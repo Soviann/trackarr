@@ -51,8 +51,16 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		pipeline = matching.NewPipeline(tmdbClient, anilistClient, geminiClient, crossDB, cfg.DataDir)
 	}
 
+	// Repositories (settings)
+	settingRepo := repository.NewSettingRepository(db)
+
 	// Services
 	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline)
+
+	var pushSvc *service.PushService
+	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
+		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+	}
 
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
@@ -60,11 +68,12 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc)
+	push := handler.NewPushHandler(pushSvc)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", handler.Health)
-		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID))
+		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey))
 
 		// Auth (unauthenticated)
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID)
@@ -90,6 +99,9 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 			r.Post("/titles/{titleID}/episodes/batch-watch", episodes.BatchMarkWatched)
 
 			r.Patch("/titles/{titleID}/seasons/{seasonID}", seasons.UpdateRating)
+
+			r.Post("/push/subscribe", push.Subscribe)
+			r.Delete("/push/subscribe", push.Unsubscribe)
 		})
 	})
 
