@@ -70,6 +70,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	webhooks := handler.NewWebhookHandler(plexSvc)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
+	settings := handler.NewSettingsHandler(settingRepo)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -103,6 +104,8 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 
 			r.Post("/push/subscribe", push.Subscribe)
 			r.Delete("/push/subscribe", push.Unsubscribe)
+
+			r.Get("/settings", settings.Get)
 
 			r.Get("/anilist/auth", anilistAuth.Authorize)
 			r.Post("/anilist/token", anilistAuth.SaveToken)
