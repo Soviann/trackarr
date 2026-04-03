@@ -23,7 +23,7 @@ func main() {
 	case "serve":
 		err = cmd.Serve(distFS)
 	case "import":
-		fmt.Println("Import not yet implemented")
+		err = cmd.Import(os.Args[2:])
 	case "migrate":
 		fmt.Println("Migrate not yet implemented")
 	default:
