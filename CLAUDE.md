@@ -18,23 +18,16 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 
 `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
 
-## Architecture
+## Environment
 
-```
-cmd/                     serve, import
-internal/
-  config/                env vars
-  database/              SQLite + embedded migrations
-  model/                 structs + enums
-  repository/            all DB queries
-  handler/               HTTP handlers (chi)
-  middleware/             JWT auth
-  service/               business logic
-    matching/            TMDB, AniList, Gemini, crossref
-  router/                route registration
-frontend/src/
-  components/ pages/ hooks/ api.ts types.ts theme.ts
-```
+`.env` (committed, defaults) + `.env.local` (gitignored, secrets). Keys: `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_EMAIL`, `JWT_SECRET`, `TMDB_API_KEY`, `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET`, `GEMINI_API_KEY`, `VAPID_*`.
+
+## Gotchas
+
+- SQLite `MaxOpenConns=1`: close row cursors before nested queries
+- `node_modules` in Docker volume: host IDE shows TS errors (expected, builds fine in container)
+- Vite dev server not started by `make up` — run `make dev-frontend` separately
+- Auth cookie: `HttpOnly`, `SameSite=Lax`, no `Secure` in dev
 
 ## Standards
 
