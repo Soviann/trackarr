@@ -1,0 +1,2 @@
+- [Interface translation](project_i18n.md) — i18n needed later, avoid hardcoded UI strings
+- [Docker-only commands](feedback_docker_only.md) — Never run go/node/npm on host, always inside Docker container via Makefile

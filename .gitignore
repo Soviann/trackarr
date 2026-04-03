@@ -1,0 +1,25 @@
+# Runtime data
+data/
+*.db
+
+# Go
+/plextracker
+tmp/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Simkl backup (sensitive)
+*.zip
+
+# Claude local settings
+.claude/settings.local.json
