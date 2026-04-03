@@ -10,6 +10,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	mw "github.com/nicolasvasse/plextracker/internal/middleware"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
 func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
@@ -25,11 +26,15 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 
+	// Services
+	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo)
+
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
 	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
+	webhooks := handler.NewWebhookHandler(plexSvc)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -39,6 +44,9 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID)
 		r.Post("/auth/google", auth.GoogleCallback)
 		r.Post("/auth/logout", auth.Logout)
+
+		// Plex webhook (unauthenticated)
+		r.Post("/webhook/plex", webhooks.HandlePlex)
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)

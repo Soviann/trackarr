@@ -80,30 +80,36 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get title names: %w", err)
 	}
-	defer rows.Close()
 
 	for rows.Next() {
 		var n model.TitleName
 		if err := rows.Scan(&n.ID, &n.TitleID, &n.Name, &n.Language, &n.IsPrimary); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("scan title name: %w", err)
 		}
 		title.Names = append(title.Names, n)
 	}
+	rows.Close()
 
-	// Load seasons with episodes
+	// Load seasons
 	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE title_id = ? ORDER BY season_number`, id)
 	if err != nil {
 		return nil, fmt.Errorf("get seasons: %w", err)
 	}
-	defer seasonRows.Close()
 
 	for seasonRows.Next() {
 		var s model.Season
 		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating); err != nil {
+			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}
+		title.Seasons = append(title.Seasons, s)
+	}
+	seasonRows.Close()
 
-		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, s.ID)
+	// Load episodes for each season (cursor closed above to avoid deadlock with MaxOpenConns=1)
+	for i := range title.Seasons {
+		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, title.Seasons[i].ID)
 		if err != nil {
 			return nil, fmt.Errorf("get episodes: %w", err)
 		}
@@ -113,11 +119,9 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 				epRows.Close()
 				return nil, fmt.Errorf("scan episode: %w", err)
 			}
-			s.Episodes = append(s.Episodes, e)
+			title.Seasons[i].Episodes = append(title.Seasons[i].Episodes, e)
 		}
 		epRows.Close()
-
-		title.Seasons = append(title.Seasons, s)
 	}
 
 	return title, nil
@@ -157,17 +161,18 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list titles: %w", err)
 	}
-	defer rows.Close()
 
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
 		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
 		titles = append(titles, t)
 	}
+	rows.Close()
 
 	// Load names for all titles
 	for i := range titles {
