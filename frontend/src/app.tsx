@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import Router from 'preact-router'
 import { Navbar } from './components/Navbar'
 import { Library } from './pages/Library'
+import { TitleDetail } from './pages/TitleDetail'
 
 function Placeholder({ name }: { name: string; path?: string }) {
   return (
@@ -35,7 +36,7 @@ export function App() {
         <Placeholder name="Add" path="/add" />
         <Placeholder name="Stats" path="/stats" />
         <Placeholder name="Login" path="/login" />
-        <Placeholder name="Title Detail" path="/title/:id" />
+        <TitleDetail path="/title/:id" />
         <Placeholder name="Validate" path="/validate" />
         <Placeholder name="Match Review" path="/match-review" />
       </Router>
