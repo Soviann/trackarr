@@ -1,0 +1,15 @@
+services:
+  plextracker:
+    build: .
+    container_name: plextracker
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
+    environment:
+      - DATA_DIR=/data
