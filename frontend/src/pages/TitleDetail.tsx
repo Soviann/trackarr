@@ -6,6 +6,9 @@ import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeRow } from '../components/EpisodeRow'
 import { ActionBar } from '../components/ActionBar'
+import { RatingPrompt } from '../components/RatingPrompt'
+import { EditSheet } from '../components/EditSheet'
+import { AniListSheet } from '../components/AniListSheet'
 
 function getNextUnwatched(title: Title) {
   for (const season of [...title.seasons].sort((a, b) => a.season_number - b.season_number)) {
@@ -24,6 +27,9 @@ function formatSeriesStatus(s: string | null) {
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
+  const [showRating, setShowRating] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [showAniList, setShowAniList] = useState(false)
 
   if (loading || !title) {
     return (
@@ -48,6 +54,35 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const handleMarkNext = async () => {
     if (!next) return
     await apiFetch(`/titles/${title.id}/episodes/${next.episode.id}`, { method: 'PATCH' })
+    mutate()
+  }
+
+  const handleSaveRating = async (rating: number) => {
+    await apiFetch(`/titles/${title.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ my_rating: rating }),
+    })
+    setShowRating(false)
+    mutate()
+  }
+
+  const handleSaveEdit = async (updates: { type?: string; status?: string }) => {
+    if (Object.keys(updates).length > 0) {
+      await apiFetch(`/titles/${title.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      })
+      mutate()
+    }
+    setShowEdit(false)
+  }
+
+  const handleConfirmAniList = async () => {
+    await apiFetch(`/titles/${title.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ match_status: 'confirmed' }),
+    })
+    setShowAniList(false)
     mutate()
   }
 
@@ -89,17 +124,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         {/* Top-right buttons */}
         <div style={{ position: 'absolute', top: '14px', right: '14px', display: 'flex', gap: '8px' }}>
           {title.type === 'anime' && (
-            <div style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(0,0,0,0.5)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              cursor: 'pointer',
-            }}>
+            <div
+              onClick={() => setShowAniList(true)}
+              style={{
+                width: '32px',
+                height: '32px',
+                background: 'rgba(0,0,0,0.5)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                cursor: 'pointer',
+              }}
+            >
               <span style={{ fontSize: '10px', fontWeight: 700, color: colors.accentAnilist }}>AL</span>
               {title.match_status === 'pending_review' && (
                 <div style={{
@@ -111,16 +149,19 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             </div>
           )}
           {/* Edit button */}
-          <div style={{
-            width: '32px',
-            height: '32px',
-            background: 'rgba(0,0,0,0.5)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}>
+          <div
+            onClick={() => setShowEdit(true)}
+            style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(0,0,0,0.5)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -192,7 +233,40 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         nextEpisode={next?.episode ?? null}
         nextSeasonNumber={next?.season.season_number}
         onMarkNext={handleMarkNext}
+        onRate={() => setShowRating(true)}
+        onAniList={() => setShowAniList(true)}
       />
+
+      {/* Bottom sheets */}
+      <RatingPrompt
+        open={showRating}
+        onClose={() => setShowRating(false)}
+        titleName={name}
+        initialRating={title.my_rating}
+        hasImdb={!!title.imdb_id}
+        hasAnilist={title.type === 'anime'}
+        onSave={handleSaveRating}
+        onSaveAndImdb={(rating) => {
+          handleSaveRating(rating)
+          if (title.imdb_id) window.open(`https://www.imdb.com/title/${title.imdb_id}/`, '_blank')
+        }}
+      />
+
+      <EditSheet
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        title={title}
+        onSave={handleSaveEdit}
+      />
+
+      {title.type === 'anime' && (
+        <AniListSheet
+          open={showAniList}
+          onClose={() => setShowAniList(false)}
+          title={title}
+          onConfirm={handleConfirmAniList}
+        />
+      )}
     </div>
   )
 }
