@@ -20,25 +20,31 @@ export function Login({ path }: { path?: string }) {
   const btnRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.onload = () => {
-      if (!window.google || !btnRef.current) return
-      window.google.accounts.id.initialize({
-        client_id: (window as Record<string, unknown>).__GOOGLE_CLIENT_ID__ ?? '',
-        callback: handleCredentialResponse,
-      })
-      window.google.accounts.id.renderButton(btnRef.current, {
-        theme: 'filled_black',
-        size: 'large',
-        width: '320',
-        text: 'signin_with',
-        shape: 'pill',
-      })
+    const init = async () => {
+      const cfg = await fetch('/api/config').then((r) => r.json())
+      const clientId = cfg.google_client_id
+      if (!clientId || clientId === 'dev') return
+
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.onload = () => {
+        if (!window.google || !btnRef.current) return
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse,
+        })
+        window.google.accounts.id.renderButton(btnRef.current, {
+          theme: 'filled_black',
+          size: 'large',
+          width: '320',
+          text: 'signin_with',
+          shape: 'pill',
+        })
+      }
+      document.head.appendChild(script)
     }
-    document.head.appendChild(script)
-    return () => { script.remove() }
+    init()
   }, [])
 
   const handleCredentialResponse = async (response: { credential: string }) => {
@@ -61,18 +67,11 @@ export function Login({ path }: { path?: string }) {
     }}>
       {/* Logo / Title */}
       <div style={{ marginBottom: '48px', textAlign: 'center' }}>
-        <div style={{
-          width: '64px', height: '64px', borderRadius: '16px',
-          background: `linear-gradient(135deg, ${colors.accentAmber}, ${colors.accentCoral})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 20px',
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-        </div>
+        <img
+          src="/icon.png"
+          alt="PlexTracker"
+          style={{ width: '80px', height: '80px', margin: '0 auto 20px', display: 'block' }}
+        />
         <div style={{ fontSize: '24px', fontWeight: 700, color: colors.textPrimary }}>PlexTracker</div>
         <div style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '6px' }}>
           Track your media library
