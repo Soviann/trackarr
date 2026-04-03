@@ -16,7 +16,7 @@ func TestLogout_ClearsCookie(t *testing.T) {
 
 	h.Logout(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 	cookies := rr.Result().Cookies()
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, "token", cookies[0].Name)
