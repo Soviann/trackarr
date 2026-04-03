@@ -8,6 +8,7 @@ import { Search } from './pages/Search'
 import { Add } from './pages/Add'
 import { Validate } from './pages/Validate'
 import { MatchReview } from './pages/MatchReview'
+import { Login } from './pages/Login'
 
 function Placeholder({ name }: { name: string; path?: string }) {
   return (
@@ -39,7 +40,7 @@ export function App() {
         <Search path="/search" />
         <Add path="/add" />
         <Placeholder name="Stats" path="/stats" />
-        <Placeholder name="Login" path="/login" />
+        <Login path="/login" />
         <TitleDetail path="/title/:id" />
         <Validate path="/validate" />
         <MatchReview path="/match-review" />
