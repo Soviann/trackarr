@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: Phase 7 complete
+## Status: Phase 8 complete
 
 ## Backend (Go)
 
@@ -22,6 +22,8 @@ Update when adding routes, services, components, or commands.
 | Service | File | Purpose |
 |---|---|---|
 | PlexService | `internal/service/plex.go` | Webhook scrobble processing, delegates to pipeline |
+| PushService | `internal/service/push.go` | Web Push VAPID notifications, subscription management |
+| BackgroundService | `internal/service/background.go` | Daily title refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching |
 | TMDBClient | `internal/service/matching/tmdb.go` | TMDB API: search, details, episodes, translations, covers |
@@ -56,7 +58,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, spa. DI via struct with repos.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, spa. DI via struct with repos.
 
 ### Routes
 
@@ -74,6 +76,9 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | BatchMarkWatched | Yes |
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
+| POST | `/api/push/subscribe` | Subscribe | Yes |
+| DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
+| GET | `/api/config` | PublicConfig | No |
 
 ## Frontend (Preact)
 
@@ -84,6 +89,7 @@ Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. T
 | Hook | File | Purpose |
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
+| `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
 
 ### Components
 
