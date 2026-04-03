@@ -1,0 +1,181 @@
+<h2>Filters — Revisited for PWA</h2>
+<p class="subtitle">Swipe pages had a gesture conflict risk. What do we go with?</p>
+
+<div class="cards" style="display:flex;flex-direction:column;gap:24px;max-width:420px;margin:0 auto;">
+
+  <!-- OPTION A: Sticky pills above navbar -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+
+        <div style="padding:16px 16px 10px;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:0 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Completed</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#BF360C,#E65100);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Dune</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#4E342E,#795548);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Shōgun</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1B5E20,#2E7D32);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">BB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky filter pills -->
+        <div style="padding:8px 16px;display:flex;gap:7px;overflow-x:auto;background:#0D0D0D;border-top:1px solid #1A1A1A;">
+          <span style="background:#E8A925;color:#0D0D0D;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap;">All</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Watching</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Up to date</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Completed</span>
+        </div>
+
+        <!-- Navbar -->
+        <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span style="font-size:9px;font-weight:600;color:#E8A925;">Library</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:9px;color:#555;">Search</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span style="font-size:9px;color:#555;">Add</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span style="font-size:9px;color:#555;">Stats</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Sticky pills above navbar</h3>
+      <p>Scrollable pill row fixed above the navbar. Tap to filter. No gesture conflict. Takes ~36px of vertical space permanently. Consistent with action bar pattern on title detail.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Keep swipeable, handle edge gestures -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+
+        <div style="padding:16px 16px 10px;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:0 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Completed</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#BF360C,#E65100);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Dune</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#4E342E,#795548);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Shōgun</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1B5E20,#2E7D32);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">BB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Label + dots -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0 6px;background:#0D0D0D;border-top:1px solid #1A1A1A;">
+          <div style="font-size:10px;font-weight:600;color:#E8A925;letter-spacing:0.5px;">All</div>
+          <div style="display:flex;gap:5px;">
+            <div style="width:16px;height:3px;border-radius:2px;background:#E8A925;"></div>
+            <div style="width:5px;height:3px;border-radius:2px;background:#333;"></div>
+            <div style="width:5px;height:3px;border-radius:2px;background:#333;"></div>
+            <div style="width:5px;height:3px;border-radius:2px;background:#333;"></div>
+            <div style="width:5px;height:3px;border-radius:2px;background:#333;"></div>
+            <div style="width:5px;height:3px;border-radius:2px;background:#333;"></div>
+          </div>
+        </div>
+
+        <!-- Navbar -->
+        <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span style="font-size:9px;font-weight:600;color:#E8A925;">Library</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:9px;color:#555;">Search</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span style="font-size:9px;color:#555;">Add</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span style="font-size:9px;color:#555;">Stats</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Swipeable pages (original pick)</h3>
+      <p>Label + dots above navbar, swipe content to switch. Android edge-swipe back only triggers from the <strong>left ~20px edge</strong> — content swipes start wider, so conflict is rare in practice. Cleaner look, more screen space. Risk: occasional mis-swipe near edges.</p>
+    </div>
+  </div>
+
+</div>

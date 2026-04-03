@@ -1,0 +1,190 @@
+<h2>Title Validation — v2 (actions at bottom, thumb zone)</h2>
+<p class="subtitle">Shared screen: Add, Share Target, Match Review. Two layout proposals, each showing the "new title" state.</p>
+
+<!-- PROPOSAL A: Cover top, actions anchored bottom -->
+<h3 style="max-width:390px;margin:24px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal A — Full-width cover hero, actions anchored at bottom</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;display:flex;flex-direction:column;min-height:700px;">
+
+    <!-- Hero cover with back button -->
+    <div style="position:relative;height:200px;background:linear-gradient(135deg,#1a3a5c,#0d2840);display:flex;align-items:flex-end;">
+      <div style="position:absolute;top:14px;left:14px;width:32px;height:32px;background:rgba(0,0,0,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </div>
+      <!-- Source badge on hero -->
+      <div style="position:absolute;top:14px;right:14px;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,0.5);border-radius:8px;padding:5px 10px;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span style="font-size:9px;color:#aaa;">via IMDb</span>
+        </div>
+      </div>
+      <div style="width:100%;padding:16px;background:linear-gradient(transparent,#0D0D0D);">
+        <div style="font-size:20px;font-weight:700;color:#fff;">Blade Runner 2049</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <span style="font-size:11px;color:#aaa;">Movie · 2017 · 2h 44min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- External IDs -->
+    <div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px;">
+      <a style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.2);border-radius:6px;padding:4px 8px;text-decoration:none;">
+        <span style="font-size:10px;font-weight:800;color:#F5C518;font-family:Impact,system-ui;">IMDb</span>
+        <span style="font-size:9px;color:#888;">tt1856101</span>
+      </a>
+      <a style="display:inline-flex;align-items:center;gap:4px;background:rgba(91,156,246,0.1);border:1px solid rgba(91,156,246,0.2);border-radius:6px;padding:4px 8px;text-decoration:none;">
+        <span style="font-size:10px;font-weight:600;color:#5B9CF6;">TMDB</span>
+        <span style="font-size:9px;color:#888;">335984</span>
+      </a>
+    </div>
+
+    <!-- Spacer -->
+    <div style="flex:1;"></div>
+
+    <!-- Actions anchored at bottom -->
+    <div style="padding:0 16px 8px;border-top:1px solid #1A1A1A;">
+      <div style="padding:12px 0 4px;">
+        <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Add to library as</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#1E1E1E;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #2A2A2A;">
+            <span style="font-size:12px;font-weight:500;color:#888;">Watching</span>
+          </div>
+          <div style="flex:1;background:#1E1E1E;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #2A2A2A;">
+            <span style="font-size:12px;font-weight:500;color:#888;">Watched</span>
+          </div>
+          <div style="flex:1;background:#E8A925;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #E8A925;">
+            <span style="font-size:12px;font-weight:600;color:#0D0D0D;">Plan</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:8px 0;">
+        <div style="background:#E8A925;border-radius:12px;padding:14px;text-align:center;">
+          <span style="font-size:14px;font-weight:700;color:#0D0D0D;">Add to Library</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main navbar -->
+    <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span style="font-size:9px;color:#555;">Library</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span style="font-size:9px;color:#555;">Search</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(76,175,80,0.12);border-top:2px solid #4CAF50;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span style="font-size:9px;font-weight:600;color:#4CAF50;">Add</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span style="font-size:9px;color:#555;">Stats</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PROPOSAL B: Side-by-side cover + info, actions anchored bottom -->
+<h3 style="max-width:390px;margin:36px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal B — Side-by-side cover, actions anchored at bottom</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;display:flex;flex-direction:column;min-height:700px;">
+
+    <!-- Header -->
+    <div style="padding:14px 16px 12px;display:flex;align-items:center;gap:12px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span style="font-size:18px;font-weight:700;color:#fff;">Add Title</span>
+      <div style="flex:1;"></div>
+      <div style="display:inline-flex;align-items:center;gap:5px;background:#1E1E1E;border-radius:8px;padding:5px 10px;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span style="font-size:9px;color:#666;">via IMDb</span>
+      </div>
+    </div>
+
+    <!-- Cover + info side by side -->
+    <div style="padding:0 16px 16px;display:flex;gap:16px;">
+      <div style="width:120px;height:180px;background:linear-gradient(135deg,#1a3a5c,#0d2840);border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,0.4));"></div>
+        <span style="font-size:44px;opacity:0.25;">🎬</span>
+      </div>
+      <div style="flex:1;min-width:0;padding-top:4px;">
+        <div style="font-size:18px;font-weight:700;color:#F0F0F0;line-height:1.3;">Blade Runner 2049</div>
+        <div style="font-size:12px;color:#666;margin-top:6px;">Movie · 2017</div>
+        <div style="font-size:11px;color:#555;margin-top:2px;">2h 44min</div>
+
+        <!-- External IDs -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;">
+          <a style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.2);border-radius:6px;padding:4px 8px;text-decoration:none;">
+            <span style="font-size:10px;font-weight:800;color:#F5C518;font-family:Impact,system-ui;">IMDb</span>
+            <span style="font-size:9px;color:#888;">tt1856101</span>
+          </a>
+          <a style="display:inline-flex;align-items:center;gap:4px;background:rgba(91,156,246,0.1);border:1px solid rgba(91,156,246,0.2);border-radius:6px;padding:4px 8px;text-decoration:none;">
+            <span style="font-size:10px;font-weight:600;color:#5B9CF6;">TMDB</span>
+            <span style="font-size:9px;color:#888;">335984</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spacer -->
+    <div style="flex:1;"></div>
+
+    <!-- Actions anchored at bottom -->
+    <div style="padding:0 16px 8px;border-top:1px solid #1A1A1A;">
+      <div style="padding:12px 0 4px;">
+        <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Add to library as</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#1E1E1E;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #2A2A2A;">
+            <span style="font-size:12px;font-weight:500;color:#888;">Watching</span>
+          </div>
+          <div style="flex:1;background:#1E1E1E;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #2A2A2A;">
+            <span style="font-size:12px;font-weight:500;color:#888;">Watched</span>
+          </div>
+          <div style="flex:1;background:#E8A925;border-radius:10px;padding:10px 0;text-align:center;border:1.5px solid #E8A925;">
+            <span style="font-size:12px;font-weight:600;color:#0D0D0D;">Plan</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:8px 0;">
+        <div style="background:#E8A925;border-radius:12px;padding:14px;text-align:center;">
+          <span style="font-size:14px;font-weight:700;color:#0D0D0D;">Add to Library</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main navbar -->
+    <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span style="font-size:9px;color:#555;">Library</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span style="font-size:9px;color:#555;">Search</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(76,175,80,0.12);border-top:2px solid #4CAF50;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span style="font-size:9px;font-weight:600;color:#4CAF50;">Add</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span style="font-size:9px;color:#555;">Stats</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:32px;max-width:420px;margin-left:auto;margin-right:auto;">
+  <h3>Design notes</h3>
+  <ul style="font-size:13px;line-height:1.8;color:#aaa;">
+    <li><strong>Both</strong> — Status picker + "Add to Library" button anchored at the bottom above navbar, within thumb zone. Info at top (read), actions at bottom (interact).</li>
+    <li><strong>Proposal A</strong> — Full-width hero cover (like Title Detail), title over gradient. Source badge overlaid on hero. Feels immersive, like you're already looking at the title page. Reuses the Title Detail hero pattern.</li>
+    <li><strong>Proposal B</strong> — Side-by-side cover + info (like the original v1). Source badge in the header bar. More compact, shows all info at a glance without scrolling. Cover is larger than v1 (120×180).</li>
+    <li>The "already in library" and "match fix" states would use the same bottom-anchored layout — the action area just changes (View button / Confirm button instead of status picker).</li>
+  </ul>
+</div>

@@ -1,0 +1,70 @@
+<h2>Navbar — Full-height active highlight</h2>
+<p class="subtitle">The active tab gets a full vertical lane of amber, icon to label.</p>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="
+    background:#0D0D0D;
+    color:#E8E8E8;
+    font-family:'DM Sans',system-ui,sans-serif;
+    padding:0;
+  ">
+    <!-- Spacer to simulate content above -->
+    <div style="padding:40px 20px 20px;text-align:center;color:#333;font-size:13px;">
+      — library content above —
+    </div>
+
+    <!-- Bottom nav: full-height active highlight -->
+    <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+
+      <!-- Library (active) — full-height amber lane -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 0 16px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;position:relative;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span style="font-size:10px;font-weight:600;color:#E8A925;">Library</span>
+      </div>
+
+      <!-- Search -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 0 16px;border-top:2px solid transparent;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span style="font-size:10px;color:#555;">Search</span>
+      </div>
+
+      <!-- Add -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 0 16px;border-top:2px solid transparent;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span style="font-size:10px;color:#555;">Add</span>
+      </div>
+
+      <!-- Stats -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 0 16px;border-top:2px solid transparent;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span style="font-size:10px;color:#555;">Stats</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px;max-width:420px;margin-left:auto;margin-right:auto;">
+  <h3>Active item treatment</h3>
+  <ul style="font-size:14px;line-height:1.8;color:#aaa;">
+    <li>Full-width column with subtle amber wash (<code>rgba(232,169,37,0.12)</code>)</li>
+    <li>Amber top border (2px) as an indicator line</li>
+    <li>Icon + label both in amber</li>
+    <li>Inactive items: no background, dim grey icons</li>
+  </ul>
+</div>

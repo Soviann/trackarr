@@ -1,0 +1,234 @@
+<h2>Visual Mood — Both in Dark Mode</h2>
+<p class="subtitle">Same content, same dark theme. Which design language do you prefer?</p>
+
+<div class="cards" style="display:flex;flex-direction:column;gap:24px;max-width:420px;margin:0 auto;">
+
+  <!-- OPTION A: Clean & Minimal (Dark) -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="
+        background:#111111;
+        color:#E8E8E8;
+        font-family:'DM Sans',system-ui,sans-serif;
+        padding:0;
+        border-radius:16px 16px 0 0;
+        overflow:hidden;
+      ">
+        <!-- Status bar -->
+        <div style="padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:#555;">9:41</span>
+          <div style="display:flex;gap:4px;">
+            <span style="font-size:11px;color:#555;">●●●</span>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div style="padding:20px 20px 12px;">
+          <div style="font-size:22px;font-weight:700;color:#F0F0F0;letter-spacing:-0.3px;">Library</div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div style="padding:0 20px 16px;display:flex;gap:8px;overflow-x:auto;">
+          <span style="background:#F0F0F0;color:#111;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;">Watching</span>
+          <span style="background:#1E1E1E;color:#777;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Up to date</span>
+          <span style="background:#1E1E1E;color:#777;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Completed</span>
+          <span style="background:#1E1E1E;color:#777;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Plan to watch</span>
+        </div>
+
+        <!-- Title cards -->
+        <div style="padding:0 20px 16px;display:flex;flex-direction:column;gap:12px;">
+
+          <!-- Card 1 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#1A1A1A;border-radius:14px;padding:12px;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">🌿</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Series · 2022</div>
+              <div style="margin-top:8px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:70%;height:100%;background:#D0D0D0;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:10px;color:#666;margin-top:3px;">S2 · 7/10 episodes</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#252525;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:12px;font-weight:700;color:#E0E0E0;">E8</span>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#1A1A1A;border-radius:14px;padding:12px;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">⚔️</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Anime · 2024</div>
+              <div style="margin-top:8px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:45%;height:100%;background:#D0D0D0;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:10px;color:#666;margin-top:3px;">S2 · 5/13 episodes</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#252525;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:12px;font-weight:700;color:#E0E0E0;">E6</span>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#1A1A1A;border-radius:14px;padding:12px;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#BF360C,#E65100);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">🔥</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Dune: Part Two</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Movie · 2024</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#252525;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:16px;color:#D0D0D0;">▶</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom nav -->
+        <div style="display:flex;justify-content:space-around;padding:10px 0 14px;border-top:1px solid #1E1E1E;background:#111111;">
+          <div style="text-align:center;">
+            <div style="font-size:18px;">📚</div>
+            <div style="font-size:9px;font-weight:600;color:#F0F0F0;margin-top:2px;">Library</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">🔍</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Search</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">➕</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Add</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">📊</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Stats</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Clean & Minimal</h3>
+      <p>Monochrome palette. White/grey accents on dark. No color accent — the <strong>covers themselves</strong> are the color. Quiet, restrained, content-forward. Think Letterboxd, Things 3.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Rich & Immersive -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="
+        background:#0D0D0D;
+        color:#E8E8E8;
+        font-family:'DM Sans',system-ui,sans-serif;
+        padding:0;
+        border-radius:16px 16px 0 0;
+        overflow:hidden;
+      ">
+        <!-- Status bar -->
+        <div style="padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:#555;">9:41</span>
+          <div style="display:flex;gap:4px;">
+            <span style="font-size:11px;color:#555;">●●●</span>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div style="padding:20px 20px 12px;">
+          <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.3px;">Library</div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div style="padding:0 20px 16px;display:flex;gap:8px;overflow-x:auto;">
+          <span style="background:#E8A925;color:#0D0D0D;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;">Watching</span>
+          <span style="background:#1E1E1E;color:#888;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Up to date</span>
+          <span style="background:#1E1E1E;color:#888;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Completed</span>
+          <span style="background:#1E1E1E;color:#888;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;">Plan to watch</span>
+        </div>
+
+        <!-- Title cards -->
+        <div style="padding:0 20px 16px;display:flex;flex-direction:column;gap:12px;">
+
+          <!-- Card 1 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#161616;border-radius:14px;padding:12px;border:1px solid #222;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">🌿</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Series · 2022</div>
+              <div style="margin-top:8px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:70%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:10px;color:#666;margin-top:3px;">S2 · 7/10 episodes</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:12px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#161616;border-radius:14px;padding:12px;border:1px solid #222;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">⚔️</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Anime · 2024</div>
+              <div style="margin-top:8px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:45%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:10px;color:#666;margin-top:3px;">S2 · 5/13 episodes</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:12px;font-weight:700;color:#0D0D0D;">E6</span>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div style="display:flex;gap:14px;align-items:center;background:#161616;border-radius:14px;padding:12px;border:1px solid #222;">
+            <div style="width:52px;height:72px;background:linear-gradient(135deg,#BF360C,#E65100);border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:18px;">🔥</span>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Dune: Part Two</div>
+              <div style="font-size:11px;color:#666;margin-top:2px;">Movie · 2024</div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:16px;color:#0D0D0D;">▶</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom nav -->
+        <div style="display:flex;justify-content:space-around;padding:10px 0 14px;border-top:1px solid #1E1E1E;background:#0D0D0D;">
+          <div style="text-align:center;">
+            <div style="font-size:18px;">📚</div>
+            <div style="font-size:9px;font-weight:600;color:#E8A925;margin-top:2px;">Library</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">🔍</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Search</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">➕</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Add</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;">📊</div>
+            <div style="font-size:9px;color:#555;margin-top:2px;">Stats</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Rich & Immersive</h3>
+      <p>Warm amber accent (<code>#E8A925</code>) on deep black. Colored progress bars, vivid action buttons, subtle card borders. Cinematic, media-app feel. Think Plex, Stremio.</p>
+    </div>
+  </div>
+
+</div>

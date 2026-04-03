@@ -1,0 +1,200 @@
+<h2>Title Card Layout</h2>
+<p class="subtitle">Three approaches for the library. Tap to pick.</p>
+
+<div class="cards" style="display:flex;flex-direction:column;gap:24px;max-width:420px;margin:0 auto;">
+
+  <!-- OPTION A: Horizontal list cards -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:16px;border-radius:16px 16px 0 0;">
+
+        <div style="font-size:11px;color:#E8A925;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Watching</div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <!-- Card 1 -->
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:48px;height:68px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">Series · 2022</div>
+              <div style="margin-top:6px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:70%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:9px;color:#666;margin-top:2px;">S2 · 7/10</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:11px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+          <!-- Card 2 -->
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:48px;height:68px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">Anime · 2024</div>
+              <div style="margin-top:6px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:45%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:9px;color:#666;margin-top:2px;">S2 · 5/13</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:11px;font-weight:700;color:#0D0D0D;">E6</span>
+            </div>
+          </div>
+          <!-- Card 3 -->
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:48px;height:68px;background:linear-gradient(135deg,#BF360C,#E65100);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Dune: Part Two</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">Movie · 2024</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;color:#0D0D0D;">▶</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Horizontal List Cards</h3>
+      <p>Compact rows. Title, year, progress bar, next episode button — all visible at a glance. Efficient, scannable. Best for "what do I watch next?"</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Poster Grid -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:16px;border-radius:16px 16px 0 0;">
+
+        <div style="font-size:11px;color:#E8A925;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Watching</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <!-- Poster 1 -->
+          <div style="position:relative;border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#2D5A27,#4A8C3F);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">Severance</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">S2 · 7/10</div>
+                <div style="margin-top:4px;height:2px;background:rgba(255,255,255,0.15);border-radius:1px;overflow:hidden;">
+                  <div style="width:70%;height:100%;background:#E8A925;border-radius:1px;"></div>
+                </div>
+              </div>
+            </div>
+            <div style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:9px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+          <!-- Poster 2 -->
+          <div style="position:relative;border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a237e,#4A148C);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">Solo Leveling</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">S2 · 5/13</div>
+                <div style="margin-top:4px;height:2px;background:rgba(255,255,255,0.15);border-radius:1px;overflow:hidden;">
+                  <div style="width:45%;height:100%;background:#E8A925;border-radius:1px;"></div>
+                </div>
+              </div>
+            </div>
+            <div style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:9px;font-weight:700;color:#0D0D0D;">E6</span>
+            </div>
+          </div>
+          <!-- Poster 3 -->
+          <div style="position:relative;border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#BF360C,#E65100);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">Dune: Part Two</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">Movie</div>
+              </div>
+            </div>
+            <div style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:11px;color:#0D0D0D;">▶</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Poster Grid</h3>
+      <p>Cover art dominates. 3 columns, progress overlay at bottom, quick-mark badge in corner. Cinematic, visual. Less text, more browse-and-feel.</p>
+    </div>
+  </div>
+
+  <!-- OPTION C: Mix -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:16px;border-radius:16px 16px 0 0;">
+
+        <!-- Watching section: horizontal cards -->
+        <div style="font-size:11px;color:#E8A925;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Watching</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:48px;height:68px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">Series · 2022</div>
+              <div style="margin-top:6px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:70%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:9px;color:#666;margin-top:2px;">S2 · 7/10</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:11px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:48px;height:68px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">Anime · 2024</div>
+              <div style="margin-top:6px;height:3px;background:#2A2A2A;border-radius:2px;overflow:hidden;">
+                <div style="width:45%;height:100%;background:#E8A925;border-radius:2px;"></div>
+              </div>
+              <div style="font-size:9px;color:#666;margin-top:2px;">S2 · 5/13</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:11px;font-weight:700;color:#0D0D0D;">E6</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan to watch section: poster grid -->
+        <div style="font-size:11px;color:#666;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Plan to watch</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div style="border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#BF360C,#E65100);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">Dune: Part Two</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">Movie · 2024</div>
+              </div>
+            </div>
+          </div>
+          <div style="border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#0D47A1,#1565C0);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">The Bear</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">Series · 2022</div>
+              </div>
+            </div>
+          </div>
+          <div style="border-radius:10px;overflow:hidden;">
+            <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#4E342E,#795548);display:flex;align-items:flex-end;">
+              <div style="width:100%;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                <div style="font-size:11px;font-weight:600;color:#fff;">Shōgun</div>
+                <div style="font-size:9px;color:#aaa;margin-top:1px;">Series · 2024</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Hybrid</h3>
+      <p><strong>Watching</strong> uses horizontal cards (progress + quick-mark matter). <strong>Plan to watch / Completed</strong> uses poster grid (just browsing, no progress to show). Best of both worlds.</p>
+    </div>
+  </div>
+
+</div>

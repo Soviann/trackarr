@@ -1,0 +1,122 @@
+<h2>Match Review — How to access it?</h2>
+<p class="subtitle">Where do pending/unconfirmed matches surface?</p>
+
+<div class="cards" style="display:flex;flex-direction:column;gap:24px;max-width:420px;margin:0 auto;">
+
+  <!-- OPTION A: Badge on Library header -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+        <div style="padding:16px 16px 10px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+          <!-- Badge -->
+          <div style="display:flex;align-items:center;gap:6px;background:#1E1E1E;border-radius:20px;padding:6px 12px 6px 8px;">
+            <div style="width:20px;height:20px;border-radius:50%;background:#EB5757;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:10px;font-weight:700;color:#fff;">3</span>
+            </div>
+            <span style="font-size:11px;font-weight:600;color:#ccc;">To review</span>
+          </div>
+        </div>
+        <!-- Cards below -->
+        <div style="padding:0 16px 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+            </div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Badge in Library header</h3>
+      <p>Small pill with count in the top-right of the Library screen. Tap to open review list. Unobtrusive, always visible when there's work to do. Disappears when all matches are resolved.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Inline banner at top of All view -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+        <div style="padding:16px 16px 10px;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+        </div>
+        <!-- Banner -->
+        <div style="margin:0 16px 12px;background:rgba(235,87,87,0.1);border:1px solid rgba(235,87,87,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#EB5757;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:12px;font-weight:700;color:#fff;">3</span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Titles need review</div>
+            <div style="font-size:10px;color:#666;margin-top:1px;">2 pending · 1 unconfirmed</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <!-- Cards below -->
+        <div style="padding:0 16px 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+            </div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Inline banner</h3>
+      <p>Alert card at the top of the library, shows count and breakdown. Tap to open review list. More prominent — you can't scroll past it without noticing. Disappears when resolved.</p>
+    </div>
+  </div>
+
+  <!-- OPTION C: Both — badge always, banner on All -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+        <div style="padding:16px 16px 10px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+          <div style="width:22px;height:22px;border-radius:50%;background:#EB5757;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:10px;font-weight:700;color:#fff;">3</span>
+          </div>
+        </div>
+        <!-- Banner -->
+        <div style="margin:0 16px 12px;background:rgba(235,87,87,0.1);border:1px solid rgba(235,87,87,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;color:#F0F0F0;">3 titles need review</div>
+            <div style="font-size:10px;color:#666;margin-top:1px;">2 pending · 1 unconfirmed</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <!-- Cards below -->
+        <div style="padding:0 16px 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+            <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+              <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+            </div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Badge + Banner</h3>
+      <p>Small count badge in header (always visible even when scrolled) + inline banner card with details at top of content. Belt and suspenders — you won't miss it.</p>
+    </div>
+  </div>
+
+</div>

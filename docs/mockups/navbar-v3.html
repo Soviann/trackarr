@@ -1,0 +1,99 @@
+<h2>Navbar — Per-tab identity colors</h2>
+<p class="subtitle">Each tab has its own color when active. Tap a tab to preview it.</p>
+
+<style>
+  .nav-demo { max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);font-family:'DM Sans',system-ui,sans-serif; }
+  .nav-bar { display:flex;background:#0D0D0D;border-top:1px solid #1A1A1A; }
+  .nav-item { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 0 16px;border-top:2px solid transparent;cursor:pointer;transition:all 0.2s ease; }
+  .nav-item svg { transition:stroke 0.2s ease; }
+  .nav-item span { font-size:10px;transition:color 0.2s ease; }
+  .nav-item.inactive svg { stroke:#555; }
+  .nav-item.inactive span { color:#555; }
+  .page-label { padding:40px 20px 20px;text-align:center;font-size:15px;font-weight:600;transition:color 0.2s ease; }
+</style>
+
+<div class="nav-demo">
+  <div style="background:#0D0D0D;">
+    <div class="page-label" id="pageLabel" style="color:#E8A925;">Library</div>
+
+    <div class="nav-bar" id="navBar">
+
+      <!-- Library — Amber -->
+      <div class="nav-item" id="nav-library" data-color="232,169,37" onclick="activateTab(this)" style="background:rgba(232,169,37,0.12);border-top-color:#E8A925;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span style="color:#E8A925;font-weight:600;">Library</span>
+      </div>
+
+      <!-- Search — Teal -->
+      <div class="nav-item inactive" id="nav-search" data-color="56,189,176" onclick="activateTab(this)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Search</span>
+      </div>
+
+      <!-- Add — Green -->
+      <div class="nav-item inactive" id="nav-add" data-color="76,175,80" onclick="activateTab(this)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span>Add</span>
+      </div>
+
+      <!-- Stats — Lavender -->
+      <div class="nav-item inactive" id="nav-stats" data-color="149,117,205" onclick="activateTab(this)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Stats</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function activateTab(el) {
+  const items = document.querySelectorAll('.nav-item');
+  items.forEach(item => {
+    item.classList.add('inactive');
+    item.style.background = 'transparent';
+    item.style.borderTopColor = 'transparent';
+    item.querySelector('svg').style.stroke = '#555';
+    item.querySelector('span').style.color = '#555';
+    item.querySelector('span').style.fontWeight = '400';
+  });
+
+  const rgb = el.dataset.color;
+  const color = 'rgb(' + rgb + ')';
+  el.classList.remove('inactive');
+  el.style.background = 'rgba(' + rgb + ',0.12)';
+  el.style.borderTopColor = color;
+  el.querySelector('svg').style.stroke = color;
+  el.querySelector('span').style.color = color;
+  el.querySelector('span').style.fontWeight = '600';
+
+  document.getElementById('pageLabel').style.color = color;
+  document.getElementById('pageLabel').textContent = el.querySelector('span').textContent;
+}
+</script>
+
+<div style="margin-top:24px;max-width:420px;margin-left:auto;margin-right:auto;">
+  <h3>Color palette</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:#aaa;">
+    <div style="display:flex;align-items:center;gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:#E8A925;"></div> <strong style="color:#E8A925;">Library</strong> — Amber</div>
+    <div style="display:flex;align-items:center;gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:#38BDB0;"></div> <strong style="color:#38BDB0;">Search</strong> — Teal</div>
+    <div style="display:flex;align-items:center;gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:#4CAF50;"></div> <strong style="color:#4CAF50;">Add</strong> — Green</div>
+    <div style="display:flex;align-items:center;gap:10px;"><div style="width:16px;height:16px;border-radius:4px;background:#9575CD;"></div> <strong style="color:#9575CD;">Stats</strong> — Lavender</div>
+  </div>
+  <p style="font-size:13px;color:#666;margin-top:12px;">Tap the tabs in the mockup to see each color in action.</p>
+</div>

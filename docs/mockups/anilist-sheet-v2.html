@@ -1,0 +1,143 @@
+<h2>AniList Bottom Sheet — v2</h2>
+<p class="subtitle">Triggered by AL badge on hero. Two proposals.</p>
+
+<!-- PROPOSAL A: Matched entry with ID tags + confidence -->
+<h3 style="max-width:390px;margin:24px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal A — Card with ID tags, AniList blue CTA</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;">
+
+    <!-- Dimmed backdrop -->
+    <div style="height:280px;background:rgba(13,13,13,0.6);"></div>
+
+    <!-- Bottom sheet -->
+    <div style="background:#161616;border-radius:16px 16px 0 0;padding:0;">
+
+      <!-- Handle -->
+      <div style="display:flex;justify-content:center;padding:10px 0 6px;">
+        <div style="width:32px;height:4px;background:#333;border-radius:2px;"></div>
+      </div>
+
+      <!-- Header -->
+      <div style="padding:0 16px 12px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;font-weight:700;color:#02A9FF;">AniList Match</span>
+        <span style="font-size:10px;color:#E8A925;font-weight:600;background:rgba(232,169,37,0.15);padding:2px 8px;border-radius:8px;">Pending</span>
+      </div>
+
+      <!-- Matched entry card -->
+      <div style="margin:0 16px 12px;background:#1E1E1E;border-radius:10px;padding:12px;display:flex;gap:12px;">
+        <div style="width:50px;height:70px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#F0F0F0;">Ore dake Level Up na Ken</div>
+          <div style="font-size:10px;color:#555;margin-top:2px;">Solo Leveling · TV · 2024</div>
+          <!-- AniList link as ID tag -->
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">
+            <a style="display:inline-flex;align-items:center;gap:3px;background:rgba(2,169,255,0.1);border:1px solid rgba(2,169,255,0.15);border-radius:5px;padding:2px 6px;text-decoration:none;">
+              <span style="font-size:9px;font-weight:600;color:#02A9FF;">AniList</span>
+              <span style="font-size:8px;color:#666;">151807</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confidence -->
+      <div style="padding:0 16px 14px;">
+        <div style="background:rgba(76,175,80,0.06);border:1px solid rgba(76,175,80,0.15);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:#888;">Confidence: <span style="color:#4CAF50;font-weight:600;">High</span></div>
+          <div style="font-size:10px;color:#555;margin-top:2px;font-style:italic;">"Title, year and type match exactly"</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:0 16px 20px;display:flex;gap:8px;">
+        <div style="flex:1;background:#02A9FF;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:700;color:#fff;">Confirm & Sync</span>
+        </div>
+        <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:600;color:#666;">Wrong match</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- PROPOSAL B: Bigger cover, side by side comparison -->
+<h3 style="max-width:390px;margin:36px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal B — Side-by-side comparison (Plex vs AniList)</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;">
+
+    <!-- Dimmed backdrop -->
+    <div style="height:220px;background:rgba(13,13,13,0.6);"></div>
+
+    <!-- Bottom sheet -->
+    <div style="background:#161616;border-radius:16px 16px 0 0;padding:0;">
+
+      <!-- Handle -->
+      <div style="display:flex;justify-content:center;padding:10px 0 6px;">
+        <div style="width:32px;height:4px;background:#333;border-radius:2px;"></div>
+      </div>
+
+      <!-- Header -->
+      <div style="padding:0 16px 12px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;font-weight:700;color:#02A9FF;">AniList Match</span>
+        <span style="font-size:10px;color:#E8A925;font-weight:600;background:rgba(232,169,37,0.15);padding:2px 8px;border-radius:8px;">Pending</span>
+      </div>
+
+      <!-- Side by side -->
+      <div style="padding:0 16px 12px;display:flex;gap:12px;">
+        <!-- Plex side -->
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Your library</div>
+          <div style="width:70px;height:100px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;margin:0 auto 6px;"></div>
+          <div style="font-size:11px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+          <div style="font-size:9px;color:#555;margin-top:2px;">Anime · 2024</div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display:flex;align-items:center;padding-top:16px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+
+        <!-- AniList side -->
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:9px;color:#02A9FF;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">AniList</div>
+          <div style="width:70px;height:100px;background:linear-gradient(135deg,#1a237e,#311B92);border-radius:6px;margin:0 auto 6px;border:1px solid rgba(2,169,255,0.3);"></div>
+          <div style="font-size:11px;font-weight:600;color:#F0F0F0;">Ore dake Level Up na Ken</div>
+          <div style="font-size:9px;color:#02A9FF;margin-top:2px;">anilist.co/anime/151807</div>
+        </div>
+      </div>
+
+      <!-- Confidence -->
+      <div style="padding:0 16px 14px;">
+        <div style="background:rgba(76,175,80,0.06);border:1px solid rgba(76,175,80,0.15);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:#888;">Confidence: <span style="color:#4CAF50;font-weight:600;">High</span></div>
+          <div style="font-size:10px;color:#555;margin-top:2px;font-style:italic;">"Title, year and type match exactly"</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:0 16px 20px;display:flex;gap:8px;">
+        <div style="flex:1;background:#02A9FF;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:700;color:#fff;">Confirm & Sync</span>
+        </div>
+        <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:600;color:#666;">Wrong match</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:32px;max-width:420px;margin-left:auto;margin-right:auto;">
+  <h3>Design notes</h3>
+  <ul style="font-size:13px;line-height:1.8;color:#aaa;">
+    <li><strong>Proposal A</strong> — Compact card showing the AniList matched entry with ID tag (clickable). Confidence box below. Minimal, focused.</li>
+    <li><strong>Proposal B</strong> — Side-by-side visual comparison: your library title vs the AniList match. Both show covers. Makes it easy to visually verify the match. Taller sheet.</li>
+    <li><strong>Both</strong> — AniList blue "Confirm & Sync" CTA. "Wrong match" dismisses. Confidence reasoning shown.</li>
+  </ul>
+</div>

@@ -1,0 +1,160 @@
+<h2>Rating Prompt — v2 (full bottom sheet)</h2>
+<p class="subtitle">Triggered on season finale / movie watched / status change to dropped/completed. Two proposals.</p>
+
+<!-- PROPOSAL A: Number grid + action buttons -->
+<h3 style="max-width:390px;margin:24px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal A — Number grid, stacked actions</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;">
+
+    <!-- Dimmed backdrop area (represents title detail behind) -->
+    <div style="height:300px;background:rgba(13,13,13,0.6);display:flex;align-items:flex-end;">
+    </div>
+
+    <!-- Bottom sheet -->
+    <div style="background:#161616;border-radius:16px 16px 0 0;padding:0;">
+
+      <!-- Drag handle -->
+      <div style="display:flex;justify-content:center;padding:10px 0 6px;">
+        <div style="width:32px;height:4px;background:#333;border-radius:2px;"></div>
+      </div>
+
+      <!-- Context line -->
+      <div style="text-align:center;padding:4px 16px 2px;">
+        <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Season 2 completed!</div>
+      </div>
+
+      <!-- Title as link -->
+      <div style="text-align:center;padding:2px 16px 12px;">
+        <span style="font-size:12px;color:#E8A925;text-decoration:underline;text-decoration-color:rgba(232,169,37,0.3);text-underline-offset:2px;">Severance</span>
+      </div>
+
+      <!-- Number grid 5x2 -->
+      <div style="padding:0 24px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">1</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">2</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">3</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">4</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">5</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">6</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">7</div>
+        <div style="aspect-ratio:1;background:#E8A925;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#0D0D0D;">8</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">9</div>
+        <div style="aspect-ratio:1;background:#1E1E1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#666;">10</div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="padding:16px 16px 6px;display:flex;flex-direction:column;gap:8px;">
+        <div style="background:#E8A925;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:700;color:#0D0D0D;">Save rating</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:11px;font-weight:800;color:#F5C518;font-family:Impact,system-ui;">IMDb</span>
+            <span style="font-size:11px;color:#888;">Save & rate</span>
+          </div>
+          <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#02A9FF;">AL</span>
+            <span style="font-size:11px;color:#888;">Save & sync</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skip -->
+      <div style="text-align:center;padding:10px 0 20px;">
+        <span style="font-size:12px;color:#555;">Skip for now</span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- PROPOSAL B: Slider + inline actions -->
+<h3 style="max-width:390px;margin:36px auto 12px;font-family:'DM Sans',system-ui,sans-serif;color:#aaa;font-size:13px;font-weight:500;">Proposal B — Slider, compact actions</h3>
+
+<div style="max-width:390px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;">
+
+    <!-- Dimmed backdrop area -->
+    <div style="height:340px;background:rgba(13,13,13,0.6);"></div>
+
+    <!-- Bottom sheet -->
+    <div style="background:#161616;border-radius:16px 16px 0 0;padding:0;">
+
+      <!-- Drag handle -->
+      <div style="display:flex;justify-content:center;padding:10px 0 6px;">
+        <div style="width:32px;height:4px;background:#333;border-radius:2px;"></div>
+      </div>
+
+      <!-- Context line -->
+      <div style="text-align:center;padding:4px 16px 2px;">
+        <div style="font-size:14px;font-weight:600;color:#F0F0F0;">Season 2 completed!</div>
+      </div>
+
+      <!-- Title as link -->
+      <div style="text-align:center;padding:2px 16px 8px;">
+        <span style="font-size:12px;color:#E8A925;text-decoration:underline;text-decoration-color:rgba(232,169,37,0.3);text-underline-offset:2px;">Severance</span>
+      </div>
+
+      <!-- Big rating number -->
+      <div style="text-align:center;font-size:36px;font-weight:700;color:#E8A925;padding:4px 0 2px;">8</div>
+
+      <!-- Slider -->
+      <div style="position:relative;margin:8px 28px 4px;height:36px;">
+        <div style="position:absolute;top:16px;left:0;right:0;height:4px;background:#2A2A2A;border-radius:2px;">
+          <div style="width:78%;height:100%;background:#E8A925;border-radius:2px;"></div>
+        </div>
+        <div style="position:absolute;top:6px;left:calc(78% - 12px);width:24px;height:24px;background:#E8A925;border-radius:50%;box-shadow:0 2px 8px rgba(232,169,37,0.4);"></div>
+      </div>
+
+      <!-- Scale markers -->
+      <div style="display:flex;justify-content:space-between;padding:0 26px;margin-bottom:14px;">
+        <span style="font-size:9px;color:#444;">1</span>
+        <span style="font-size:9px;color:#444;">2</span>
+        <span style="font-size:9px;color:#444;">3</span>
+        <span style="font-size:9px;color:#444;">4</span>
+        <span style="font-size:9px;color:#444;">5</span>
+        <span style="font-size:9px;color:#444;">6</span>
+        <span style="font-size:9px;color:#444;">7</span>
+        <span style="font-size:9px;color:#E8A925;font-weight:600;">8</span>
+        <span style="font-size:9px;color:#444;">9</span>
+        <span style="font-size:9px;color:#444;">10</span>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="padding:0 16px 6px;display:flex;flex-direction:column;gap:8px;">
+        <div style="background:#E8A925;border-radius:12px;padding:13px;text-align:center;">
+          <span style="font-size:13px;font-weight:700;color:#0D0D0D;">Save rating</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:11px;font-weight:800;color:#F5C518;font-family:Impact,system-ui;">IMDb</span>
+            <span style="font-size:11px;color:#888;">Save & rate</span>
+          </div>
+          <div style="flex:1;background:#1E1E1E;border-radius:12px;padding:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#02A9FF;">AL</span>
+            <span style="font-size:11px;color:#888;">Save & sync</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skip -->
+      <div style="text-align:center;padding:10px 0 20px;">
+        <span style="font-size:12px;color:#555;">Skip for now</span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:32px;max-width:420px;margin-left:auto;margin-right:auto;">
+  <h3>Design notes</h3>
+  <ul style="font-size:13px;line-height:1.8;color:#aaa;">
+    <li><strong>Both</strong> — Full bottom sheet with dimmed backdrop. Title as amber link to detail page. Three-tier actions: "Save rating" primary, IMDb/AniList side by side, "Skip for now" as text.</li>
+    <li><strong>Proposal A</strong> — 5×2 number grid. Large tap targets, zero ambiguity. One tap to select. Sheet is taller but every element is easy to hit.</li>
+    <li><strong>Proposal B</strong> — Slider with big number display. More tactile/fun interaction. Compact vertically. Snaps to integers. Might be fiddly on small screens.</li>
+    <li><strong>AniList "Save & sync"</strong> — Only shown for anime titles with confirmed AniList match.</li>
+  </ul>
+</div>

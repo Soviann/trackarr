@@ -1,0 +1,264 @@
+<h2>Filter Tabs — Where to put them?</h2>
+<p class="subtitle">All three keep filters in thumb reach. Tap to pick.</p>
+
+<div class="cards" style="display:flex;flex-direction:column;gap:24px;max-width:420px;margin:0 auto;">
+
+  <!-- OPTION A: Sticky above bottom navbar -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;position:relative;">
+
+        <!-- Header -->
+        <div style="padding:16px 16px 10px;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+        </div>
+
+        <!-- Content area (scrollable zone) -->
+        <div style="padding:0 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 5/13</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E6</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter tabs — sticky above navbar -->
+        <div style="padding:8px 16px;display:flex;gap:7px;overflow-x:auto;background:#0D0D0D;border-top:1px solid #1A1A1A;">
+          <span style="background:#E8A925;color:#0D0D0D;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap;">All</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Watching</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Up to date</span>
+          <span style="background:#1E1E1E;color:#777;padding:5px 12px;border-radius:18px;font-size:11px;font-weight:500;white-space:nowrap;">Completed</span>
+        </div>
+
+        <!-- Bottom nav -->
+        <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span style="font-size:9px;font-weight:600;color:#E8A925;">Library</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:9px;color:#555;">Search</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span style="font-size:9px;color:#555;">Add</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span style="font-size:9px;color:#555;">Stats</span>
+          </div>
+        </div>
+
+        <!-- Thumb zone indicator -->
+        <div style="position:absolute;top:8px;right:8px;background:rgba(232,169,37,0.2);border:1px solid rgba(232,169,37,0.3);border-radius:8px;padding:4px 8px;">
+          <span style="font-size:9px;color:#E8A925;font-weight:600;">FILTERS AT BOTTOM</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Filters sticky above navbar</h3>
+      <p>Pill tabs pinned just above the bottom nav. Always in thumb zone. Content scrolls above them. Two fixed bars at the bottom (filters + nav).</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Swipe pages with dots -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;position:relative;">
+
+        <!-- Header with current filter name -->
+        <div style="padding:16px 16px 10px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+          <div style="font-size:12px;color:#E8A925;font-weight:600;">Watching</div>
+        </div>
+
+        <!-- Swipe indicator -->
+        <div style="padding:0 16px 6px;display:flex;align-items:center;gap:4px;justify-content:center;">
+          <div style="font-size:10px;color:#444;">← swipe →</div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:0 16px;">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 5/13</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E6</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page dots above navbar -->
+        <div style="display:flex;justify-content:center;gap:6px;padding:10px 0 4px;">
+          <div style="width:18px;height:4px;border-radius:2px;background:#E8A925;"></div>
+          <div style="width:6px;height:4px;border-radius:2px;background:#333;"></div>
+          <div style="width:6px;height:4px;border-radius:2px;background:#333;"></div>
+          <div style="width:6px;height:4px;border-radius:2px;background:#333;"></div>
+          <div style="width:6px;height:4px;border-radius:2px;background:#333;"></div>
+          <div style="width:6px;height:4px;border-radius:2px;background:#333;"></div>
+        </div>
+
+        <!-- Bottom nav -->
+        <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span style="font-size:9px;font-weight:600;color:#E8A925;">Library</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:9px;color:#555;">Search</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span style="font-size:9px;color:#555;">Add</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span style="font-size:9px;color:#555;">Stats</span>
+          </div>
+        </div>
+
+        <div style="position:absolute;top:8px;right:8px;background:rgba(232,169,37,0.2);border:1px solid rgba(232,169,37,0.3);border-radius:8px;padding:4px 8px;">
+          <span style="font-size:9px;color:#E8A925;font-weight:600;">SWIPE TO FILTER</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Swipeable pages</h3>
+      <p>No visible filter bar at all. <strong>Swipe left/right</strong> to switch between All → Watching → Up to date → etc. Dot indicators above navbar. Maximum content space, gesture-driven. But: loses the "All" overview.</p>
+    </div>
+  </div>
+
+  <!-- OPTION C: Filters in bottom sheet / expandable -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="border:none;overflow:hidden;border-radius:16px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0D0D0D;font-family:'DM Sans',system-ui,sans-serif;padding:0;border-radius:16px 16px 0 0;overflow:hidden;position:relative;">
+
+        <!-- Header -->
+        <div style="padding:16px 16px 10px;">
+          <div style="font-size:20px;font-weight:700;color:#fff;">Library</div>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:0 16px;">
+          <div style="font-size:11px;color:#E8A925;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Watching</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#2D5A27,#4A8C3F);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Severance</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 7/10</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E8</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;background:#161616;border-radius:12px;padding:10px;border:1px solid #222;">
+              <div style="width:44px;height:62px;background:linear-gradient(135deg,#1a237e,#4A148C);border-radius:6px;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#F0F0F0;">Solo Leveling</div>
+                <div style="font-size:10px;color:#666;margin-top:2px;">S2 · 5/13</div>
+              </div>
+              <div style="width:32px;height:32px;border-radius:50%;background:#E8A925;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;color:#0D0D0D;">E6</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Completed</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#BF360C,#E65100);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Dune</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#4E342E,#795548);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">Shōgun</div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:8px;overflow:hidden;">
+              <div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1B5E20,#2E7D32);display:flex;align-items:flex-end;">
+                <div style="width:100%;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));">
+                  <div style="font-size:10px;font-weight:600;color:#fff;">BB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current filter chip + change button above navbar -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px 4px;background:#0D0D0D;border-top:1px solid #1A1A1A;">
+          <span style="background:#E8A925;color:#0D0D0D;padding:5px 14px;border-radius:18px;font-size:11px;font-weight:600;">All</span>
+          <span style="color:#555;font-size:10px;">tap to change filter</span>
+        </div>
+
+        <!-- Bottom nav -->
+        <div style="display:flex;border-top:1px solid #1A1A1A;background:#0D0D0D;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;background:rgba(232,169,37,0.12);border-top:2px solid #E8A925;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A925" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span style="font-size:9px;font-weight:600;color:#E8A925;">Library</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:9px;color:#555;">Search</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span style="font-size:9px;color:#555;">Add</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 0 14px;border-top:2px solid transparent;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span style="font-size:9px;color:#555;">Stats</span>
+          </div>
+        </div>
+
+        <div style="position:absolute;top:8px;right:8px;background:rgba(232,169,37,0.2);border:1px solid rgba(232,169,37,0.3);border-radius:8px;padding:4px 8px;">
+          <span style="font-size:9px;color:#E8A925;font-weight:600;">TAP TO FILTER</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Single chip + bottom sheet</h3>
+      <p>One active filter chip above the navbar. Tapping it opens a <strong>bottom sheet</strong> with all filter options. Minimal footprint, keeps the "All" view, thumb-friendly. The filter row takes almost no vertical space.</p>
+    </div>
+  </div>
+
+</div>
