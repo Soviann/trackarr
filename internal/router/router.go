@@ -9,6 +9,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/config"
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	mw "github.com/nicolasvasse/plextracker/internal/middleware"
+	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
 func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
@@ -17,6 +18,18 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
+
+	// Repositories
+	titleRepo := repository.NewTitleRepository(db)
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+	eventRepo := repository.NewWatchEventRepository(db)
+
+	// Handlers
+	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
+	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo)
+	seasons := handler.NewSeasonHandler(seasonRepo)
+	covers := handler.NewCoverHandler(cfg.DataDir)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -27,10 +40,22 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		r.Post("/auth/google", auth.GoogleCallback)
 		r.Post("/auth/logout", auth.Logout)
 
+		// Covers (unauthenticated for caching)
+		r.Get("/covers/{filename}", covers.Serve)
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
-			// Title routes will go here
+
+			r.Get("/titles", titles.List)
+			r.Get("/titles/{id}", titles.GetByID)
+			r.Post("/titles", titles.Create)
+			r.Patch("/titles/{id}", titles.Update)
+
+			r.Patch("/titles/{titleID}/episodes/{episodeID}", episodes.ToggleWatched)
+			r.Post("/titles/{titleID}/episodes/batch-watch", episodes.BatchMarkWatched)
+
+			r.Patch("/titles/{titleID}/seasons/{seasonID}", seasons.UpdateRating)
 		})
 	})
 
