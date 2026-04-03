@@ -4,6 +4,7 @@ import Router from 'preact-router'
 import { Navbar } from './components/Navbar'
 import { Library } from './pages/Library'
 import { TitleDetail } from './pages/TitleDetail'
+import { Search } from './pages/Search'
 
 function Placeholder({ name }: { name: string; path?: string }) {
   return (
@@ -32,7 +33,7 @@ export function App() {
     <div style={{ minHeight: '100vh', paddingBottom: hideNavbar ? 0 : '108px' }}>
       <Router onChange={handleRoute}>
         <Library path="/" />
-        <Placeholder name="Search" path="/search" />
+        <Search path="/search" />
         <Placeholder name="Add" path="/add" />
         <Placeholder name="Stats" path="/stats" />
         <Placeholder name="Login" path="/login" />
