@@ -7,6 +7,7 @@ import { TitleDetail } from './pages/TitleDetail'
 import { Search } from './pages/Search'
 import { Add } from './pages/Add'
 import { Validate } from './pages/Validate'
+import { MatchReview } from './pages/MatchReview'
 
 function Placeholder({ name }: { name: string; path?: string }) {
   return (
@@ -41,7 +42,7 @@ export function App() {
         <Placeholder name="Login" path="/login" />
         <TitleDetail path="/title/:id" />
         <Validate path="/validate" />
-        <Placeholder name="Match Review" path="/match-review" />
+        <MatchReview path="/match-review" />
       </Router>
       {!hideNavbar && <Navbar currentPath={currentPath} onNavigate={navigate} />}
     </div>

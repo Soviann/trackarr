@@ -1,0 +1,126 @@
+import { route } from 'preact-router'
+import type { Title } from '../types'
+import { colors } from '../theme'
+import { apiFetch } from '../api'
+
+interface MatchReviewCardProps {
+  title: Title
+  onUpdate: () => void
+}
+
+export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
+  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const isUnconfirmed = title.match_status === 'unconfirmed'
+  const borderColor = isUnconfirmed ? colors.accentCoral : colors.accentAmber
+
+  const handleConfirm = async (e: Event) => {
+    e.stopPropagation()
+    await apiFetch(`/titles/${title.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ match_status: 'confirmed' }),
+    })
+    onUpdate()
+  }
+
+  const idChips = [
+    title.imdb_id && { label: 'IMDb', value: title.imdb_id },
+    title.tmdb_id && { label: 'TMDB', value: String(title.tmdb_id) },
+    title.tvdb_id && { label: 'TVDB', value: String(title.tvdb_id) },
+    title.anilist_id && { label: 'AniList', value: String(title.anilist_id) },
+  ].filter(Boolean) as { label: string; value: string }[]
+
+  return (
+    <div
+      onClick={() => route(`/title/${title.id}`)}
+      style={{
+        background: colors.bgCard,
+        borderRadius: '12px',
+        padding: '12px',
+        border: `1px solid ${borderColor}33`,
+        borderLeft: `3px solid ${borderColor}`,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        <div style={{
+          width: '48px', height: '68px', borderRadius: '6px', flexShrink: 0,
+          background: title.cover_url
+            ? `url(/api/covers/${title.cover_url}) center/cover`
+            : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>{name}</div>
+          <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '2px' }}>
+            {title.type} · {title.year}
+          </div>
+
+          {/* ID chips */}
+          {idChips.length > 0 && (
+            <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {idChips.map((chip) => (
+                <span
+                  key={chip.label}
+                  style={{
+                    fontSize: '9px',
+                    color: colors.textSecondary,
+                    background: colors.bgSurface,
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                  }}
+                >
+                  {chip.label}: {chip.value}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Status indicator */}
+          <div style={{
+            fontSize: '10px',
+            color: borderColor,
+            fontWeight: 500,
+            marginTop: '6px',
+          }}>
+            {isUnconfirmed ? 'Unconfirmed match' : 'Pending review'}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+        <button
+          onClick={handleConfirm}
+          style={{
+            flex: 1,
+            padding: '8px',
+            borderRadius: '8px',
+            background: `${colors.accentGreen}1F`,
+            border: `1px solid ${colors.accentGreen}33`,
+            color: colors.accentGreen,
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Confirm
+        </button>
+        <button
+          onClick={(e: Event) => { e.stopPropagation(); route(`/validate?q=${encodeURIComponent(name)}`) }}
+          style={{
+            flex: 1,
+            padding: '8px',
+            borderRadius: '8px',
+            background: colors.bgSurface,
+            border: `1px solid ${colors.borderCard}`,
+            color: colors.textSecondary,
+            fontSize: '11px',
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Fix match
+        </button>
+      </div>
+    </div>
+  )
+}
