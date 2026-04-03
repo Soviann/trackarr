@@ -58,10 +58,11 @@ type PlexService struct {
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
+	push     *PushService       // nil = no push notifications
 }
 
-func NewPlexService(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, pipeline *matching.Pipeline) *PlexService {
-	return &PlexService{titles: titles, seasons: seasons, episodes: episodes, events: events, pipeline: pipeline}
+func NewPlexService(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, pipeline *matching.Pipeline, push *PushService) *PlexService {
+	return &PlexService{titles: titles, seasons: seasons, episodes: episodes, events: events, pipeline: pipeline, push: push}
 }
 
 func (s *PlexService) ProcessScrobble(payload *PlexPayload, rawPayload string) error {
@@ -110,6 +111,12 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 			Source:      model.WatchEventSourcePlex,
 			PlexPayload: &rawPayload,
 		})
+
+		s.push.SendNotification(
+			fmt.Sprintf("Note %s ?", meta.Title),
+			"Tu viens de regarder ce film",
+			fmt.Sprintf("/title/%d", titleID),
+		)
 		return nil
 	}
 
@@ -118,6 +125,15 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 		Source:      model.WatchEventSourcePlex,
 		PlexPayload: &rawPayload,
 	})
+
+	// Prompt rating for movies on re-scrobble too
+	if title.MyRating == nil {
+		s.push.SendNotification(
+			fmt.Sprintf("Note %s ?", meta.Title),
+			"Tu viens de regarder ce film",
+			fmt.Sprintf("/title/%d", title.ID),
+		)
+	}
 	return nil
 }
 

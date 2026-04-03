@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -143,6 +144,14 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		result.NewStatus = *newStatus
 		s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
 		title.SeriesStatus = newStatus
+
+		if *newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled {
+			s.push.SendNotification(
+				title.PrimaryName(),
+				"La série est terminée",
+				fmt.Sprintf("/title/%d", title.ID),
+			)
+		}
 	}
 
 	// Update cover if missing

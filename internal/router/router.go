@@ -55,16 +55,16 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	settingRepo := repository.NewSettingRepository(db)
 
 	// Services
-	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline)
-
 	var pushSvc *service.PushService
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
+	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
+
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
-	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo)
+	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc)
