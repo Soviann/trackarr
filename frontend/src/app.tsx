@@ -5,6 +5,8 @@ import { Navbar } from './components/Navbar'
 import { Library } from './pages/Library'
 import { TitleDetail } from './pages/TitleDetail'
 import { Search } from './pages/Search'
+import { Add } from './pages/Add'
+import { Validate } from './pages/Validate'
 
 function Placeholder({ name }: { name: string; path?: string }) {
   return (
@@ -34,11 +36,11 @@ export function App() {
       <Router onChange={handleRoute}>
         <Library path="/" />
         <Search path="/search" />
-        <Placeholder name="Add" path="/add" />
+        <Add path="/add" />
         <Placeholder name="Stats" path="/stats" />
         <Placeholder name="Login" path="/login" />
         <TitleDetail path="/title/:id" />
-        <Placeholder name="Validate" path="/validate" />
+        <Validate path="/validate" />
         <Placeholder name="Match Review" path="/match-review" />
       </Router>
       {!hideNavbar && <Navbar currentPath={currentPath} onNavigate={navigate} />}
