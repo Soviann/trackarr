@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: Phase 8 complete
+## Status: Phase 9 complete
 
 ## Backend (Go)
 
@@ -58,7 +58,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, spa. DI via struct with repos.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, spa. DI via struct with repos.
 
 ### Routes
 
@@ -78,6 +78,10 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
+| GET | `/api/settings` | Get | Yes |
+| GET | `/api/anilist/auth` | Authorize | Yes |
+| POST | `/api/anilist/token` | SaveToken | Yes |
+| DELETE | `/api/anilist/token` | Disconnect | Yes |
 | GET | `/api/config` | PublicConfig | No |
 
 ## Frontend (Preact)
