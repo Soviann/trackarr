@@ -22,7 +22,7 @@ func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepo
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 
-	svc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo)
+	svc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, nil)
 	return svc, titleRepo
 }
 

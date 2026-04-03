@@ -8,6 +8,7 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
 type PlexPayload struct {
@@ -56,10 +57,11 @@ type PlexService struct {
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
+	pipeline *matching.Pipeline // nil = skip matching, create with basic info
 }
 
-func NewPlexService(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository) *PlexService {
-	return &PlexService{titles: titles, seasons: seasons, episodes: episodes, events: events}
+func NewPlexService(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, pipeline *matching.Pipeline) *PlexService {
+	return &PlexService{titles: titles, seasons: seasons, episodes: episodes, events: events, pipeline: pipeline}
 }
 
 func (s *PlexService) ProcessScrobble(payload *PlexPayload, rawPayload string) error {
@@ -81,7 +83,6 @@ func (s *PlexService) ProcessScrobble(payload *PlexPayload, rawPayload string) e
 }
 
 func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
-	// Try to find existing title
 	var imdbID *string
 	var tmdbID *int64
 	ratingKey := meta.RatingKey
@@ -95,25 +96,10 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 
 	title, err := s.titles.FindByExternalID(imdbID, tmdbID, &ratingKey)
 	if err != nil {
-		// Create new title
-		newTitle := &model.Title{
-			Type:          model.TitleTypeMovie,
-			Year:          meta.Year,
-			Status:        model.TitleStatusCompleted,
-			MatchStatus:   model.MatchStatusConfirmed,
-			PlexRatingKey: &ratingKey,
-		}
-		if ids.IMDB != "" {
-			newTitle.IMDBID = &ids.IMDB
-		}
-		if ids.TMDB != 0 {
-			newTitle.TMDBID = &ids.TMDB
-		}
-		if ids.TVDB != 0 {
-			newTitle.TVDBID = &ids.TVDB
-		}
+		// Create new title — run matching pipeline if available
+		newTitle, names := s.buildNewTitle(meta, ids, model.TitleTypeMovie, ratingKey)
+		newTitle.Status = model.TitleStatusCompleted
 
-		names := []model.TitleName{{Name: meta.Title, Language: "en", IsPrimary: true}}
 		titleID, err := s.titles.Create(newTitle, names)
 		if err != nil {
 			return fmt.Errorf("create movie: %w", err)
@@ -127,7 +113,6 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 		return nil
 	}
 
-	// Log re-watch event
 	s.events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		Source:      model.WatchEventSourcePlex,
@@ -137,7 +122,6 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 }
 
 func (s *PlexService) processEpisode(meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
-	// Find title by grandparent rating key or external IDs
 	grandparentKey := meta.GrandparentRatingKey
 	var imdbID *string
 	var tmdbID *int64
@@ -151,30 +135,21 @@ func (s *PlexService) processEpisode(meta PlexMetadata, ids PlexExternalIDs, raw
 
 	title, err := s.titles.FindByExternalID(imdbID, tmdbID, &grandparentKey)
 	if err != nil {
-		// Create new series
 		seriesName := meta.GrandparentTitle
 		if seriesName == "" {
 			seriesName = meta.Title
 		}
 
-		newTitle := &model.Title{
-			Type:          model.TitleTypeSeries,
-			Year:          meta.Year,
-			Status:        model.TitleStatusWatching,
-			MatchStatus:   model.MatchStatusConfirmed,
-			PlexRatingKey: &grandparentKey,
+		seriesMeta := PlexMetadata{
+			Title:    seriesName,
+			Year:     meta.Year,
+			Type:     "show",
+			RatingKey: grandparentKey,
+			GUID:     meta.GUID,
 		}
-		if ids.IMDB != "" {
-			newTitle.IMDBID = &ids.IMDB
-		}
-		if ids.TMDB != 0 {
-			newTitle.TMDBID = &ids.TMDB
-		}
-		if ids.TVDB != 0 {
-			newTitle.TVDBID = &ids.TVDB
-		}
+		newTitle, names := s.buildNewTitle(seriesMeta, ids, model.TitleTypeSeries, grandparentKey)
+		newTitle.Status = model.TitleStatusWatching
 
-		names := []model.TitleName{{Name: seriesName, Language: "en", IsPrimary: true}}
 		titleID, createErr := s.titles.Create(newTitle, names)
 		if createErr != nil {
 			return fmt.Errorf("create series: %w", createErr)
@@ -207,6 +182,61 @@ func (s *PlexService) processEpisode(meta PlexMetadata, ids PlexExternalIDs, raw
 	})
 
 	return nil
+}
+
+// buildNewTitle runs the matching pipeline (if available) and constructs a Title + names.
+func (s *PlexService) buildNewTitle(meta PlexMetadata, ids PlexExternalIDs, titleType model.TitleType, ratingKey string) (*model.Title, []model.TitleName) {
+	title := &model.Title{
+		Type:          titleType,
+		Year:          meta.Year,
+		PlexRatingKey: &ratingKey,
+	}
+
+	if s.pipeline != nil {
+		result, err := s.pipeline.Run(matching.MatchInput{
+			Title:  meta.Title,
+			Year:   meta.Year,
+			Type:   titleType,
+			IMDBID: ids.IMDB,
+			TMDBID: ids.TMDB,
+			TVDBID: ids.TVDB,
+		})
+		if err == nil {
+			title.MatchStatus = result.MatchStatus
+			title.Type = result.TitleType
+			if result.IMDBID != "" {
+				title.IMDBID = &result.IMDBID
+			}
+			if result.TMDBID != 0 {
+				title.TMDBID = &result.TMDBID
+			}
+			if result.TVDBID != 0 {
+				title.TVDBID = &result.TVDBID
+			}
+			if result.AniListID != 0 {
+				title.AniListID = &result.AniListID
+			}
+			if result.CoverFile != "" {
+				coverURL := "/covers/" + result.CoverFile
+				title.CoverURL = &coverURL
+			}
+			return title, result.Names
+		}
+	}
+
+	// Fallback: no pipeline or pipeline error
+	title.MatchStatus = model.MatchStatusConfirmed
+	if ids.IMDB != "" {
+		title.IMDBID = &ids.IMDB
+	}
+	if ids.TMDB != 0 {
+		title.TMDBID = &ids.TMDB
+	}
+	if ids.TVDB != 0 {
+		title.TVDBID = &ids.TVDB
+	}
+	names := []model.TitleName{{Name: meta.Title, Language: "en", IsPrimary: true}}
+	return title, names
 }
 
 func ParsePlexPayload(data []byte) (*PlexPayload, error) {

@@ -44,14 +44,14 @@ type TMDBSearchResult struct {
 	Overview     string  `json:"overview"`
 }
 
-func (r *TMDBSearchResult) DisplayTitle() string {
+func (r TMDBSearchResult) DisplayTitle() string {
 	if r.Title != "" {
 		return r.Title
 	}
 	return r.Name
 }
 
-func (r *TMDBSearchResult) Year() int {
+func (r TMDBSearchResult) Year() int {
 	date := r.ReleaseDate
 	if date == "" {
 		date = r.FirstAirDate
