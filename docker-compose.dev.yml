@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: plextracker-dev
+    ports:
+      - "8080:8080"   # Go backend
+      - "5173:5173"   # Vite dev server
+    volumes:
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+      - node-modules:/app/frontend/node_modules
+    environment:
+      - GOOGLE_CLIENT_ID=dev
+      - GOOGLE_ALLOWED_EMAIL=dev@localhost
+      - JWT_SECRET=dev-secret-change-me
+      - TMDB_API_KEY=
+      - ANILIST_CLIENT_ID=
+      - ANILIST_CLIENT_SECRET=
+      - GEMINI_API_KEY=
+      - VAPID_PUBLIC_KEY=
+      - VAPID_PRIVATE_KEY=
+      - VAPID_SUBJECT=mailto:dev@localhost
+      - DATA_DIR=/app/data
+    working_dir: /app
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
+  node-modules:

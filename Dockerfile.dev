@@ -1,0 +1,25 @@
+FROM golang:1.24-bookworm
+
+# Node.js 22 LTS
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Air for Go hot reload
+RUN go install github.com/air-verse/air@v1.61.7
+
+WORKDIR /app
+
+# Go dependencies (cached layer)
+COPY go.mod go.sum* ./
+RUN go mod download 2>/dev/null || true
+
+# Frontend dependencies (cached layer)
+COPY frontend/package.json frontend/package-lock.json* ./frontend/
+RUN cd frontend && npm ci 2>/dev/null || true
+
+COPY . .
+
+EXPOSE 8080 5173
+
+CMD ["air", "-c", ".air.toml"]
