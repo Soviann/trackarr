@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: Phase 6 complete
+## Status: Phase 7 complete
 
 ## Backend (Go)
 
@@ -77,4 +77,41 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ## Frontend (Preact)
 
-Design tokens in `frontend/src/theme.ts`.
+Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+
+### Hooks
+
+| Hook | File | Purpose |
+|---|---|---|
+| `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
+
+### Components
+
+| Component | File | Purpose |
+|---|---|---|
+| Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
+| FilterBar | `components/FilterBar.tsx` | Library filter tabs (All/Watching/Up to date/Completed/Dropped/Plan) |
+| TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
+| PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3 aspect, gradient overlay) |
+| StatusBadge | `components/StatusBadge.tsx` | Colored status pill |
+| SeasonTab | `components/SeasonTab.tsx` | Season pill with progress/check |
+| EpisodeRow | `components/EpisodeRow.tsx` | Episode row with toggle watched |
+| ActionBar | `components/ActionBar.tsx` | Title detail action bar (next ep, IMDb, AniList, Rate) |
+| BottomSheet | `components/BottomSheet.tsx` | Reusable slide-up sheet with backdrop |
+| RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList buttons |
+| EditSheet | `components/EditSheet.tsx` | Edit type/status |
+| AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
+| MatchReviewCard | `components/MatchReviewCard.tsx` | Match review card with ID chips + confirm/fix |
+
+### Pages & Routes
+
+| Route | Page | File |
+|---|---|---|
+| `/` | Library | `pages/Library.tsx` |
+| `/search` | Search | `pages/Search.tsx` |
+| `/add` | Add | `pages/Add.tsx` |
+| `/stats` | Stats (placeholder) | `app.tsx` |
+| `/login` | Login | `pages/Login.tsx` |
+| `/title/:id` | TitleDetail | `pages/TitleDetail.tsx` |
+| `/validate` | Validate | `pages/Validate.tsx` |
+| `/match-review` | MatchReview | `pages/MatchReview.tsx` |
