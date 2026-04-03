@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact'
 import { colors, accentWash } from '../theme'
 
 const tabs = [
@@ -57,23 +58,27 @@ const tabs = [
 interface NavbarProps {
   currentPath: string
   onNavigate: (path: string) => void
+  above?: ComponentChildren
 }
 
-export function Navbar({ currentPath, onNavigate }: NavbarProps) {
+export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
   const activePath = currentPath === '/' ? '/' : `/${currentPath.split('/')[1]}`
 
   return (
-    <nav style={{
-      display: 'flex',
-      background: colors.bgPrimary,
-      borderTop: `1px solid ${colors.borderSubtle}`,
+    <div style={{
       position: 'fixed',
       bottom: 0,
       left: 0,
       right: 0,
       zIndex: 100,
-      paddingBottom: 'env(safe-area-inset-bottom)',
+      background: colors.bgPrimary,
     }}>
+      {above}
+      <nav style={{
+        display: 'flex',
+        borderTop: `1px solid ${colors.borderSubtle}`,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
       {tabs.map((tab) => {
         const active = activePath === tab.path
         const iconColor = active ? tab.color : colors.textMuted
@@ -109,5 +114,6 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
         )
       })}
     </nav>
+    </div>
   )
 }

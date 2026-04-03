@@ -21,6 +21,9 @@ frontend/dist/
 # Simkl backup (sensitive)
 *.zip
 
+# Environment (secrets)
+.env.local
+
 # Claude local settings
 .claude/settings.local.json
 

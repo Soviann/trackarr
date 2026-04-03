@@ -20,16 +20,9 @@ export function FilterBar({ active, onChange }: FilterBarProps) {
   return (
     <div style={{
       display: 'flex',
-      gap: 0,
       borderTop: `1px solid ${colors.borderSubtle}`,
       background: colors.bgPrimary,
       overflowX: 'auto',
-      position: 'fixed',
-      bottom: '72px',
-      left: 0,
-      right: 0,
-      zIndex: 99,
-      paddingBottom: 0,
     }}>
       {tabs.map((tab) => {
         const isActive = active === tab.id
@@ -38,7 +31,7 @@ export function FilterBar({ active, onChange }: FilterBarProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             style={{
-              flex: 'none',
+              flex: 1,
               padding: '8px 12px',
               textAlign: 'center',
               background: isActive ? accentWash(colors.accentBlue) : 'transparent',

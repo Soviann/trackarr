@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import Router from 'preact-router'
 import { Navbar } from './components/Navbar'
+import { FilterBar, FilterTab } from './components/FilterBar'
 import { Library } from './pages/Library'
 import { TitleDetail } from './pages/TitleDetail'
 import { Search } from './pages/Search'
@@ -21,6 +22,7 @@ function Placeholder({ name }: { name: string; path?: string }) {
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const [filterTab, setFilterTab] = useState<FilterTab>('all')
 
   const handleRoute = (e: { url: string }) => {
     setCurrentPath(e.url)
@@ -30,13 +32,13 @@ export function App() {
     route(path)
   }
 
-  // Hide navbar on login and validate pages
   const hideNavbar = currentPath === '/login' || currentPath.startsWith('/validate')
+  const showFilterBar = currentPath === '/'
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: hideNavbar ? 0 : '108px' }}>
       <Router onChange={handleRoute}>
-        <Library path="/" />
+        <Library path="/" filterTab={filterTab} />
         <Search path="/search" />
         <Add path="/add" />
         <Placeholder name="Stats" path="/stats" />
@@ -45,7 +47,13 @@ export function App() {
         <Validate path="/validate" />
         <MatchReview path="/match-review" />
       </Router>
-      {!hideNavbar && <Navbar currentPath={currentPath} onNavigate={navigate} />}
+      {!hideNavbar && (
+        <Navbar
+          currentPath={currentPath}
+          onNavigate={navigate}
+          above={showFilterBar ? <FilterBar active={filterTab} onChange={setFilterTab} /> : undefined}
+        />
+      )}
     </div>
   )
 }

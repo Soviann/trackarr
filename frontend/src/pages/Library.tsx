@@ -1,9 +1,9 @@
-import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
+import { apiFetch } from '../api'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
-import { FilterBar, FilterTab } from '../components/FilterBar'
+import type { FilterTab } from '../components/FilterBar'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 
@@ -115,8 +115,7 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
   )
 }
 
-export function Library({ path }: { path?: string }) {
-  const [tab, setTab] = useState<FilterTab>('all')
+export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?: FilterTab }) {
   const { data: titles, loading, mutate } = useApi<Title[]>('/titles')
 
   const allTitles = titles ?? []
@@ -137,8 +136,23 @@ export function Library({ path }: { path?: string }) {
   return (
     <div style={{ paddingBottom: '36px' }}>
       {/* Header */}
-      <div style={{ padding: '16px 16px 10px' }}>
+      <div style={{ padding: '16px 16px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>Library</div>
+        <button
+          onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route('/login') }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
 
       {loading && (
@@ -202,7 +216,6 @@ export function Library({ path }: { path?: string }) {
         </>
       )}
 
-      <FilterBar active={tab} onChange={setTab} />
     </div>
   )
 }
