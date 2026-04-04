@@ -25,7 +25,10 @@ export function Login({ path }: { path?: string }) {
 
   useEffect(() => {
     const init = async () => {
-      const cfg = await fetch('/api/config').then((r) => r.json())
+      const res = await fetch('/api/config')
+      if (!res.ok) return
+      const cfg = await res.json()
+      if (!cfg) return
       if (cfg.dev_login) setDevLogin(true)
       const clientId = cfg.google_client_id
       if (!clientId || clientId === 'dev') return
