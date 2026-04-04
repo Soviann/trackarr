@@ -7,33 +7,6 @@ on:
   workflow_call:
 
 jobs:
-  test-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Run Go tests
-        run: go test -tags sqlite_fts5 ./... -count=1
-
-  lint-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
-
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -50,4 +23,48 @@ jobs:
 
       - name: Build
         run: cd frontend && npx vite build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+  test-backend:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Run Go tests
+        run: go test -tags sqlite_fts5 ./... -count=1
+
+  lint-backend:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
 
