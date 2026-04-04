@@ -21,6 +21,7 @@
   "share_target": {
     "action": "/add",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "url": "url"
     }
