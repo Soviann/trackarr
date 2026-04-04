@@ -10,16 +10,8 @@ import { Add } from './pages/Add'
 import { Validate } from './pages/Validate'
 import { MatchReview } from './pages/MatchReview'
 import { Login } from './pages/Login'
+import { Stats } from './pages/Stats'
 import { usePush } from './hooks/usePush'
-
-function Placeholder({ name }: { name: string; path?: string }) {
-  return (
-    <div style={{ padding: '20px' }}>
-      <h1 style={{ fontSize: '20px', fontWeight: 700 }}>{name}</h1>
-      <p style={{ color: '#666', marginTop: '8px' }}>Coming soon.</p>
-    </div>
-  )
-}
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
@@ -51,7 +43,7 @@ export function App() {
         <Library path="/" filterTab={filterTab} />
         <Search path="/search" />
         <Add path="/add" />
-        <Placeholder name="Stats" path="/stats" />
+        <Stats path="/stats" />
         <Login path="/login" />
         <TitleDetail path="/title/:id" />
         <Validate path="/validate" />

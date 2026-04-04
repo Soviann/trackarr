@@ -50,3 +50,47 @@ export interface Episode {
   watched: boolean
   watched_at: string | null
 }
+
+// Stats
+export interface StatsResponse {
+  overview: StatsOverview
+  ratings: StatsRatings
+  breakdown: StatsBreakdown
+  fun_stats: FunStat[]
+  year_summary: StatsYear
+}
+
+export interface StatsOverview {
+  total_titles: number
+  total_movies: number
+  total_series: number
+  total_anime: number
+  episodes_watched: number
+  completion_rate: number
+  average_rating: number
+}
+
+export interface StatsRatings {
+  distribution: number[]
+  average_by_type: Record<string, number>
+  insight: string
+}
+
+export interface StatsBreakdown {
+  by_status: Record<string, number>
+  by_type: Record<string, number>
+}
+
+export interface FunStat {
+  id: string
+  icon: string
+  title: string
+  value: string
+  detail: string
+}
+
+export interface StatsYear {
+  titles_added: number
+  episodes_watched: number
+  completions: number
+}

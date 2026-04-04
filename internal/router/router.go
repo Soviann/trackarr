@@ -64,6 +64,9 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 
 	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
 
+	// Stats repository
+	statsRepo := repository.NewStatsRepository(db)
+
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
 	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc)
@@ -73,6 +76,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
 	settings := handler.NewSettingsHandler(settingRepo)
+	stats := handler.NewStatsHandler(statsRepo)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -112,6 +116,8 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 
 			r.Post("/push/subscribe", push.Subscribe)
 			r.Delete("/push/subscribe", push.Unsubscribe)
+
+			r.Get("/stats", stats.Get)
 
 			r.Get("/settings", settings.Get)
 
