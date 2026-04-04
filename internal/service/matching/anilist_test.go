@@ -15,7 +15,7 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphqlRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 
 		switch {
 		case contains(req.Query, "Page(perPage"):
@@ -23,7 +23,7 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 			malID := int64(21)
 			eps := 148
 			year := 2011
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Page": map[string]interface{}{
 						"media": []interface{}{
@@ -48,7 +48,7 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 			malID := int64(21)
 			eps := 12
 			year := 2015
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Media": map[string]interface{}{
 						"id":    21,
@@ -67,7 +67,7 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 		case contains(req.Query, "SaveMediaListEntry"):
 			// Sync rating mutation
 			assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"SaveMediaListEntry": map[string]interface{}{
 						"id":    1,

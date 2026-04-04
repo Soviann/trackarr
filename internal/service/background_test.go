@@ -35,23 +35,27 @@ func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
 
 	// Create a series with status=watching, series_status=ended
 	ended := model.SeriesStatusEnded
-	titleID, _ := titleRepo.Create(&model.Title{
+	titleID, err := titleRepo.Create(&model.Title{
 		Type:         model.TitleTypeSeries,
 		Year:         2023,
 		Status:       model.TitleStatusWatching,
 		MatchStatus:  model.MatchStatusConfirmed,
 		SeriesStatus: &ended,
 	}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
 
 	// Create 1 season with 2 episodes, all watched
-	season, _ := seasonRepo.GetOrCreate(titleID, 1)
-	seasonRepo.UpdateTotalEpisodes(season.ID, 2)
+	season, err := seasonRepo.GetOrCreate(titleID, 1)
+	require.NoError(t, err)
+	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
 
-	ep1, _ := episodeRepo.GetOrCreate(season.ID, 1)
-	ep2, _ := episodeRepo.GetOrCreate(season.ID, 2)
+	ep1, err := episodeRepo.GetOrCreate(season.ID, 1)
+	require.NoError(t, err)
+	ep2, err := episodeRepo.GetOrCreate(season.ID, 2)
+	require.NoError(t, err)
 	now := time.Now().UTC()
-	episodeRepo.MarkWatched(ep1.ID, now)
-	episodeRepo.MarkWatched(ep2.ID, now)
+	require.NoError(t, episodeRepo.MarkWatched(ep1.ID, now))
+	require.NoError(t, episodeRepo.MarkWatched(ep2.ID, now))
 
 	// Run refresh
 	results := svc.RefreshTitles()
@@ -67,12 +71,13 @@ func TestBackgroundService_SkipCompletedTitles(t *testing.T) {
 	svc, titleRepo, _, _ := setupBackgroundService(t)
 
 	// Create a completed title
-	titleRepo.Create(&model.Title{
+	_, err := titleRepo.Create(&model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2024,
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
 
 	results := svc.RefreshTitles()
 	assert.Empty(t, results)
@@ -82,20 +87,24 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 	svc, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
 
 	ended := model.SeriesStatusEnded
-	titleID, _ := titleRepo.Create(&model.Title{
+	titleID, err := titleRepo.Create(&model.Title{
 		Type:         model.TitleTypeSeries,
 		Year:         2023,
 		Status:       model.TitleStatusWatching,
 		MatchStatus:  model.MatchStatusConfirmed,
 		SeriesStatus: &ended,
 	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
 
-	season, _ := seasonRepo.GetOrCreate(titleID, 1)
-	seasonRepo.UpdateTotalEpisodes(season.ID, 2)
+	season, err := seasonRepo.GetOrCreate(titleID, 1)
+	require.NoError(t, err)
+	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
 
-	ep1, _ := episodeRepo.GetOrCreate(season.ID, 1)
-	episodeRepo.GetOrCreate(season.ID, 2) // ep2 unwatched
-	episodeRepo.MarkWatched(ep1.ID, time.Now().UTC())
+	ep1, err := episodeRepo.GetOrCreate(season.ID, 1)
+	require.NoError(t, err)
+	_, err = episodeRepo.GetOrCreate(season.ID, 2) // ep2 unwatched
+	require.NoError(t, err)
+	require.NoError(t, episodeRepo.MarkWatched(ep1.ID, time.Now().UTC()))
 
 	results := svc.RefreshTitles()
 

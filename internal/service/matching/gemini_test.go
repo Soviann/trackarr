@@ -36,7 +36,7 @@ func geminiOKResponse(jsonStr string) []byte {
 func TestGeminiVerifyMatch(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Query().Get("key"), "test-key")
-		w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "Exact title and year match"}`))
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "Exact title and year match"}`))
 	}))
 	defer server.Close()
 
@@ -55,7 +55,7 @@ func TestGeminiVerifyMatch(t *testing.T) {
 
 func TestGeminiFuzzyResolve(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(geminiOKResponse(`{"candidate_title": "Fight Club", "candidate_year": 1999, "confidence": "high", "reason": "Well-known movie"}`))
+		_, _ = w.Write(geminiOKResponse(`{"candidate_title": "Fight Club", "candidate_year": 1999, "confidence": "high", "reason": "Well-known movie"}`))
 	}))
 	defer server.Close()
 
@@ -76,12 +76,12 @@ func TestGeminiKeyRotationOn429(t *testing.T) {
 		if n == 1 {
 			// First key: rate limited
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte("rate limited"))
+			_, _ = w.Write([]byte("rate limited"))
 			return
 		}
 		// Second key: success
 		assert.Contains(t, r.URL.Query().Get("key"), "key-2")
-		w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "match"}`))
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "match"}`))
 	}))
 	defer server.Close()
 
@@ -117,7 +117,7 @@ func TestGeminiAllKeysRateLimited(t *testing.T) {
 func TestGeminiResponseWithMarkdownFences(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Response wrapped in markdown code fences
-		w.Write(geminiOKResponse("```json\n{\"confirmed\": true, \"confidence\": \"high\", \"reason\": \"match\"}\n```"))
+		_, _ = w.Write(geminiOKResponse("```json\n{\"confirmed\": true, \"confidence\": \"high\", \"reason\": \"match\"}\n```"))
 	}))
 	defer server.Close()
 
