@@ -1,3 +1,7 @@
+include .env
+-include .env.local
+export
+
 DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
@@ -39,8 +43,14 @@ build: ## Build production binary
 migrate: ## Run database migrations
 	$(EXEC) ./tmp/plextracker migrate
 
-import: ## Import Simkl backup (BACKUP_FILE=path)
-	$(EXEC) ./tmp/plextracker import $(BACKUP_FILE)
+import: ## Import Simkl backup on NAS (BACKUP_FILE=filename in /volume1/downloads)
+	sshpass -p '$(NAS_PASSWORD)' ssh -p $(NAS_PORT) $(NAS_USERNAME)@$(NAS_HOST) \
+		'docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
+		 docker exec plextracker ./plextracker import /tmp/$(BACKUP_FILE) && \
+		 docker exec plextracker rm /tmp/$(BACKUP_FILE)'
 
-import-dry: ## Dry-run Simkl import
-	$(EXEC) ./tmp/plextracker import --dry-run $(BACKUP_FILE)
+import-dry: ## Dry-run Simkl import on NAS (BACKUP_FILE=filename in /volume1/downloads)
+	sshpass -p '$(NAS_PASSWORD)' ssh -p $(NAS_PORT) $(NAS_USERNAME)@$(NAS_HOST) \
+		'docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
+		 docker exec plextracker ./plextracker import --dry-run /tmp/$(BACKUP_FILE) && \
+		 docker exec plextracker rm /tmp/$(BACKUP_FILE)'
