@@ -8,5 +8,5 @@ type Season struct {
 	MyRating      *int  `json:"my_rating"`
 
 	// Loaded relations
-	Episodes []Episode `json:"episodes,omitempty"`
+	Episodes []Episode `json:"episodes"`
 }

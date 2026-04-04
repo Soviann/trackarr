@@ -104,6 +104,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}
+		s.Episodes = []model.Episode{}
 		title.Seasons = append(title.Seasons, s)
 	}
 	seasonRows.Close()
@@ -244,6 +245,7 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 				seasonRows.Close()
 				return nil, fmt.Errorf("scan season: %w", err)
 			}
+			s.Episodes = []model.Episode{}
 			titles[i].Seasons = append(titles[i].Seasons, s)
 		}
 		seasonRows.Close()
