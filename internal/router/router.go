@@ -75,10 +75,15 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	// API routes
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", handler.Health)
-		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey))
+		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey, cfg.DebugLogin))
 
 		// Auth (unauthenticated)
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID)
+		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
+			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
+			r.Post("/auth/dev", auth.DevLogin)
+			log.Println("⚠️  Dev login enabled — POST /api/auth/dev")
+		}
 		r.Post("/auth/google", auth.GoogleCallback)
 		r.Post("/auth/logout", auth.Logout)
 

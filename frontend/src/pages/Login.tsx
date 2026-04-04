@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { colors } from '../theme'
 import { apiFetch } from '../api'
@@ -18,10 +18,15 @@ declare global {
 
 export function Login({ path }: { path?: string }) {
   const btnRef = useRef<HTMLDivElement>(null)
+  const [devLogin, setDevLogin] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [devError, setDevError] = useState('')
 
   useEffect(() => {
     const init = async () => {
       const cfg = await fetch('/api/config').then((r) => r.json())
+      if (cfg.dev_login) setDevLogin(true)
       const clientId = cfg.google_client_id
       if (!clientId || clientId === 'dev') return
 
@@ -80,6 +85,48 @@ export function Login({ path }: { path?: string }) {
 
       {/* Google Sign-In */}
       <div ref={btnRef} style={{ minHeight: '44px' }} />
+
+      {devLogin && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setDevError('')
+            try {
+              await apiFetch('/auth/dev', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+              })
+              route('/')
+            } catch {
+              setDevError('Invalid credentials')
+            }
+          }}
+          style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px', width: '320px' }}
+        >
+          <div style={{ fontSize: '11px', color: colors.textSecondary, textAlign: 'center' }}>Dev Login</div>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.borderCard}`, background: colors.bgCard, color: colors.textPrimary, fontSize: '13px' }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.borderCard}`, background: colors.bgCard, color: colors.textPrimary, fontSize: '13px' }}
+          />
+          {devError && <div style={{ fontSize: '11px', color: '#e74c3c', textAlign: 'center' }}>{devError}</div>}
+          <button
+            type="submit"
+            style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: colors.accent, color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+          >
+            Sign in
+          </button>
+        </form>
+      )}
 
       <div style={{ fontSize: '11px', color: colors.textDimmed, marginTop: '24px', textAlign: 'center' }}>
         Sign in with your Google account to get started

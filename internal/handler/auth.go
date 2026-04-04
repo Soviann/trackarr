@@ -14,6 +14,8 @@ type AuthHandler struct {
 	jwtSecret    string
 	allowedEmail string
 	clientID     string
+	devUser      string
+	devPassword  string
 }
 
 func NewAuthHandler(jwtSecret, allowedEmail, clientID string) *AuthHandler {
@@ -22,6 +24,12 @@ func NewAuthHandler(jwtSecret, allowedEmail, clientID string) *AuthHandler {
 		allowedEmail: allowedEmail,
 		clientID:     clientID,
 	}
+}
+
+func (h *AuthHandler) WithDevLogin(user, password string) *AuthHandler {
+	h.devUser = user
+	h.devPassword = password
+	return h
 }
 
 // GoogleCallback verifies the Google ID token and issues a JWT cookie.
@@ -65,6 +73,46 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	signed, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    signed,
+		Path:     "/",
+		MaxAge:   365 * 24 * 3600,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DevLogin authenticates with username/password for local development.
+// Only works when debug login is enabled and credentials are non-default.
+func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1024)).Decode(&body); err != nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	if body.Username != h.devUser || body.Password != h.devPassword {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	// Issue JWT with the allowed email, same as Google OAuth
+	claims := jwt.MapClaims{
+		"email": h.allowedEmail,
+		"exp":   jwt.NewNumericDate(time.Now().Add(365 * 24 * time.Hour)),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(h.jwtSecret))
+	if err != nil {
+		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 

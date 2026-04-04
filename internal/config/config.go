@@ -19,6 +19,9 @@ type Config struct {
 	VAPIDPublicKey      string
 	VAPIDPrivateKey     string
 	VAPIDSubject        string
+	DebugLogin          bool
+	DebugLoginUser      string
+	DebugLoginPassword  string
 }
 
 func Load() (*Config, error) {
@@ -39,6 +42,10 @@ func Load() (*Config, error) {
 	if keys := os.Getenv("GEMINI_API_KEY"); keys != "" {
 		cfg.GeminiAPIKeys = strings.Split(keys, ",")
 	}
+
+	cfg.DebugLogin = os.Getenv("DEBUG_LOGIN") == "true"
+	cfg.DebugLoginUser = envOr("DEBUG_LOGIN_USER", "")
+	cfg.DebugLoginPassword = envOr("DEBUG_LOGIN_PASSWORD", "")
 
 	if cfg.GoogleClientID == "" || cfg.GoogleAllowedEmail == "" || cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("required env vars: GOOGLE_CLIENT_ID, GOOGLE_ALLOWED_EMAIL, JWT_SECRET")

@@ -34,12 +34,13 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-func PublicConfig(googleClientID, vapidPublicKey string) http.HandlerFunc {
+func PublicConfig(googleClientID, vapidPublicKey string, devLogin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		writeJSON(w, map[string]string{
+		writeJSON(w, map[string]interface{}{
 			"google_client_id": googleClientID,
 			"vapid_public_key": vapidPublicKey,
+			"dev_login":        devLogin,
 		})
 	}
 }
