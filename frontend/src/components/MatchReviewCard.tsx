@@ -127,16 +127,18 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
       <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
         <button
           onClick={handleConfirm}
+          disabled={!hasAnyID}
           style={{
             flex: 1,
             padding: '8px',
             borderRadius: '8px',
-            background: `${colors.accentGreen}1F`,
-            border: `1px solid ${colors.accentGreen}33`,
-            color: colors.accentGreen,
+            background: hasAnyID ? `${colors.accentGreen}1F` : `${colors.textMuted}1F`,
+            border: `1px solid ${hasAnyID ? colors.accentGreen : colors.textMuted}33`,
+            color: hasAnyID ? colors.accentGreen : colors.textMuted,
             fontSize: '11px',
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: hasAnyID ? 'pointer' : 'not-allowed',
+            opacity: hasAnyID ? 1 : 0.5,
           }}
         >
           Confirm

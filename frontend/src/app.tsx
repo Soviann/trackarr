@@ -15,7 +15,7 @@ import { usePush } from './hooks/usePush'
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
-  const [filterTab, setFilterTab] = useState<FilterTab>('all')
+  const [filterTab, setFilterTab] = useState<FilterTab>('watching')
   const [vapidKey, setVapidKey] = useState<string>()
 
   useEffect(() => {

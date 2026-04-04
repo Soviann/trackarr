@@ -3,12 +3,12 @@ import { colors, accentWash } from '../theme'
 export type FilterTab = 'all' | 'watching' | 'up_to_date' | 'completed' | 'dropped' | 'plan'
 
 const tabs: { id: FilterTab; label: string }[] = [
-  { id: 'all', label: 'All' },
   { id: 'watching', label: 'Watching' },
   { id: 'up_to_date', label: 'Up to date' },
   { id: 'completed', label: 'Completed' },
   { id: 'dropped', label: 'Dropped' },
   { id: 'plan', label: 'Plan' },
+  { id: 'all', label: 'All' },
 ]
 
 interface FilterBarProps {
