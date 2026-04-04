@@ -257,7 +257,7 @@ func (s *BackgroundService) FetchMissingCovers() int {
 		if posterPath != nil && *posterPath != "" {
 			coverPath, err := s.tmdb.DownloadCover(*posterPath, s.coversDir())
 			if err == nil {
-				s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+				_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 				fetched++
 			}
 		}

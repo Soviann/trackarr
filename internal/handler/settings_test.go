@@ -63,7 +63,7 @@ func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
 	h.Get(rr, req)
 
 	var result map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&result)
+	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, true, result["push_subscribed"])
 }

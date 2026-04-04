@@ -39,7 +39,7 @@ func TestPushService_Unsubscribe(t *testing.T) {
 	svc, settings := setupPushService(t)
 
 	// Store a subscription first
-	settings.Set("push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
+	_ = settings.Set("push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
 
 	err := svc.Unsubscribe()
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestPushService_HasSubscription(t *testing.T) {
 
 	assert.False(t, svc.HasSubscription())
 
-	settings.Set("push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
+	_ = settings.Set("push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
 	assert.True(t, svc.HasSubscription())
 }
 

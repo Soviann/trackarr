@@ -43,7 +43,7 @@ func TestTitleHandler_List(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var titles []model.Title
-	json.NewDecoder(rr.Body).Decode(&titles)
+	_ = json.NewDecoder(rr.Body).Decode(&titles)
 	assert.Len(t, titles, 1)
 	assert.Equal(t, "Dune", titles[0].PrimaryName())
 }
@@ -65,7 +65,7 @@ func TestTitleHandler_Create(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var title model.Title
-	json.NewDecoder(rr.Body).Decode(&title)
+	_ = json.NewDecoder(rr.Body).Decode(&title)
 	assert.Equal(t, "Dune: Part Two", title.PrimaryName())
 }
 
@@ -83,7 +83,7 @@ func TestTitleHandler_GetByID(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var title model.Title
-	json.NewDecoder(rr.Body).Decode(&title)
+	_ = json.NewDecoder(rr.Body).Decode(&title)
 	assert.Equal(t, "Test", title.PrimaryName())
 }
 

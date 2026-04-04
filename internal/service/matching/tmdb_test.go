@@ -19,7 +19,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 
 	mux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "test-key", r.URL.Query().Get("api_key"))
-		json.NewEncoder(w).Encode(tmdbSearchResponse{
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
 			Results: []TMDBSearchResult{
 				{ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15", Overview: "An insomniac office worker..."},
 				{ID: 551, Title: "Fight Club 2", ReleaseDate: "2025-01-01"},
@@ -28,7 +28,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
 			Results: []TMDBSearchResult{
 				{ID: 1399, Name: "Breaking Bad", FirstAirDate: "2008-01-20"},
 			},
@@ -36,7 +36,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/movie/550", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(TMDBMovieDetails{
+		_ = json.NewEncoder(w).Encode(TMDBMovieDetails{
 			ID:          550,
 			Title:       "Fight Club",
 			ReleaseDate: "1999-10-15",
@@ -49,7 +49,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/tv/1399", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(TMDBTVDetails{
+		_ = json.NewEncoder(w).Encode(TMDBTVDetails{
 			ID:           1399,
 			Name:         "Breaking Bad",
 			FirstAirDate: "2008-01-20",
@@ -68,7 +68,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/tv/1399/season/1", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSeasonResponse{
+		_ = json.NewEncoder(w).Encode(tmdbSeasonResponse{
 			Episodes: []TMDBEpisode{
 				{ID: 1, Name: "Pilot", EpisodeNumber: 1, SeasonNumber: 1, AirDate: "2008-01-20"},
 				{ID: 2, Name: "Cat's in the Bag...", EpisodeNumber: 2, SeasonNumber: 1, AirDate: "2008-01-27"},
@@ -77,7 +77,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
 			Translations: []TMDBTranslation{
 				{ISO639: "en", Data: struct {
 					Title string `json:"title"`
@@ -96,7 +96,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	})
 
 	mux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("fake-image-data"))
+		_, _ = w.Write([]byte("fake-image-data"))
 	})
 
 	server := httptest.NewServer(mux)
