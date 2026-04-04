@@ -64,7 +64,7 @@ func (s *BackgroundService) RefreshTitles() []RefreshResult {
 	}
 
 	// List non-completed, confirmed titles
-	titles, err := s.titles.List(repository.TitleFilter{})
+	titles, err := s.titles.ListAll()
 	if err != nil {
 		log.Printf("background: list titles: %v", err)
 		return nil
@@ -231,7 +231,7 @@ func (s *BackgroundService) FetchMissingCovers() int {
 		return 0
 	}
 
-	titles, err := s.titles.List(repository.TitleFilter{})
+	titles, err := s.titles.ListAll()
 	if err != nil {
 		log.Printf("background: list titles for covers: %v", err)
 		return 0

@@ -13,6 +13,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,10 +44,12 @@ func TestTitleHandler_List(t *testing.T) {
 	require.NoError(t, h.List(rr, req))
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var titles []model.Title
-	_ = json.NewDecoder(rr.Body).Decode(&titles)
-	assert.Len(t, titles, 1)
-	assert.Equal(t, "Dune", titles[0].PrimaryName())
+	var result repository.PaginatedResult
+	_ = json.NewDecoder(rr.Body).Decode(&result)
+	assert.Len(t, result.Titles, 1)
+	assert.Equal(t, "Dune", result.Titles[0].PrimaryName())
+	assert.Equal(t, 1, result.Total)
+	assert.False(t, result.HasMore)
 }
 
 func TestTitleHandler_Create(t *testing.T) {

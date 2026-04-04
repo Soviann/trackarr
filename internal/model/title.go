@@ -59,6 +59,9 @@ type Title struct {
 	Names   []TitleName `json:"names,omitempty"`
 	Seasons []Season    `json:"seasons,omitempty"`
 
+	// Listing-only: next unwatched episode for quick mark
+	NextEpisode *NextEpisode `json:"next_episode,omitempty"`
+
 	// Search-only fields
 	MatchedName     *string `json:"matched_name,omitempty"`
 	MatchedLanguage *string `json:"matched_language,omitempty"`
@@ -75,6 +78,14 @@ func (t *Title) PrimaryName() string {
 		return t.Names[0].Name
 	}
 	return ""
+}
+
+// NextEpisode represents the first unwatched episode (for quick-mark in listing).
+type NextEpisode struct {
+	ID            int64 `json:"id"`
+	SeasonID      int64 `json:"season_id"`
+	Episode       int   `json:"episode"`
+	SeasonNumber  int   `json:"season_number"`
 }
 
 type TitleName struct {

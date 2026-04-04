@@ -27,6 +27,40 @@ type searchResult struct {
 	relevance int
 }
 
+// searchTitlesPaginated performs a relevance-ranked search with pagination.
+func (r *TitleRepository) searchTitlesPaginated(searchTerm string, filter TitleFilter) (*PaginatedResult, error) {
+	allResults, err := r.searchTitles(searchTerm, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	total := len(allResults)
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = DefaultPageSize
+	}
+	offset := filter.Offset
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	page := allResults[offset:end]
+	page, err = r.loadTitleRelationsLight(page)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PaginatedResult{
+		Titles:  page,
+		Total:   total,
+		HasMore: end < total,
+	}, nil
+}
+
 // searchTitles performs a relevance-ranked search, returning up to searchResultLimit results.
 func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([]model.Title, error) {
 	useFTS := len(searchTerm) >= 2

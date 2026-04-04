@@ -1,4 +1,4 @@
-import type { Title } from '../types'
+import type { Title, PaginatedResponse } from '../types'
 import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -6,14 +6,16 @@ import { MatchReviewCard } from '../components/MatchReviewCard'
 import { ErrorBanner } from '../components/ErrorBanner'
 
 export function MatchReview({ path }: { path?: string }) {
-  const { data: allTitles, loading, error, mutate } = useApi<Title[]>('/titles')
+  const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>('/titles?match_status=pending_review&limit=500')
+  const { data: unconfirmedData, loading: l2, error: e2, mutate: m2 } = useApi<PaginatedResponse>('/titles?match_status=unconfirmed&limit=500')
 
-  const titles = allTitles?.filter((t) =>
-    t.match_status === 'pending_review' || t.match_status === 'unconfirmed'
-  ) ?? []
+  const loading = l1 || l2
+  const error = e1 || e2
+  const mutate = () => { m1(); m2() }
 
-  const unconfirmed = titles.filter((t) => t.match_status === 'unconfirmed')
-  const pending = titles.filter((t) => t.match_status === 'pending_review')
+  const pending = pendingData?.titles ?? []
+  const unconfirmed = unconfirmedData?.titles ?? []
+  const titles = [...unconfirmed, ...pending]
 
   const handleBatchConfirm = async () => {
     for (const t of titles) {

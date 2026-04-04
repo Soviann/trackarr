@@ -1,42 +1,28 @@
+import { useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import type { Title } from '../types'
 import { colors } from '../theme'
-import { useApi } from '../hooks/useApi'
+import { useTitleStore } from '../store'
 import type { FilterTab } from '../components/FilterBar'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
 
-function isUpToDate(title: Title): boolean {
-  if (title.type === 'movie') return false
-  if (!title.seasons || title.seasons.length === 0) return false
-  return title.seasons.every((s) =>
-    (s.episodes ?? []).length === 0 || (s.episodes ?? []).every((e) => e.watched)
-  )
+const tabToStatus: Record<FilterTab, string | undefined> = {
+  all: undefined,
+  watching: 'watching_behind',
+  up_to_date: 'up_to_date',
+  completed: 'completed',
+  dropped: 'dropped',
+  plan: 'plan_to_watch',
 }
 
-function filterTitles(titles: Title[], tab: FilterTab) {
-  if (tab === 'all') return titles
-  if (tab === 'watching') return titles.filter((t) => t.status === 'watching' && !isUpToDate(t))
-  if (tab === 'up_to_date') return titles.filter((t) => t.status === 'watching' && isUpToDate(t))
-  if (tab === 'completed') return titles.filter((t) => t.status === 'completed')
-  if (tab === 'dropped') return titles.filter((t) => t.status === 'dropped')
-  if (tab === 'plan') return titles.filter((t) => t.status === 'plan_to_watch')
-  return titles
-}
-
-function SectionHeader({ label, color }: { label: string; color: string }) {
+function TitleList({ titles, onUpdate }: { titles: Title[]; onUpdate: () => void }) {
+  if (titles.length === 0) return null
   return (
-    <div style={{
-      fontSize: '10px',
-      color,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      padding: '12px 16px 8px',
-    }}>
-      {label}
+    <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {titles.map((t) => <TitleCard key={t.id} title={t} onUpdate={onUpdate} />)}
     </div>
   )
 }
@@ -51,15 +37,6 @@ function PosterGrid({ titles }: { titles: Title[] }) {
       gap: '8px',
     }}>
       {titles.map((t) => <PosterCard key={t.id} title={t} />)}
-    </div>
-  )
-}
-
-function TitleList({ titles, onUpdate }: { titles: Title[]; onUpdate: () => void }) {
-  if (titles.length === 0) return null
-  return (
-    <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {titles.map((t) => <TitleCard key={t.id} title={t} onUpdate={onUpdate} />)}
     </div>
   )
 }
@@ -117,23 +94,49 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
   )
 }
 
-export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?: FilterTab }) {
-  const { data: titles, loading, error, mutate } = useApi<Title[]>('/titles')
+function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
+  return (
+    <div style={{ padding: '12px 16px 24px', textAlign: 'center' }}>
+      <button
+        onClick={onClick}
+        disabled={loading}
+        style={{
+          background: colors.bgCard,
+          border: `1px solid ${colors.borderCard}`,
+          borderRadius: '10px',
+          padding: '10px 24px',
+          color: colors.accentTeal,
+          fontSize: '12px',
+          fontWeight: 600,
+          cursor: loading ? 'default' : 'pointer',
+          opacity: loading ? 0.6 : 1,
+          fontFamily: 'inherit',
+        }}
+      >
+        {loading ? 'Chargement...' : 'Charger plus'}
+      </button>
+    </div>
+  )
+}
 
-  const allTitles = titles ?? []
-  const pendingCount = allTitles.filter((t) => t.match_status === 'pending_review').length
-  const unconfirmedCount = allTitles.filter((t) => t.match_status === 'unconfirmed').length
+export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?: FilterTab }) {
+  const {
+    titles, total, hasMore, counts,
+    loading, loadingMore, error,
+    setFilter, loadMore, invalidate,
+  } = useTitleStore()
+
+  // Sync tab with store filter
+  useEffect(() => {
+    const status = tabToStatus[tab]
+    setFilter({ status, search: undefined })
+  }, [tab])
+
+  const pendingCount = counts?.pending_review ?? 0
+  const unconfirmedCount = counts?.unconfirmed ?? 0
   const reviewCount = pendingCount + unconfirmedCount
 
-  const filtered = filterTitles(allTitles, tab)
-
-  const watching = filtered.filter((t) => t.status === 'watching' && !isUpToDate(t))
-  const upToDate = filtered.filter((t) => t.status === 'watching' && isUpToDate(t))
-  const completed = filtered.filter((t) => t.status === 'completed')
-  const dropped = filtered.filter((t) => t.status === 'dropped')
-  const planToWatch = filtered.filter((t) => t.status === 'plan_to_watch')
-
-  const showSection = (items: unknown[]) => tab === 'all' ? items.length > 0 : true
+  const useListView = tab === 'watching' || tab === 'up_to_date'
 
   return (
     <div style={{ paddingBottom: '36px' }}>
@@ -157,7 +160,7 @@ export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?:
         </button>
       </div>
 
-      {error && <ErrorBanner message={error} onRetry={mutate} />}
+      {error && <ErrorBanner message={error} onRetry={invalidate} />}
 
       {loading && (
         <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
@@ -165,61 +168,35 @@ export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?:
         </div>
       )}
 
-      {!loading && allTitles.length === 0 && (
+      {!loading && titles.length === 0 && (
         <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
-          No titles yet. Add one with the + tab!
+          {tab === 'all' ? "No titles yet. Add one with the + tab!" : "No titles in this category."}
         </div>
       )}
 
-      {!loading && allTitles.length > 0 && (
+      {!loading && titles.length > 0 && (
         <>
           <MatchReviewBanner count={reviewCount} pendingCount={pendingCount} unconfirmedCount={unconfirmedCount} />
 
-          {tab === 'all' ? (
-            <>
-              {showSection(watching) && (
-                <>
-                  <SectionHeader label="Watching" color={colors.accentAmber} />
-                  <TitleList titles={watching} onUpdate={mutate} />
-                </>
-              )}
-              {showSection(upToDate) && (
-                <>
-                  <SectionHeader label="Up to date" color={colors.accentGreen} />
-                  <TitleList titles={upToDate} onUpdate={mutate} />
-                </>
-              )}
-              {showSection(completed) && (
-                <>
-                  <SectionHeader label="Completed" color={colors.textSecondary} />
-                  <PosterGrid titles={completed} />
-                </>
-              )}
-              {showSection(planToWatch) && (
-                <>
-                  <SectionHeader label="Plan to watch" color={colors.textSecondary} />
-                  <PosterGrid titles={planToWatch} />
-                </>
-              )}
-              {showSection(dropped) && (
-                <>
-                  <SectionHeader label="Dropped" color={colors.textSecondary} />
-                  <PosterGrid titles={dropped} />
-                </>
-              )}
-            </>
+          {total > 0 && (
+            <div style={{ padding: '0 16px 8px' }}>
+              <span style={{ fontSize: '10px', color: colors.textMuted }}>
+                {titles.length} / {total} titles
+              </span>
+            </div>
+          )}
+
+          {useListView ? (
+            <TitleList titles={titles} onUpdate={invalidate} />
           ) : (
-            <>
-              {(tab === 'watching' || tab === 'up_to_date') ? (
-                <TitleList titles={filtered} onUpdate={mutate} />
-              ) : (
-                <PosterGrid titles={filtered} />
-              )}
-            </>
+            <PosterGrid titles={titles} />
+          )}
+
+          {hasMore && (
+            <LoadMoreButton onClick={loadMore} loading={loadingMore} />
           )}
         </>
       )}
-
     </div>
   )
 }

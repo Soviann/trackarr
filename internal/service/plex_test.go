@@ -59,9 +59,9 @@ func TestPlexService_MovieScrobble(t *testing.T) {
 	err := svc.ProcessScrobble(payload, `{"event":"media.scrobble"}`)
 	require.NoError(t, err)
 
-	titles, _ := titleRepo.List(repository.TitleFilter{})
-	assert.Len(t, titles, 1)
-	assert.Equal(t, "Dune: Part Two", titles[0].PrimaryName())
+	result, _ := titleRepo.List(repository.TitleFilter{})
+	assert.Len(t, result.Titles, 1)
+	assert.Equal(t, "Dune: Part Two", result.Titles[0].PrimaryName())
 }
 
 func TestPlexService_EpisodeScrobble(t *testing.T) {
@@ -87,10 +87,10 @@ func TestPlexService_EpisodeScrobble(t *testing.T) {
 	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
-	titles, _ := titleRepo.List(repository.TitleFilter{})
-	assert.Len(t, titles, 1)
+	result, _ := titleRepo.List(repository.TitleFilter{})
+	assert.Len(t, result.Titles, 1)
 
-	title, _ := titleRepo.GetByID(titles[0].ID)
+	title, _ := titleRepo.GetByID(result.Titles[0].ID)
 	assert.Equal(t, "Breaking Bad", title.PrimaryName())
 	assert.Len(t, title.Seasons, 1)
 	assert.Len(t, title.Seasons[0].Episodes, 1)
@@ -111,6 +111,6 @@ func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
-	titles, _ := titleRepo.List(repository.TitleFilter{})
-	assert.Len(t, titles, 0)
+	result, _ := titleRepo.List(repository.TitleFilter{})
+	assert.Len(t, result.Titles, 0)
 }

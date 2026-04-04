@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
-import type { Title, TitleStatus } from '../types'
+import type { Title, TitleStatus, PaginatedResponse } from '../types'
 import { colors, accentWash } from '../theme'
-import { useApi } from '../hooks/useApi'
+import { apiFetch } from '../api'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
+
+const PAGE_SIZE = 50
 
 const statusFilters: { id: TitleStatus | null; label: string; color: string }[] = [
   { id: null, label: 'All', color: colors.accentTeal },
@@ -14,17 +16,79 @@ const statusFilters: { id: TitleStatus | null; label: string; color: string }[] 
   { id: 'plan_to_watch', label: 'Plan', color: colors.textSecondary },
 ]
 
-export function Search({ path }: { path?: string }) {
+export function Search({ path: _ }: { path?: string }) {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<TitleStatus | null>(null)
+  const [results, setResults] = useState<Title[]>([])
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  let searchPath: string | null = null
-  if (query.trim()) {
-    searchPath = `/titles?search=${encodeURIComponent(query.trim())}`
-    if (statusFilter) searchPath += `&status=${statusFilter}`
+  const buildUrl = useCallback((offset: number) => {
+    const trimmed = query.trim()
+    if (!trimmed) return null
+    const params = new URLSearchParams()
+    params.set('search', trimmed)
+    if (statusFilter) params.set('status', statusFilter)
+    params.set('limit', String(PAGE_SIZE))
+    params.set('offset', String(offset))
+    return `/titles?${params.toString()}`
+  }, [query, statusFilter])
+
+  // Fetch first page
+  useEffect(() => {
+    const url = buildUrl(0)
+    if (!url) {
+      setResults([])
+      setTotal(0)
+      setHasMore(false)
+      return
+    }
+    setLoading(true)
+    setError(null)
+    apiFetch<PaginatedResponse>(url)
+      .then((r) => {
+        setResults(r.titles)
+        setTotal(r.total)
+        setHasMore(r.has_more)
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [buildUrl])
+
+  const handleLoadMore = async () => {
+    const url = buildUrl(results.length)
+    if (!url || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const r = await apiFetch<PaginatedResponse>(url)
+      setResults((prev) => [...prev, ...r.titles])
+      setHasMore(r.has_more)
+      setTotal(r.total)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Load more failed')
+    } finally {
+      setLoadingMore(false)
+    }
   }
-  const { data: results, loading, error, mutate } = useApi<Title[]>(searchPath)
+
+  const retry = () => {
+    const url = buildUrl(0)
+    if (!url) return
+    setLoading(true)
+    setError(null)
+    apiFetch<PaginatedResponse>(url)
+      .then((r) => {
+        setResults(r.titles)
+        setTotal(r.total)
+        setHasMore(r.has_more)
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -38,10 +102,9 @@ export function Search({ path }: { path?: string }) {
     const seasons = t.seasons ?? []
     if (t.type !== 'movie' && seasons.length > 0) {
       const s = seasons[seasons.length - 1]
-      const eps = s.episodes ?? []
-      const w = eps.filter((e) => e.watched).length
-      const total = s.total_episodes ?? eps.length
-      parts.push(`S${s.season_number} ${w}/${total}`)
+      const w = s.watched_count ?? (s.episodes ?? []).filter((e) => e.watched).length
+      const totalEp = s.total_episodes ?? s.episode_count ?? (s.episodes ?? []).length
+      parts.push(`S${s.season_number} ${w}/${totalEp}`)
     }
     if (t.my_rating) parts.push(`\u2605 ${t.my_rating}`)
     return parts.join(' \u00b7 ')
@@ -80,13 +143,13 @@ export function Search({ path }: { path?: string }) {
           </div>
         )}
 
-        {query.trim() && error && <ErrorBanner message={error} onRetry={mutate} />}
+        {query.trim() && error && <ErrorBanner message={error} onRetry={retry} />}
 
-        {query.trim() && results && (
+        {query.trim() && results.length > 0 && (
           <>
             <div style={{ padding: '16px 16px 8px' }}>
               <span style={{ fontSize: '10px', color: colors.textMuted }}>
-                {results.length} result{results.length !== 1 ? 's' : ''} for "{query.trim()}"
+                {results.length} / {total} result{total !== 1 ? 's' : ''} for "{query.trim()}"
               </span>
             </div>
 
@@ -197,7 +260,36 @@ export function Search({ path }: { path?: string }) {
                 </div>
               ))}
             </div>
+
+            {hasMore && (
+              <div style={{ padding: '12px 16px 24px', textAlign: 'center' }}>
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  style={{
+                    background: colors.bgCard,
+                    border: `1px solid ${colors.borderCard}`,
+                    borderRadius: '10px',
+                    padding: '10px 24px',
+                    color: colors.accentTeal,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: loadingMore ? 'default' : 'pointer',
+                    opacity: loadingMore ? 0.6 : 1,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {loadingMore ? 'Chargement...' : 'Charger plus'}
+                </button>
+              </div>
+            )}
           </>
+        )}
+
+        {query.trim() && !loading && results.length === 0 && !error && (
+          <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
+            No results for "{query.trim()}"
+          </div>
         )}
 
         {query.trim() && loading && (

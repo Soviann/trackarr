@@ -20,8 +20,16 @@ export interface Title {
   match_source: string | null
   names: TitleName[]
   seasons: Season[]
+  next_episode?: NextEpisode
   matched_name?: string
   matched_language?: string
+}
+
+export interface NextEpisode {
+  id: number
+  season_id: number
+  episode: number
+  season_number: number
 }
 
 export interface TitleName {
@@ -38,7 +46,21 @@ export interface Season {
   season_number: number
   total_episodes: number | null
   my_rating: number | null
+  episode_count?: number
+  watched_count?: number
   episodes: Episode[]
+}
+
+export interface PaginatedResponse {
+  titles: Title[]
+  total: number
+  has_more: boolean
+  counts?: StatusCounts
+}
+
+export interface StatusCounts {
+  pending_review: number
+  unconfirmed: number
 }
 
 export interface Episode {

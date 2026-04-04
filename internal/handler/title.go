@@ -20,10 +20,20 @@ func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.Sea
 }
 
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
-	filter := repository.TitleFilter{}
+	filter := repository.TitleFilter{
+		Limit:  httputil.ParseQueryInt(r, "limit", repository.DefaultPageSize),
+		Offset: httputil.ParseQueryInt(r, "offset", 0),
+	}
 	if s := r.URL.Query().Get("status"); s != "" {
-		status := model.TitleStatus(s)
-		filter.Status = &status
+		switch s {
+		case "up_to_date":
+			filter.UpToDate = true
+		case "watching_behind":
+			filter.WatchingBehind = true
+		default:
+			status := model.TitleStatus(s)
+			filter.Status = &status
+		}
 	}
 	if t := r.URL.Query().Get("type"); t != "" {
 		titleType := model.TitleType(t)
@@ -37,16 +47,24 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.MatchStatus = &matchStatus
 	}
 
-	titles, err := h.titles.List(filter)
+	result, err := h.titles.List(filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
-	if titles == nil {
-		titles = []model.Title{}
+	if result.Titles == nil {
+		result.Titles = []model.Title{}
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, titles)
+	// Include global counts on first page (for match review banner)
+	if filter.Offset == 0 && filter.Search == nil {
+		counts, err := h.titles.GetStatusCounts()
+		if err == nil {
+			result.Counts = counts
+		}
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 

@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: Phase 11 complete (Stats page)
+## Status: T14 complete (server-side pagination)
 
 ## Backend (Go)
 
@@ -15,7 +15,7 @@ Update when adding routes, services, components, or commands.
 
 ### Models
 
-`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus), TitleName, Season, Episode, WatchEvent (WatchEventSource), Setting.
+`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode), TitleName, Season (EpisodeCount, WatchedCount for listing), Episode, WatchEvent (WatchEventSource), Setting.
 
 ### Services
 
@@ -56,7 +56,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Repositories
 
-`internal/repository/` — TitleRepository, SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here.
+`internal/repository/` — TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
 
 ### Handlers
 
@@ -96,6 +96,7 @@ Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. T
 | Hook | File | Purpose |
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
+| `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, loadMore, cache |
 | `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
 
 ### Components

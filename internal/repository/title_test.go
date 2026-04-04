@@ -50,10 +50,11 @@ func TestTitleRepository_ListByStatus(t *testing.T) {
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
 
-	titles, err := repo.List(repository.TitleFilter{Status: ptr(model.TitleStatusWatching)})
+	result, err := repo.List(repository.TitleFilter{Status: ptr(model.TitleStatusWatching)})
 	require.NoError(t, err)
-	assert.Len(t, titles, 1)
-	assert.Equal(t, "A", titles[0].PrimaryName())
+	assert.Len(t, result.Titles, 1)
+	assert.Equal(t, "A", result.Titles[0].PrimaryName())
+	assert.Equal(t, 1, result.Total)
 }
 
 func TestTitleRepository_ListBySearch(t *testing.T) {
@@ -63,10 +64,10 @@ func TestTitleRepository_ListBySearch(t *testing.T) {
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune: Part Two", Language: "en", IsPrimary: true}})
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Oppenheimer", Language: "en", IsPrimary: true}})
 
-	titles, err := repo.List(repository.TitleFilter{Search: ptr("dune")})
+	result, err := repo.List(repository.TitleFilter{Search: ptr("dune")})
 	require.NoError(t, err)
-	assert.Len(t, titles, 1)
-	assert.Equal(t, "Dune: Part Two", titles[0].PrimaryName())
+	assert.Len(t, result.Titles, 1)
+	assert.Equal(t, "Dune: Part Two", result.Titles[0].PrimaryName())
 }
 
 func TestTitleRepository_Update(t *testing.T) {

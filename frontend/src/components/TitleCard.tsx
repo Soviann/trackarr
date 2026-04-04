@@ -11,25 +11,23 @@ interface TitleCardProps {
 
 function getProgress(title: Title) {
   const seasons = title.seasons ?? []
-  const currentSeason = seasons
-    .filter((s) => (s.episodes ?? []).length > 0)
-    .sort((a, b) => b.season_number - a.season_number)
-    .find((s) => (s.episodes ?? []).some((e) => e.watched))
+  const ne = title.next_episode
 
+  // Find the relevant season: the one with the next unwatched episode, or the latest with episodes
+  let currentSeason = ne
+    ? seasons.find((s) => s.season_number === ne.season_number)
+    : null
   if (!currentSeason) {
-    const first = seasons[0]
-    const eps = first?.episodes ?? []
-    return { season: first, watched: 0, total: first?.total_episodes ?? 0, nextEpisode: eps[0] ?? null }
+    currentSeason = seasons
+      .filter((s) => (s.episode_count ?? (s.episodes ?? []).length) > 0)
+      .sort((a, b) => b.season_number - a.season_number)[0] ?? seasons[0]
   }
+  if (!currentSeason) return null
 
-  const eps = currentSeason.episodes ?? []
-  const watched = eps.filter((e) => e.watched).length
-  const total = currentSeason.total_episodes ?? eps.length
-  const nextEpisode = eps
-    .sort((a, b) => a.episode - b.episode)
-    .find((e) => !e.watched) ?? null
+  const watched = currentSeason.watched_count ?? (currentSeason.episodes ?? []).filter((e) => e.watched).length
+  const total = currentSeason.total_episodes ?? currentSeason.episode_count ?? (currentSeason.episodes ?? []).length
 
-  return { season: currentSeason, watched, total, nextEpisode }
+  return { season: currentSeason, watched, total }
 }
 
 export function TitleCard({ title, onUpdate }: TitleCardProps) {
@@ -41,15 +39,15 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
   const season = progress?.season
   const watched = progress?.watched ?? 0
   const total = progress?.total ?? 0
-  const nextEpisode = progress?.nextEpisode ?? null
+  const ne = title.next_episode ?? null
   const pct = total > 0 ? (watched / total) * 100 : 0
 
   const handleQuickMark = async (e: Event) => {
     e.stopPropagation()
-    if (!nextEpisode || toggling) return
+    if (!ne || toggling) return
     setToggling(true)
     try {
-      await apiFetch(`/titles/${title.id}/episodes/${nextEpisode.id}`, { method: 'PATCH' })
+      await apiFetch(`/titles/${title.id}/episodes/${ne.id}`, { method: 'PATCH' })
       onUpdate?.()
     } finally {
       setToggling(false)
@@ -120,7 +118,7 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
       </div>
 
       {/* Quick mark badge */}
-      {nextEpisode && (
+      {ne && (
         <div
           onClick={handleQuickMark}
           style={{
@@ -136,11 +134,11 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
           }}
         >
           <span style={{
-            fontSize: nextEpisode.episode >= 10 ? '10px' : '11px',
+            fontSize: ne.episode >= 10 ? '10px' : '11px',
             fontWeight: 700,
             color: colors.bgPrimary,
           }}>
-            E{nextEpisode.episode}
+            E{ne.episode}
           </span>
         </div>
       )}

@@ -21,6 +21,26 @@ type TitleFilter struct {
 	Type        *model.TitleType
 	Search      *string
 	MatchStatus *model.MatchStatus
+	UpToDate       bool // server-side "up to date" filter (watching + all episodes watched)
+	WatchingBehind bool // server-side "watching but behind" filter (watching + has unwatched episodes)
+	Limit          int
+	Offset         int
+}
+
+const DefaultPageSize = 50
+
+// PaginatedResult wraps a list of titles with pagination metadata.
+type PaginatedResult struct {
+	Titles  []model.Title `json:"titles"`
+	Total   int           `json:"total"`
+	HasMore bool          `json:"has_more"`
+	Counts  *StatusCounts `json:"counts,omitempty"`
+}
+
+// StatusCounts holds global counts for the library overview.
+type StatusCounts struct {
+	PendingReview int `json:"pending_review"`
+	Unconfirmed   int `json:"unconfirmed"`
 }
 
 type TitleUpdate struct {
@@ -129,7 +149,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	return title, nil
 }
 
-func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
+func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	searchTerm := ""
 	if filter.Search != nil {
 		searchTerm = strings.TrimSpace(*filter.Search)
@@ -137,21 +157,29 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 
 	// Delegate search to relevance-ranked search
 	if searchTerm != "" {
-		titles, err := r.searchTitles(searchTerm, filter)
-		if err != nil {
-			return nil, err
-		}
-		return r.loadTitleRelations(titles)
+		return r.searchTitlesPaginated(searchTerm, filter)
 	}
 
 	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.created_at, t.updated_at`
-	query := `SELECT DISTINCT ` + baseCols + ` FROM titles t`
+
 	var conditions []string
 	var args []interface{}
 
-	if filter.Status != nil {
-		conditions = append(conditions, `t.status = ?`)
-		args = append(args, *filter.Status)
+	if filter.UpToDate {
+		// "Up to date" = watching + every episode watched (no unwatched episodes)
+		conditions = append(conditions, `t.status = 'watching'`)
+		conditions = append(conditions, `t.type != 'movie'`)
+		conditions = append(conditions, `EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id)`)
+		conditions = append(conditions, `NOT EXISTS (SELECT 1 FROM seasons s3 JOIN episodes e3 ON e3.season_id = s3.id WHERE s3.title_id = t.id AND e3.watched = 0)`)
+	} else if filter.WatchingBehind {
+		// "Watching behind" = watching + has at least one unwatched episode (or is a movie, or has no episodes)
+		conditions = append(conditions, `t.status = 'watching'`)
+		conditions = append(conditions, `(t.type = 'movie' OR NOT EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id) OR EXISTS (SELECT 1 FROM seasons s4 JOIN episodes e4 ON e4.season_id = s4.id WHERE s4.title_id = t.id AND e4.watched = 0))`)
+	} else {
+		if filter.Status != nil {
+			conditions = append(conditions, `t.status = ?`)
+			args = append(args, *filter.Status)
+		}
 	}
 	if filter.Type != nil {
 		conditions = append(conditions, `t.type = ?`)
@@ -162,12 +190,29 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 		args = append(args, *filter.MatchStatus)
 	}
 
+	whereClause := ""
 	if len(conditions) > 0 {
-		query += ` WHERE ` + strings.Join(conditions, ` AND `)
+		whereClause = ` WHERE ` + strings.Join(conditions, ` AND `)
 	}
-	query += ` ORDER BY t.updated_at DESC`
 
-	rows, err := r.db.Query(query, args...)
+	// Count total
+	var total int
+	countQuery := `SELECT COUNT(DISTINCT t.id) FROM titles t` + whereClause
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, fmt.Errorf("count titles: %w", err)
+	}
+
+	// Apply pagination
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = DefaultPageSize
+	}
+	offset := filter.Offset
+
+	query := `SELECT DISTINCT ` + baseCols + ` FROM titles t` + whereClause + ` ORDER BY t.updated_at DESC LIMIT ? OFFSET ?`
+	queryArgs := append(args, limit, offset)
+
+	rows, err := r.db.Query(query, queryArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("list titles: %w", err)
 	}
@@ -184,7 +229,16 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 	}
 	rows.Close()
 
-	return r.loadTitleRelations(titles)
+	titles, err = r.loadTitleRelationsLight(titles)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PaginatedResult{
+		Titles:  titles,
+		Total:   total,
+		HasMore: offset+len(titles) < total,
+	}, nil
 }
 
 // loadTitleRelations loads names, seasons, and episodes for a slice of titles.
@@ -233,6 +287,102 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 				titles[i].Seasons[j].Episodes = append(titles[i].Seasons[j].Episodes, e)
 			}
 			epRows.Close()
+		}
+	}
+
+	return titles, nil
+}
+
+// GetStatusCounts returns global match status counts for the library banner.
+func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
+	var counts StatusCounts
+	err := r.db.QueryRow(`SELECT
+		COALESCE(SUM(CASE WHEN match_status = 'pending_review' THEN 1 ELSE 0 END), 0),
+		COALESCE(SUM(CASE WHEN match_status = 'unconfirmed' THEN 1 ELSE 0 END), 0)
+		FROM titles`).Scan(&counts.PendingReview, &counts.Unconfirmed)
+	if err != nil {
+		return nil, fmt.Errorf("get status counts: %w", err)
+	}
+	return &counts, nil
+}
+
+// ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
+func (r *TitleRepository) ListAll() ([]model.Title, error) {
+	rows, err := r.db.Query(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("list all titles: %w", err)
+	}
+
+	var titles []model.Title
+	for rows.Next() {
+		var t model.Title
+		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan title: %w", err)
+		}
+		titles = append(titles, t)
+	}
+	rows.Close()
+
+	return r.loadTitleRelations(titles)
+}
+
+// loadTitleRelationsLight loads names and seasons with watched/episode counts (no individual episodes).
+// Used for listing endpoints where episode details are not needed.
+func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model.Title, error) {
+	for i := range titles {
+		nameRows, err := r.db.Query(`SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id = ?`, titles[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("get title names: %w", err)
+		}
+		for nameRows.Next() {
+			var n model.TitleName
+			if err := nameRows.Scan(&n.ID, &n.TitleID, &n.Name, &n.Language, &n.IsPrimary); err != nil {
+				nameRows.Close()
+				return nil, fmt.Errorf("scan title name: %w", err)
+			}
+			titles[i].Names = append(titles[i].Names, n)
+		}
+		nameRows.Close()
+
+		seasonRows, err := r.db.Query(`
+			SELECT s.id, s.title_id, s.season_number, s.total_episodes, s.my_rating,
+				COUNT(e.id) AS episode_count,
+				SUM(CASE WHEN e.watched THEN 1 ELSE 0 END) AS watched_count
+			FROM seasons s
+			LEFT JOIN episodes e ON e.season_id = s.id
+			WHERE s.title_id = ?
+			GROUP BY s.id
+			ORDER BY s.season_number`, titles[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("get seasons light: %w", err)
+		}
+		for seasonRows.Next() {
+			var s model.Season
+			var episodeCount, watchedCount int
+			if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating, &episodeCount, &watchedCount); err != nil {
+				seasonRows.Close()
+				return nil, fmt.Errorf("scan season light: %w", err)
+			}
+			s.EpisodeCount = &episodeCount
+			s.WatchedCount = &watchedCount
+			s.Episodes = []model.Episode{}
+			titles[i].Seasons = append(titles[i].Seasons, s)
+		}
+		seasonRows.Close()
+
+		// Load next unwatched episode for quick-mark
+		var ne model.NextEpisode
+		err = r.db.QueryRow(`
+			SELECT e.id, e.season_id, e.episode, s.season_number
+			FROM episodes e
+			JOIN seasons s ON s.id = e.season_id
+			WHERE s.title_id = ? AND e.watched = 0
+			ORDER BY s.season_number, e.episode
+			LIMIT 1`, titles[i].ID).Scan(&ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber)
+		if err == nil {
+			titles[i].NextEpisode = &ne
 		}
 	}
 
