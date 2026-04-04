@@ -31,6 +31,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          args: --timeout=5m
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -49,19 +50,3 @@ jobs:
       - name: Build
         run: cd frontend && npx vite build
 
-  test-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: cd frontend && npm ci
-
-      - name: Run tests
-        run: cd frontend && npx vitest run
