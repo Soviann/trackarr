@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -16,6 +17,7 @@ type BackgroundService struct {
 	episodes *repository.EpisodeRepository
 	tmdb     *matching.TMDBClient
 	push     *PushService
+	dataDir  string
 }
 
 func NewBackgroundService(
@@ -24,6 +26,7 @@ func NewBackgroundService(
 	episodes *repository.EpisodeRepository,
 	tmdb *matching.TMDBClient,
 	push *PushService,
+	dataDir string,
 ) *BackgroundService {
 	return &BackgroundService{
 		titles:   titles,
@@ -31,7 +34,12 @@ func NewBackgroundService(
 		episodes: episodes,
 		tmdb:     tmdb,
 		push:     push,
+		dataDir:  dataDir,
 	}
+}
+
+func (s *BackgroundService) coversDir() string {
+	return filepath.Join(s.dataDir, "covers")
 }
 
 // RefreshResult captures what happened for a single title during refresh.
@@ -122,7 +130,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, "")
+		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
 			s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 		}
@@ -156,7 +164,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, "")
+		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
 			s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 		}
@@ -214,6 +222,52 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 	return nil
 }
 
+// FetchMissingCovers downloads covers for all titles that have a TMDB ID but no cover.
+// Unlike RefreshTitles, this includes completed/dropped titles.
+func (s *BackgroundService) FetchMissingCovers() int {
+	if s == nil {
+		return 0
+	}
+
+	titles, err := s.titles.List(repository.TitleFilter{})
+	if err != nil {
+		log.Printf("background: list titles for covers: %v", err)
+		return 0
+	}
+
+	fetched := 0
+	for _, title := range titles {
+		if title.CoverURL != nil || title.TMDBID == nil {
+			continue
+		}
+
+		var posterPath *string
+		if title.Type == model.TitleTypeMovie {
+			details, err := s.tmdb.GetMovieDetails(*title.TMDBID)
+			if err == nil {
+				posterPath = details.PosterPath
+			}
+		} else {
+			details, err := s.tmdb.GetTVDetails(*title.TMDBID)
+			if err == nil {
+				posterPath = details.PosterPath
+			}
+		}
+
+		if posterPath != nil && *posterPath != "" {
+			coverPath, err := s.tmdb.DownloadCover(*posterPath, s.coversDir())
+			if err == nil {
+				s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+				fetched++
+			}
+		}
+
+		time.Sleep(300 * time.Millisecond)
+	}
+
+	return fetched
+}
+
 // StartTicker launches the background refresh on a daily interval.
 func (s *BackgroundService) StartTicker(interval time.Duration) {
 	if s == nil {
@@ -223,6 +277,10 @@ func (s *BackgroundService) StartTicker(interval time.Duration) {
 	go func() {
 		// Run once at startup after a short delay
 		time.Sleep(30 * time.Second)
+		log.Println("background: fetching missing covers")
+		if n := s.FetchMissingCovers(); n > 0 {
+			log.Printf("background: fetched %d missing covers", n)
+		}
 		log.Println("background: starting initial refresh")
 		s.RefreshTitles()
 

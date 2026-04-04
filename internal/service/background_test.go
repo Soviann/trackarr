@@ -26,7 +26,7 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *reposito
 
 	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
 	// No external API clients in tests — nil TMDB/AniList
-	svc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, nil, pushSvc)
+	svc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, nil, pushSvc, t.TempDir())
 	return svc, titleRepo, seasonRepo, episodeRepo
 }
 

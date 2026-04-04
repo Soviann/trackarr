@@ -50,7 +50,7 @@ func Serve(distFS embed.FS) error {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, tmdbClient, pushSvc)
+	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, tmdbClient, pushSvc, cfg.DataDir)
 	bgSvc.StartTicker(24 * time.Hour)
 
 	log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
