@@ -19,6 +19,7 @@ type Config struct {
 	VAPIDPublicKey      string
 	VAPIDPrivateKey     string
 	VAPIDSubject        string
+	PlexWebhookSecret   string
 	DebugLogin          bool
 	DebugLoginUser      string
 	DebugLoginPassword  string
@@ -37,6 +38,7 @@ func Load() (*Config, error) {
 		VAPIDPublicKey:      os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey:     os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:        os.Getenv("VAPID_SUBJECT"),
+		PlexWebhookSecret:   os.Getenv("PLEX_WEBHOOK_SECRET"),
 	}
 
 	if keys := os.Getenv("GEMINI_API_KEY"); keys != "" {

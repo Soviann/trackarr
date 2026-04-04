@@ -67,7 +67,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
-	webhooks := handler.NewWebhookHandler(plexSvc)
+	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
 	settings := handler.NewSettingsHandler(settingRepo)
@@ -87,8 +87,8 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		r.Post("/auth/google", auth.GoogleCallback)
 		r.Post("/auth/logout", auth.Logout)
 
-		// Plex webhook (unauthenticated)
-		r.Post("/webhook/plex", webhooks.HandlePlex)
+		// Plex webhook (secured by secret token in URL)
+		r.Post("/webhook/plex/{secret}", webhooks.HandlePlex)
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)
