@@ -16,6 +16,8 @@ export interface Title {
   status: TitleStatus
   series_status: SeriesStatus | null
   match_status: MatchStatus
+  original_title: string | null
+  match_source: string | null
   names: TitleName[]
   seasons: Season[]
   matched_name?: string

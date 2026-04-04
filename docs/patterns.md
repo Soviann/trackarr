@@ -39,6 +39,8 @@ Update when adding routes, services, components, or commands.
 4. **AniList search** — anime only → proceed to Step 5
 5. **Gemini verification** — high confidence → `pending_review`, low → `unconfirmed`
 
+Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
+
 After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover.
 
 ### External APIs

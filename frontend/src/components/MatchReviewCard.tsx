@@ -8,10 +8,21 @@ interface MatchReviewCardProps {
   onUpdate: () => void
 }
 
+const matchSourceLabels: Record<string, string> = {
+  plex_ids: 'Matched via Plex metadata',
+  crossref: 'Matched via cross-reference DB',
+  tmdb_search: 'Matched via TMDB search',
+  anilist_search: 'Matched via AniList',
+  gemini_fuzzy: 'Matched via AI fuzzy resolution',
+  manual: 'Manual entry',
+  none: 'No automatic match found',
+}
+
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
   const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const isUnconfirmed = title.match_status === 'unconfirmed'
   const borderColor = isUnconfirmed ? colors.accentCoral : colors.accentAmber
+  const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id)
 
   const handleConfirm = async (e: Event) => {
     e.stopPropagation()
@@ -28,6 +39,20 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
     title.tvdb_id && { label: 'TVDB', value: String(title.tvdb_id) },
     title.anilist_id && { label: 'AniList', value: String(title.anilist_id) },
   ].filter(Boolean) as { label: string; value: string }[]
+
+  // Build contextual explanation
+  const sourceLabel = title.match_source ? (matchSourceLabels[title.match_source] ?? title.match_source) : null
+
+  const buildStatusText = () => {
+    const source = sourceLabel ?? (isUnconfirmed ? 'Unconfirmed match' : 'Pending review')
+    if (isUnconfirmed && !hasAnyID) return `${source} — needs manual linking`
+    if (isUnconfirmed && hasAnyID) return `${source} — please verify`
+    if (!isUnconfirmed) return `${source} — AI-verified, confirm?`
+    return source
+  }
+
+  // Show original title if it differs from the resolved name
+  const showOriginalTitle = title.original_title && title.original_title !== name
 
   return (
     <div
@@ -54,6 +79,18 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
             {title.type} · {title.year}
           </div>
 
+          {/* Original title comparison */}
+          {showOriginalTitle && (
+            <div style={{
+              fontSize: '10px',
+              color: colors.textSecondary,
+              marginTop: '4px',
+              fontStyle: 'italic',
+            }}>
+              Plex: "{title.original_title}" → "{name}"
+            </div>
+          )}
+
           {/* ID chips */}
           {idChips.length > 0 && (
             <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -74,14 +111,14 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
             </div>
           )}
 
-          {/* Status indicator */}
+          {/* Match source + contextual explanation */}
           <div style={{
             fontSize: '10px',
             color: borderColor,
             fontWeight: 500,
             marginTop: '6px',
           }}>
-            {isUnconfirmed ? 'Unconfirmed match' : 'Pending review'}
+            {buildStatusText()}
           </div>
         </div>
       </div>
@@ -105,7 +142,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           Confirm
         </button>
         <button
-          onClick={(e: Event) => { e.stopPropagation(); route(`/validate?q=${encodeURIComponent(name)}`) }}
+          onClick={(e: Event) => { e.stopPropagation(); route(`/validate?q=${encodeURIComponent(title.original_title ?? name)}`) }}
           style={{
             flex: 1,
             padding: '8px',

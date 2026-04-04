@@ -7,6 +7,17 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
+// Match source constants track which pipeline step produced the match.
+const (
+	MatchSourcePlexIDs       = "plex_ids"
+	MatchSourceCrossRef      = "crossref"
+	MatchSourceTMDBSearch    = "tmdb_search"
+	MatchSourceAniListSearch = "anilist_search"
+	MatchSourceGeminiFuzzy   = "gemini_fuzzy"
+	MatchSourceManual        = "manual"
+	MatchSourceNone          = "none"
+)
+
 // Pipeline orchestrates the media matching process through Steps 1-5.
 type Pipeline struct {
 	tmdb    *TMDBClient
@@ -33,6 +44,7 @@ type MatchResult struct {
 	TVDBID      int64
 	AniListID   int64
 	MatchStatus model.MatchStatus
+	MatchSource string            // which pipeline step produced the match
 	Names       []model.TitleName // multilingual names
 	CoverFile   string            // local filename in covers dir
 	TitleType   model.TitleType   // resolved type (may differ from input if anime detected)
@@ -61,6 +73,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	// Step 1: Check Plex metadata IDs — if we have TMDB or IMDB, we're confirmed
 	if result.TMDBID != 0 || result.IMDBID != "" {
 		result.MatchStatus = model.MatchStatusConfirmed
+		result.MatchSource = MatchSourcePlexIDs
 		p.enrichFromIDs(result, input)
 		return result, nil
 	}
@@ -76,6 +89,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 			mergeIDs(result, crossIDs)
 			if result.TMDBID != 0 || result.IMDBID != "" {
 				result.MatchStatus = model.MatchStatusConfirmed
+				result.MatchSource = MatchSourceCrossRef
 				p.enrichFromIDs(result, input)
 				return result, nil
 			}
@@ -86,7 +100,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	if p.tmdb != nil {
 		found := p.searchTMDB(input, result)
 		if found {
-			// Continue to Step 5 for verification
+			result.MatchSource = MatchSourceTMDBSearch
 			return p.verifyAndEnrich(input, result)
 		}
 	}
@@ -95,6 +109,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	if p.anilist != nil && input.Type == model.TitleTypeAnime {
 		found := p.searchAniList(input, result)
 		if found {
+			result.MatchSource = MatchSourceAniListSearch
 			return p.verifyAndEnrich(input, result)
 		}
 	}
@@ -118,6 +133,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 				}
 				if p.searchTMDB(resolvedInput, result) {
 					result.MatchStatus = model.MatchStatusUnconfirmed
+					result.MatchSource = MatchSourceGeminiFuzzy
 					p.enrichFromIDs(result, input)
 					return result, nil
 				}
@@ -127,6 +143,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 
 	// No match found
 	result.MatchStatus = model.MatchStatusUnconfirmed
+	result.MatchSource = MatchSourceNone
 	result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	return result, nil
 }

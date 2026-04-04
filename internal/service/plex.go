@@ -219,6 +219,8 @@ func (s *PlexService) buildNewTitle(meta PlexMetadata, ids PlexExternalIDs, titl
 		})
 		if err == nil {
 			title.MatchStatus = result.MatchStatus
+			title.MatchSource = &result.MatchSource
+			title.OriginalTitle = &meta.Title
 			title.Type = result.TitleType
 			if result.IMDBID != "" {
 				title.IMDBID = &result.IMDBID
@@ -242,6 +244,9 @@ func (s *PlexService) buildNewTitle(meta PlexMetadata, ids PlexExternalIDs, titl
 
 	// Fallback: no pipeline or pipeline error
 	title.MatchStatus = model.MatchStatusConfirmed
+	title.OriginalTitle = &meta.Title
+	fallbackSource := matching.MatchSourcePlexIDs
+	title.MatchSource = &fallbackSource
 	if ids.IMDB != "" {
 		title.IMDBID = &ids.IMDB
 	}

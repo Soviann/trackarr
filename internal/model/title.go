@@ -50,6 +50,8 @@ type Title struct {
 	Status        TitleStatus   `json:"status"`
 	SeriesStatus  *SeriesStatus `json:"series_status"`
 	MatchStatus   MatchStatus   `json:"match_status"`
+	OriginalTitle *string       `json:"original_title"`
+	MatchSource   *string       `json:"match_source"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 

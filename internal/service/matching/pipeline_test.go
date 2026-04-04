@@ -158,6 +158,7 @@ func TestPipeline_Step1_PlexIDsConfirmed(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, model.MatchStatusConfirmed, result.MatchStatus)
+	assert.Equal(t, MatchSourcePlexIDs, result.MatchSource)
 	assert.Equal(t, "tt0137523", result.IMDBID)
 	assert.Equal(t, int64(550), result.TMDBID)
 	assert.NotEmpty(t, result.Names)
@@ -180,6 +181,7 @@ func TestPipeline_Step3_TMDBSearch(t *testing.T) {
 	require.NoError(t, err)
 	// Gemini confirms with high confidence → pending_review
 	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
+	assert.Equal(t, MatchSourceTMDBSearch, result.MatchSource)
 	assert.Equal(t, int64(550), result.TMDBID)
 	assert.Equal(t, "tt0137523", result.IMDBID)
 }
@@ -194,6 +196,7 @@ func TestPipeline_Step3_TVSearch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
+	assert.Equal(t, MatchSourceTMDBSearch, result.MatchSource)
 	assert.Equal(t, int64(1399), result.TMDBID)
 	assert.Equal(t, "tt0903747", result.IMDBID)
 	assert.Equal(t, int64(81189), result.TVDBID)
@@ -266,6 +269,7 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 		Type:  model.TitleTypeAnime,
 	})
 	require.NoError(t, err)
+	assert.Equal(t, MatchSourceAniListSearch, result.MatchSource)
 	assert.Equal(t, int64(21), result.AniListID)
 }
 
@@ -299,6 +303,7 @@ func TestPipeline_NoMatch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, model.MatchStatusUnconfirmed, result.MatchStatus)
+	assert.Equal(t, MatchSourceNone, result.MatchSource)
 	assert.NotEmpty(t, result.Names)
 	assert.Equal(t, "Some Obscure Title", result.Names[0].Name)
 }
@@ -356,6 +361,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, model.MatchStatusConfirmed, result.MatchStatus)
+	assert.Equal(t, MatchSourceCrossRef, result.MatchSource)
 	assert.Equal(t, int64(46298), result.TMDBID)
 	assert.Equal(t, "tt0388629", result.IMDBID)
 	assert.Equal(t, int64(21), result.AniListID)
@@ -374,5 +380,6 @@ func TestPipeline_NilClients(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, model.MatchStatusUnconfirmed, result.MatchStatus)
+	assert.Equal(t, MatchSourceNone, result.MatchSource)
 	assert.Equal(t, "Test", result.Names[0].Name)
 }

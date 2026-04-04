@@ -88,11 +88,13 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	manualSource := "manual"
 	title := &model.Title{
 		Type:        body.Type,
 		Year:        body.Year,
 		Status:      body.Status,
 		MatchStatus: body.MatchStatus,
+		MatchSource: &manualSource,
 		CoverURL:    body.CoverURL,
 		IMDBID:      body.IMDBID,
 		AniListID:   body.AniListID,
