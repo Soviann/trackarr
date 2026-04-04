@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.1.3] — 2026-04-04
+
+### Corrigé
+- Déploiement : préserve les fichiers locaux (`logs/`, `.env.local`) lors de la mise à jour
+- CI : ne tourne plus que lors des releases
+
 ## [v0.1.2] — 2026-04-04
 
 ### Corrigé
