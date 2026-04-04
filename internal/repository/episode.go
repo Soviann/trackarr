@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
 type EpisodeRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewEpisodeRepository(db *sql.DB) *EpisodeRepository {
+func NewEpisodeRepository(db database.DBTX) *EpisodeRepository {
 	return &EpisodeRepository{db: db}
 }
 

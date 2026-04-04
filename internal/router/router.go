@@ -58,12 +58,12 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	settingRepo := repository.NewSettingRepository(db)
 
 	// Services
-	var pushSvc *service.PushService
+	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	plexSvc := service.NewPlexService(titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
+	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
 
 	// Stats repository
 	statsRepo := repository.NewStatsRepository(db)

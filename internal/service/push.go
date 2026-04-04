@@ -9,6 +9,16 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
+// PushNotifier abstracts push notification operations.
+// Use NewNoopNotifier() when VAPID keys are not configured.
+type PushNotifier interface {
+	Subscribe(rawJSON string) error
+	Unsubscribe() error
+	HasSubscription() bool
+	SendNotification(title, body, url string) error
+}
+
+// PushService implements PushNotifier with real web push notifications.
 type PushService struct {
 	settings   *repository.SettingRepository
 	publicKey  string
@@ -51,18 +61,11 @@ func (s *PushService) Unsubscribe() error {
 }
 
 func (s *PushService) HasSubscription() bool {
-	if s == nil {
-		return false
-	}
 	val, err := s.settings.Get(settingKeyPushSubscription)
 	return err == nil && val != ""
 }
 
 func (s *PushService) SendNotification(title, body, url string) error {
-	if s == nil {
-		return nil
-	}
-
 	raw, err := s.settings.Get(settingKeyPushSubscription)
 	if err != nil {
 		return nil // No subscription, silently skip
@@ -95,3 +98,17 @@ func (s *PushService) SendNotification(title, body, url string) error {
 
 	return nil
 }
+
+// noopNotifier silently ignores all push operations.
+type noopNotifier struct{}
+
+// NewNoopNotifier returns a PushNotifier that does nothing.
+// Use when VAPID keys are not configured.
+func NewNoopNotifier() PushNotifier {
+	return noopNotifier{}
+}
+
+func (noopNotifier) Subscribe(string) error           { return fmt.Errorf("push notifications not configured") }
+func (noopNotifier) Unsubscribe() error               { return fmt.Errorf("push notifications not configured") }
+func (noopNotifier) HasSubscription() bool             { return false }
+func (noopNotifier) SendNotification(_, _, _ string) error { return nil }

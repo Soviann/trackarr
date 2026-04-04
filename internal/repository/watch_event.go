@@ -1,17 +1,18 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
+	"strings"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
 type WatchEventRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewWatchEventRepository(db *sql.DB) *WatchEventRepository {
+func NewWatchEventRepository(db database.DBTX) *WatchEventRepository {
 	return &WatchEventRepository{db: db}
 }
 
@@ -22,6 +23,28 @@ func (r *WatchEventRepository) Create(event *model.WatchEvent) (int64, error) {
 		return 0, fmt.Errorf("create watch event: %w", err)
 	}
 	return res.LastInsertId()
+}
+
+// BatchCreate inserts multiple watch events in a single statement.
+func (r *WatchEventRepository) BatchCreate(events []model.WatchEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(events))
+	args := make([]interface{}, 0, len(events)*4)
+	for i, e := range events {
+		placeholders[i] = "(?, ?, ?, ?)"
+		args = append(args, e.TitleID, e.EpisodeID, e.Source, e.PlexPayload)
+	}
+
+	query := fmt.Sprintf("INSERT INTO watch_events (title_id, episode_id, source, plex_payload) VALUES %s",
+		strings.Join(placeholders, ", "))
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("batch create watch events: %w", err)
+	}
+	return nil
 }
 
 func (r *WatchEventRepository) ListByTitle(titleID int64) ([]model.WatchEvent, error) {

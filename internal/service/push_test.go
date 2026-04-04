@@ -72,9 +72,10 @@ func TestPushService_Subscribe_RequiresEndpoint(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestPushService_NilSafe(t *testing.T) {
-	// Nil push service should not panic
-	var svc *service.PushService
-	assert.False(t, svc.HasSubscription())
-	assert.NoError(t, svc.SendNotification("title", "body", ""))
+func TestNoopNotifier(t *testing.T) {
+	noop := service.NewNoopNotifier()
+	assert.False(t, noop.HasSubscription())
+	assert.NoError(t, noop.SendNotification("title", "body", ""))
+	assert.Error(t, noop.Subscribe(`{"endpoint":"https://example.com"}`))
+	assert.Error(t, noop.Unsubscribe())
 }

@@ -1,15 +1,16 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
+
+	"github.com/nicolasvasse/plextracker/internal/database"
 )
 
 type SettingRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewSettingRepository(db *sql.DB) *SettingRepository {
+func NewSettingRepository(db database.DBTX) *SettingRepository {
 	return &SettingRepository{db: db}
 }
 

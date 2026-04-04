@@ -15,10 +15,10 @@ type EpisodeHandler struct {
 	titles   *repository.TitleRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
-	push     *service.PushService
+	push     service.PushNotifier
 }
 
-func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, push *service.PushService) *EpisodeHandler {
+func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, push service.PushNotifier) *EpisodeHandler {
 	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, push: push}
 }
 
@@ -78,14 +78,16 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 	}
 
 	// Log watch events
-	for _, epID := range body.EpisodeIDs {
+	watchEvents := make([]model.WatchEvent, len(body.EpisodeIDs))
+	for i, epID := range body.EpisodeIDs {
 		id := epID
-		_, _ = h.events.Create(&model.WatchEvent{
+		watchEvents[i] = model.WatchEvent{
 			TitleID:   titleID,
 			EpisodeID: &id,
 			Source:    model.WatchEventSourceManual,
-		})
+		}
 	}
+	_ = h.events.BatchCreate(watchEvents)
 
 	title, _ := h.titles.GetByID(titleID)
 

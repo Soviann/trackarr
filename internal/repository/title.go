@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"fmt"
 	"strings"
 
@@ -9,10 +11,10 @@ import (
 )
 
 type TitleRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewTitleRepository(db *sql.DB) *TitleRepository {
+func NewTitleRepository(db database.DBTX) *TitleRepository {
 	return &TitleRepository{db: db}
 }
 
@@ -57,13 +59,22 @@ type TitleUpdate struct {
 }
 
 func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (int64, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return 0, fmt.Errorf("begin tx: %w", err)
+	// If already inside a transaction, use the DBTX directly.
+	// Otherwise, wrap in a new transaction for atomicity.
+	if db, ok := r.db.(*sql.DB); ok {
+		var id int64
+		err := database.WithTx(db, func(tx *sql.Tx) error {
+			var err error
+			id, err = r.createInTx(tx, title, names)
+			return err
+		})
+		return id, err
 	}
-	defer func() { _ = tx.Rollback() }()
+	return r.createInTx(r.db, title, names)
+}
 
-	res, err := tx.Exec(`
+func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names []model.TitleName) (int64, error) {
+	res, err := db.Exec(`
 		INSERT INTO titles (type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		title.Type, title.Year, title.CoverURL, title.IMDBID, title.AniListID, title.TMDBID, title.TVDBID,
@@ -77,14 +88,14 @@ func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (i
 	id, _ := res.LastInsertId()
 
 	for _, name := range names {
-		_, err := tx.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, ?)`,
+		_, err := db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, ?)`,
 			id, name.Name, name.Language, name.IsPrimary)
 		if err != nil {
 			return 0, fmt.Errorf("insert title name: %w", err)
 		}
 	}
 
-	return id, tx.Commit()
+	return id, nil
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {

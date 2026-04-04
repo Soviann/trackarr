@@ -9,18 +9,14 @@ import (
 )
 
 type PushHandler struct {
-	push *service.PushService
+	push service.PushNotifier
 }
 
-func NewPushHandler(push *service.PushService) *PushHandler {
+func NewPushHandler(push service.PushNotifier) *PushHandler {
 	return &PushHandler{push: push}
 }
 
 func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) error {
-	if h.push == nil {
-		return httputil.NewAPIError(http.StatusServiceUnavailable, "Push notifications not configured")
-	}
-
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4096))
 	if err != nil {
 		return httputil.BadRequest("Invalid request")
@@ -35,10 +31,6 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) error {
-	if h.push == nil {
-		return httputil.NewAPIError(http.StatusServiceUnavailable, "Push notifications not configured")
-	}
-
 	if err := h.push.Unsubscribe(); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}

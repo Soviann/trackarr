@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
 type SeasonRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewSeasonRepository(db *sql.DB) *SeasonRepository {
+func NewSeasonRepository(db database.DBTX) *SeasonRepository {
 	return &SeasonRepository{db: db}
 }
 

@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: T15 complete (cover placeholders)
+## Status: T25 complete (Phase 6 — refactoring domaine)
 
 ## Backend (Go)
 
@@ -22,12 +22,12 @@ Update when adding routes, services, components, or commands.
 | Service | File | Purpose |
 |---|---|---|
 | PlexService | `internal/service/plex.go` | Webhook scrobble processing, delegates to pipeline |
-| PushService | `internal/service/push.go` | Web Push VAPID notifications, subscription management |
+| PushNotifier | `internal/service/push.go` | Interface (PushService + noopNotifier). Web Push VAPID |
 | BackgroundService | `internal/service/background.go` | Daily title refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching |
-| TMDBClient | `internal/service/matching/tmdb.go` | TMDB API: search, details, episodes, translations, covers |
-| AniListClient | `internal/service/matching/anilist.go` | AniList GraphQL: search, details, rating sync |
+| TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers |
+| AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync |
 | CrossRefDB | `internal/service/matching/crossref.go` | anime-offline-database ID cross-referencing |
 | GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve, key rotation |
 
@@ -39,6 +39,8 @@ Update when adding routes, services, components, or commands.
 4. **AniList search** — anime only → proceed to Step 5
 5. **Gemini verification** — high confidence → `pending_review`, low → `unconfirmed`
 
+Confidence levels: `ConfidenceHigh`, `ConfidenceMedium`, `ConfidenceLow` (constants in `pipeline.go`). Graceful degradation: nil clients are skipped, pipeline falls through to next step.
+
 Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
 
 After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover.
@@ -47,6 +49,10 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 | API | File | Purpose |
 |---|---|---|
+### Database
+
+`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)` transaction helper, `DBTX` interface (shared by `*sql.DB` and `*sql.Tx`). SQLite with WAL, `MaxOpenConns=1`.
+
 | TMDB | `internal/service/matching/tmdb.go` | Metadata, episodes, covers, names |
 | AniList | `internal/service/matching/anilist.go` | Anime search, episodes, rating sync |
 | Gemini | `internal/service/matching/gemini.go` | Match verification/fallback |
@@ -56,7 +62,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Repositories
 
-`internal/repository/` — TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
+`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
 
 ### Handlers
 

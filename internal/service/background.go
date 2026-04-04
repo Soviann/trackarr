@@ -17,7 +17,7 @@ type BackgroundService struct {
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	tmdb     *matching.TMDBClient
-	push     *PushService
+	push     PushNotifier
 	dataDir  string
 	limiter  *APILimiter
 }
@@ -27,7 +27,7 @@ func NewBackgroundService(
 	seasons *repository.SeasonRepository,
 	episodes *repository.EpisodeRepository,
 	tmdb *matching.TMDBClient,
-	push *PushService,
+	push PushNotifier,
 	dataDir string,
 ) *BackgroundService {
 	return &BackgroundService{

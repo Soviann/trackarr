@@ -18,6 +18,13 @@ const (
 	MatchSourceNone          = "none"
 )
 
+// Confidence levels returned by Gemini verification/resolution.
+const (
+	ConfidenceHigh   = "high"
+	ConfidenceMedium = "medium"
+	ConfidenceLow    = "low"
+)
+
 // Pipeline orchestrates the media matching process through Steps 1-5.
 type Pipeline struct {
 	tmdb    *TMDBClient
@@ -61,7 +68,12 @@ type MatchInput struct {
 	TVDBID int64
 }
 
-// Run executes the full matching pipeline.
+// Run executes the full matching pipeline (steps 1-5).
+//
+// Graceful degradation: each pipeline client (TMDB, AniList, Gemini, CrossRefDB)
+// may be nil. When a client is nil, its step is skipped and the pipeline falls
+// through to the next step. If all steps fail, the title is created with
+// MatchStatusUnconfirmed and MatchSourceNone, using the original Plex title.
 func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	result := &MatchResult{
 		IMDBID:    input.IMDBID,
@@ -232,7 +244,7 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 		if err != nil {
 			log.Printf("gemini verification failed: %v", err)
 			result.MatchStatus = model.MatchStatusUnconfirmed
-		} else if verification.Confirmed && verification.Confidence == "high" {
+		} else if verification.Confirmed && verification.Confidence == ConfidenceHigh {
 			result.MatchStatus = model.MatchStatusPendingReview
 		} else {
 			result.MatchStatus = model.MatchStatusUnconfirmed

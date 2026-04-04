@@ -6,14 +6,15 @@ import (
 	"math"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
 type StatsRepository struct {
-	db *sql.DB
+	db database.DBTX
 }
 
-func NewStatsRepository(db *sql.DB) *StatsRepository {
+func NewStatsRepository(db database.DBTX) *StatsRepository {
 	return &StatsRepository{db: db}
 }
 

@@ -45,7 +45,7 @@ func Serve(distFS embed.FS) error {
 		tmdbClient = matching.NewTMDBClient(cfg.TMDBAPIKey)
 	}
 
-	var pushSvc *service.PushService
+	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
