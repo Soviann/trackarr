@@ -12,7 +12,9 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
+  const raw = event.notification.data?.url || '/'
+  const target = new URL(raw, self.location.origin)
+  const url = target.origin === self.location.origin ? target.pathname : '/'
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {

@@ -49,7 +49,7 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
                 <a
                   href={`https://anilist.co/anime/${title.anilist_id}`}
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer"
                   style={{ fontSize: '10px', color: colors.accentAnilist, marginTop: '4px', display: 'block' }}
                 >
                   View on AniList

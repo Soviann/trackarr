@@ -249,7 +249,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onSave={handleSaveRating}
         onSaveAndImdb={(rating) => {
           handleSaveRating(rating)
-          if (title.imdb_id) window.open(`https://www.imdb.com/title/${title.imdb_id}/`, '_blank')
+          if (title.imdb_id) window.open(`https://www.imdb.com/title/${title.imdb_id}/`, '_blank', 'noopener,noreferrer')
         }}
       />
 

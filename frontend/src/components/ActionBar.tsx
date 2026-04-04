@@ -59,7 +59,7 @@ export function ActionBar({ title, nextEpisode, nextSeasonNumber, onMarkNext, on
         <a
           href={`https://www.imdb.com/title/${title.imdb_id}/`}
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           style={{
             flex: 1,
             display: 'flex',
