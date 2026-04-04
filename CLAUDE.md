@@ -12,6 +12,10 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
 - Plans: `docs/superpowers/plans/`.
 
+## Plans
+
+Audience = PO (non-technical). Structure plans around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in a collapsed/separate section if essential for scope estimation.
+
 ## Commands
 
 **All via Makefile (runs inside Docker).** Never `go`/`node`/`npm` on host. Host-only: `git`, `gh`, `docker`, `make`.
@@ -35,6 +39,15 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - No magic strings — constants/enums. DB queries in `repository/` only.
 - Handlers: struct with repos (DI), methods = HTTP handlers.
 - Errors: `fmt.Errorf("context: %w", err)`. Tests: `testify/assert`, in-memory SQLite.
+
+## Visual Verification
+
+After UI/UX changes, verify in-browser via Chrome DevTools MCP:
+1. Login with `DEBUG_LOGIN*` credentials from `.env.local`
+2. Confirm changed screens work as expected
+3. Check console for errors/warnings
+4. Navigate other pages to catch regressions
+5. If broken: fix → re-verify. Never claim done without visual confirmation.
 
 ## Git
 
