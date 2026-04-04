@@ -30,7 +30,7 @@ func TestSettingsHandler_Get_Empty(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()
-	h.Get(rr, req)
+	require.NoError(t, h.Get(rr, req))
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -46,7 +46,7 @@ func TestSettingsHandler_Get_AniListConnected(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()
-	h.Get(rr, req)
+	require.NoError(t, h.Get(rr, req))
 
 	var result map[string]interface{}
 	_ = json.NewDecoder(rr.Body).Decode(&result)
@@ -60,7 +60,7 @@ func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()
-	h.Get(rr, req)
+	require.NoError(t, h.Get(rr, req))
 
 	var result map[string]interface{}
 	_ = json.NewDecoder(rr.Body).Decode(&result)

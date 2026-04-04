@@ -1,15 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
@@ -26,24 +22,20 @@ func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.
 	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, push: push}
 }
 
-func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) {
-	titleID, err := strconv.ParseInt(chi.URLParam(r, "titleID"), 10, 64)
+func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) error {
+	titleID, err := httputil.ParseIDParam(r, "titleID")
 	if err != nil {
-		http.Error(w, "Invalid title ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid title ID")
 	}
 
-	episodeID, err := strconv.ParseInt(chi.URLParam(r, "episodeID"), 10, 64)
+	episodeID, err := httputil.ParseIDParam(r, "episodeID")
 	if err != nil {
-		http.Error(w, "Invalid episode ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid episode ID")
 	}
 
 	ep, err := h.episodes.ToggleWatched(episodeID)
 	if err != nil {
-		log.Printf("episode: toggle watched: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	// Log watch event if toggled on
@@ -63,29 +55,26 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) {
 		h.maybePromptRating(title)
 	}
 
-	writeJSON(w, title)
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
 }
 
-func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request) {
-	titleID, err := strconv.ParseInt(chi.URLParam(r, "titleID"), 10, 64)
+func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request) error {
+	titleID, err := httputil.ParseIDParam(r, "titleID")
 	if err != nil {
-		http.Error(w, "Invalid title ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid title ID")
 	}
 
 	var body struct {
 		EpisodeIDs []int64 `json:"episode_ids"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
 	}
 
 	now := time.Now().UTC()
 	if err := h.episodes.BatchMarkWatched(body.EpisodeIDs, now); err != nil {
-		log.Printf("episode: batch mark watched: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	// Log watch events
@@ -105,7 +94,8 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		h.maybePromptRating(title)
 	}
 
-	writeJSON(w, title)
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
 }
 
 // maybePromptRating sends a push notification if any season has all episodes watched

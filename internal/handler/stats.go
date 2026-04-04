@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
@@ -15,13 +15,12 @@ func NewStatsHandler(stats *repository.StatsRepository) *StatsHandler {
 	return &StatsHandler{stats: stats}
 }
 
-func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	resp, err := h.stats.GetAll()
 	if err != nil {
-		log.Printf("stats: get: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
-	writeJSON(w, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
+	return nil
 }

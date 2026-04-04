@@ -8,6 +8,7 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestAniListAuth_Authorize(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/anilist/auth", nil)
 	rr := httptest.NewRecorder()
-	h.Authorize(rr, req)
+	require.NoError(t, h.Authorize(rr, req))
 
 	assert.Equal(t, http.StatusFound, rr.Code)
 	assert.Contains(t, rr.Header().Get("Location"), "anilist.co/api/v2/oauth/authorize")
@@ -42,7 +43,7 @@ func TestAniListAuth_SaveToken(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/anilist/token", strings.NewReader(`{"token":"abc123"}`))
 	rr := httptest.NewRecorder()
-	h.SaveToken(rr, req)
+	require.NoError(t, h.SaveToken(rr, req))
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
@@ -56,9 +57,12 @@ func TestAniListAuth_SaveToken_EmptyRejected(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/anilist/token", strings.NewReader(`{"token":""}`))
 	rr := httptest.NewRecorder()
-	h.SaveToken(rr, req)
+	err := h.SaveToken(rr, req)
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
 
 func TestAniListAuth_Disconnect(t *testing.T) {
@@ -67,7 +71,7 @@ func TestAniListAuth_Disconnect(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/api/anilist/token", nil)
 	rr := httptest.NewRecorder()
-	h.Disconnect(rr, req)
+	require.NoError(t, h.Disconnect(rr, req))
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
@@ -86,7 +90,10 @@ func TestAniListAuth_AuthorizeNotConfigured(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/anilist/auth", nil)
 	rr := httptest.NewRecorder()
-	h.Authorize(rr, req)
+	err = h.Authorize(rr, req)
 
-	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusServiceUnavailable, apiErr.Status)
 }

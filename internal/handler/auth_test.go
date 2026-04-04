@@ -7,6 +7,7 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogout_ClearsCookie(t *testing.T) {
@@ -14,7 +15,7 @@ func TestLogout_ClearsCookie(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/auth/logout", nil)
 	rr := httptest.NewRecorder()
 
-	h.Logout(rr, req)
+	require.NoError(t, h.Logout(rr, req))
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 	cookies := rr.Result().Cookies()

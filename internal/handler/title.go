@@ -1,13 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
-	"io"
-	"log"
 	"net/http"
-	"strconv"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
@@ -23,7 +19,7 @@ func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.Sea
 	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events}
 }
 
-func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 	filter := repository.TitleFilter{}
 	if s := r.URL.Query().Get("status"); s != "" {
 		status := model.TitleStatus(s)
@@ -43,35 +39,33 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	titles, err := h.titles.List(filter)
 	if err != nil {
-		log.Printf("title: list: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	if titles == nil {
 		titles = []model.Title{}
 	}
 
-	writeJSON(w, titles)
+	httputil.WriteJSON(w, http.StatusOK, titles)
+	return nil
 }
 
-func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid ID")
 	}
 
 	title, err := h.titles.GetByID(id)
 	if err != nil {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+		return httputil.NotFound("Not found")
 	}
 
-	writeJSON(w, title)
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
 }
 
-func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Type        model.TitleType   `json:"type"`
 		Year        int               `json:"year"`
@@ -85,9 +79,8 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		TVDBID      *int64            `json:"tvdb_id"`
 	}
 
-	if err := json.NewDecoder(io.LimitReader(r.Body, 65536)).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+	if err := httputil.ReadJSON(r, &body, 65536); err != nil {
+		return httputil.BadRequest("Invalid request")
 	}
 
 	manualSource := "manual"
@@ -106,21 +99,18 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.titles.Create(title, body.Names)
 	if err != nil {
-		log.Printf("title: create: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	created, _ := h.titles.GetByID(id)
-	w.WriteHeader(http.StatusCreated)
-	writeJSON(w, created)
+	httputil.WriteJSON(w, http.StatusCreated, created)
+	return nil
 }
 
-func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid ID")
 	}
 
 	var body struct {
@@ -130,9 +120,8 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Type        *model.TitleType    `json:"type"`
 	}
 
-	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
 	}
 
 	update := repository.TitleUpdate{
@@ -142,16 +131,10 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.titles.Update(id, update); err != nil {
-		log.Printf("title: update: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	title, _ := h.titles.GetByID(id)
-	writeJSON(w, title)
-}
-
-func writeJSON(w http.ResponseWriter, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
 }

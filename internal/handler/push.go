@@ -2,9 +2,9 @@ package handler
 
 import (
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
@@ -16,38 +16,33 @@ func NewPushHandler(push *service.PushService) *PushHandler {
 	return &PushHandler{push: push}
 }
 
-func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
+func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) error {
 	if h.push == nil {
-		http.Error(w, "Push notifications not configured", http.StatusServiceUnavailable)
-		return
+		return httputil.NewAPIError(http.StatusServiceUnavailable, "Push notifications not configured")
 	}
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4096))
 	if err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid request")
 	}
 
 	if err := h.push.Subscribe(string(body)); err != nil {
-		log.Printf("push: subscribe: %v", err)
-		http.Error(w, "Invalid subscription", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid subscription")
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
-func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
+func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) error {
 	if h.push == nil {
-		http.Error(w, "Push notifications not configured", http.StatusServiceUnavailable)
-		return
+		return httputil.NewAPIError(http.StatusServiceUnavailable, "Push notifications not configured")
 	}
 
 	if err := h.push.Unsubscribe(); err != nil {
-		log.Printf("push: unsubscribe: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

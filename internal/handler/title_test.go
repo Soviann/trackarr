@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func TestTitleHandler_List(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/api/titles?status=watching", nil)
 	rr := httptest.NewRecorder()
-	h.List(rr, req)
+	require.NoError(t, h.List(rr, req))
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var titles []model.Title
@@ -61,7 +62,7 @@ func TestTitleHandler_Create(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader(body))
 	rr := httptest.NewRecorder()
-	h.Create(rr, req)
+	require.NoError(t, h.Create(rr, req))
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	var title model.Title
@@ -75,7 +76,7 @@ func TestTitleHandler_GetByID(t *testing.T) {
 	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	r := chi.NewRouter()
-	r.Get("/api/titles/{id}", h.GetByID)
+	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
 
 	req := httptest.NewRequest("GET", "/api/titles/"+itoa(id), nil)
 	rr := httptest.NewRecorder()

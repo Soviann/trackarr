@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 )
 
 type AuthHandler struct {
@@ -36,20 +37,18 @@ func (h *AuthHandler) WithDevLogin(user, password string) *AuthHandler {
 }
 
 // GoogleCallback verifies the Google ID token and issues a JWT cookie.
-func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Credential string `json:"credential"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid request")
 	}
 
 	// Verify Google ID token via Google's tokeninfo endpoint
 	resp, err := http.Get(fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", body.Credential))
 	if err != nil || resp.StatusCode != 200 {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
+		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
 	}
 	defer resp.Body.Close()
 
@@ -58,13 +57,11 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		Aud   string `json:"aud"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
+		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
 	}
 
 	if tokenInfo.Email != h.allowedEmail || tokenInfo.Aud != h.clientID {
-		http.Error(w, "Unauthorized", http.StatusForbidden)
-		return
+		return httputil.NewAPIError(http.StatusForbidden, "Unauthorized")
 	}
 
 	// Issue JWT
@@ -75,31 +72,29 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	http.SetCookie(w, h.authCookie(signed))
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 // DevLogin authenticates with username/password for local development.
 // Only works when debug login is enabled and credentials are non-default.
-func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1024)).Decode(&body); err != nil {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+		return httputil.NotFound("Not found")
 	}
 
 	userOK := subtle.ConstantTimeCompare([]byte(body.Username), []byte(h.devUser))
 	passOK := subtle.ConstantTimeCompare([]byte(body.Password), []byte(h.devPassword))
 	if userOK&passOK != 1 {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+		return httputil.NotFound("Not found")
 	}
 
 	// Issue JWT with the allowed email, same as Google OAuth
@@ -110,15 +105,15 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+		return httputil.NotFound("Not found")
 	}
 
 	http.SetCookie(w, h.authCookie(signed))
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
-func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
@@ -129,6 +124,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 func (h *AuthHandler) authCookie(token string) *http.Cookie {

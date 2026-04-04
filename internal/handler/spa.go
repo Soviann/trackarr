@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 )
 
 // SPAHandler serves the embedded Preact SPA.
@@ -37,7 +39,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 func PublicConfig(googleClientID, vapidPublicKey string, devLogin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		writeJSON(w, map[string]interface{}{
+		httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"google_client_id": googleClientID,
 			"vapid_public_key": vapidPublicKey,
 			"dev_login":        devLogin,

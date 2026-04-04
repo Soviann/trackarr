@@ -3,9 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
@@ -24,42 +24,39 @@ func NewAniListAuthHandler(settings *repository.SettingRepository, clientID stri
 }
 
 // Authorize redirects to AniList OAuth page (implicit grant).
-func (h *AniListAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
+func (h *AniListAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) error {
 	if h.clientID == "" {
-		http.Error(w, "AniList not configured", http.StatusServiceUnavailable)
-		return
+		return httputil.NewAPIError(http.StatusServiceUnavailable, "AniList not configured")
 	}
 
 	url := anilistAuthorizeURL + "?client_id=" + h.clientID + "&response_type=token"
 	http.Redirect(w, r, url, http.StatusFound)
+	return nil
 }
 
 // SaveToken stores the access token received from the frontend.
-func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) {
+func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&body); err != nil || body.Token == "" {
-		http.Error(w, "Invalid token", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid token")
 	}
 
 	if err := h.settings.Set(settingKeyAniListToken, body.Token); err != nil {
-		log.Printf("anilist: save token: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 // Disconnect removes the stored AniList token.
-func (h *AniListAuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) {
+func (h *AniListAuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) error {
 	if err := h.settings.Delete(settingKeyAniListToken); err != nil {
-		log.Printf("anilist: disconnect: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

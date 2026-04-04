@@ -8,6 +8,7 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestPushHandler_Subscribe(t *testing.T) {
 	body := `{"endpoint":"https://push.example.com/sub","keys":{"p256dh":"k","auth":"a"}}`
 	req := httptest.NewRequest("POST", "/api/push/subscribe", strings.NewReader(body))
 	rr := httptest.NewRecorder()
-	h.Subscribe(rr, req)
+	require.NoError(t, h.Subscribe(rr, req))
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 }
@@ -42,9 +43,12 @@ func TestPushHandler_Subscribe_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/push/subscribe", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
-	h.Subscribe(rr, req)
+	err := h.Subscribe(rr, req)
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
 
 func TestPushHandler_Unsubscribe(t *testing.T) {
@@ -52,7 +56,7 @@ func TestPushHandler_Unsubscribe(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/api/push/subscribe", nil)
 	rr := httptest.NewRecorder()
-	h.Unsubscribe(rr, req)
+	require.NoError(t, h.Unsubscribe(rr, req))
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 }

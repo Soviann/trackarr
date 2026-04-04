@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nicolasvasse/plextracker/internal/config"
 	"github.com/nicolasvasse/plextracker/internal/handler"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	mw "github.com/nicolasvasse/plextracker/internal/middleware"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
@@ -88,14 +89,14 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID, cfg.CookieSecure)
 		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
 			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
-			r.With(authRateLimit).Post("/auth/dev", auth.DevLogin)
+			r.With(authRateLimit).Post("/auth/dev", httputil.WrapHandler(auth.DevLogin))
 			log.Println("⚠️  Dev login enabled — POST /api/auth/dev")
 		}
-		r.With(authRateLimit).Post("/auth/google", auth.GoogleCallback)
-		r.Post("/auth/logout", auth.Logout)
+		r.With(authRateLimit).Post("/auth/google", httputil.WrapHandler(auth.GoogleCallback))
+		r.Post("/auth/logout", httputil.WrapHandler(auth.Logout))
 
 		// Plex webhook (secured by secret token in URL)
-		r.Post("/webhook/plex/{secret}", webhooks.HandlePlex)
+		r.Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)
@@ -104,26 +105,26 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		r.Group(func(r chi.Router) {
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
 
-			r.Get("/titles", titles.List)
-			r.Get("/titles/{id}", titles.GetByID)
-			r.Post("/titles", titles.Create)
-			r.Patch("/titles/{id}", titles.Update)
+			r.Get("/titles", httputil.WrapHandler(titles.List))
+			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
+			r.Post("/titles", httputil.WrapHandler(titles.Create))
+			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
 
-			r.Patch("/titles/{titleID}/episodes/{episodeID}", episodes.ToggleWatched)
-			r.Post("/titles/{titleID}/episodes/batch-watch", episodes.BatchMarkWatched)
+			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
+			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
 
-			r.Patch("/titles/{titleID}/seasons/{seasonID}", seasons.UpdateRating)
+			r.Patch("/titles/{titleID}/seasons/{seasonID}", httputil.WrapHandler(seasons.UpdateRating))
 
-			r.Post("/push/subscribe", push.Subscribe)
-			r.Delete("/push/subscribe", push.Unsubscribe)
+			r.Post("/push/subscribe", httputil.WrapHandler(push.Subscribe))
+			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
 
-			r.Get("/stats", stats.Get)
+			r.Get("/stats", httputil.WrapHandler(stats.Get))
 
-			r.Get("/settings", settings.Get)
+			r.Get("/settings", httputil.WrapHandler(settings.Get))
 
-			r.Get("/anilist/auth", anilistAuth.Authorize)
-			r.Post("/anilist/token", anilistAuth.SaveToken)
-			r.Delete("/anilist/token", anilistAuth.Disconnect)
+			r.Get("/anilist/auth", httputil.WrapHandler(anilistAuth.Authorize))
+			r.Post("/anilist/token", httputil.WrapHandler(anilistAuth.SaveToken))
+			r.Delete("/anilist/token", httputil.WrapHandler(anilistAuth.Disconnect))
 		})
 	})
 

@@ -1,13 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
-	"io"
-	"log"
 	"net/http"
-	"strconv"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
@@ -19,26 +15,23 @@ func NewSeasonHandler(seasons *repository.SeasonRepository) *SeasonHandler {
 	return &SeasonHandler{seasons: seasons}
 }
 
-func (h *SeasonHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
-	seasonID, err := strconv.ParseInt(chi.URLParam(r, "seasonID"), 10, 64)
+func (h *SeasonHandler) UpdateRating(w http.ResponseWriter, r *http.Request) error {
+	seasonID, err := httputil.ParseIDParam(r, "seasonID")
 	if err != nil {
-		http.Error(w, "Invalid season ID", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid season ID")
 	}
 
 	var body struct {
 		Rating int `json:"rating"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1024)).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+	if err := httputil.ReadJSON(r, &body, 1024); err != nil {
+		return httputil.BadRequest("Invalid request")
 	}
 
 	if err := h.seasons.UpdateRating(seasonID, body.Rating); err != nil {
-		log.Printf("season: update rating: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
+	return nil
 }

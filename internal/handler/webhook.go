@@ -2,10 +2,10 @@ package handler
 
 import (
 	"crypto/subtle"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
@@ -18,35 +18,30 @@ func NewWebhookHandler(plex *service.PlexService, secret string) *WebhookHandler
 	return &WebhookHandler{plex: plex, secret: secret}
 }
 
-func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) {
+func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) error {
 	token := chi.URLParam(r, "secret")
 	if h.secret == "" || subtle.ConstantTimeCompare([]byte(token), []byte(h.secret)) != 1 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
 	}
 	// Plex sends multipart/form-data with a "payload" field
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid request")
 	}
 
 	raw := r.FormValue("payload")
 	if raw == "" {
-		http.Error(w, "Missing payload", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Missing payload")
 	}
 
 	payload, err := service.ParsePlexPayload([]byte(raw))
 	if err != nil {
-		http.Error(w, "Invalid payload", http.StatusBadRequest)
-		return
+		return httputil.BadRequest("Invalid payload")
 	}
 
 	if err := h.plex.ProcessScrobble(payload, raw); err != nil {
-		log.Printf("webhook: process scrobble: %v", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
+		return httputil.InternalError("Internal error", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
+	return nil
 }
