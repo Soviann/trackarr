@@ -122,6 +122,9 @@ export function Add({ path }: { path?: string }) {
           <input
             ref={inputRef}
             type="text"
+            name="add-title"
+            id="add-title"
+            autocomplete="off"
             value={query}
             onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
             onKeyDown={handleKeyDown}

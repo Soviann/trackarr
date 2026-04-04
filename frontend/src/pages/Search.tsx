@@ -230,6 +230,9 @@ export function Search({ path }: { path?: string }) {
           <input
             ref={inputRef}
             type="text"
+            name="search"
+            id="search"
+            autocomplete="off"
             value={query}
             onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
             placeholder="Search titles..."

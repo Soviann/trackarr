@@ -109,6 +109,9 @@ export function Login({ path }: { path?: string }) {
           <div style={{ fontSize: '11px', color: colors.textSecondary, textAlign: 'center' }}>Dev Login</div>
           <input
             type="text"
+            name="username"
+            id="username"
+            autocomplete="username"
             placeholder="Username"
             value={username}
             onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
@@ -116,6 +119,9 @@ export function Login({ path }: { path?: string }) {
           />
           <input
             type="password"
+            name="password"
+            id="password"
+            autocomplete="current-password"
             placeholder="Password"
             value={password}
             onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
