@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -18,6 +19,7 @@ type BackgroundService struct {
 	tmdb     *matching.TMDBClient
 	push     *PushService
 	dataDir  string
+	limiter  *APILimiter
 }
 
 func NewBackgroundService(
@@ -35,6 +37,7 @@ func NewBackgroundService(
 		tmdb:     tmdb,
 		push:     push,
 		dataDir:  dataDir,
+		limiter:  NewAPILimiter(2, 1),
 	}
 }
 
@@ -77,8 +80,7 @@ func (s *BackgroundService) RefreshTitles() []RefreshResult {
 		result := s.refreshTitle(&title)
 		results = append(results, result)
 
-		// Rate limiting between titles
-		time.Sleep(500 * time.Millisecond)
+		_ = s.limiter.Wait(context.Background())
 	}
 
 	return results
@@ -192,7 +194,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 			_, _ = s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
 		}
 
-		time.Sleep(250 * time.Millisecond) // Rate limiting per season
+		_ = s.limiter.Wait(context.Background())
 	}
 }
 
@@ -262,7 +264,7 @@ func (s *BackgroundService) FetchMissingCovers() int {
 			}
 		}
 
-		time.Sleep(300 * time.Millisecond)
+		_ = s.limiter.Wait(context.Background())
 	}
 
 	return fetched
