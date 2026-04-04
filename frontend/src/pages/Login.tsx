@@ -124,7 +124,7 @@ export function Login({ path }: { path?: string }) {
           {devError && <div style={{ fontSize: '11px', color: '#e74c3c', textAlign: 'center' }}>{devError}</div>}
           <button
             type="submit"
-            style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: colors.accent, color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: colors.accentAmber, color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
           >
             Sign in
           </button>
