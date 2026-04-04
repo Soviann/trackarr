@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -42,7 +43,8 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	titles, err := h.titles.List(filter)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("title: list: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -104,7 +106,8 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.titles.Create(title, body.Names)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("title: create: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -139,7 +142,8 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.titles.Update(id, update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("title: update: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

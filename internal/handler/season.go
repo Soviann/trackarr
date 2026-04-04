@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -34,7 +35,8 @@ func (h *SeasonHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.seasons.UpdateRating(seasonID, body.Rating); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("season: update rating: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

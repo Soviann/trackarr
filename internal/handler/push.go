@@ -2,6 +2,7 @@ package handler
 
 import (
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/nicolasvasse/plextracker/internal/service"
@@ -28,7 +29,8 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.push.Subscribe(string(body)); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("push: subscribe: %v", err)
+		http.Error(w, "Invalid subscription", http.StatusBadRequest)
 		return
 	}
 
@@ -42,7 +44,8 @@ func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.push.Unsubscribe(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("push: unsubscribe: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

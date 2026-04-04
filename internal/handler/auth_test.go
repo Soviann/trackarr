@@ -10,7 +10,7 @@ import (
 )
 
 func TestLogout_ClearsCookie(t *testing.T) {
-	h := handler.NewAuthHandler("secret", "test@example.com", "client-id")
+	h := handler.NewAuthHandler("secret", "test@example.com", "client-id", false)
 	req := httptest.NewRequest("POST", "/api/auth/logout", nil)
 	rr := httptest.NewRecorder()
 

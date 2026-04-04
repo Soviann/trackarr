@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/nicolasvasse/plextracker/internal/repository"
@@ -44,7 +45,8 @@ func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.settings.Set(settingKeyAniListToken, body.Token); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("anilist: save token: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -54,7 +56,8 @@ func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) {
 // Disconnect removes the stored AniList token.
 func (h *AniListAuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) {
 	if err := h.settings.Delete(settingKeyAniListToken); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("anilist: disconnect: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

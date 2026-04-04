@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,7 +41,8 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) {
 
 	ep, err := h.episodes.ToggleWatched(episodeID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("episode: toggle watched: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -81,7 +83,8 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 
 	now := time.Now().UTC()
 	if err := h.episodes.BatchMarkWatched(body.EpisodeIDs, now); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("episode: batch mark watched: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

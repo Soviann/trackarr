@@ -12,6 +12,7 @@ type Config struct {
 	GoogleClientID      string
 	GoogleAllowedEmail  string
 	JWTSecret           string
+	CookieSecure        bool
 	TMDBAPIKey          string
 	AniListClientID     string
 	AniListClientSecret string
@@ -48,9 +49,14 @@ func Load() (*Config, error) {
 	cfg.DebugLogin = os.Getenv("DEBUG_LOGIN") == "true"
 	cfg.DebugLoginUser = envOr("DEBUG_LOGIN_USER", "")
 	cfg.DebugLoginPassword = envOr("DEBUG_LOGIN_PASSWORD", "")
+	cfg.CookieSecure = !cfg.DebugLogin
 
 	if cfg.GoogleClientID == "" || cfg.GoogleAllowedEmail == "" || cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("required env vars: GOOGLE_CLIENT_ID, GOOGLE_ALLOWED_EMAIL, JWT_SECRET")
+	}
+
+	if cfg.JWTSecret == "dev-secret-change-me" && !cfg.DebugLogin {
+		return nil, fmt.Errorf("JWT_SECRET must be changed from default for production use")
 	}
 
 	return cfg, nil

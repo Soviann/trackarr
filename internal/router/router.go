@@ -22,6 +22,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
+	r.Use(mw.SecurityHeaders)
 
 	// Repositories
 	titleRepo := repository.NewTitleRepository(db)
@@ -78,7 +79,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey, cfg.DebugLogin))
 
 		// Auth (unauthenticated)
-		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID)
+		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID, cfg.CookieSecure)
 		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
 			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
 			r.Post("/auth/dev", auth.DevLogin)

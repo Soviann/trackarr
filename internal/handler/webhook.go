@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/subtle"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -42,7 +43,8 @@ func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.plex.ProcessScrobble(payload, raw); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("webhook: process scrobble: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

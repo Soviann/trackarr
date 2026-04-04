@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,15 +15,17 @@ type AuthHandler struct {
 	jwtSecret    string
 	allowedEmail string
 	clientID     string
+	cookieSecure bool
 	devUser      string
 	devPassword  string
 }
 
-func NewAuthHandler(jwtSecret, allowedEmail, clientID string) *AuthHandler {
+func NewAuthHandler(jwtSecret, allowedEmail, clientID string, cookieSecure bool) *AuthHandler {
 	return &AuthHandler{
 		jwtSecret:    jwtSecret,
 		allowedEmail: allowedEmail,
 		clientID:     clientID,
+		cookieSecure: cookieSecure,
 	}
 }
 
@@ -76,14 +79,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    signed,
-		Path:     "/",
-		MaxAge:   365 * 24 * 3600,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	http.SetCookie(w, h.authCookie(signed))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -99,7 +95,9 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if body.Username != h.devUser || body.Password != h.devPassword {
+	userOK := subtle.ConstantTimeCompare([]byte(body.Username), []byte(h.devUser))
+	passOK := subtle.ConstantTimeCompare([]byte(body.Password), []byte(h.devPassword))
+	if userOK&passOK != 1 {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -116,14 +114,7 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    signed,
-		Path:     "/",
-		MaxAge:   365 * 24 * 3600,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	http.SetCookie(w, h.authCookie(signed))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -134,7 +125,20 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   h.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandler) authCookie(token string) *http.Cookie {
+	return &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   365 * 24 * 3600,
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	}
 }
