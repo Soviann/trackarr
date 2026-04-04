@@ -4,8 +4,39 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: [ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          NOTES=$(awk "/^## \\[$TAG\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md)
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        run: gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          NOTES: ${{ steps.changelog.outputs.notes }}
+
   deploy:
+    needs: [ci, release]
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to NAS
