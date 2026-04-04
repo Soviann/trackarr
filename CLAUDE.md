@@ -7,6 +7,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 ## Approach
 
 - Act over ask. Only read files you will edit.
+- Always prefer the robust/correct solution over the lazy/easy one, even if harder or more tedious. If trade-offs exist, present them to the user as a PO: describe user-visible impact of each option, not implementation effort.
 - Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update patterns.md when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
 - CLAUDE.md and patterns.md must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
