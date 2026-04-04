@@ -1,5 +1,37 @@
 # Changelog
 
+## [v0.3.0] — 2026-04-04
+
+### Ajouté
+- Pagination serveur avec réponse allégée (compteurs saison, next_episode)
+- Placeholders colorés par type pour les titres sans couverture
+- Métadonnées épisodes enrichies depuis TMDB (nom, date de diffusion)
+- États d'erreur avec bouton « Réessayer » et écran de secours JS
+- Fondations frontend : store Zustand, utilitaires partagés, tokens de thème
+- Recherche améliorée : tri par pertinence, limite à 50 résultats
+
+### Refactorisé
+- Découpage des clients TMDB et AniList par responsabilité (search, details, covers, sync)
+- Interface `PushNotifier` avec implémentation no-op (suppression des nil checks)
+- Interface `DBTX` et helper `WithTx` pour transactions SQLite
+- Scrobbles Plex atomiques via transactions
+- `BatchCreate` pour les watch events
+- Gestion d'erreurs centralisée avec helpers HTTP
+- Rate limiter `x/time/rate` pour les appels API externes
+
+### Corrigé
+- Crash JS causé par `episodes: null` dans le JSON
+- Cohérence de langue sur l'écran de connexion
+- Accessibilité des boutons retour/edit (balises `<button>` + `aria-label`)
+
+## [v0.2.0] — 2026-04-04
+
+### Ajouté
+- Page Stats avec tableau de bord complet
+
+### Corrigé
+- Sécurité : CSP, open redirect, referrer leaks, durée JWT, rate limiting
+
 ## [v0.1.3] — 2026-04-04
 
 ### Corrigé
