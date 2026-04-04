@@ -14,7 +14,7 @@ export function Validate({ path }: { path?: string }) {
   const [adding, setAdding] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TitleStatus>('plan_to_watch')
 
-  const getName = (t: Title) => t.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const getName = (t: Title) => (t.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
 
   const handleAdd = async () => {
     if (adding) return

@@ -11,8 +11,8 @@ import { EditSheet } from '../components/EditSheet'
 import { AniListSheet } from '../components/AniListSheet'
 
 function getNextUnwatched(title: Title) {
-  for (const season of [...title.seasons].sort((a, b) => a.season_number - b.season_number)) {
-    for (const ep of [...season.episodes].sort((a, b) => a.episode - b.episode)) {
+  for (const season of [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)) {
+    for (const ep of [...(season.episodes ?? [])].sort((a, b) => a.episode - b.episode)) {
       if (!ep.watched) return { season, episode: ep }
     }
   }
@@ -39,15 +39,16 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     )
   }
 
-  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const typeLabel = title.type.charAt(0).toUpperCase() + title.type.slice(1)
-  const sortedSeasons = [...title.seasons].sort((a, b) => a.season_number - b.season_number)
+  const sortedSeasons = [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)
   const current = sortedSeasons.find((s) => s.season_number === activeSeason)
-    ?? sortedSeasons.find((s) => s.episodes.some((e) => !e.watched))
+    ?? sortedSeasons.find((s) => (s.episodes ?? []).some((e) => !e.watched))
     ?? sortedSeasons[sortedSeasons.length - 1]
 
-  const watched = current?.episodes.filter((e) => e.watched).length ?? 0
-  const total = current?.total_episodes ?? current?.episodes.length ?? 0
+  const currentEps = current?.episodes ?? []
+  const watched = currentEps.filter((e) => e.watched).length
+  const total = current?.total_episodes ?? currentEps.length
   const pct = total > 0 ? (watched / total) * 100 : 0
   const next = getNextUnwatched(title)
 
@@ -219,7 +220,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Episode list */}
       {current && (
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {[...current.episodes]
+          {[...(current.episodes ?? [])]
             .sort((a, b) => a.episode - b.episode)
             .map((ep) => (
               <EpisodeRow key={ep.id} titleId={title.id} episode={ep} onToggle={mutate} />

@@ -9,8 +9,9 @@ import { PosterCard } from '../components/PosterCard'
 
 function isUpToDate(title: Title): boolean {
   if (title.type === 'movie') return false
+  if (!title.seasons || title.seasons.length === 0) return false
   return title.seasons.every((s) =>
-    s.episodes.length === 0 || s.episodes.every((e) => e.watched)
+    (s.episodes ?? []).length === 0 || (s.episodes ?? []).every((e) => e.watched)
   )
 }
 

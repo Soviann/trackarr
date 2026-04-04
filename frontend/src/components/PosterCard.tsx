@@ -7,7 +7,7 @@ interface PosterCardProps {
 }
 
 export function PosterCard({ title }: PosterCardProps) {
-  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
 
   return (
     <div

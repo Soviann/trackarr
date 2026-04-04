@@ -11,7 +11,7 @@ interface AniListSheetProps {
 }
 
 export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniListSheetProps) {
-  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const hasAnilistMatch = !!title.anilist_id
 
   return (

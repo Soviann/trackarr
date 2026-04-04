@@ -3,6 +3,7 @@ import preact from '@preact/preset-vite'
 
 export default defineConfig({
   plugins: [preact({ devToolsEnabled: false })],
+  cacheDir: '/tmp/vite-cache',
   server: {
     host: '0.0.0.0',
     port: 5173,

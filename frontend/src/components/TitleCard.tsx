@@ -10,19 +10,22 @@ interface TitleCardProps {
 }
 
 function getProgress(title: Title) {
-  const currentSeason = title.seasons
-    .filter((s) => s.episodes.length > 0)
+  const seasons = title.seasons ?? []
+  const currentSeason = seasons
+    .filter((s) => (s.episodes ?? []).length > 0)
     .sort((a, b) => b.season_number - a.season_number)
-    .find((s) => s.episodes.some((e) => e.watched))
+    .find((s) => (s.episodes ?? []).some((e) => e.watched))
 
   if (!currentSeason) {
-    const first = title.seasons[0]
-    return { season: first, watched: 0, total: first?.total_episodes ?? 0, nextEpisode: first?.episodes[0] ?? null }
+    const first = seasons[0]
+    const eps = first?.episodes ?? []
+    return { season: first, watched: 0, total: first?.total_episodes ?? 0, nextEpisode: eps[0] ?? null }
   }
 
-  const watched = currentSeason.episodes.filter((e) => e.watched).length
-  const total = currentSeason.total_episodes ?? currentSeason.episodes.length
-  const nextEpisode = currentSeason.episodes
+  const eps = currentSeason.episodes ?? []
+  const watched = eps.filter((e) => e.watched).length
+  const total = currentSeason.total_episodes ?? eps.length
+  const nextEpisode = eps
     .sort((a, b) => a.episode - b.episode)
     .find((e) => !e.watched) ?? null
 
@@ -31,10 +34,14 @@ function getProgress(title: Title) {
 
 export function TitleCard({ title, onUpdate }: TitleCardProps) {
   const [toggling, setToggling] = useState(false)
-  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const typeLabel = title.type.charAt(0).toUpperCase() + title.type.slice(1)
 
-  const { season, watched, total, nextEpisode } = getProgress(title)
+  const progress = title.type !== 'movie' ? getProgress(title) : null
+  const season = progress?.season
+  const watched = progress?.watched ?? 0
+  const total = progress?.total ?? 0
+  const nextEpisode = progress?.nextEpisode ?? null
   const pct = total > 0 ? (watched / total) * 100 : 0
 
   const handleQuickMark = async (e: Event) => {

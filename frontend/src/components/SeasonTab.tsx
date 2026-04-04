@@ -8,8 +8,9 @@ interface SeasonTabProps {
 }
 
 export function SeasonTab({ season, active, onClick }: SeasonTabProps) {
-  const watched = season.episodes.filter((e) => e.watched).length
-  const total = season.total_episodes ?? season.episodes.length
+  const eps = season.episodes ?? []
+  const watched = eps.filter((e) => e.watched).length
+  const total = season.total_episodes ?? eps.length
   const allWatched = total > 0 && watched >= total
 
   if (active) {

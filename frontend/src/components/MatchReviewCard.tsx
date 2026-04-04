@@ -9,7 +9,7 @@ interface MatchReviewCardProps {
 }
 
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
-  const name = title.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const isUnconfirmed = title.match_status === 'unconfirmed'
   const borderColor = isUnconfirmed ? colors.accentCoral : colors.accentAmber
 

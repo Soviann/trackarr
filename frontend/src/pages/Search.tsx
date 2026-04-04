@@ -15,15 +15,17 @@ export function Search({ path }: { path?: string }) {
     inputRef.current?.focus()
   }, [])
 
-  const getName = (t: Title) => t.names.find((n) => n.is_primary)?.name ?? 'Untitled'
+  const getName = (t: Title) => (t.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
   const getTypeLabel = (t: Title) => t.type.charAt(0).toUpperCase() + t.type.slice(1)
 
   const getMetadata = (t: Title) => {
     const parts = [getTypeLabel(t), String(t.year)]
-    if (t.type !== 'movie' && t.seasons.length > 0) {
-      const s = t.seasons[t.seasons.length - 1]
-      const w = s.episodes.filter((e) => e.watched).length
-      const total = s.total_episodes ?? s.episodes.length
+    const seasons = t.seasons ?? []
+    if (t.type !== 'movie' && seasons.length > 0) {
+      const s = seasons[seasons.length - 1]
+      const eps = s.episodes ?? []
+      const w = eps.filter((e) => e.watched).length
+      const total = s.total_episodes ?? eps.length
       parts.push(`S${s.season_number} ${w}/${total}`)
     }
     if (t.my_rating) parts.push(`★ ${t.my_rating}`)
