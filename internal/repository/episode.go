@@ -79,6 +79,32 @@ func (r *EpisodeRepository) BatchMarkWatched(ids []int64, watchedAt time.Time) e
 	return nil
 }
 
+// UpdateMetadata sets name and air_date on an episode, only if the new value is non-empty.
+func (r *EpisodeRepository) UpdateMetadata(id int64, name, airDate string) error {
+	var sets []string
+	var args []interface{}
+
+	if name != "" {
+		sets = append(sets, "name = ?")
+		args = append(args, name)
+	}
+	if airDate != "" {
+		sets = append(sets, "air_date = ?")
+		args = append(args, airDate)
+	}
+	if len(sets) == 0 {
+		return nil
+	}
+
+	args = append(args, id)
+	query := fmt.Sprintf("UPDATE episodes SET %s WHERE id = ?", strings.Join(sets, ", "))
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("update episode metadata: %w", err)
+	}
+	return nil
+}
+
 func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, error) {
 	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
 	if err != nil {

@@ -191,7 +191,12 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		}
 
 		for _, tmdbEp := range episodes {
-			_, _ = s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
+			ep, err := s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
+			if err != nil {
+				continue
+			}
+			// Enrich metadata — only update if TMDB has non-empty values
+			_ = s.episodes.UpdateMetadata(ep.ID, tmdbEp.Name, tmdbEp.AirDate)
 		}
 
 		_ = s.limiter.Wait(context.Background())

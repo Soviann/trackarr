@@ -34,18 +34,22 @@ export function EpisodeRow({ titleId, episode, onToggle }: EpisodeRowProps) {
       borderRadius: '8px',
       border: `1px solid ${episode.watched ? colors.borderCard : colors.bgSurface}`,
     }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: '12px', color: colors.textPrimary }}>E{episode.episode}</span>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: colors.textPrimary, flexShrink: 0 }}>E{episode.episode}</span>
         {episode.name && (
           <span style={{
             fontSize: '11px',
             color: colors.textMuted,
-            marginLeft: '8px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {episode.name}
+            — {episode.name}
+          </span>
+        )}
+        {episode.air_date && (
+          <span style={{ fontSize: '10px', color: colors.textDimmed, flexShrink: 0, marginLeft: 'auto' }}>
+            {episode.air_date}
           </span>
         )}
       </div>
