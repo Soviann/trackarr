@@ -97,6 +97,20 @@ Options :
 - **Save & sync AniList** : enregistre et synchronise via l'API AniList (anime uniquement)
 - **Skip for now** : ferme sans noter
 
+### Stats
+
+L'onglet Stats (icône chart, barre lavande) affiche un tableau de bord de l'ensemble de la bibliothèque.
+
+**En un coup d'œil** : 4 cartes avec les chiffres-clés — titres suivis, épisodes vus, taux de complétion, note moyenne. Avec la répartition films/séries/anime en dessous.
+
+**Notes** : barres horizontales montrant la distribution des notes de 10 à 1. Un texte d'insight résume la tendance (généreux, exigeant, etc.).
+
+**Bibliothèque** : deux donuts montrant la répartition par statut (en cours, terminé, abandonné, à voir) et par type (film, série, anime).
+
+**Le savais-tu ?** : cartes insight surprenantes — plus gros binge, série la plus fidèle, sprint complétion, oiseau de nuit/lève-tôt, Plex vs Manuel, écart de notes entre types, préférence de décennies, cimetière des titres abandonnés, pression du backlog, mois record. Chaque carte n'apparaît que si la donnée est pertinente.
+
+**Année en cours** : 3 mini-cartes — titres ajoutés, épisodes vus, et complétions cette année.
+
 ### Édition d'un titre
 
 Depuis le bouton crayon sur le détail d'un titre :

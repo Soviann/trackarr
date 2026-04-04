@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: Phase 10 complete
+## Status: Phase 11 complete (Stats page)
 
 ## Backend (Go)
 
@@ -56,11 +56,11 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Repositories
 
-`internal/repository/` — TitleRepository, SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository. All DB queries live here.
+`internal/repository/` — TitleRepository, SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here.
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, spa. DI via struct with repos.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, spa. DI via struct with repos.
 
 ### Routes
 
@@ -80,6 +80,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
+| GET | `/api/stats` | Get | Yes |
 | GET | `/api/settings` | Get | Yes |
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
@@ -122,7 +123,7 @@ Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. T
 | `/` | Library | `pages/Library.tsx` |
 | `/search` | Search | `pages/Search.tsx` |
 | `/add` | Add | `pages/Add.tsx` |
-| `/stats` | Stats (placeholder) | `app.tsx` |
+| `/stats` | Stats | `pages/Stats.tsx` |
 | `/login` | Login | `pages/Login.tsx` |
 | `/title/:id` | TitleDetail | `pages/TitleDetail.tsx` |
 | `/validate` | Validate | `pages/Validate.tsx` |
