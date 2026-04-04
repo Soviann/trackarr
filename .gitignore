@@ -30,3 +30,6 @@ frontend/dist/
 
 # Superpowers
 .superpowers/
+
+# Playwright MCP
+.playwright-mcp/
