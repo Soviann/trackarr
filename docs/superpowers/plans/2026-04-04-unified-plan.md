@@ -112,76 +112,61 @@ Chercher "Naruto" retourne 4 845 resultats dont aucun n'est Naruto.
 
 **Fichiers :** `internal/repository/title_search.go` (nouveau), `internal/repository/title.go`
 
-### T14 — P2 : Pagination serveur
-*(Necessite batch loader — refactor T12, + store Zustand T8)*
+### T14 — P2 : Pagination serveur ✅
 
-**Etapes :**
-1. Reponse legere : plus d'episodes dans le listing, compteurs par saison
-2. Pagination `limit`/`offset` (defaut 50)
-3. Filtre "Up to date" cote serveur
-4. Bouton "Charger plus" en frontend
+Listing paginé (limit/offset, défaut 50), réponse légère (compteurs saison, next_episode, pas d'épisodes individuels), filtres serveur `up_to_date` et `watching_behind`, bouton "Charger plus" en Library et Search, MatchReview via `match_status` filter.
 
-**Comportement attendu :**
-- "Watching" charge en < 500 ms
-- "All" charge 50 titres puis "Charger plus"
-- Detail affiche toujours tous les episodes
+### T15 — P2 : Placeholder pour titres sans couverture ✅
 
-**Fichiers :** `internal/repository/title_loader.go` (nouveau), `internal/repository/title.go`, `internal/handler/title.go`, `frontend/src/pages/Library.tsx`, `frontend/src/store.ts`
+Composant `CoverPlaceholder` avec gradient coloré + icône SVG par type (movie=bleu, series=teal, anime=lavande). Helper `coverBackground()` pour le CSS. Appliqué dans TitleCard, PosterCard, MatchReviewCard, TitleDetail, Search, Validate.
 
-### T15 — P2 : Placeholder pour titres sans couverture
-**Comportement attendu :**
-- Carte Library : icone ou fond colore selon le type (film/serie/anime)
-- Page Detail : fond degrade + icone au lieu d'un bloc noir
-- Le titre reste lisible
+### T16 — P2 : Page Match Review accessible directement ✅
 
-### T16 — P2 : Page Match Review accessible directement
-**Comportement attendu :**
-- `/match-review` s'affiche correctement en navigation directe (bookmark, refresh)
-- Si rien a revoir : message "Aucun titre a verifier"
+Navigation directe fonctionne (SPA catch-all sert index.html). Message vide = "Aucun titre à vérifier".
 
 ---
 
 ## Phase 5 — Ameliorations UX secondaires
 
-### T17 — P3 : Enrichir les metadonnees episodes (nom, date)
-L'import Simkl ne fournit pas ces infos. Le job de refresh TMDB les ignore.
+### T17 — P3 : Enrichir les metadonnees episodes (nom, date) ✅
 
-**Comportement attendu :**
-- Apres un cycle de refresh, les episodes ont nom et date
-- Detail affiche "E3 — The One Where..." et la date
-- Les episodes deja nommes ne sont pas ecrases a vide
+EpisodeRepository.UpdateMetadata enrichit nom/date depuis TMDB. EpisodeRow affiche "E3 — nom" + date. Refresh quotidien met à jour les épisodes existants.
 
-**Fichiers :** `internal/repository/episode.go`, `internal/service/background.go`
+### T18 — P3 : Coherence de langue sur Login ✅
 
-### T18 — P3 : Coherence de langue sur Login
-Melange francais/anglais sur la page Login. Tout doit etre dans la meme langue.
+Textes Login alignés en français (tagline, bouton, message d'accueil, erreur).
 
-### T19 — P3 : Accessibilite boutons retour/edit (Detail)
-Les boutons sont des `<div>` sans role ni label. Passer en `<button>` avec `aria-label`.
+### T19 — P3 : Accessibilite boutons retour/edit (Detail) ✅
+
+Boutons back/edit/AniList convertis en `<button>` avec `aria-label` (Detail + MatchReview).
 
 ---
 
 ## Phase 6 — Refactoring domaine
 
-### T20 — Decouper tmdb.go et anilist.go
-Separer par responsabilite : search, details, covers / search, sync.
+### T20 — Decouper tmdb.go et anilist.go ✅
 
-### T21 — Pattern no-op client (PushService)
-Interface PushNotifier + implementation no-op quand non configure. Supprime les `if x != nil` partout.
+tmdb.go découpé en tmdb.go (client), tmdb_search.go, tmdb_details.go, tmdb_covers.go. anilist.go découpé en anilist.go (client), anilist_search.go, anilist_sync.go.
 
-### T22 — Constantes pipeline + documentation erreurs
-Constantes nommees pour confidence levels. Documentation du comportement de degradation gracieuse.
+### T21 — Pattern no-op client (PushService) ✅
 
-### T23 — Helper transaction (WithTx)
-Helper generique pour les transactions SQLite.
+Interface `PushNotifier` + `noopNotifier`. Callers utilisent l'interface, plus de `if x != nil`.
 
-**Fichier :** `internal/database/database.go`
+### T22 — Constantes pipeline + documentation erreurs ✅
 
-### T24 — Scrobble Plex en transaction
-Wrapper processMovie et processEpisode dans WithTx.
+Constantes `ConfidenceHigh/Medium/Low`. Documentation dégradation gracieuse sur `Pipeline.Run`.
 
-### T25 — Operations batch episodes
-BatchCreate pour watch events.
+### T23 — Helper transaction (WithTx) ✅
+
+`database.WithTx(db, fn)` + interface `database.DBTX` pour repos compatibles tx.
+
+### T24 — Scrobble Plex en transaction ✅
+
+`processMovie` et `processEpisode` wrappés dans `WithTx`. Repos créés depuis `*sql.Tx`.
+
+### T25 — Operations batch episodes ✅
+
+`WatchEventRepository.BatchCreate` — insert multiple en un statement. Utilisé dans `BatchMarkWatched`.
 
 ---
 
