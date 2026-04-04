@@ -82,7 +82,7 @@ export function Login({ path }: { path?: string }) {
         />
         <div style={{ fontSize: '24px', fontWeight: 700, color: colors.textPrimary }}>PlexTracker</div>
         <div style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '6px' }}>
-          Track your media library
+          Suivez votre bibliothèque multimédia
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export function Login({ path }: { path?: string }) {
               })
               route('/')
             } catch {
-              setDevError('Invalid credentials')
+              setDevError('Identifiants invalides')
             }
           }}
           style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px', width: '320px' }}
@@ -132,13 +132,13 @@ export function Login({ path }: { path?: string }) {
             type="submit"
             style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: colors.accentAmber, color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
           >
-            Sign in
+            Se connecter
           </button>
         </form>
       )}
 
       <div style={{ fontSize: '11px', color: colors.textDimmed, marginTop: '24px', textAlign: 'center' }}>
-        Sign in with your Google account to get started
+        Connectez-vous avec votre compte Google pour commencer
       </div>
     </div>
   )

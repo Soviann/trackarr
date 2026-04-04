@@ -101,8 +101,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       }}>
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
         {/* Back button */}
-        <div
+        <button
           onClick={() => history.back()}
+          aria-label="Retour"
           style={{
             position: 'absolute',
             top: '14px',
@@ -115,19 +116,22 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            border: 'none',
+            padding: 0,
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
-        </div>
+        </button>
 
         {/* Top-right buttons */}
         <div style={{ position: 'absolute', top: '14px', right: '14px', display: 'flex', gap: '8px' }}>
           {title.type === 'anime' && (
-            <div
+            <button
               onClick={() => setShowAniList(true)}
+              aria-label="AniList"
               style={{
                 width: '32px',
                 height: '32px',
@@ -138,6 +142,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 justifyContent: 'center',
                 position: 'relative',
                 cursor: 'pointer',
+                border: 'none',
+                padding: 0,
               }}
             >
               <span style={{ fontSize: '10px', fontWeight: 700, color: colors.accentAnilist }}>AL</span>
@@ -148,11 +154,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   background: colors.accentAmber, border: '1.5px solid rgba(0,0,0,0.5)',
                 }} />
               )}
-            </div>
+            </button>
           )}
           {/* Edit button */}
-          <div
+          <button
             onClick={() => setShowEdit(true)}
+            aria-label="Modifier"
             style={{
               width: '32px',
               height: '32px',
@@ -162,13 +169,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              border: 'none',
+              padding: 0,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
-          </div>
+          </button>
         </div>
 
         {/* Title info over gradient */}

@@ -32,19 +32,20 @@ export function MatchReview({ path }: { path?: string }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
+          <button
             onClick={() => history.back()}
+            aria-label="Retour"
             style={{
               width: '32px', height: '32px', borderRadius: '50%',
               background: colors.bgCard,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: 'pointer', border: 'none', padding: 0,
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
-          </div>
+          </button>
           <div style={{ fontSize: '17px', fontWeight: 600, color: colors.textPrimary }}>Match Review</div>
           {titles.length > 0 && (
             <div style={{
@@ -84,7 +85,7 @@ export function MatchReview({ path }: { path?: string }) {
 
       {!loading && titles.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 0', color: colors.textSecondary }}>
-          All titles confirmed!
+          Aucun titre à vérifier
         </div>
       )}
 
