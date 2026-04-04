@@ -10,6 +10,7 @@ import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { AniListSheet } from '../components/AniListSheet'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 
 function getNextUnwatched(title: Title) {
   for (const season of [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)) {
@@ -94,12 +95,11 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       <div style={{
         position: 'relative',
         height: '160px',
-        background: title.cover_url
-          ? `url(/api/covers/${title.cover_url}) center/cover`
-          : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
+        background: coverBackground(title.cover_url, title.type),
         display: 'flex',
         alignItems: 'flex-end',
       }}>
+        {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
         {/* Back button */}
         <div
           onClick={() => history.back()}

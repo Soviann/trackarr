@@ -2,6 +2,7 @@ import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { apiFetch } from '../api'
+import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface MatchReviewCardProps {
   title: Title
@@ -69,10 +70,11 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
         <div style={{
           width: '48px', height: '68px', borderRadius: '6px', flexShrink: 0,
-          background: title.cover_url
-            ? `url(/api/covers/${title.cover_url}) center/cover`
-            : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
-        }} />
+          background: coverBackground(title.cover_url, title.type),
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="20px" />}
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>{name}</div>
           <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '2px' }}>

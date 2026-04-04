@@ -1,6 +1,7 @@
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
+import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface PosterCardProps {
   title: Title
@@ -20,12 +21,12 @@ export function PosterCard({ title }: PosterCardProps) {
     >
       <div style={{
         aspectRatio: '2/3',
-        background: title.cover_url
-          ? `url(/api/covers/${title.cover_url}) center/cover`
-          : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
+        background: coverBackground(title.cover_url, title.type),
         display: 'flex',
         alignItems: 'flex-end',
+        position: 'relative',
       }}>
+        {!title.cover_url && <CoverPlaceholder type={title.type} />}
         <div style={{
           width: '100%',
           padding: '6px',

@@ -5,6 +5,7 @@ import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../api'
+import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 
 export function Validate({ path }: { path?: string }) {
   const params = new URLSearchParams(window.location.search)
@@ -90,10 +91,11 @@ export function Validate({ path }: { path?: string }) {
             >
               <div style={{
                 width: '42px', height: '60px', borderRadius: '6px', flexShrink: 0,
-                background: t.cover_url
-                  ? `url(/api/covers/${t.cover_url}) center/cover`
-                  : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
-              }} />
+                background: coverBackground(t.cover_url, t.type),
+                position: 'relative', overflow: 'hidden',
+              }}>
+                {!t.cover_url && <CoverPlaceholder type={t.type} iconSize="18px" />}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>{getName(t)}</span>

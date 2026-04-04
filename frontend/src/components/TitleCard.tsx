@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { apiFetch } from '../api'
+import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface TitleCardProps {
   title: Title
@@ -74,10 +75,12 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
         height: '68px',
         borderRadius: '6px',
         flexShrink: 0,
-        background: title.cover_url
-          ? `url(/api/covers/${title.cover_url}) center/cover`
-          : `linear-gradient(135deg, ${colors.bgSurface}, ${colors.bgCard})`,
-      }} />
+        background: coverBackground(title.cover_url, title.type),
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="20px" />}
+      </div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>

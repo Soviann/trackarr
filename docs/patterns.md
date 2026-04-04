@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: T14 complete (server-side pagination)
+## Status: T15 complete (cover placeholders)
 
 ## Backend (Go)
 
@@ -116,6 +116,7 @@ Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. T
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
 | AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
 | MatchReviewCard | `components/MatchReviewCard.tsx` | Match review card with ID chips + confirm/fix |
+| CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for titles without cover (movie=blue, series=teal, anime=lavender). `coverBackground()` helper for CSS background string |
 
 ### Pages & Routes
 
