@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.1.2] — 2026-04-04
+
+### Corrigé
+- Déploiement : évite la suppression de `.env.local` lors de la mise à jour
+
+### Ajouté
+- Déclenchement manuel du déploiement (sans tag)
+
 ## [v0.1.1] — 2026-04-04
 
 ### Corrigé
