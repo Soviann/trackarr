@@ -70,7 +70,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// Issue JWT
 	claims := jwt.MapClaims{
 		"email": tokenInfo.Email,
-		"exp":   jwt.NewNumericDate(time.Now().Add(365 * 24 * time.Hour)),
+		"exp":   jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(h.jwtSecret))
@@ -105,7 +105,7 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	// Issue JWT with the allowed email, same as Google OAuth
 	claims := jwt.MapClaims{
 		"email": h.allowedEmail,
-		"exp":   jwt.NewNumericDate(time.Now().Add(365 * 24 * time.Hour)),
+		"exp":   jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(h.jwtSecret))
@@ -136,7 +136,7 @@ func (h *AuthHandler) authCookie(token string) *http.Cookie {
 		Name:     "token",
 		Value:    token,
 		Path:     "/",
-		MaxAge:   365 * 24 * 3600,
+		MaxAge:   30 * 24 * 3600,
 		HttpOnly: true,
 		Secure:   h.cookieSecure,
 		SameSite: http.SameSiteLaxMode,

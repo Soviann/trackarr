@@ -5,6 +5,7 @@ import (
 	"embed"
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -78,14 +79,15 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		r.Get("/health", handler.Health)
 		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey, cfg.DebugLogin))
 
-		// Auth (unauthenticated)
+		// Auth (unauthenticated, rate-limited)
+		authRateLimit := mw.RateLimit(10, time.Minute)
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID, cfg.CookieSecure)
 		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
 			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
-			r.Post("/auth/dev", auth.DevLogin)
+			r.With(authRateLimit).Post("/auth/dev", auth.DevLogin)
 			log.Println("⚠️  Dev login enabled — POST /api/auth/dev")
 		}
-		r.Post("/auth/google", auth.GoogleCallback)
+		r.With(authRateLimit).Post("/auth/google", auth.GoogleCallback)
 		r.Post("/auth/logout", auth.Logout)
 
 		// Plex webhook (secured by secret token in URL)
