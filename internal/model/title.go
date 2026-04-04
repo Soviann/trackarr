@@ -56,6 +56,10 @@ type Title struct {
 	// Loaded relations
 	Names   []TitleName `json:"names,omitempty"`
 	Seasons []Season    `json:"seasons,omitempty"`
+
+	// Search-only fields
+	MatchedName     *string `json:"matched_name,omitempty"`
+	MatchedLanguage *string `json:"matched_language,omitempty"`
 }
 
 // PrimaryName returns the primary display name, or the first name if none is primary.

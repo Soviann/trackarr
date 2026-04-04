@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/plextracker ."
+  cmd = "go build -tags sqlite_fts5 -o ./tmp/plextracker ."
   bin = "./tmp/plextracker serve"
   include_ext = ["go", "tpl", "tmpl", "html", "sql"]
   exclude_dir = ["tmp", "frontend", "node_modules", "data", "docs"]

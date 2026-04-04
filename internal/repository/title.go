@@ -128,14 +128,31 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 }
 
 func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
-	query := `SELECT DISTINCT t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.created_at, t.updated_at FROM titles t`
+	searchTerm := ""
+	useFTS := false
+	if filter.Search != nil {
+		searchTerm = strings.TrimSpace(*filter.Search)
+		useFTS = len(searchTerm) >= 2
+	}
+
+	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.created_at, t.updated_at`
+	var query string
 	var conditions []string
 	var args []interface{}
 
-	if filter.Search != nil {
-		query += ` JOIN title_names tn ON tn.title_id = t.id`
+	if useFTS {
+		// FTS5 prefix search with matched name tracking
+		ftsQuery := buildFTSQuery(searchTerm)
+		query = `SELECT DISTINCT ` + baseCols + `, tn.name, tn.language FROM titles t JOIN title_names tn ON tn.title_id = t.id JOIN title_names_fts fts ON fts.rowid = tn.id`
+		conditions = append(conditions, `title_names_fts MATCH ?`)
+		args = append(args, ftsQuery)
+	} else if filter.Search != nil && searchTerm != "" {
+		// Short query: fallback to LIKE
+		query = `SELECT DISTINCT ` + baseCols + `, tn.name, tn.language FROM titles t JOIN title_names tn ON tn.title_id = t.id`
 		conditions = append(conditions, `tn.name LIKE ?`)
-		args = append(args, "%"+*filter.Search+"%")
+		args = append(args, "%"+searchTerm+"%")
+	} else {
+		query = `SELECT DISTINCT ` + baseCols + ` FROM titles t`
 	}
 
 	if filter.Status != nil {
@@ -162,17 +179,43 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 		return nil, fmt.Errorf("list titles: %w", err)
 	}
 
+	hasSearch := filter.Search != nil && searchTerm != ""
+	seen := map[int64]bool{}
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
-		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
-			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.CreatedAt, &t.UpdatedAt); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scan title: %w", err)
+		if hasSearch {
+			var matchedName, matchedLang string
+			if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+				&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.CreatedAt, &t.UpdatedAt,
+				&matchedName, &matchedLang); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("scan title: %w", err)
+			}
+			if seen[t.ID] {
+				continue
+			}
+			seen[t.ID] = true
+			t.MatchedName = &matchedName
+			t.MatchedLanguage = &matchedLang
+		} else {
+			if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+				&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.CreatedAt, &t.UpdatedAt); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("scan title: %w", err)
+			}
 		}
 		titles = append(titles, t)
 	}
 	rows.Close()
+
+	// Levenshtein fallback: if FTS returned few results and query is long enough
+	if useFTS && len(titles) < 3 && len(searchTerm) >= 3 {
+		fuzzyTitles, err := r.fuzzySearch(searchTerm, seen, filter)
+		if err == nil {
+			titles = append(titles, fuzzyTitles...)
+		}
+	}
 
 	// Load names, seasons, and episodes for all titles
 	for i := range titles {
@@ -220,6 +263,151 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 			epRows.Close()
 		}
 	}
+
+	return titles, nil
+}
+
+// buildFTSQuery transforms a search string into an FTS5 prefix query.
+// "nar ship" becomes "nar* ship*" for prefix matching.
+func buildFTSQuery(search string) string {
+	words := strings.Fields(search)
+	for i, w := range words {
+		// Escape FTS5 special characters
+		w = strings.NewReplacer(`"`, `""`, `*`, ``).Replace(w)
+		words[i] = `"` + w + `"` + `*`
+	}
+	return strings.Join(words, " ")
+}
+
+// levenshtein computes the edit distance between two strings.
+func levenshtein(a, b string) int {
+	la, lb := len([]rune(a)), len([]rune(b))
+	if la == 0 {
+		return lb
+	}
+	if lb == 0 {
+		return la
+	}
+	ra, rb := []rune(a), []rune(b)
+	prev := make([]int, lb+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= la; i++ {
+		curr := make([]int, lb+1)
+		curr[0] = i
+		for j := 1; j <= lb; j++ {
+			cost := 1
+			if ra[i-1] == rb[j-1] {
+				cost = 0
+			}
+			curr[j] = min(curr[j-1]+1, min(prev[j]+1, prev[j-1]+cost))
+		}
+		prev = curr
+	}
+	return prev[lb]
+}
+
+// fuzzySearch finds titles by Levenshtein distance when FTS5 returns few results.
+func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter TitleFilter) ([]model.Title, error) {
+	rows, err := r.db.Query(`SELECT id, title_id, name, language FROM title_names`)
+	if err != nil {
+		return nil, fmt.Errorf("fuzzy search names: %w", err)
+	}
+
+	type candidate struct {
+		titleID  int64
+		name     string
+		language string
+		dist     int
+	}
+	searchLower := strings.ToLower(search)
+	var candidates []candidate
+	for rows.Next() {
+		var id, titleID int64
+		var name, lang string
+		if err := rows.Scan(&id, &titleID, &name, &lang); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan fuzzy name: %w", err)
+		}
+		if seen[titleID] {
+			continue
+		}
+		// Compare against each word in the name for better short-query matching
+		nameLower := strings.ToLower(name)
+		bestDist := levenshtein(searchLower, nameLower)
+		for _, word := range strings.Fields(nameLower) {
+			if d := levenshtein(searchLower, word); d < bestDist {
+				bestDist = d
+			}
+		}
+		maxDist := 2
+		if len(searchLower) > 6 {
+			maxDist = 3
+		}
+		if bestDist <= maxDist {
+			candidates = append(candidates, candidate{titleID, name, lang, bestDist})
+		}
+	}
+	rows.Close()
+
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+
+	// Deduplicate by title ID (keep best match)
+	best := map[int64]candidate{}
+	for _, c := range candidates {
+		if existing, ok := best[c.titleID]; !ok || c.dist < existing.dist {
+			best[c.titleID] = c
+		}
+	}
+
+	// Build filter conditions for matched title IDs
+	var ids []interface{}
+	matchInfo := map[int64]candidate{}
+	for _, c := range best {
+		ids = append(ids, c.titleID)
+		matchInfo[c.titleID] = c
+		seen[c.titleID] = true
+	}
+
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	query := `SELECT t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.created_at, t.updated_at FROM titles t WHERE t.id IN (` + placeholders + `)`
+	var args []interface{}
+	args = append(args, ids...)
+
+	if filter.Status != nil {
+		query += ` AND t.status = ?`
+		args = append(args, *filter.Status)
+	}
+	if filter.Type != nil {
+		query += ` AND t.type = ?`
+		args = append(args, *filter.Type)
+	}
+
+	tRows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("fuzzy search titles: %w", err)
+	}
+
+	var titles []model.Title
+	for tRows.Next() {
+		var t model.Title
+		if err := tRows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			tRows.Close()
+			return nil, fmt.Errorf("scan fuzzy title: %w", err)
+		}
+		if c, ok := matchInfo[t.ID]; ok {
+			t.MatchedName = &c.name
+			t.MatchedLanguage = &c.language
+		}
+		titles = append(titles, t)
+	}
+	tRows.Close()
 
 	return titles, nil
 }

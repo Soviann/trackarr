@@ -1,14 +1,28 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
-import type { Title } from '../types'
-import { colors } from '../theme'
+import type { Title, TitleStatus } from '../types'
+import { colors, accentWash } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { StatusBadge } from '../components/StatusBadge'
 
+const statusFilters: { id: TitleStatus | null; label: string; color: string }[] = [
+  { id: null, label: 'All', color: colors.accentTeal },
+  { id: 'watching', label: 'Watching', color: colors.accentAmber },
+  { id: 'completed', label: 'Completed', color: colors.accentGreen },
+  { id: 'dropped', label: 'Dropped', color: colors.accentCoral },
+  { id: 'plan_to_watch', label: 'Plan', color: colors.textSecondary },
+]
+
 export function Search({ path }: { path?: string }) {
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<TitleStatus | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const searchPath = query.trim() ? `/titles?search=${encodeURIComponent(query.trim())}` : null
+
+  let searchPath: string | null = null
+  if (query.trim()) {
+    searchPath = `/titles?search=${encodeURIComponent(query.trim())}`
+    if (statusFilter) searchPath += `&status=${statusFilter}`
+  }
   const { data: results, loading } = useApi<Title[]>(searchPath)
 
   useEffect(() => {
@@ -28,9 +42,12 @@ export function Search({ path }: { path?: string }) {
       const total = s.total_episodes ?? eps.length
       parts.push(`S${s.season_number} ${w}/${total}`)
     }
-    if (t.my_rating) parts.push(`★ ${t.my_rating}`)
-    return parts.join(' · ')
+    if (t.my_rating) parts.push(`\u2605 ${t.my_rating}`)
+    return parts.join(' \u00b7 ')
   }
+
+  const hasMatchedAlt = (t: Title) =>
+    t.matched_name && t.matched_name !== getName(t)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 108px)' }}>
@@ -69,6 +86,40 @@ export function Search({ path }: { path?: string }) {
                 {results.length} result{results.length !== 1 ? 's' : ''} for "{query.trim()}"
               </span>
             </div>
+
+            {/* Status filter chips */}
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              padding: '0 16px 12px',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+            }}>
+              {statusFilters.map((sf) => {
+                const isActive = statusFilter === sf.id
+                return (
+                  <button
+                    key={sf.id ?? 'all'}
+                    onClick={() => setStatusFilter(sf.id)}
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: isActive ? 600 : 400,
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      background: isActive ? accentWash(sf.color) : colors.bgSurface,
+                      color: isActive ? sf.color : colors.textMuted,
+                      WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >
+                    {sf.label}
+                  </button>
+                )
+              })}
+            </div>
+
             <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {results.map((t) => (
                 <div
@@ -101,6 +152,38 @@ export function Search({ path }: { path?: string }) {
                       </span>
                       <StatusBadge status={t.status} />
                     </div>
+                    {hasMatchedAlt(t) && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginTop: '2px',
+                      }}>
+                        <span style={{
+                          fontSize: '11px',
+                          color: colors.textSecondary,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {t.matched_name}
+                        </span>
+                        {t.matched_language && (
+                          <span style={{
+                            fontSize: '8px',
+                            color: colors.textMuted,
+                            background: colors.bgSurface,
+                            borderRadius: '3px',
+                            padding: '1px 4px',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            flexShrink: 0,
+                          }}>
+                            {t.matched_language}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '3px' }}>
                       {getMetadata(t)}
                     </div>
@@ -162,7 +245,7 @@ export function Search({ path }: { path?: string }) {
           />
           {query && (
             <svg
-              onClick={() => setQuery('')}
+              onClick={() => { setQuery(''); setStatusFilter(null) }}
               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               style={{ cursor: 'pointer', flexShrink: 0 }}

@@ -13,7 +13,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /app/frontend/dist ./frontend/dist
-RUN CGO_ENABLED=1 go build -o plextracker .
+RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
 
 # Runtime
 FROM debian:bookworm-slim

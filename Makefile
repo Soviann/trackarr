@@ -19,7 +19,7 @@ shell: ## Shell into container
 	$(EXEC) bash
 
 test: ## Run all Go tests
-	$(EXEC) go test ./... -v -count=1
+	$(EXEC) go test -tags sqlite_fts5 ./... -v -count=1
 
 test-front: ## Run frontend tests
 	$(EXEC) bash -c "cd frontend && npx vitest run"
@@ -34,7 +34,7 @@ dev-frontend: ## Start Vite dev server (inside container)
 	$(EXEC) bash -c "cd frontend && npx vite --host 0.0.0.0"
 
 build: ## Build production binary
-	$(EXEC) go build -o plextracker .
+	$(EXEC) go build -tags sqlite_fts5 -o plextracker .
 
 migrate: ## Run database migrations
 	$(EXEC) ./tmp/plextracker migrate

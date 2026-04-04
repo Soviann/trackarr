@@ -18,6 +18,8 @@ export interface Title {
   match_status: MatchStatus
   names: TitleName[]
   seasons: Season[]
+  matched_name?: string
+  matched_language?: string
 }
 
 export interface TitleName {
