@@ -63,7 +63,7 @@ func TestAniListAuth_SaveToken_EmptyRejected(t *testing.T) {
 
 func TestAniListAuth_Disconnect(t *testing.T) {
 	h, settings := setupAniListHandler(t)
-	settings.Set("anilist_token", "abc123")
+	_ = settings.Set("anilist_token", "abc123")
 
 	req := httptest.NewRequest("DELETE", "/api/anilist/token", nil)
 	rr := httptest.NewRecorder()

@@ -41,7 +41,7 @@ func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (i
 	if err != nil {
 		return 0, fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.Exec(`
 		INSERT INTO titles (type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source)

@@ -35,28 +35,28 @@ func TestSettingsHandler_Get_Empty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var result map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&result)
+	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, false, result["push_subscribed"])
 }
 
 func TestSettingsHandler_Get_AniListConnected(t *testing.T) {
 	h, settings := setupSettingsHandler(t)
-	settings.Set("anilist_token", "some-token")
+	_ = settings.Set("anilist_token", "some-token")
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()
 	h.Get(rr, req)
 
 	var result map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&result)
+	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, true, result["anilist_connected"])
 	assert.Equal(t, false, result["push_subscribed"])
 }
 
 func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
 	h, settings := setupSettingsHandler(t)
-	settings.Set("push_subscription", `{"endpoint":"https://push.example.com"}`)
+	_ = settings.Set("push_subscription", `{"endpoint":"https://push.example.com"}`)
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()

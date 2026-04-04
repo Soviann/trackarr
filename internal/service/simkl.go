@@ -210,8 +210,8 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 				}
 			}
 
-			s.episodes.MarkWatched(ep.ID, watchedAt)
-			s.events.Create(&model.WatchEvent{
+			_ = s.episodes.MarkWatched(ep.ID, watchedAt)
+			_, _ = s.events.Create(&model.WatchEvent{
 				TitleID:   titleID,
 				EpisodeID: &ep.ID,
 				Source:    model.WatchEventSourceManual,
@@ -221,7 +221,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 
 	// For movies, also log watch event with last_watched_at
 	if titleType == model.TitleTypeMovie && item.LastWatchedAt != "" {
-		s.events.Create(&model.WatchEvent{
+		_, _ = s.events.Create(&model.WatchEvent{
 			TitleID: titleID,
 			Source:  model.WatchEventSourceManual,
 		})

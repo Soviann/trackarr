@@ -46,7 +46,7 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) {
 
 	// Log watch event if toggled on
 	if ep.Watched {
-		h.events.Create(&model.WatchEvent{
+		_, _ = h.events.Create(&model.WatchEvent{
 			TitleID:   titleID,
 			EpisodeID: &episodeID,
 			Source:    model.WatchEventSourceManual,
@@ -88,7 +88,7 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 	// Log watch events
 	for _, epID := range body.EpisodeIDs {
 		id := epID
-		h.events.Create(&model.WatchEvent{
+		_, _ = h.events.Create(&model.WatchEvent{
 			TitleID:   titleID,
 			EpisodeID: &id,
 			Source:    model.WatchEventSourceManual,
@@ -123,7 +123,7 @@ func (h *EpisodeHandler) maybePromptRating(title *model.Title) {
 			}
 		}
 		if allWatched {
-			h.push.SendNotification(
+			_ = h.push.SendNotification(
 				fmt.Sprintf("Note %s ?", title.PrimaryName()),
 				fmt.Sprintf("Tu as terminé la saison %d", season.SeasonNumber),
 				fmt.Sprintf("/title/%d", title.ID),

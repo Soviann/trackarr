@@ -34,8 +34,8 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 func TestTitleHandler_List(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 
-	titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
-	titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
 
 	req := httptest.NewRequest("GET", "/api/titles?status=watching", nil)
 	rr := httptest.NewRecorder()

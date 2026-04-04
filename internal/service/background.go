@@ -132,7 +132,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+			_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 		}
 	}
 }
@@ -150,11 +150,11 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		result.StatusChanged = true
 		result.OldStatus = *title.SeriesStatus
 		result.NewStatus = *newStatus
-		s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
+		_ = s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
 		title.SeriesStatus = newStatus
 
 		if *newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled {
-			s.push.SendNotification(
+			_ = s.push.SendNotification(
 				title.PrimaryName(),
 				"La série est terminée",
 				fmt.Sprintf("/title/%d", title.ID),
@@ -166,7 +166,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+			_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 		}
 	}
 
@@ -180,7 +180,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		if err != nil {
 			continue
 		}
-		s.seasons.UpdateTotalEpisodes(season.ID, tmdbSeason.EpisodeCount)
+		_ = s.seasons.UpdateTotalEpisodes(season.ID, tmdbSeason.EpisodeCount)
 
 		// Fetch individual episodes
 		episodes, err := s.tmdb.GetTVSeasonEpisodes(*title.TMDBID, tmdbSeason.SeasonNumber)
@@ -189,7 +189,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		}
 
 		for _, tmdbEp := range episodes {
-			s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
+			_, _ = s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
 		}
 
 		time.Sleep(250 * time.Millisecond) // Rate limiting per season

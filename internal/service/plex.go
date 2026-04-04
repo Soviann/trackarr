@@ -44,9 +44,9 @@ func ParseGUIDs(guids []PlexGUID) PlexExternalIDs {
 		if strings.HasPrefix(g.ID, "imdb://") {
 			ids.IMDB = strings.TrimPrefix(g.ID, "imdb://")
 		} else if strings.HasPrefix(g.ID, "tmdb://") {
-			fmt.Sscanf(strings.TrimPrefix(g.ID, "tmdb://"), "%d", &ids.TMDB)
+			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tmdb://"), "%d", &ids.TMDB)
 		} else if strings.HasPrefix(g.ID, "tvdb://") {
-			fmt.Sscanf(strings.TrimPrefix(g.ID, "tvdb://"), "%d", &ids.TVDB)
+			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tvdb://"), "%d", &ids.TVDB)
 		}
 	}
 	return ids
@@ -106,13 +106,13 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 			return fmt.Errorf("create movie: %w", err)
 		}
 
-		s.events.Create(&model.WatchEvent{
+		_, _ = s.events.Create(&model.WatchEvent{
 			TitleID:     titleID,
 			Source:      model.WatchEventSourcePlex,
 			PlexPayload: &rawPayload,
 		})
 
-		s.push.SendNotification(
+		_ = s.push.SendNotification(
 			fmt.Sprintf("Note %s ?", meta.Title),
 			"Tu viens de regarder ce film",
 			fmt.Sprintf("/title/%d", titleID),
@@ -120,7 +120,7 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 		return nil
 	}
 
-	s.events.Create(&model.WatchEvent{
+	_, _ = s.events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		Source:      model.WatchEventSourcePlex,
 		PlexPayload: &rawPayload,
@@ -128,7 +128,7 @@ func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPa
 
 	// Prompt rating for movies on re-scrobble too
 	if title.MyRating == nil {
-		s.push.SendNotification(
+		_ = s.push.SendNotification(
 			fmt.Sprintf("Note %s ?", meta.Title),
 			"Tu viens de regarder ce film",
 			fmt.Sprintf("/title/%d", title.ID),
@@ -186,11 +186,11 @@ func (s *PlexService) processEpisode(meta PlexMetadata, ids PlexExternalIDs, raw
 
 	// Mark watched (if not already)
 	if !ep.Watched {
-		s.episodes.MarkWatched(ep.ID, time.Now().UTC())
+		_ = s.episodes.MarkWatched(ep.ID, time.Now().UTC())
 	}
 
 	// Log watch event
-	s.events.Create(&model.WatchEvent{
+	_, _ = s.events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		EpisodeID:   &ep.ID,
 		Source:      model.WatchEventSourcePlex,

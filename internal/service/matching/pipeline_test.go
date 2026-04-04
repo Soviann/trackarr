@@ -22,14 +22,14 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 	// TMDB mock
 	tmdbMux := http.NewServeMux()
 	tmdbMux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
 			Results: []TMDBSearchResult{
 				{ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15"},
 			},
 		})
 	})
 	tmdbMux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
 			Results: []TMDBSearchResult{
 				{ID: 1399, Name: "Breaking Bad", FirstAirDate: "2008-01-20"},
 			},
@@ -37,7 +37,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 	})
 	tmdbMux.HandleFunc("/movie/550", func(w http.ResponseWriter, r *http.Request) {
 		poster := "/poster550.jpg"
-		json.NewEncoder(w).Encode(TMDBMovieDetails{
+		_ = json.NewEncoder(w).Encode(TMDBMovieDetails{
 			ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15",
 			IMDBID: "tt0137523", PosterPath: &poster,
 			ExternalIDs: &struct {
@@ -48,7 +48,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 	})
 	tmdbMux.HandleFunc("/tv/1399", func(w http.ResponseWriter, r *http.Request) {
 		poster := "/poster1399.jpg"
-		json.NewEncoder(w).Encode(TMDBTVDetails{
+		_ = json.NewEncoder(w).Encode(TMDBTVDetails{
 			ID: 1399, Name: "Breaking Bad", FirstAirDate: "2008-01-20",
 			PosterPath: &poster,
 			ExternalIDs: &struct {
@@ -58,7 +58,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		})
 	})
 	tmdbMux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
 			Translations: []TMDBTranslation{
 				{ISO639: "en", Data: struct {
 					Title string `json:"title"`
@@ -72,7 +72,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		})
 	})
 	tmdbMux.HandleFunc("/tv/1399/translations", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
 			Translations: []TMDBTranslation{
 				{ISO639: "en", Data: struct {
 					Title string `json:"title"`
@@ -86,7 +86,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		})
 	})
 	tmdbMux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("fake-cover"))
+		_, _ = w.Write([]byte("fake-cover"))
 	})
 	tmdbServer := httptest.NewServer(tmdbMux)
 	t.Cleanup(tmdbServer.Close)
@@ -96,7 +96,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 
 	// Gemini mock
 	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "Exact match"}`))
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "Exact match"}`))
 	}))
 	t.Cleanup(geminiServer.Close)
 
@@ -106,12 +106,12 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 	// AniList mock
 	anilistServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphqlRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 
 		if contains(req.Query, "Page(perPage") {
 			eps := 12
 			year := 2015
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Page": map[string]interface{}{
 						"media": []interface{}{
@@ -127,7 +127,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		} else if contains(req.Query, "Media(id") {
 			eps := 12
 			year := 2015
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Media": map[string]interface{}{
 						"id": 21, "title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
@@ -208,10 +208,10 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 
 	tmdbMux := http.NewServeMux()
 	tmdbMux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{})
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{})
 	})
 	tmdbMux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{})
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{})
 	})
 	tmdbServer := httptest.NewServer(tmdbMux)
 	defer tmdbServer.Close()
@@ -221,10 +221,10 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 
 	anilistServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req graphqlRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if contains(req.Query, "Page(perPage") {
 			eps := 12
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Page": map[string]interface{}{
 						"media": []interface{}{
@@ -238,7 +238,7 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 			})
 		} else {
 			eps := 12
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"Media": map[string]interface{}{
 						"id": 21, "title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
@@ -254,7 +254,7 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 	anilistClient.apiURL = anilistServer.URL
 
 	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "match"}`))
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "match"}`))
 	}))
 	defer geminiServer.Close()
 
@@ -278,7 +278,7 @@ func TestPipeline_NoMatch(t *testing.T) {
 
 	// TMDB returns no results, no AniList (not anime)
 	tmdbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbSearchResponse{})
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{})
 	}))
 	defer tmdbServer.Close()
 
@@ -287,7 +287,7 @@ func TestPipeline_NoMatch(t *testing.T) {
 
 	// Gemini fuzzy also fails
 	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(geminiOKResponse(`{"candidate_title": "", "candidate_year": 0, "confidence": "low", "reason": "unknown"}`))
+		_, _ = w.Write(geminiOKResponse(`{"candidate_title": "", "candidate_year": 0, "confidence": "low", "reason": "unknown"}`))
 	}))
 	defer geminiServer.Close()
 
@@ -323,7 +323,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 	tmdbMux := http.NewServeMux()
 	tmdbMux.HandleFunc("/tv/46298", func(w http.ResponseWriter, r *http.Request) {
 		poster := "/op.jpg"
-		json.NewEncoder(w).Encode(TMDBTVDetails{
+		_ = json.NewEncoder(w).Encode(TMDBTVDetails{
 			ID: 46298, Name: "One Piece", PosterPath: &poster,
 			ExternalIDs: &struct {
 				IMDBID string `json:"imdb_id"`
@@ -332,7 +332,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 		})
 	})
 	tmdbMux.HandleFunc("/tv/46298/translations", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
 			Translations: []TMDBTranslation{
 				{ISO639: "en", Data: struct {
 					Title string `json:"title"`
@@ -342,7 +342,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 		})
 	})
 	tmdbMux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("cover"))
+		_, _ = w.Write([]byte("cover"))
 	})
 	tmdbServer := httptest.NewServer(tmdbMux)
 	defer tmdbServer.Close()
