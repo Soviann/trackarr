@@ -174,7 +174,7 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 	}
 	rows.Close()
 
-	// Load names for all titles
+	// Load names, seasons, and episodes for all titles
 	for i := range titles {
 		nameRows, err := r.db.Query(`SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id = ?`, titles[i].ID)
 		if err != nil {
@@ -189,6 +189,36 @@ func (r *TitleRepository) List(filter TitleFilter) ([]model.Title, error) {
 			titles[i].Names = append(titles[i].Names, n)
 		}
 		nameRows.Close()
+
+		seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE title_id = ? ORDER BY season_number`, titles[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("get seasons: %w", err)
+		}
+		for seasonRows.Next() {
+			var s model.Season
+			if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating); err != nil {
+				seasonRows.Close()
+				return nil, fmt.Errorf("scan season: %w", err)
+			}
+			titles[i].Seasons = append(titles[i].Seasons, s)
+		}
+		seasonRows.Close()
+
+		for j := range titles[i].Seasons {
+			epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, titles[i].Seasons[j].ID)
+			if err != nil {
+				return nil, fmt.Errorf("get episodes: %w", err)
+			}
+			for epRows.Next() {
+				var e model.Episode
+				if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
+					epRows.Close()
+					return nil, fmt.Errorf("scan episode: %w", err)
+				}
+				titles[i].Seasons[j].Episodes = append(titles[i].Seasons[j].Episodes, e)
+			}
+			epRows.Close()
+		}
 	}
 
 	return titles, nil
