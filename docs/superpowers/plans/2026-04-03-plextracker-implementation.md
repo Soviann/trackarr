@@ -2092,11 +2092,11 @@ r.Post("/webhook/plex", webhookHandler.Handle)
 - Create: `internal/service/matching/tmdb.go`
 - Create: `internal/service/matching/tmdb_test.go`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: search by title+year, parse response, extract TMDB ID + IMDB ID. Use `httptest.NewServer` to mock the TMDB API.
 
-- [ ] **Step 2-4: Implement + verify**
+- [x] **Step 2-4: Implement + verify**
 
 Key operations:
 - `SearchMovie(title, year)` → TMDB result with IDs
@@ -2107,7 +2107,7 @@ Key operations:
 - `GetTitleNames(tmdbID, type)` → multilingual names (en, fr)
 - `DownloadCover(posterPath, destDir)` → saves to `/data/covers/`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ### Task 6.2: AniList GraphQL Client
 
@@ -2121,7 +2121,7 @@ Key operations:
 - `SyncRating(anilistID, rating, accessToken)` → GraphQL mutation
 - `GetNames(anilistID)` → romaji, english names
 
-- [ ] **Step 1-5: TDD cycle → commit**
+- [x] **Step 1-5: TDD cycle → commit**
 
 ### Task 6.3: Cross-Reference Database
 
@@ -2133,7 +2133,7 @@ Uses [anime-offline-database](https://github.com/manami-project/anime-offline-da
 
 Key operation: `Lookup(ids ExternalIDs) → ExternalIDs` — given any subset of IDs, returns all known cross-references.
 
-- [ ] **Step 1-5: TDD cycle → commit**
+- [x] **Step 1-5: TDD cycle → commit**
 
 ### Task 6.4: Gemini AI Verification
 
@@ -2146,7 +2146,7 @@ Key operations:
 - `FuzzyResolve(source PlexInfo)` → `{candidateTitle, candidateYear, confidence, reason}`
 - API key rotation: cycle through `GeminiAPIKeys` on 429 responses
 
-- [ ] **Step 1-5: TDD cycle → commit**
+- [x] **Step 1-5: TDD cycle → commit**
 
 ### Task 6.5: Pipeline Orchestrator
 
@@ -2165,17 +2165,17 @@ At every step: store newly found IDs, use them for the next step.
 
 After matching: fetch full episode list + multilingual names + cover.
 
-- [ ] **Step 1: Write failing test for the full pipeline**
+- [x] **Step 1: Write failing test for the full pipeline**
 
 Test with a mock Plex payload that has no external IDs, forcing the pipeline through all steps.
 
-- [ ] **Step 2-4: Implement + verify**
+- [x] **Step 2-4: Implement + verify**
 
-- [ ] **Step 5: Integrate pipeline into webhook handler**
+- [x] **Step 5: Integrate pipeline into webhook handler**
 
 Replace the simple "create title" in Task 5.1 with the full pipeline.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ---
 
@@ -2191,10 +2191,10 @@ Implement the 4-tab bottom navbar with identity colors (amber/teal/green/lavende
 
 Use Lucide-style inline SVGs (monitor, search, circle-plus, bar-chart).
 
-- [ ] **Step 1: Implement Navbar component**
-- [ ] **Step 2: Update app.tsx with all routes and Navbar**
-- [ ] **Step 3: Verify visually in browser**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Implement Navbar component**
+- [x] **Step 2: Update app.tsx with all routes and Navbar**
+- [x] **Step 3: Verify visually in browser**
+- [x] **Step 4: Commit**
 
 ### Task 7.2: Library Screen
 
@@ -2219,13 +2219,13 @@ Reference: `docs/mockups/library-v2.html`
 
 **useApi hook**: Simple fetch wrapper using `apiFetch`. Returns `{data, error, loading, mutate}`.
 
-- [ ] **Step 1: Create useApi hook**
-- [ ] **Step 2: Create FilterBar component**
-- [ ] **Step 3: Create PosterCard component**
-- [ ] **Step 4: Create TitleCard component with quick mark**
-- [ ] **Step 5: Create Library page assembling all components**
-- [ ] **Step 6: Verify visually against mockup**
-- [ ] **Step 7: Commit**
+- [x] **Step 1: Create useApi hook**
+- [x] **Step 2: Create FilterBar component**
+- [x] **Step 3: Create PosterCard component**
+- [x] **Step 4: Create TitleCard component with quick mark**
+- [x] **Step 5: Create Library page assembling all components**
+- [x] **Step 6: Verify visually against mockup**
+- [x] **Step 7: Commit**
 
 ### Task 7.3: Title Detail Screen
 
@@ -2247,12 +2247,12 @@ Reference: `docs/mockups/title-detail-v6.html`
 
 **Action bar**: Above main navbar. Items: S02E06 (next unwatched, coral highlight), IMDb (link), AniList (sync), Rate.
 
-- [ ] **Step 1: Create SeasonTab component**
-- [ ] **Step 2: Create EpisodeRow component**
-- [ ] **Step 3: Create ActionBar component**
-- [ ] **Step 4: Create TitleDetail page**
-- [ ] **Step 5: Verify visually against mockup**
-- [ ] **Step 6: Commit**
+- [x] **Step 1: Create SeasonTab component**
+- [x] **Step 2: Create EpisodeRow component**
+- [x] **Step 3: Create ActionBar component**
+- [x] **Step 4: Create TitleDetail page**
+- [x] **Step 5: Verify visually against mockup**
+- [x] **Step 6: Commit**
 
 ### Task 7.4: Bottom Sheets (Rating, Edit, AniList)
 
@@ -2272,12 +2272,12 @@ Reference: `docs/mockups/rating-prompt-v3.html`, `docs/mockups/edit-sheet-v2.htm
 
 **AniListSheet**: Match card (cover + romaji + english + year + link). Confidence box. Actions: Confirm & Sync / Wrong match. States: not connected, pending, confirmed.
 
-- [ ] **Step 1: Create BottomSheet base component**
-- [ ] **Step 2: Create RatingPrompt**
-- [ ] **Step 3: Create EditSheet**
-- [ ] **Step 4: Create AniListSheet**
-- [ ] **Step 5: Wire trigger logic (episode toggle, action bar, edit button, AniList badge)**
-- [ ] **Step 6: Commit**
+- [x] **Step 1: Create BottomSheet base component**
+- [x] **Step 2: Create RatingPrompt**
+- [x] **Step 3: Create EditSheet**
+- [x] **Step 4: Create AniListSheet**
+- [x] **Step 5: Wire trigger logic (episode toggle, action bar, edit button, AniList badge)**
+- [x] **Step 6: Commit**
 
 ### Task 7.5: Search Screen
 
@@ -2289,7 +2289,7 @@ Reference: `docs/mockups/search-screen-v2.html`
 
 Search input at bottom (thumb zone), auto-focuses on tab switch. Results as compact rows: cover thumb (42×60) + title + status badge (colored pill) + metadata + chevron. Tapping → Title Detail.
 
-- [ ] **Step 1-4: Implement + verify + commit**
+- [x] **Step 1-4: Implement + verify + commit**
 
 ### Task 7.6: Add & Validate Screens
 
@@ -2303,7 +2303,7 @@ Reference: `docs/mockups/add-screen-v2.html`, `docs/mockups/title-validation-v2.
 
 **Validate**: Shared screen for add/share target/match fix. Loading spinner during matching. Cover + title + year + type + resolved IDs as clickable chips. States: new title (status picker + Add button), already in library (status badge + view link), match fix (confirm + manual ID fields).
 
-- [ ] **Step 1-4: Implement + verify + commit**
+- [x] **Step 1-4: Implement + verify + commit**
 
 ### Task 7.7: Match Review Screen
 
@@ -2317,7 +2317,7 @@ Reference: `docs/mockups/match-review-v2.html`
 
 **Match Review Screen**: Header with count badge. Batch confirm button. Sections: unconfirmed (red) then pending (amber). Cards with cover + Plex title + confidence box + external ID chips + Confirm/Fix actions.
 
-- [ ] **Step 1-4: Implement + verify + commit**
+- [x] **Step 1-4: Implement + verify + commit**
 
 ### Task 7.8: Login Screen
 
@@ -2328,7 +2328,7 @@ Google Sign-In button. On success → `POST /api/auth/google` with credential �
 
 Use Google's GSI JavaScript library (`accounts.google.com/gsi/client`).
 
-- [ ] **Step 1-3: Implement + verify + commit**
+- [x] **Step 1-3: Implement + verify + commit**
 
 ---
 

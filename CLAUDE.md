@@ -10,7 +10,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update patterns.md when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
 - CLAUDE.md and patterns.md must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
-- Plans: `docs/superpowers/plans/` — never commit.
+- Plans: `docs/superpowers/plans/`.
 
 ## Commands
 
@@ -41,7 +41,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - `<type>(scope): description` — `feat|fix|chore|refactor|docs`, French 3rd-person imperative
 - Title = visible impact, not implementation detail
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
-- Never commit plans. Skip `git diff` when you made the edits. Merges: `--no-ff`.
+- Skip `git diff` when you made the edits. Merges: `--no-ff`.
 
 ## Language
 
