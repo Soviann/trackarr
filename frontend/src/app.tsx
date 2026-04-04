@@ -12,6 +12,7 @@ import { MatchReview } from './pages/MatchReview'
 import { Login } from './pages/Login'
 import { Stats } from './pages/Stats'
 import { usePush } from './hooks/usePush'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
@@ -38,24 +39,26 @@ export function App() {
   const showFilterBar = currentPath === '/'
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: hideNavbar ? 0 : '108px' }}>
-      <Router onChange={handleRoute}>
-        <Library path="/" filterTab={filterTab} />
-        <Search path="/search" />
-        <Add path="/add" />
-        <Stats path="/stats" />
-        <Login path="/login" />
-        <TitleDetail path="/title/:id" />
-        <Validate path="/validate" />
-        <MatchReview path="/match-review" />
-      </Router>
-      {!hideNavbar && (
-        <Navbar
-          currentPath={currentPath}
-          onNavigate={navigate}
-          above={showFilterBar ? <FilterBar active={filterTab} onChange={setFilterTab} /> : undefined}
-        />
-      )}
-    </div>
+    <ErrorBoundary>
+      <div style={{ minHeight: '100vh', paddingBottom: hideNavbar ? 0 : '108px' }}>
+        <Router onChange={handleRoute}>
+          <Library path="/" filterTab={filterTab} />
+          <Search path="/search" />
+          <Add path="/add" />
+          <Stats path="/stats" />
+          <Login path="/login" />
+          <TitleDetail path="/title/:id" />
+          <Validate path="/validate" />
+          <MatchReview path="/match-review" />
+        </Router>
+        {!hideNavbar && (
+          <Navbar
+            currentPath={currentPath}
+            onNavigate={navigate}
+            above={showFilterBar ? <FilterBar active={filterTab} onChange={setFilterTab} /> : undefined}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   )
 }

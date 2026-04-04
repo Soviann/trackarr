@@ -4,6 +4,7 @@ import type { Title, TitleStatus } from '../types'
 import { colors, accentWash } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { StatusBadge } from '../components/StatusBadge'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 const statusFilters: { id: TitleStatus | null; label: string; color: string }[] = [
   { id: null, label: 'All', color: colors.accentTeal },
@@ -23,7 +24,7 @@ export function Search({ path }: { path?: string }) {
     searchPath = `/titles?search=${encodeURIComponent(query.trim())}`
     if (statusFilter) searchPath += `&status=${statusFilter}`
   }
-  const { data: results, loading } = useApi<Title[]>(searchPath)
+  const { data: results, loading, error, mutate } = useApi<Title[]>(searchPath)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -78,6 +79,8 @@ export function Search({ path }: { path?: string }) {
             </div>
           </div>
         )}
+
+        {query.trim() && error && <ErrorBanner message={error} onRetry={mutate} />}
 
         {query.trim() && results && (
           <>

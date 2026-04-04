@@ -3,9 +3,10 @@ import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { MatchReviewCard } from '../components/MatchReviewCard'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 export function MatchReview({ path }: { path?: string }) {
-  const { data: allTitles, loading, mutate } = useApi<Title[]>('/titles')
+  const { data: allTitles, loading, error, mutate } = useApi<Title[]>('/titles')
 
   const titles = allTitles?.filter((t) =>
     t.match_status === 'pending_review' || t.match_status === 'unconfirmed'
@@ -72,6 +73,8 @@ export function MatchReview({ path }: { path?: string }) {
           </button>
         )}
       </div>
+
+      {error && <ErrorBanner message={error} onRetry={mutate} />}
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '40px 0', color: colors.textSecondary }}>Loading...</div>

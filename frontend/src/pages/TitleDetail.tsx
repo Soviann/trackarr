@@ -9,6 +9,7 @@ import { ActionBar } from '../components/ActionBar'
 import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { AniListSheet } from '../components/AniListSheet'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 function getNextUnwatched(title: Title) {
   for (const season of [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)) {
@@ -25,7 +26,7 @@ function formatSeriesStatus(s: string | null) {
 }
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
-  const { data: title, loading, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
+  const { data: title, loading, error, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -34,7 +35,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   if (loading || !title) {
     return (
       <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
-        {loading ? 'Loading...' : 'Title not found'}
+        {error ? <ErrorBanner message={error} onRetry={mutate} /> : loading ? 'Loading...' : 'Title not found'}
       </div>
     )
   }

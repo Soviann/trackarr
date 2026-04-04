@@ -6,6 +6,7 @@ import { useApi } from '../hooks/useApi'
 import type { FilterTab } from '../components/FilterBar'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 function isUpToDate(title: Title): boolean {
   if (title.type === 'movie') return false
@@ -117,7 +118,7 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
 }
 
 export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?: FilterTab }) {
-  const { data: titles, loading, mutate } = useApi<Title[]>('/titles')
+  const { data: titles, loading, error, mutate } = useApi<Title[]>('/titles')
 
   const allTitles = titles ?? []
   const pendingCount = allTitles.filter((t) => t.match_status === 'pending_review').length
@@ -155,6 +156,8 @@ export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?:
           </svg>
         </button>
       </div>
+
+      {error && <ErrorBanner message={error} onRetry={mutate} />}
 
       {loading && (
         <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
