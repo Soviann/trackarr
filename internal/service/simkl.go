@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -15,21 +16,62 @@ type SimklBackup struct {
 }
 
 type SimklItem struct {
-	Title         string       `json:"title"`
-	Year          int          `json:"year"`
-	Status        string       `json:"status"`
-	UserRating    *int         `json:"user_rating"`
-	LastWatchedAt string       `json:"last_watched_at"`
-	AnimeType     string       `json:"anime_type"` // "tv", "movie", "ova", "ona", "special"
-	IDs           SimklIDs     `json:"ids"`
+	Status        string        `json:"status"`
+	UserRating    *int          `json:"user_rating"`
+	LastWatchedAt string        `json:"last_watched_at"`
+	AnimeType     string        `json:"anime_type"`
 	Seasons       []SimklSeason `json:"seasons"`
+	// Nested media object (key varies: "movie" or "show")
+	Movie *SimklMedia `json:"movie"`
+	Show  *SimklMedia `json:"show"`
+}
+
+// Media returns the nested media object (movie or show).
+func (i SimklItem) Media() *SimklMedia {
+	if i.Movie != nil {
+		return i.Movie
+	}
+	return i.Show
+}
+
+type SimklMedia struct {
+	Title string   `json:"title"`
+	Year  int      `json:"year"`
+	IDs   SimklIDs `json:"ids"`
 }
 
 type SimklIDs struct {
-	IMDB    string `json:"imdb"`
-	TMDB    int64  `json:"tmdb"`
-	AniList int64  `json:"anilist"`
-	TVDB    int64  `json:"tvdb"`
+	IMDB    string    `json:"imdb"`
+	TMDB    flexInt64 `json:"tmdb"`
+	AniList flexInt64 `json:"anilist"`
+	TVDB    flexInt64 `json:"tvdb"`
+}
+
+// flexInt64 handles JSON values that may be int or string.
+type flexInt64 int64
+
+func (f *flexInt64) UnmarshalJSON(data []byte) error {
+	// Try int first
+	var i int64
+	if err := json.Unmarshal(data, &i); err == nil {
+		*f = flexInt64(i)
+		return nil
+	}
+	// Try string
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s == "" {
+			*f = 0
+			return nil
+		}
+		_, err := fmt.Sscanf(s, "%d", &i)
+		if err != nil {
+			return fmt.Errorf("flexInt64: cannot parse %q: %w", s, err)
+		}
+		*f = flexInt64(i)
+		return nil
+	}
+	return fmt.Errorf("flexInt64: cannot unmarshal %s", string(data))
 }
 
 type SimklSeason struct {
@@ -91,14 +133,21 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 }
 
 func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, result *ImportResult) error {
+	media := item.Media()
+	if media == nil {
+		result.Errors++
+		return fmt.Errorf("no media object found")
+	}
+
 	// Check for duplicates by external ID
 	var imdbID *string
 	var tmdbID *int64
-	if item.IDs.IMDB != "" {
-		imdbID = &item.IDs.IMDB
+	if media.IDs.IMDB != "" {
+		imdbID = &media.IDs.IMDB
 	}
-	if item.IDs.TMDB != 0 {
-		tmdbID = &item.IDs.TMDB
+	if media.IDs.TMDB != 0 {
+		v := int64(media.IDs.TMDB)
+		tmdbID = &v
 	}
 
 	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil); err == nil && existing != nil {
@@ -112,30 +161,33 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 	// Build title
 	title := &model.Title{
 		Type:        titleType,
-		Year:        item.Year,
+		Year:        media.Year,
 		Status:      status,
 		MatchStatus: model.MatchStatusConfirmed,
 		MyRating:    item.UserRating,
 	}
 
-	if item.IDs.IMDB != "" {
-		title.IMDBID = &item.IDs.IMDB
+	if media.IDs.IMDB != "" {
+		title.IMDBID = &media.IDs.IMDB
 	}
-	if item.IDs.TMDB != 0 {
-		title.TMDBID = &item.IDs.TMDB
+	if media.IDs.TMDB != 0 {
+		v := int64(media.IDs.TMDB)
+		title.TMDBID = &v
 	}
-	if item.IDs.AniList != 0 {
-		title.AniListID = &item.IDs.AniList
+	if media.IDs.AniList != 0 {
+		v := int64(media.IDs.AniList)
+		title.AniListID = &v
 	}
-	if item.IDs.TVDB != 0 {
-		title.TVDBID = &item.IDs.TVDB
+	if media.IDs.TVDB != 0 {
+		v := int64(media.IDs.TVDB)
+		title.TVDBID = &v
 	}
 
-	names := []model.TitleName{{Name: item.Title, Language: "en", IsPrimary: true}}
+	names := []model.TitleName{{Name: media.Title, Language: "en", IsPrimary: true}}
 
 	titleID, err := s.titles.Create(title, names)
 	if err != nil {
-		return fmt.Errorf("create title %q: %w", item.Title, err)
+		return fmt.Errorf("create title %q: %w", media.Title, err)
 	}
 
 	// Import seasons/episodes
