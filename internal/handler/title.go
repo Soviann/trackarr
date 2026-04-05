@@ -19,10 +19,24 @@ func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.Sea
 	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events}
 }
 
+var allowedSorts = map[string]bool{
+	"updated_at":     true,
+	"original_title": true,
+	"year":           true,
+	"my_rating":      true,
+	"created_at":     true,
+}
+
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 	filter := repository.TitleFilter{
 		Limit:  httputil.ParseQueryInt(r, "limit", repository.DefaultPageSize),
 		Offset: httputil.ParseQueryInt(r, "offset", 0),
+	}
+	if sortField := r.URL.Query().Get("sort"); allowedSorts[sortField] {
+		filter.Sort = sortField
+	}
+	if order := r.URL.Query().Get("order"); order == "asc" || order == "desc" {
+		filter.Order = order
 	}
 	if s := r.URL.Query().Get("status"); s != "" {
 		switch s {

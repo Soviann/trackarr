@@ -41,6 +41,8 @@ L'écran principal affiche tous les titres organisés par statut.
 
 **Onglets filtrés** : Watching, Up to date, Completed, Dropped, Plan to watch — affiche uniquement les titres du statut sélectionné.
 
+**Tri** : le tiroir de filtres propose 5 options de tri (dernière mise à jour, titre, année, note, date d'ajout). Taper un chip l'active ; taper à nouveau inverse la direction (↑/↓). Le tri est masqué pendant la recherche et persiste via localStorage.
+
 **Action rapide** : le badge rond sur chaque carte "En cours" affiche le numéro du prochain épisode. Un tap marque cet épisode comme vu et passe au suivant.
 
 **Bannière de revue** : si des titres ont un match à vérifier, une bannière rouge apparaît sous le titre "Library" avec le nombre de titres concernés.

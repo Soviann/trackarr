@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Ajouté
+- Tri dans le tiroir de filtres : dernière mise à jour, titre, année, note, date d'ajout — avec direction réversible et persistance localStorage
+
 ## [v0.6.1] — 2026-04-05
 
 ### Corrigé

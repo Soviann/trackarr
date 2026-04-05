@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
 import type { TitleStatus, TitleType, SeriesStatus } from '../types'
+import type { SortField, SortOrder, SortState } from '../store'
 import { colors, accentWash } from '../theme'
 import s from './FilterDrawer.module.css'
 
@@ -17,6 +18,9 @@ interface FilterDrawerProps {
   onStatusChange: (status: StatusFilter) => void
   onTypeChange: (type: TypeFilter) => void
   onSeriesStatusChange: (seriesStatus: SeriesStatusFilter) => void
+  sort: SortState
+  onSortChange: (sort: SortState) => void
+  isSearchActive: boolean
   defaultOpen?: boolean
 }
 
@@ -34,6 +38,14 @@ const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
   { id: 'anime', label: 'Anime', color: colors.accentAnilist },
   { id: 'movie', label: 'Movie', color: colors.accentAmber },
   { id: 'series', label: 'Series', color: colors.accentLavender },
+]
+
+const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[] = [
+  { field: 'updated_at', label: 'Last updated', defaultOrder: 'desc' },
+  { field: 'original_title', label: 'Title', defaultOrder: 'asc' },
+  { field: 'year', label: 'Year', defaultOrder: 'desc' },
+  { field: 'my_rating', label: 'Rating', defaultOrder: 'desc' },
+  { field: 'created_at', label: 'Date added', defaultOrder: 'desc' },
 ]
 
 const seriesStatusFilters: { id: SeriesStatusFilter; label: string; color: string }[] = [
@@ -63,6 +75,7 @@ function Chip<T>({ filter, active, onClick }: {
 export function FilterDrawer({
   status, type, seriesStatus,
   onStatusChange, onTypeChange, onSeriesStatusChange,
+  sort, onSortChange, isSearchActive,
   defaultOpen = true,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
@@ -82,8 +95,20 @@ export function FilterDrawer({
 
   const showSeriesStatus = type === 'series' || type === 'anime'
 
+  const handleSortClick = (option: typeof sortOptions[number]) => {
+    if (sort.field === option.field) {
+      onSortChange({ field: sort.field, order: sort.order === 'asc' ? 'desc' : 'asc' })
+    } else {
+      onSortChange({ field: option.field, order: option.defaultOrder })
+    }
+  }
+
   // Build active tags for collapsed state
   const activeTags: { label: string; color: string }[] = []
+  const activeSort = sortOptions.find((o) => o.field === sort.field)
+  if (!isSearchActive && activeSort && sort.field !== 'updated_at') {
+    activeTags.push({ label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`, color: colors.accentTeal })
+  }
   const activeStatus = statusFilters.find((f) => f.id === status)
   if (status !== null) activeTags.push({ label: activeStatus?.label ?? '', color: activeStatus?.color ?? '' })
   const activeType = typeFilters.find((f) => f.id === type)
@@ -117,7 +142,32 @@ export function FilterDrawer({
 
       {/* Drawer content */}
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
-        <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Status</div>
+        {!isSearchActive && (
+          <>
+            <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Sort</div>
+            <div className={s.filterRow}>
+              {sortOptions.map((opt) => {
+                const active = sort.field === opt.field
+                return (
+                  <button
+                    key={opt.field}
+                    className={clsx(s.chip, active && s.chipActive)}
+                    style={active ? { background: accentWash(colors.accentTeal), color: colors.accentTeal } : undefined}
+                    onClick={() => handleSortClick(opt)}
+                  >
+                    {opt.label}
+                    {active && (
+                      <span className={s.sortArrow}>
+                        {sort.order === 'asc' ? ' ↑' : ' ↓'}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+        <div className={clsx(s.filterLabel, isSearchActive && s.filterLabelFirst)}>Status</div>
         <div className={s.filterRow}>
           {statusFilters.map((f) => (
             <Chip key={f.label} filter={f} active={status === f.id} onClick={() => onStatusChange(f.id)} />

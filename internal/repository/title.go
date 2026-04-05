@@ -28,6 +28,8 @@ type TitleFilter struct {
 	WatchingBehind bool // server-side "watching but behind" filter (watching + has unwatched episodes)
 	Limit          int
 	Offset         int
+	Sort           string // column name: updated_at, original_title, year, my_rating, created_at
+	Order          string // asc or desc
 }
 
 const DefaultPageSize = 50
@@ -229,7 +231,26 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	}
 	offset := filter.Offset
 
-	query := `SELECT DISTINCT ` + baseCols + ` FROM titles t` + whereClause + ` ORDER BY t.updated_at DESC LIMIT ? OFFSET ?`
+	// Build ORDER BY
+	orderBy := "t.updated_at DESC" // default
+	if filter.Sort != "" {
+		dir := "DESC"
+		if filter.Order == "asc" {
+			dir = "ASC"
+		} else if filter.Order == "desc" {
+			dir = "DESC"
+		}
+		col := "t." + filter.Sort
+		// NULLS LAST: for nullable columns, sort nulls to the end
+		switch filter.Sort {
+		case "my_rating", "year", "original_title":
+			orderBy = fmt.Sprintf("CASE WHEN %s IS NULL THEN 1 ELSE 0 END, %s %s", col, col, dir)
+		default:
+			orderBy = fmt.Sprintf("%s %s", col, dir)
+		}
+	}
+
+	query := `SELECT DISTINCT ` + baseCols + ` FROM titles t` + whereClause + ` ORDER BY ` + orderBy + ` LIMIT ? OFFSET ?`
 	queryArgs := make([]interface{}, len(args), len(args)+2)
 	copy(queryArgs, args)
 	queryArgs = append(queryArgs, limit, offset)

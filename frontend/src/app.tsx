@@ -50,7 +50,7 @@ export function App() {
     route(path)
   }
 
-  const { filter, setFilter } = useTitleStore()
+  const { filter, setFilter, sort, setSort } = useTitleStore()
 
   const statusFilter: StatusFilter = filter.status === 'watching_behind'
     ? 'watching'
@@ -110,6 +110,9 @@ export function App() {
                 onStatusChange={handleStatusChange}
                 onTypeChange={handleTypeChange}
                 onSeriesStatusChange={handleSeriesStatusChange}
+                sort={sort}
+                onSortChange={setSort}
+                isSearchActive={currentPath === '/search'}
                 defaultOpen={currentPath === '/'}
               />
             ) : undefined}
