@@ -3,8 +3,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
@@ -95,10 +97,26 @@ type SimklImporter struct {
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
+	tasks    *repository.TaskRepository // optional, enables enrichment enqueue
+	db       database.DBTX             // optional, enables episode backfill
 }
 
-func NewSimklImporter(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository) *SimklImporter {
-	return &SimklImporter{titles: titles, seasons: seasons, episodes: episodes, events: events}
+type SimklImporterOption func(*SimklImporter)
+
+func WithTaskRepository(tasks *repository.TaskRepository) SimklImporterOption {
+	return func(s *SimklImporter) { s.tasks = tasks }
+}
+
+func WithBackfillDeps(db database.DBTX) SimklImporterOption {
+	return func(s *SimklImporter) { s.db = db }
+}
+
+func NewSimklImporter(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, opts ...SimklImporterOption) *SimklImporter {
+	s := &SimklImporter{titles: titles, seasons: seasons, episodes: episodes, events: events}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult, error) {
@@ -190,6 +208,8 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 		return fmt.Errorf("create title %q: %w", media.Title, err)
 	}
 
+	s.enqueueEnrichment(titleID, media.Title, media.Year, titleType, media.IDs)
+
 	// Import seasons/episodes
 	for _, simklSeason := range item.Seasons {
 		season, err := s.seasons.GetOrCreate(titleID, simklSeason.Number)
@@ -219,6 +239,31 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 		}
 	}
 
+	// Backfill previous episodes
+	if s.db != nil && len(item.Seasons) > 0 {
+		maxSeason, maxEpisode := 0, 0
+		var latestWatchedAt time.Time
+		for _, ss := range item.Seasons {
+			for _, ep := range ss.Episodes {
+				if ss.Number > maxSeason || (ss.Number == maxSeason && ep.Number > maxEpisode) {
+					maxSeason = ss.Number
+					maxEpisode = ep.Number
+					if t, err := time.Parse(time.RFC3339, ep.WatchedAt); err == nil {
+						latestWatchedAt = t
+					}
+				}
+			}
+		}
+		if latestWatchedAt.IsZero() {
+			latestWatchedAt = time.Now().UTC()
+		}
+		if maxSeason > 0 && maxEpisode > 0 {
+			if err := BackfillPreviousEpisodes(s.db, nil, titleID, tmdbID, maxSeason, maxEpisode, latestWatchedAt); err != nil {
+				log.Printf("simkl import: backfill for title %d: %v", titleID, err)
+			}
+		}
+	}
+
 	// For movies, also log watch event with last_watched_at
 	if titleType == model.TitleTypeMovie && item.LastWatchedAt != "" {
 		_, _ = s.events.Create(&model.WatchEvent{
@@ -229,6 +274,25 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 
 	result.Created++
 	return nil
+}
+
+func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, titleType model.TitleType, ids SimklIDs) {
+	if s.tasks == nil {
+		return
+	}
+	payload, _ := json.Marshal(EnrichmentPayload{
+		TitleID:   titleID,
+		TitleName: name,
+		Year:      year,
+		TitleType: titleType,
+		IMDBID:    ids.IMDB,
+		TMDBID:    int64(ids.TMDB),
+		TVDBID:    int64(ids.TVDB),
+	})
+	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
+	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+		log.Printf("simkl import: enqueue enrichment for title %d: %v", titleID, err)
+	}
 }
 
 func mapSimklStatus(status string) model.TitleStatus {

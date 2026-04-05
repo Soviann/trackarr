@@ -62,6 +62,8 @@ func Import(args []string) error {
 		repository.NewSeasonRepository(db),
 		repository.NewEpisodeRepository(db),
 		repository.NewWatchEventRepository(db),
+		service.WithTaskRepository(repository.NewTaskRepository(db)),
+		service.WithBackfillDeps(db),
 	)
 
 	if dryRun {

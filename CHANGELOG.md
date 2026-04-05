@@ -1,5 +1,11 @@
 # Changelog
 
+## Non publié
+
+### Ajouté
+- Import Simkl : enrichissement automatique des titres importés via la file d'attente existante
+- Import Simkl : backfill des épisodes précédents (marque vus les épisodes antérieurs au plus avancé)
+
 ## [v0.5.0] — 2026-04-05
 
 ### Ajouté
