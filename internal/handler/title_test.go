@@ -183,7 +183,7 @@ func TestTitleHandler_List_WithPagination(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 
 	for i := 0; i < 5; i++ {
-		titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+		_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
 	}
 
 	req := httptest.NewRequest("GET", "/api/titles?limit=2&offset=0", nil)

@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: T27 complete (Phase 7 — migration frontend)
+## Status: T32 complete (Phase 8 — quality & documentation)
 
 ## Backend (Go)
 
@@ -66,16 +66,18 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, spa. DI via struct with repos.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
 
 ### Routes
 
 | Method | Path | Handler | Auth |
 |---|---|---|---|
 | GET | `/api/health` | Health | No |
-| POST | `/api/auth/google` | GoogleCallback | No |
+| GET | `/api/config` | PublicConfig | No |
+| POST | `/api/auth/google` | GoogleCallback | No (rate-limited) |
+| POST | `/api/auth/dev` | DevLogin | No (debug only, rate-limited) |
 | POST | `/api/auth/logout` | Logout | No |
-| POST | `/api/webhook/plex` | HandlePlex | No |
+| POST | `/api/webhook/plex/{secret}` | HandlePlex | No (secret in URL) |
 | GET | `/api/covers/{filename}` | Serve | No |
 | GET | `/api/titles` | List | Yes |
 | GET | `/api/titles/{id}` | GetByID | Yes |
@@ -91,7 +93,8 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
 | DELETE | `/api/anilist/token` | Disconnect | Yes |
-| GET | `/api/config` | PublicConfig | No |
+
+Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
 
 ## Frontend (Preact)
 
@@ -136,3 +139,17 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | `/title/:id` | TitleDetail | `pages/TitleDetail.tsx` |
 | `/validate` | Validate | `pages/Validate.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
+
+## Quality
+
+### Linting
+
+`.golangci.yml` — errcheck, gocritic, govet. Run `make lint`.
+
+### Backend Tests
+
+`make test` — `testify/assert+require`, in-memory SQLite. Table-driven tests for repository (TitleRepository: filters, pagination, search, external IDs, status counts) and handlers (error paths: invalid ID, not found, bad JSON).
+
+### Frontend Tests
+
+`make test-front` — vitest + jsdom + @testing-library/preact. `vitest.config.ts` (CSS Modules non-scoped). `utils.test.ts` (19 tests), `ErrorBanner.test.tsx` (6 tests).

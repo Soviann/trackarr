@@ -66,14 +66,14 @@ func TestTitleRepository_List(t *testing.T) {
 	// Naruto: 1 season, 2 episodes, all watched → "up to date"
 	sN, _ := seasonRepo.GetOrCreate(idC, 1)
 	eN1, _ := episodeRepo.GetOrCreate(sN.ID, 1)
-	episodeRepo.ToggleWatched(eN1.ID)
+	_, _ = episodeRepo.ToggleWatched(eN1.ID)
 	eN2, _ := episodeRepo.GetOrCreate(sN.ID, 2)
-	episodeRepo.ToggleWatched(eN2.ID)
+	_, _ = episodeRepo.ToggleWatched(eN2.ID)
 
 	// Add a series "watching behind": series with unwatched episodes
 	idD, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "The Bear", Language: "en", IsPrimary: true}})
 	sD, _ := seasonRepo.GetOrCreate(idD, 1)
-	episodeRepo.GetOrCreate(sD.ID, 1) // unwatched
+	_, _ = episodeRepo.GetOrCreate(sD.ID, 1) // unwatched
 
 	_ = idA
 	_ = idB
@@ -194,7 +194,7 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 
 	imdb := "tt1234567"
 	tmdb := int64(12345)
-	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	tests := []struct {
 		name      string
@@ -242,10 +242,10 @@ func TestTitleRepository_GetStatusCounts(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
-	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
-	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
-	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "D", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "D", Language: "en", IsPrimary: true}})
 
 	counts, err := repo.GetStatusCounts()
 	require.NoError(t, err)

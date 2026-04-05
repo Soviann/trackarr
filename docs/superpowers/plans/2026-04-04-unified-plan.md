@@ -184,20 +184,25 @@ Remplacement des getName/getTypeLabel dupliqués dans 7 fichiers par les imports
 
 ## Phase 8 — Qualite et documentation
 
-### T28 — Configuration golangci-lint
-`.golangci.yml` avec errcheck, gocritic, govet.
+### T28 — Configuration golangci-lint ✅
 
-### T29 — Tests backend supplementaires
-Table-driven tests pour TitleRepository, tests d'erreur pour handlers.
+`.golangci.yml` (errcheck, gocritic, govet). 6 warnings gocritic corrigés (if-else → switch, appendAssign).
 
-### T30 — Tests frontend
-Tests unitaires utils.ts + ErrorBanner + @testing-library/preact.
+### T29 — Tests backend supplémentaires ✅
 
-### T31 — Specification OpenAPI 3.0
-Documentation de tous les endpoints API.
+Table-driven tests TitleRepository (filtres, pagination, FindByExternalID, GetStatusCounts). Tests d'erreur handlers (ID invalide, 404, JSON malformé, Update, pagination).
 
-### T32 — Mise a jour patterns.md
-Documenter les nouveaux packages et patterns.
+### T30 — Tests frontend ✅
+
+vitest + jsdom + @testing-library/preact. 19 tests utils.ts + 6 tests ErrorBanner. Config vitest.config.ts avec CSS Modules non-scoped.
+
+### T31 — Spécification OpenAPI 3.0 ✅
+
+`docs/openapi.yaml` — 21 endpoints documentés avec schémas, paramètres et codes de réponse.
+
+### T32 — Mise à jour patterns.md ✅
+
+Ajout httputil, linting, tests, OpenAPI. Correction route webhook et ajout dev auth.
 
 ---
 
