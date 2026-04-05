@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.8.0] — 2026-04-06
+
 ### Ajouté
 - Tri par date de sortie (nouveau tri par défaut)
 - Filtre par date de sortie : décennie, intervalle de dates, option d'inclusion des titres sans date
