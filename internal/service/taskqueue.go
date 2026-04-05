@@ -31,9 +31,10 @@ type RefreshPayload struct {
 }
 
 type CoverFetchPayload struct {
-	TitleID   int64           `json:"title_id"`
-	TMDBID    int64           `json:"tmdb_id"`
-	TitleType model.TitleType `json:"title_type"`
+	TitleID    int64           `json:"title_id"`
+	TMDBID     int64           `json:"tmdb_id"`
+	AniListID  int64           `json:"anilist_id,omitempty"`
+	TitleType  model.TitleType `json:"title_type"`
 }
 
 // TaskQueueWorker processes retryable tasks from the queue.
@@ -42,6 +43,7 @@ type TaskQueueWorker struct {
 	titles   *repository.TitleRepository
 	pipeline *matching.Pipeline
 	tmdb     *matching.TMDBClient
+	anilist  *matching.AniListClient
 	push     PushNotifier
 	settings *repository.SettingRepository
 	dataDir  string
@@ -53,6 +55,7 @@ func NewTaskQueueWorker(
 	titles *repository.TitleRepository,
 	pipeline *matching.Pipeline,
 	tmdb *matching.TMDBClient,
+	anilist *matching.AniListClient,
 	push PushNotifier,
 	settings *repository.SettingRepository,
 	dataDir string,
@@ -62,6 +65,7 @@ func NewTaskQueueWorker(
 		titles:   titles,
 		pipeline: pipeline,
 		tmdb:     tmdb,
+		anilist:  anilist,
 		push:     push,
 		settings: settings,
 		dataDir:  dataDir,
@@ -191,8 +195,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 		update.AniListID = &result.AniListID
 	}
 	if result.CoverFile != "" {
-		coverURL := "/covers/" + result.CoverFile
-		update.CoverURL = &coverURL
+		update.CoverURL = &result.CoverFile
 	}
 	if result.TitleType != payload.TitleType {
 		update.Type = &result.TitleType
@@ -216,32 +219,38 @@ func (w *TaskQueueWorker) handleRefresh(task model.Task) error {
 		return fmt.Errorf("get title %d: %w", payload.TitleID, err)
 	}
 
-	if title.TMDBID == nil {
-		return nil // nothing to refresh without TMDB ID
+	// Try TMDB cover
+	if title.TMDBID != nil && title.CoverURL == nil {
+		if title.Type == model.TitleTypeMovie {
+			details, err := w.tmdb.GetMovieDetails(*title.TMDBID)
+			if err != nil {
+				return err
+			}
+			if details.PosterPath != nil {
+				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
+				if err == nil {
+					_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					title.CoverURL = &coverPath
+				}
+			}
+		} else {
+			details, err := w.tmdb.GetTVDetails(*title.TMDBID)
+			if err != nil {
+				return err
+			}
+			if details.PosterPath != nil {
+				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
+				if err == nil {
+					_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					title.CoverURL = &coverPath
+				}
+			}
+		}
 	}
 
-	if title.Type == model.TitleTypeMovie {
-		details, err := w.tmdb.GetMovieDetails(*title.TMDBID)
-		if err != nil {
-			return err
-		}
-		if title.CoverURL == nil && details.PosterPath != nil {
-			coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
-			if err == nil {
-				_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
-			}
-		}
-	} else {
-		details, err := w.tmdb.GetTVDetails(*title.TMDBID)
-		if err != nil {
-			return err
-		}
-		if title.CoverURL == nil && details.PosterPath != nil {
-			coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
-			if err == nil {
-				_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
-			}
-		}
+	// Fallback: AniList cover
+	if title.CoverURL == nil && title.AniListID != nil {
+		w.downloadAniListCover(title)
 	}
 
 	return nil
@@ -253,37 +262,73 @@ func (w *TaskQueueWorker) handleCoverFetch(task model.Task) error {
 		return fmt.Errorf("decode cover_fetch payload: %w", err)
 	}
 
-	if w.tmdb == nil {
-		return fmt.Errorf("TMDB client not configured")
+	coversDir := fmt.Sprintf("%s/covers", w.dataDir)
+
+	// Try TMDB
+	if w.tmdb != nil && payload.TMDBID != 0 {
+		var posterPath *string
+		if payload.TitleType == model.TitleTypeMovie {
+			details, err := w.tmdb.GetMovieDetails(payload.TMDBID)
+			if err != nil {
+				return err
+			}
+			posterPath = details.PosterPath
+		} else {
+			details, err := w.tmdb.GetTVDetails(payload.TMDBID)
+			if err != nil {
+				return err
+			}
+			posterPath = details.PosterPath
+		}
+
+		if posterPath != nil && *posterPath != "" {
+			coverPath, err := w.tmdb.DownloadCover(*posterPath, coversDir)
+			if err != nil {
+				return err
+			}
+			_ = w.titles.Update(payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
+			return nil
+		}
 	}
 
-	var posterPath *string
-	if payload.TitleType == model.TitleTypeMovie {
-		details, err := w.tmdb.GetMovieDetails(payload.TMDBID)
+	// Fallback: AniList
+	if w.anilist != nil && payload.AniListID != 0 {
+		details, err := w.anilist.GetAnimeDetails(payload.AniListID)
 		if err != nil {
-			return err
+			return fmt.Errorf("anilist cover fetch: %w", err)
 		}
-		posterPath = details.PosterPath
-	} else {
-		details, err := w.tmdb.GetTVDetails(payload.TMDBID)
-		if err != nil {
-			return err
+		if details.CoverURL != "" {
+			coverPath, err := w.anilist.DownloadCover(details.CoverURL, coversDir)
+			if err != nil {
+				return fmt.Errorf("download anilist cover: %w", err)
+			}
+			_ = w.titles.Update(payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 		}
-		posterPath = details.PosterPath
-	}
-
-	if posterPath != nil && *posterPath != "" {
-		coverPath, err := w.tmdb.DownloadCover(*posterPath, fmt.Sprintf("%s/covers", w.dataDir))
-		if err != nil {
-			return err
-		}
-		_ = w.titles.Update(payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 	}
 
 	return nil
 }
 
 // notifyDeadTask sends a push notification when a task dies (if enabled).
+func (w *TaskQueueWorker) downloadAniListCover(title *model.Title) {
+	if w.anilist == nil || title.AniListID == nil {
+		return
+	}
+
+	details, err := w.anilist.GetAnimeDetails(*title.AniListID)
+	if err != nil || details.CoverURL == "" {
+		return
+	}
+
+	coverPath, err := w.anilist.DownloadCover(details.CoverURL, fmt.Sprintf("%s/covers", w.dataDir))
+	if err != nil {
+		return
+	}
+
+	_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+	title.CoverURL = &coverPath
+}
+
 func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
 	if !IsNotificationEnabled(w.settings, NotifDeadTask) {
 		return

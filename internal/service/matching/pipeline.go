@@ -330,9 +330,12 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
 
-	// Download cover from TMDB
+	// Download cover: try TMDB first, fallback to AniList
 	if p.tmdb != nil && result.TMDBID != 0 {
 		p.downloadCover(result)
+	}
+	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
+		p.downloadAniListCover(result)
 	}
 }
 
@@ -360,6 +363,21 @@ func (p *Pipeline) downloadCover(result *MatchResult) {
 		}
 		result.CoverFile = filename
 	}
+}
+
+func (p *Pipeline) downloadAniListCover(result *MatchResult) {
+	details, err := p.anilist.GetAnimeDetails(result.AniListID)
+	if err != nil || details.CoverURL == "" {
+		return
+	}
+
+	coversDir := fmt.Sprintf("%s/covers", p.dataDir)
+	filename, err := p.anilist.DownloadCover(details.CoverURL, coversDir)
+	if err != nil {
+		log.Printf("download anilist cover failed: %v", err)
+		return
+	}
+	result.CoverFile = filename
 }
 
 func mergeIDs(result *MatchResult, ids *ExternalIDs) {

@@ -27,7 +27,7 @@ Update when adding routes, services, components, or commands.
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers |
-| AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync |
+| AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync, covers |
 | CrossRefDB | `internal/service/matching/crossref.go` | anime-offline-database ID cross-referencing |
 | GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve, key rotation |
 
@@ -43,7 +43,7 @@ Confidence levels: `ConfidenceHigh`, `ConfidenceMedium`, `ConfidenceLow` (consta
 
 Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
 
-After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover.
+After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover (TMDB first, AniList `coverImage.extraLarge` fallback). AniList covers prefixed `al-` to avoid filename collisions.
 
 ### External APIs
 

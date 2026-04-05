@@ -27,6 +27,7 @@ type AniListDetails struct {
 	Episodes     *int   `json:"episodes"`
 	Format       string `json:"format"`
 	SeasonYear   *int   `json:"seasonYear"`
+	CoverURL     string `json:"coverURL"` // extraLarge or large
 }
 
 type AniListNames struct {
@@ -58,6 +59,7 @@ query ($id: Int) {
     episodes
     format
     seasonYear
+    coverImage { extraLarge large }
   }
 }
 `
@@ -111,12 +113,21 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 			Episodes   *int   `json:"episodes"`
 			Format     string `json:"format"`
 			SeasonYear *int   `json:"seasonYear"`
+			CoverImage struct {
+				ExtraLarge string `json:"extraLarge"`
+				Large      string `json:"large"`
+			} `json:"coverImage"`
 		} `json:"Media"`
 	}
 
 	err := c.query(getAnimeDetailsQuery, map[string]interface{}{"id": anilistID}, "", &resp)
 	if err != nil {
 		return nil, fmt.Errorf("get anime details: %w", err)
+	}
+
+	coverURL := resp.Media.CoverImage.ExtraLarge
+	if coverURL == "" {
+		coverURL = resp.Media.CoverImage.Large
 	}
 
 	return &AniListDetails{
@@ -127,6 +138,7 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 		Episodes:     resp.Media.Episodes,
 		Format:       resp.Media.Format,
 		SeasonYear:   resp.Media.SeasonYear,
+		CoverURL:     coverURL,
 	}, nil
 }
 

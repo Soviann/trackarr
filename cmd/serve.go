@@ -47,17 +47,18 @@ func Serve(distFS embed.FS) error {
 	if cfg.TMDBAPIKey != "" {
 		tmdbClient = matching.NewTMDBClient(cfg.TMDBAPIKey)
 	}
+	anilistClient := matching.NewAniListClient()
 
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, pushSvc, cfg.DataDir)
+	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	bgSvc.StartTicker(24 * time.Hour)
 
 	// Task queue worker
-	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, pushSvc, settingRepo, cfg.DataDir)
+	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir)
 	worker.Start(context.Background())
 
 	log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
