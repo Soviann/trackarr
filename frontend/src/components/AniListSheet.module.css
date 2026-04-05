@@ -1,0 +1,111 @@
+.container {
+  padding: 8px 16px 20px;
+}
+
+.heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+
+.matchCard {
+  background: var(--color-bg-surface);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.coverFallback {
+  background: linear-gradient(135deg, var(--color-bg-card), var(--color-bg-surface));
+}
+
+.cover {
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.titleName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.titleId {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.anilistLink {
+  font-size: 10px;
+  color: var(--color-accent-anilist);
+  margin-top: 4px;
+  display: block;
+}
+
+.confidence {
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.confirmed {
+  background: var(--wash-green);
+  color: var(--color-accent-green);
+}
+
+.pending {
+  background: var(--wash-amber);
+  color: var(--color-accent-amber);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnConfirm {
+  flex: 1;
+  background: var(--color-accent-anilist);
+  border-radius: 12px;
+  padding: 13px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btnConfirmLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.btnWrong {
+  flex: 1;
+  background: var(--color-bg-surface);
+  border-radius: 12px;
+  padding: 13px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btnWrongLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}

@@ -1,6 +1,7 @@
 import type { JSX } from 'preact'
 import type { TitleType } from '../types'
 import { colors } from '../theme'
+import s from './CoverPlaceholder.module.css'
 
 const typeConfig: Record<TitleType, { color: string; icon: JSX.Element }> = {
   movie: {
@@ -46,16 +47,14 @@ interface CoverPlaceholderProps {
 export function CoverPlaceholder({ type, iconSize }: CoverPlaceholderProps) {
   const { color, icon } = typeConfig[type]
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      background: `linear-gradient(135deg, ${color}25, ${color}0A)`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: `${color}50`,
-    }}>
-      <div style={{ width: iconSize ?? '40%', height: iconSize ?? '40%' }}>
+    <div
+      className={s.placeholder}
+      style={{
+        '--cover-color': color,
+        ...(iconSize ? { '--icon-size': iconSize } : {}),
+      } as Record<string, string>}
+    >
+      <div className={s.icon}>
         {icon}
       </div>
     </div>

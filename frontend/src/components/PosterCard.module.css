@@ -1,0 +1,27 @@
+.card {
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.poster {
+  aspect-ratio: 2/3;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.labelOverlay {
+  width: 100%;
+  padding: 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

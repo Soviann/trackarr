@@ -1,0 +1,8 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0D0D0D;
+  color: #F0F0F0;
+  -webkit-font-smoothing: antialiased;
+}

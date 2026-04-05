@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: T25 complete (Phase 6 — refactoring domaine)
+## Status: T27 complete (Phase 7 — migration frontend)
 
 ## Backend (Go)
 
@@ -95,7 +95,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ## Frontend (Preact)
 
-Design tokens in `frontend/src/theme.ts`. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules (`*.module.css`) for all components. `clsx` for conditional classes. `theme.ts` retained for SVG attributes and dynamic values (`coverBackground()`, `accentWash()`). Shared utils in `frontend/src/utils.ts` (`getName`, `getTypeLabel`, `getStatusLabel`, `formatDate`, `watchedCount`, `totalEpisodes`). API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
 
 ### Hooks
 

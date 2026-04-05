@@ -1,0 +1,55 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--color-bg-surface);
+}
+
+.watched {
+  border-color: var(--color-border-card);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.episodeNumber {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.episodeName {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.airDate {
+  font-size: 10px;
+  color: var(--color-text-dimmed);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.toggle {
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-text-dimmed);
+}

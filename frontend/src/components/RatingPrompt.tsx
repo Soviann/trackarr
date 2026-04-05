@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
-import { colors } from '../theme'
+import clsx from 'clsx'
 import { BottomSheet } from './BottomSheet'
+import s from './RatingPrompt.module.css'
 
 interface RatingPromptProps {
   open: boolean
@@ -25,42 +26,29 @@ export function RatingPrompt({
     <BottomSheet open={open} onClose={onClose}>
       {/* Context */}
       {context && (
-        <div style={{ textAlign: 'center', padding: '8px 16px 2px' }}>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: colors.textPrimary }}>{context}</div>
+        <div className={s.context}>
+          <div className={s.contextText}>{context}</div>
         </div>
       )}
 
       {/* Title */}
-      <div style={{ textAlign: 'center', padding: '2px 16px 16px' }}>
-        <span style={{
-          fontSize: '12px',
-          color: colors.accentAmber,
-          textDecoration: 'underline',
-          textDecorationColor: 'rgba(232,169,37,0.3)',
-          textUnderlineOffset: '2px',
-        }}>
-          {titleName}
-        </span>
+      <div className={s.titleWrapper}>
+        <span className={s.titleName}>{titleName}</span>
       </div>
 
       {/* Big rating */}
-      <div style={{ textAlign: 'center', fontSize: '32px', fontWeight: 700, color: colors.accentAmber, padding: '0 0 8px' }}>
+      <div className={s.bigRating}>
         {rating > 0 ? rating : '–'}
-        <span style={{ fontSize: '16px', color: colors.textMuted, fontWeight: 400 }}>/10</span>
+        <span className={s.bigRatingSuffix}>/10</span>
       </div>
 
       {/* 10 stars */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '0 20px 20px' }}>
+      <div className={s.stars}>
         {Array.from({ length: 10 }, (_, i) => (
           <span
             key={i}
             onClick={() => setRating(i + 1)}
-            style={{
-              fontSize: '24px',
-              color: i < rating ? colors.accentAmber : '#333',
-              cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}
+            className={clsx(s.star, i < rating && s.starActive)}
           >
             ★
           </span>
@@ -68,75 +56,41 @@ export function RatingPrompt({
       </div>
 
       {/* Buttons */}
-      <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className={s.buttons}>
         <button
           onClick={() => { if (rating > 0) onSave(rating) }}
-          style={{
-            background: rating > 0 ? colors.accentAmber : colors.bgSurface,
-            borderRadius: '12px',
-            padding: '13px',
-            textAlign: 'center',
-            border: 'none',
-            cursor: rating > 0 ? 'pointer' : 'default',
-          }}
+          className={clsx(s.saveButton, rating > 0 && s.saveButtonActive)}
         >
-          <span style={{ fontSize: '13px', fontWeight: 700, color: rating > 0 ? colors.bgPrimary : colors.textMuted }}>
+          <span className={clsx(s.saveButtonLabel, rating > 0 && s.saveButtonLabelActive)}>
             Save rating
           </span>
         </button>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className={s.externalButtons}>
           {hasImdb && (
             <button
               onClick={() => { if (rating > 0) onSaveAndImdb?.(rating) }}
-              style={{
-                flex: 1,
-                background: colors.bgSurface,
-                borderRadius: '12px',
-                padding: '12px',
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              className={s.externalButton}
             >
-              <span style={{ fontSize: '11px', fontWeight: 800, color: colors.accentImdb, fontFamily: 'Impact,system-ui' }}>IMDb</span>
-              <span style={{ fontSize: '11px', color: '#888' }}>Save & rate</span>
+              <span className={s.imdbLabel}>IMDb</span>
+              <span className={s.externalSubLabel}>Save & rate</span>
             </button>
           )}
           {hasAnilist && (
             <button
               onClick={() => { if (rating > 0) onSaveAndAnilist?.(rating) }}
-              style={{
-                flex: 1,
-                background: colors.bgSurface,
-                borderRadius: '12px',
-                padding: '12px',
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              className={s.externalButton}
             >
-              <span style={{ fontSize: '11px', fontWeight: 700, color: colors.accentAnilist }}>AL</span>
-              <span style={{ fontSize: '11px', color: '#888' }}>Save & sync</span>
+              <span className={s.anilistLabel}>AL</span>
+              <span className={s.externalSubLabel}>Save & sync</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Skip */}
-      <div
-        onClick={onClose}
-        style={{ textAlign: 'center', padding: '10px 0 20px', cursor: 'pointer' }}
-      >
-        <span style={{ fontSize: '12px', color: colors.textMuted }}>Skip for now</span>
+      <div onClick={onClose} className={s.skip}>
+        <span className={s.skipLabel}>Skip for now</span>
       </div>
     </BottomSheet>
   )

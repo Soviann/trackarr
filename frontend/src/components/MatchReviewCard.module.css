@@ -1,0 +1,107 @@
+.card {
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--status-color) 20%, transparent);
+  border-left: 3px solid var(--status-color);
+  cursor: pointer;
+}
+
+.layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cover {
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.meta {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.originalTitle {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.chips {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 9px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.statusText {
+  font-size: 10px;
+  color: var(--status-color);
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btnConfirm {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--wash-green);
+  border: 1px solid color-mix(in srgb, var(--color-accent-green) 20%, transparent);
+  color: var(--color-accent-green);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnConfirm:disabled {
+  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-text-muted) 20%, transparent);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btnFix {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-card);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}

@@ -1,0 +1,36 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin: 8px 12px;
+  background: var(--wash-coral);
+  border: 1px solid color-mix(in srgb, var(--color-accent-coral) 30%, transparent);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.message {
+  flex: 1;
+}
+
+.retryButton {
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--color-accent-coral) 30%, transparent);
+  color: #fca5a5;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.dismissButton {
+  background: none;
+  border: none;
+  color: #fca5a5;
+  cursor: pointer;
+  padding: 0 0 0 8px;
+  font-size: 14px;
+}

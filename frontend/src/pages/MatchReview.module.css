@@ -1,0 +1,96 @@
+.page {
+  padding: var(--space-md);
+  padding-bottom: 36px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.badge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--color-accent-coral);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.badgeText {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.confirmAllBtn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent-green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-green) 20%, transparent);
+  color: var(--color-accent-green);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.statusMsg {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--color-text-secondary);
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-sm);
+}
+
+.sectionLabelUnconfirmed {
+  color: var(--color-accent-coral);
+}
+
+.sectionLabelPending {
+  color: var(--color-accent-amber);
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cardListSpaced {
+  margin-bottom: var(--space-md);
+}

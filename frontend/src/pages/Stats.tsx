@@ -1,8 +1,7 @@
-import { colors, accentWash } from '../theme'
+import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import type { StatsResponse, FunStat } from '../types'
-
-const lavender = colors.accentLavender
+import s from './Stats.module.css'
 
 const statusColors: Record<string, string> = {
   watching: colors.accentAmber,
@@ -31,17 +30,17 @@ const typeLabels: Record<string, string> = {
 }
 
 const funStatIcons: Record<string, string> = {
-  flame: '🔥',
-  heart: '❤️',
-  zap: '⚡',
-  moon: '🌙',
-  sun: '☀️',
-  tv: '📺',
-  'bar-chart': '📊',
-  calendar: '📅',
-  skull: '💀',
-  clock: '⏳',
-  trophy: '🏆',
+  flame: '\u{1F525}',
+  heart: '\u2764\uFE0F',
+  zap: '\u26A1',
+  moon: '\u{1F319}',
+  sun: '\u2600\uFE0F',
+  tv: '\u{1F4FA}',
+  'bar-chart': '\u{1F4CA}',
+  calendar: '\u{1F4C5}',
+  skull: '\u{1F480}',
+  clock: '\u23F3',
+  trophy: '\u{1F3C6}',
 }
 
 export function Stats({ path }: { path?: string }) {
@@ -49,17 +48,15 @@ export function Stats({ path }: { path?: string }) {
 
   if (loading || !data) {
     return (
-      <div style={{ padding: '20px', color: colors.textSecondary }}>
+      <div className={s.loading}>
         Chargement...
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '16px 0 36px' }}>
-      <h1 style={{ fontSize: '20px', fontWeight: 700, color: colors.textPrimary, padding: '0 16px 16px' }}>
-        Stats
-      </h1>
+    <div className={s.page}>
+      <h1 className={s.pageTitle}>Stats</h1>
 
       <OverviewSection overview={data.overview} />
       <RatingsSection ratings={data.ratings} />
@@ -73,48 +70,22 @@ export function Stats({ path }: { path?: string }) {
 function OverviewSection({ overview }: { overview: StatsResponse['overview'] }) {
   const cards = [
     { value: overview.total_titles.toLocaleString('fr-FR'), label: 'TITRES SUIVIS' },
-    { value: overview.episodes_watched.toLocaleString('fr-FR'), label: 'ÉPISODES VUS' },
-    { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPLÉTÉS' },
-    { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '—', label: 'NOTE MOYENNE' },
+    { value: overview.episodes_watched.toLocaleString('fr-FR'), label: '\u00C9PISODES VUS' },
+    { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPL\u00C9T\u00C9S' },
+    { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '\u2014', label: 'NOTE MOYENNE' },
   ]
 
   return (
-    <section style={{ padding: '0 16px 24px' }}>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '10px',
-      }}>
+    <section className={s.section}>
+      <div className={s.overviewGrid}>
         {cards.map((card) => (
-          <div key={card.label} style={{
-            background: colors.bgCard,
-            border: `1px solid ${colors.borderCard}`,
-            borderRadius: '12px',
-            padding: '16px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 700, color: colors.textPrimary }}>
-              {card.value}
-            </div>
-            <div style={{
-              fontSize: '10px',
-              color: lavender,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              marginTop: '4px',
-            }}>
-              {card.label}
-            </div>
+          <div key={card.label} className={s.card}>
+            <div className={s.overviewValue}>{card.value}</div>
+            <div className={s.overviewLabel}>{card.label}</div>
           </div>
         ))}
       </div>
-      <div style={{
-        textAlign: 'center',
-        color: colors.textMuted,
-        fontSize: '12px',
-        marginTop: '10px',
-      }}>
+      <div className={s.overviewFooter}>
         {overview.total_movies} films · {overview.total_series} séries · {overview.total_anime} anime
       </div>
     </section>
@@ -125,52 +96,27 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
   const max = Math.max(...ratings.distribution, 1)
 
   return (
-    <section style={{ padding: '0 16px 24px' }}>
+    <section className={s.section}>
       <SectionLabel>Notes</SectionLabel>
-      <div style={{
-        background: colors.bgCard,
-        border: `1px solid ${colors.borderCard}`,
-        borderRadius: '12px',
-        padding: '14px 16px',
-      }}>
+      <div className={s.ratingsCard}>
         {[...ratings.distribution].reverse().map((count, i) => {
           const rating = 10 - i
           return (
-          <div key={rating} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: i < 9 ? '6px' : 0,
-          }}>
-            <span style={{ fontSize: '12px', color: colors.textSecondary, width: '18px', textAlign: 'right', flexShrink: 0 }}>
-              {rating}
-            </span>
-            <div style={{ flex: 1, height: '16px', borderRadius: '4px', background: colors.bgSurface, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: count > 0 ? `${Math.max((count / max) * 100, 4)}%` : '0%',
-                background: lavender,
-                borderRadius: '4px',
-                transition: 'width 0.3s ease',
-              }} />
+            <div key={rating} className={s.ratingRow}>
+              <span className={s.ratingLabel}>{rating}</span>
+              <div className={s.ratingTrack}>
+                <div
+                  className={s.ratingBar}
+                  style={{ width: count > 0 ? `${Math.max((count / max) * 100, 4)}%` : '0%' }}
+                />
+              </div>
+              <span className={s.ratingCount}>{count > 0 ? count : ''}</span>
             </div>
-            <span style={{ fontSize: '11px', color: colors.textMuted, width: '22px', textAlign: 'right', flexShrink: 0 }}>
-              {count > 0 ? count : ''}
-            </span>
-          </div>
           )
         })}
       </div>
       {ratings.insight && (
-        <div style={{
-          color: colors.textSecondary,
-          fontSize: '12px',
-          marginTop: '10px',
-          textAlign: 'center',
-          fontStyle: 'italic',
-        }}>
-          {ratings.insight}
-        </div>
+        <div className={s.ratingInsight}>{ratings.insight}</div>
       )}
     </section>
   )
@@ -178,13 +124,9 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
 
 function BreakdownSection({ breakdown }: { breakdown: StatsResponse['breakdown'] }) {
   return (
-    <section style={{ padding: '0 16px 24px' }}>
+    <section className={s.section}>
       <SectionLabel>Bibliothèque</SectionLabel>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '10px',
-      }}>
+      <div className={s.breakdownGrid}>
         <DonutChart
           data={breakdown.by_status}
           colorMap={statusColors}
@@ -231,55 +173,17 @@ function DonutChart({
   const gradient = `conic-gradient(${stops.join(', ')})`
 
   return (
-    <div style={{
-      background: colors.bgCard,
-      border: `1px solid ${colors.borderCard}`,
-      borderRadius: '12px',
-      padding: '14px',
-      textAlign: 'center',
-    }}>
-      <div style={{ fontSize: '11px', color: colors.textSecondary, marginBottom: '10px', fontWeight: 600 }}>
-        {title}
+    <div className={s.donutCard}>
+      <div className={s.donutTitle}>{title}</div>
+      <div className={s.donutRing} style={{ background: gradient }}>
+        <div className={s.donutCenter}>{total}</div>
       </div>
-      <div style={{
-        width: '100px',
-        height: '100px',
-        borderRadius: '50%',
-        background: gradient,
-        margin: '0 auto',
-        position: 'relative',
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: colors.bgCard,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '18px',
-          fontWeight: 700,
-          color: colors.textPrimary,
-        }}>
-          {total}
-        </div>
-      </div>
-      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className={s.donutLegend}>
         {entries.map(([key, count]) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px' }}>
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: colorMap[key] || colors.textMuted,
-              flexShrink: 0,
-            }} />
-            <span style={{ color: colors.textSecondary }}>{labelMap[key] || key}</span>
-            <span style={{ color: colors.textMuted }}>{count}</span>
+          <div key={key} className={s.legendItem}>
+            <span className={s.legendDot} style={{ background: colorMap[key] || colors.textMuted }} />
+            <span className={s.legendLabel}>{labelMap[key] || key}</span>
+            <span className={s.legendCount}>{count}</span>
           </div>
         ))}
       </div>
@@ -289,32 +193,16 @@ function DonutChart({
 
 function FunStatsSection({ stats }: { stats: FunStat[] }) {
   return (
-    <section style={{ padding: '0 16px 24px' }}>
+    <section className={s.section}>
       <SectionLabel>Le savais-tu ?</SectionLabel>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className={s.funStatList}>
         {stats.map((stat) => (
-          <div key={stat.id} style={{
-            background: colors.bgCard,
-            border: `1px solid ${colors.borderCard}`,
-            borderRadius: '12px',
-            padding: '14px 16px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start',
-          }}>
-            <span style={{ fontSize: '22px', flexShrink: 0, lineHeight: 1 }}>
-              {funStatIcons[stat.icon] || '📌'}
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '12px', color: colors.textSecondary, marginBottom: '2px' }}>
-                {stat.title}
-              </div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: colors.textPrimary }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '2px' }}>
-                {stat.detail}
-              </div>
+          <div key={stat.id} className={s.funStatCard}>
+            <span className={s.funStatIcon}>{funStatIcons[stat.icon] || '\u{1F4CC}'}</span>
+            <div className={s.funStatBody}>
+              <div className={s.funStatTitle}>{stat.title}</div>
+              <div className={s.funStatValue}>{stat.value}</div>
+              <div className={s.funStatDetail}>{stat.detail}</div>
             </div>
           </div>
         ))}
@@ -327,36 +215,18 @@ function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
   const currentYear = new Date().getFullYear()
   const cards = [
     { value: year.titles_added, label: 'Ajoutés' },
-    { value: year.episodes_watched, label: 'Épisodes' },
+    { value: year.episodes_watched, label: '\u00C9pisodes' },
     { value: year.completions, label: 'Terminés' },
   ]
 
   return (
-    <section style={{ padding: '0 16px 0' }}>
-      <SectionLabel>{currentYear} en chiffres</SectionLabel>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: '8px',
-      }}>
+    <section className={s.sectionLast}>
+      <SectionLabel>{`${currentYear} en chiffres`}</SectionLabel>
+      <div className={s.yearGrid}>
         {cards.map((card) => (
-          <div key={card.label} style={{
-            background: colors.bgCard,
-            border: `1px solid ${colors.borderCard}`,
-            borderRadius: '12px',
-            padding: '12px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: colors.textPrimary }}>
-              {card.value}
-            </div>
-            <div style={{
-              fontSize: '10px',
-              color: colors.textSecondary,
-              marginTop: '2px',
-            }}>
-              {card.label}
-            </div>
+          <div key={card.label} className={s.yearCard}>
+            <div className={s.yearValue}>{card.value}</div>
+            <div className={s.yearLabel}>{card.label}</div>
           </div>
         ))}
       </div>
@@ -365,16 +235,5 @@ function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return (
-    <div style={{
-      fontSize: '10px',
-      color: lavender,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      marginBottom: '10px',
-    }}>
-      {children}
-    </div>
-  )
+  return <div className={s.sectionLabel}>{children}</div>
 }

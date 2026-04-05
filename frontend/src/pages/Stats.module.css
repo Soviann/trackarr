@@ -1,0 +1,277 @@
+.page {
+  padding: var(--space-lg) 0 36px;
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  padding: 0 var(--space-lg) var(--space-lg);
+}
+
+.loading {
+  padding: 20px;
+  color: var(--color-text-secondary);
+}
+
+/* Shared */
+.section {
+  padding: 0 var(--space-lg) var(--space-xl);
+}
+
+.sectionLast {
+  padding: 0 var(--space-lg) 0;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  color: var(--color-accent-lavender);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  padding: var(--space-lg);
+  text-align: center;
+}
+
+/* Overview */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.overviewValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.overviewLabel {
+  font-size: 10px;
+  color: var(--color-accent-lavender);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: var(--space-xs);
+}
+
+.overviewFooter {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+/* Ratings */
+.ratingsCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  padding: 14px var(--space-lg);
+}
+
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ratingRow:not(:last-child) {
+  margin-bottom: 6px;
+}
+
+.ratingLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ratingTrack {
+  flex: 1;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.ratingBar {
+  height: 100%;
+  background: var(--color-accent-lavender);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.ratingCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ratingInsight {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Breakdown / Donut */
+.breakdownGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.donutCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.donutTitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.donutRing {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+}
+
+.donutCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.donutLegend {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--color-text-secondary);
+}
+
+.legendCount {
+  color: var(--color-text-muted);
+}
+
+/* Fun stats */
+.funStatList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.funStatCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  padding: 14px var(--space-lg);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.funStatIcon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.funStatBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.funStatTitle {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.funStatValue {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.funStatDetail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Year */
+.yearGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.yearCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  padding: var(--space-md);
+  text-align: center;
+}
+
+.yearValue {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.yearLabel {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}

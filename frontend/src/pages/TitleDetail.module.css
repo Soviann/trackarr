@@ -1,0 +1,133 @@
+.page {
+  padding-bottom: 36px;
+}
+
+.loading {
+  padding: 40px var(--space-lg);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.hero {
+  position: relative;
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.overlayBtn {
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.backBtn {
+  composes: overlayBtn;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+}
+
+.topRight {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.anilistBtn {
+  composes: overlayBtn;
+  position: relative;
+}
+
+.anilistLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #02a9ff;
+}
+
+.pendingDot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent-amber);
+  border: 1.5px solid rgba(0, 0, 0, 0.5);
+}
+
+.heroInfo {
+  width: 100%;
+  padding: 14px var(--space-lg);
+  background: linear-gradient(transparent, #0d0d0d);
+}
+
+.heroTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: #fff;
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: 3px;
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-xs);
+  color: #aaa;
+}
+
+.heroRating {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent-amber);
+}
+
+.progressWrap {
+  padding: var(--space-md) var(--space-lg) 10px;
+}
+
+.progressTrack {
+  height: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--color-accent-amber);
+  border-radius: 2px;
+}
+
+.progressLabel {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.seasonTabs {
+  padding: 0 var(--space-lg) 10px;
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+}
+
+.episodeList {
+  padding: 0 var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

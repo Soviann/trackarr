@@ -172,11 +172,13 @@ Constantes `ConfidenceHigh/Medium/Low`. Documentation dégradation gracieuse sur
 
 ## Phase 7 — Migration frontend
 
-### T26 — Migrer les pages vers Zustand + utils
-Remplacer les appels locaux par le store et les utilitaires partages.
+### T26 — Migrer les pages vers Zustand + utils ✅
 
-### T27 — Migration CSS Modules
-Extraire les styles inline dans des fichiers `.module.css` pour tous les composants.
+Remplacement des getName/getTypeLabel dupliqués dans 7 fichiers par les imports de utils.ts.
+
+### T27 — Migration CSS Modules ✅
+
+266 styles inline migrés vers 25 fichiers .module.css. Tokens CSS dans tokens.css, clsx pour les classes conditionnelles, bridge CSS custom properties pour les couleurs dynamiques. Bundle JS réduit de 91.5kB à 82.4kB. Port Vite changé de 5173 à 5174 (conflit DDEV).
 
 ---
 
@@ -203,5 +205,5 @@ Documenter les nouveaux packages et patterns.
 
 Apres chaque tache :
 1. `make test` + `make test-front` + `make lint`
-2. Verification visuelle en emulation mobile (Chrome DevTools MCP, port 5173)
+2. Verification visuelle en emulation mobile (Chrome DevTools MCP, port 5174)
 3. Pas de regression sur les pages existantes

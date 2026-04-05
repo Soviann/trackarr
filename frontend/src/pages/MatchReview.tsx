@@ -1,9 +1,10 @@
-import type { Title, PaginatedResponse } from '../types'
-import { colors } from '../theme'
+import type { PaginatedResponse } from '../types'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { MatchReviewCard } from '../components/MatchReviewCard'
 import { ErrorBanner } from '../components/ErrorBanner'
+import clsx from 'clsx'
+import s from './MatchReview.module.css'
 
 export function MatchReview({ path }: { path?: string }) {
   const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>('/titles?match_status=pending_review&limit=500')
@@ -28,50 +29,28 @@ export function MatchReview({ path }: { path?: string }) {
   }
 
   return (
-    <div style={{ padding: '16px', paddingBottom: '36px' }}>
+    <div className={s.page}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className={s.header}>
+        <div className={s.headerLeft}>
           <button
             onClick={() => history.back()}
             aria-label="Retour"
-            style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: colors.bgCard,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: 'none', padding: 0,
-            }}
+            className={s.backBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
-          <div style={{ fontSize: '17px', fontWeight: 600, color: colors.textPrimary }}>Match Review</div>
+          <div className={s.title}>Match Review</div>
           {titles.length > 0 && (
-            <div style={{
-              minWidth: '20px', height: '20px', borderRadius: '10px',
-              background: colors.accentCoral,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 6px',
-            }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>{titles.length}</span>
+            <div className={s.badge}>
+              <span className={s.badgeText}>{titles.length}</span>
             </div>
           )}
         </div>
         {titles.length > 1 && (
-          <button
-            onClick={handleBatchConfirm}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              background: `${colors.accentGreen}1F`,
-              border: `1px solid ${colors.accentGreen}33`,
-              color: colors.accentGreen,
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={handleBatchConfirm} className={s.confirmAllBtn}>
             Confirm all
           </button>
         )}
@@ -80,11 +59,11 @@ export function MatchReview({ path }: { path?: string }) {
       {error && <ErrorBanner message={error} onRetry={mutate} />}
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: colors.textSecondary }}>Loading...</div>
+        <div className={s.statusMsg}>Loading...</div>
       )}
 
       {!loading && titles.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: colors.textSecondary }}>
+        <div className={s.statusMsg}>
           Aucun titre à vérifier
         </div>
       )}
@@ -92,13 +71,10 @@ export function MatchReview({ path }: { path?: string }) {
       {/* Unconfirmed section */}
       {unconfirmed.length > 0 && (
         <>
-          <div style={{
-            fontSize: '10px', color: colors.accentCoral, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px',
-          }}>
+          <div className={clsx(s.sectionLabel, s.sectionLabelUnconfirmed)}>
             Unconfirmed ({unconfirmed.length})
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+          <div className={clsx(s.cardList, s.cardListSpaced)}>
             {unconfirmed.map((t) => <MatchReviewCard key={t.id} title={t} onUpdate={mutate} />)}
           </div>
         </>
@@ -107,13 +83,10 @@ export function MatchReview({ path }: { path?: string }) {
       {/* Pending section */}
       {pending.length > 0 && (
         <>
-          <div style={{
-            fontSize: '10px', color: colors.accentAmber, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px',
-          }}>
+          <div className={clsx(s.sectionLabel, s.sectionLabelPending)}>
             Pending review ({pending.length})
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className={s.cardList}>
             {pending.map((t) => <MatchReviewCard key={t.id} title={t} onUpdate={mutate} />)}
           </div>
         </>

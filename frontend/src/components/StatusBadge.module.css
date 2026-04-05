@@ -1,0 +1,27 @@
+.badge {
+  font-size: 9px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.watching {
+  color: var(--color-bg-primary);
+  background: var(--color-accent-amber);
+}
+
+.completed {
+  color: var(--color-accent-green);
+  background: var(--wash-green);
+}
+
+.dropped {
+  color: var(--color-accent-coral);
+  background: var(--wash-coral);
+}
+
+.planToWatch {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+}

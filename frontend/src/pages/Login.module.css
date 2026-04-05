@@ -1,0 +1,84 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-primary);
+  padding: var(--space-xxl);
+}
+
+.header {
+  margin-bottom: 48px;
+  text-align: center;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+}
+
+.googleBtn {
+  min-height: 44px;
+}
+
+.devForm {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 320px;
+}
+
+.devLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.devInput {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 8px;
+  border: 1px solid var(--color-border-card);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.devError {
+  font-size: var(--font-size-xs);
+  color: #e74c3c;
+  text-align: center;
+}
+
+.devSubmit {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 8px;
+  border: none;
+  background: var(--color-accent-amber);
+  color: #000;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.footer {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dimmed);
+  margin-top: var(--space-lg);
+  text-align: center;
+}
