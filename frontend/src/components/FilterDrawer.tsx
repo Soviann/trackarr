@@ -4,7 +4,7 @@ import type { TitleStatus, TitleType, SeriesStatus } from '../types'
 import { colors, accentWash } from '../theme'
 import s from './FilterDrawer.module.css'
 
-const STORAGE_KEY = 'filter-drawer-open'
+const STORAGE_KEY_HOME = 'filter-drawer-open-home'
 
 type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
@@ -17,15 +17,16 @@ interface FilterDrawerProps {
   onStatusChange: (status: StatusFilter) => void
   onTypeChange: (type: TypeFilter) => void
   onSeriesStatusChange: (seriesStatus: SeriesStatusFilter) => void
+  defaultOpen?: boolean
 }
 
 const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
-  { id: 'watching', label: 'Watching', color: colors.accentAmber },
+  { id: null, label: 'All', color: colors.accentTeal },
   { id: 'plan_to_watch', label: 'Plan', color: colors.accentLavender },
+  { id: 'watching', label: 'Watching', color: colors.accentAmber },
   { id: 'up_to_date', label: 'Caught up', color: colors.accentBlue },
   { id: 'completed', label: 'Completed', color: colors.accentGreen },
   { id: 'dropped', label: 'Dropped', color: colors.accentCoral },
-  { id: null, label: 'All', color: colors.accentTeal },
 ]
 
 const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
@@ -62,15 +63,22 @@ function Chip<T>({ filter, active, onClick }: {
 export function FilterDrawer({
   status, type, seriesStatus,
   onStatusChange, onTypeChange, onSeriesStatusChange,
+  defaultOpen = true,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!defaultOpen) return false
+    const stored = localStorage.getItem(STORAGE_KEY_HOME)
     return stored !== null ? stored === 'true' : true
   })
 
+  // Reset to closed when switching to a page with defaultOpen=false
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(open))
-  }, [open])
+    if (!defaultOpen) setOpen(false)
+  }, [defaultOpen])
+
+  useEffect(() => {
+    if (defaultOpen) localStorage.setItem(STORAGE_KEY_HOME, String(open))
+  }, [open, defaultOpen])
 
   const showSeriesStatus = type === 'series' || type === 'anime'
 

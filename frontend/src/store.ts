@@ -35,7 +35,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   loading: false,
   loadingMore: false,
   error: null,
-  filter: {},
+  filter: { status: 'plan_to_watch' },
 
   setFilter: (filter) => {
     set({ filter: { ...get().filter, ...filter } })

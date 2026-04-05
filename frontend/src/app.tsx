@@ -38,7 +38,12 @@ export function App() {
     setCurrentPath(e.url)
   }
 
+  const defaultFilter = { status: 'plan_to_watch', type: undefined, series_status: undefined, search: undefined }
+
   const navigate = (path: string) => {
+    if (path === '/' || path === '/search') {
+      setFilter(defaultFilter)
+    }
     route(path)
   }
 
@@ -99,6 +104,7 @@ export function App() {
                 onStatusChange={handleStatusChange}
                 onTypeChange={handleTypeChange}
                 onSeriesStatusChange={handleSeriesStatusChange}
+                defaultOpen={currentPath === '/'}
               />
             ) : undefined}
           />
