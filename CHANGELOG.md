@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.7.1] — 2026-04-05
+
+### Corrigé
+- Notifications : la notification « série terminée » est désormais conditionnée aux réglages utilisateur (nouveau toggle dans l'admin)
+
+### Amélioré
+- Notifications : tous les textes (push + labels admin) sont en anglais par défaut
+
 ## [v0.7.0] — 2026-04-05
 
 ### Ajouté
