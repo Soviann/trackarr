@@ -1,12 +1,11 @@
 import { useState } from 'preact/hooks'
 import type { Title } from '../types'
-import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
-import { getName, getTypeLabel } from '../utils'
+import { getName, getTypeLabel, getStatusLabel } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeRow } from '../components/EpisodeRow'
-import { ActionBar } from '../components/ActionBar'
+import { ActionDrawer } from '../components/ActionDrawer'
 import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { RematchSheet } from '../components/RematchSheet'
@@ -29,6 +28,21 @@ function formatSeriesStatus(st: string | null) {
   return st.charAt(0).toUpperCase() + st.slice(1).replace('_', ' ')
 }
 
+function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}m`
+}
+
+function parseJSON<T>(json: string | null): T | null {
+  if (!json) return null
+  try { return JSON.parse(json) } catch { return null }
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
@@ -36,6 +50,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showEdit, setShowEdit] = useState(false)
   const [showAniList, setShowAniList] = useState(false)
   const [showRematch, setShowRematch] = useState(false)
+  const [synopsisExpanded, setSynopsisExpanded] = useState(false)
 
   if (loading || !title) {
     return (
@@ -57,6 +72,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const total = current?.total_episodes ?? currentEps.length
   const pct = total > 0 ? (watched / total) * 100 : 0
   const next = getNextUnwatched(title)
+
+  const genres = parseJSON<string[]>(title.genres)
+  const credits = parseJSON<{ name: string; role: string }[]>(title.credits)
 
   const handleMarkNext = async () => {
     if (!next) return
@@ -93,64 +111,130 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     mutate()
   }
 
+  // Build meta line
+  const metaParts = [typeLabel, String(title.year)]
+  if (title.runtime) metaParts.push(formatRuntime(title.runtime))
+  if (title.series_status) metaParts.push(formatSeriesStatus(title.series_status))
+
   return (
     <div className={s.page}>
-      {/* Hero cover */}
+      {/* Hero — pure visual */}
       <div
         className={s.hero}
         style={{ background: coverBackground(title.cover_url, title.type) }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
-        {/* Back button */}
-        <button onClick={() => history.back()} aria-label="Retour" className={s.backBtn}>
+        <div className={s.heroFade} />
+        <button onClick={() => history.back()} aria-label="Back" className={s.backBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
+      </div>
 
-        {/* Top-right buttons */}
-        <div className={s.topRight}>
-          {title.type === 'anime' && (
-            <button onClick={() => setShowAniList(true)} aria-label="AniList" className={s.anilistBtn}>
-              <span className={s.anilistLabel}>AL</span>
-              {title.match_status === 'pending_review' && <div className={s.pendingDot} />}
-            </button>
+      {/* Identity zone */}
+      <div className={s.identity}>
+        {title.cover_url ? (
+          <img src={`/api/covers/${title.cover_url}`} alt="" className={s.miniPoster} />
+        ) : (
+          <div className={s.miniPosterPlaceholder} style={{ background: coverBackground(null, title.type) }}>
+            <CoverPlaceholder type={title.type} iconSize="24px" />
+          </div>
+        )}
+        <div className={s.identityInfo}>
+          <div className={s.identityTitle}>{name}</div>
+          <div className={s.identityMeta}>{metaParts.join(' · ')}</div>
+          {genres && genres.length > 0 && (
+            <div className={s.genrePills}>
+              {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
+            </div>
           )}
-          {/* Fix match button */}
-          <button onClick={() => setShowRematch(true)} aria-label="Fix match" className={s.overlayBtn}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
-          {/* Edit button */}
-          <button onClick={() => setShowEdit(true)} aria-label="Modifier" className={s.overlayBtn}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
         </div>
+      </div>
 
-        {/* Title info over gradient */}
-        <div className={s.heroInfo}>
-          <div className={s.heroTitle}>{name}</div>
-          <div className={s.heroMeta}>
-            <span className={s.heroSubtitle}>
-              {typeLabel} · {title.year}
-              {title.series_status && ` · ${formatSeriesStatus(title.series_status)}`}
-            </span>
-            {title.my_rating != null && (
-              <span className={s.heroRating}>
-                ★ {title.my_rating}/10
-              </span>
+      {/* Ratings card */}
+      <div className={s.card} style={{ marginTop: '12px' }}>
+        <div className={s.ratingsRow}>
+          <div>
+            <div className={s.cardLabel}>My rating</div>
+            {title.my_rating != null ? (
+              <div className={s.myRating}>{title.my_rating}<span className={s.myRatingSuffix}>/10</span></div>
+            ) : (
+              <div className={s.noRating}>Not rated</div>
+            )}
+          </div>
+          <div className={s.extRatings}>
+            {title.tmdb_rating != null && (
+              <div className={s.extItem}>
+                <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
+                <div className={s.extSource}>TMDB</div>
+              </div>
+            )}
+            {title.anilist_rating != null && (
+              <div className={s.extItem}>
+                <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
+                <div className={s.extSource}>AniList</div>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Synopsis card */}
+      {title.overview && (
+        <div className={s.card}>
+          <div className={s.cardLabel}>Synopsis</div>
+          <div className={`${s.synopsisText} ${!synopsisExpanded ? s.synopsisClamped : ''}`}>
+            {title.overview}
+          </div>
+          <button className={s.synopsisToggle} onClick={() => setSynopsisExpanded(!synopsisExpanded)}>
+            {synopsisExpanded ? 'Show less' : 'Show more'}
+          </button>
+        </div>
+      )}
+
+      {/* Cast & Crew card */}
+      {credits && credits.length > 0 && (
+        <div className={s.card}>
+          <div className={s.cardLabel}>Cast & Crew</div>
+          <div className={s.castList}>
+            {credits.map((c, i) => (
+              <div key={i} className={s.castEntry}>
+                <span className={s.castPerson}>{c.name}</span>
+                <span className={s.castRole}>{c.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Details card */}
+      <div className={s.card}>
+        <div className={s.cardLabel}>Details</div>
+        <div className={s.detailRow}>
+          <span className={s.detailKey}>Status</span>
+          <span className={s.detailVal}>{getStatusLabel(title.status)}</span>
+        </div>
+        <div className={s.detailRow}>
+          <span className={s.detailKey}>Added</span>
+          <span className={s.detailVal}>{formatDate(title.created_at)}</span>
+        </div>
+        {title.match_source && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Match</span>
+            <span className={s.detailVal}>{title.match_source}</span>
+          </div>
+        )}
+        {title.original_title && title.original_title !== name && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Original title</span>
+            <span className={s.detailVal}>{title.original_title}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Progress bar (series/anime) */}
       {current && title.type !== 'movie' && (
         <div className={s.progressWrap}>
           <div className={s.progressTrack}>
@@ -187,13 +271,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </div>
       )}
 
-      {/* Action bar */}
-      <ActionBar
+      {/* Action drawer */}
+      <ActionDrawer
         title={title}
         nextEpisode={next?.episode ?? null}
         nextSeasonNumber={next?.season.season_number}
         onMarkNext={handleMarkNext}
         onRate={() => setShowRating(true)}
+        onEdit={() => setShowEdit(true)}
+        onRematch={() => setShowRematch(true)}
         onAniList={() => setShowAniList(true)}
       />
 
