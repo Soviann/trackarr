@@ -1,0 +1,502 @@
+openapi: "3.0.3"
+info:
+  title: PlexTracker API
+  version: "1.0.0"
+  description: API de suivi de médias personnels — Go / SQLite / Preact.
+
+servers:
+  - url: /api
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+
+  schemas:
+    TitleType:
+      type: string
+      enum: [movie, series, anime]
+
+    TitleStatus:
+      type: string
+      enum: [watching, completed, dropped, plan_to_watch]
+
+    SeriesStatus:
+      type: string
+      enum: [returning, ended, cancelled, in_production]
+
+    MatchStatus:
+      type: string
+      enum: [confirmed, pending_review, unconfirmed]
+
+    TitleName:
+      type: object
+      properties:
+        id: { type: integer }
+        title_id: { type: integer }
+        name: { type: string }
+        language: { type: string }
+        is_primary: { type: boolean }
+      required: [name, language, is_primary]
+
+    Episode:
+      type: object
+      properties:
+        id: { type: integer }
+        season_id: { type: integer }
+        episode: { type: integer }
+        name: { type: string, nullable: true }
+        air_date: { type: string, nullable: true, description: "YYYY-MM-DD" }
+        watched: { type: boolean }
+        watched_at: { type: string, format: date-time, nullable: true }
+        plex_rating_key: { type: string, nullable: true }
+
+    Season:
+      type: object
+      properties:
+        id: { type: integer }
+        title_id: { type: integer }
+        season_number: { type: integer }
+        total_episodes: { type: integer, nullable: true }
+        my_rating: { type: integer, nullable: true, minimum: 1, maximum: 10 }
+        episode_count: { type: integer, nullable: true }
+        watched_count: { type: integer, nullable: true }
+        episodes:
+          type: array
+          items: { $ref: "#/components/schemas/Episode" }
+
+    NextEpisode:
+      type: object
+      properties:
+        id: { type: integer }
+        season_id: { type: integer }
+        episode: { type: integer }
+        season_number: { type: integer }
+
+    Title:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { $ref: "#/components/schemas/TitleType" }
+        year: { type: integer }
+        cover_url: { type: string, nullable: true }
+        imdb_id: { type: string, nullable: true }
+        anilist_id: { type: integer, nullable: true }
+        tmdb_id: { type: integer, nullable: true }
+        tvdb_id: { type: integer, nullable: true }
+        plex_rating_key: { type: string, nullable: true }
+        my_rating: { type: integer, nullable: true, minimum: 1, maximum: 10 }
+        status: { $ref: "#/components/schemas/TitleStatus" }
+        series_status: { $ref: "#/components/schemas/SeriesStatus" }
+        match_status: { $ref: "#/components/schemas/MatchStatus" }
+        original_title: { type: string, nullable: true }
+        match_source: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        names:
+          type: array
+          items: { $ref: "#/components/schemas/TitleName" }
+        seasons:
+          type: array
+          items: { $ref: "#/components/schemas/Season" }
+        next_episode:
+          allOf:
+            - $ref: "#/components/schemas/NextEpisode"
+          nullable: true
+
+    PaginatedTitles:
+      type: object
+      properties:
+        titles:
+          type: array
+          items: { $ref: "#/components/schemas/Title" }
+        total: { type: integer }
+        has_more: { type: boolean }
+        counts:
+          type: object
+          nullable: true
+          properties:
+            pending_review: { type: integer }
+            unconfirmed: { type: integer }
+
+    StatsResponse:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            total_titles: { type: integer }
+            total_movies: { type: integer }
+            total_series: { type: integer }
+            total_anime: { type: integer }
+            episodes_watched: { type: integer }
+            completion_rate: { type: number }
+            average_rating: { type: number }
+        ratings:
+          type: object
+          properties:
+            distribution:
+              type: array
+              items: { type: integer }
+              description: "10-element array, index 0 = rating 1"
+            average_by_type:
+              type: object
+              additionalProperties: { type: number }
+            insight: { type: string }
+        breakdown:
+          type: object
+          properties:
+            by_status:
+              type: object
+              additionalProperties: { type: integer }
+            by_type:
+              type: object
+              additionalProperties: { type: integer }
+        fun_stats:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              icon: { type: string }
+              title: { type: string }
+              value: { type: string }
+              detail: { type: string }
+        year_summary:
+          type: object
+          properties:
+            titles_added: { type: integer }
+            episodes_watched: { type: integer }
+            completions: { type: integer }
+
+    Settings:
+      type: object
+      properties:
+        anilist_connected: { type: boolean }
+        push_subscribed: { type: boolean }
+
+    PublicConfig:
+      type: object
+      properties:
+        google_client_id: { type: string }
+        vapid_public_key: { type: string }
+        dev_login: { type: boolean }
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+
+  /config:
+    get:
+      summary: Public configuration
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicConfig" }
+
+  /auth/google:
+    post:
+      summary: Google OAuth callback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                credential: { type: string }
+              required: [credential]
+      responses:
+        "204": { description: "Authenticated (sets HttpOnly cookie)" }
+        "400": { description: "Invalid credential" }
+        "403": { description: "Email not allowed" }
+
+  /auth/dev:
+    post:
+      summary: Dev login (debug mode only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+              required: [username, password]
+      responses:
+        "204": { description: "Authenticated (sets HttpOnly cookie)" }
+        "401": { description: "Invalid credentials" }
+
+  /auth/logout:
+    post:
+      summary: Logout
+      responses:
+        "204": { description: "Cookie cleared" }
+
+  /webhook/plex/{secret}:
+    post:
+      summary: Plex webhook
+      parameters:
+        - name: secret
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                payload: { type: string }
+      responses:
+        "200": { description: "Processed" }
+        "401": { description: "Invalid secret" }
+
+  /covers/{filename}:
+    get:
+      summary: Serve cover image
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Image file
+          headers:
+            Cache-Control:
+              schema: { type: string, example: "public, max-age=604800" }
+        "400": { description: "Invalid filename" }
+
+  /titles:
+    get:
+      summary: List titles (paginated)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: status, in: query, schema: { type: string, enum: [watching, completed, dropped, plan_to_watch, up_to_date, watching_behind] } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TitleType" } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: match_status, in: query, schema: { $ref: "#/components/schemas/MatchStatus" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedTitles" }
+    post:
+      summary: Create a title
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { $ref: "#/components/schemas/TitleType" }
+                year: { type: integer }
+                status: { $ref: "#/components/schemas/TitleStatus" }
+                match_status: { $ref: "#/components/schemas/MatchStatus" }
+                names:
+                  type: array
+                  items: { $ref: "#/components/schemas/TitleName" }
+                cover_url: { type: string, nullable: true }
+                imdb_id: { type: string, nullable: true }
+                anilist_id: { type: integer, nullable: true }
+                tmdb_id: { type: integer, nullable: true }
+                tvdb_id: { type: integer, nullable: true }
+              required: [type, year, status, match_status, names]
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Title" }
+        "400": { description: "Invalid request" }
+
+  /titles/{id}:
+    get:
+      summary: Get title by ID (full detail with episodes)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Title" }
+        "400": { description: "Invalid ID" }
+        "404": { description: "Not found" }
+    patch:
+      summary: Update a title
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: "#/components/schemas/TitleStatus" }
+                match_status: { $ref: "#/components/schemas/MatchStatus" }
+                my_rating: { type: integer, minimum: 1, maximum: 10 }
+                type: { $ref: "#/components/schemas/TitleType" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Title" }
+        "400": { description: "Invalid ID or body" }
+
+  /titles/{titleID}/episodes/{episodeID}:
+    patch:
+      summary: Toggle episode watched status
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: titleID, in: path, required: true, schema: { type: integer } }
+        - { name: episodeID, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Updated title
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Title" }
+        "400": { description: "Invalid ID" }
+
+  /titles/{titleID}/episodes/batch-watch:
+    post:
+      summary: Mark multiple episodes as watched
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: titleID, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                episode_ids:
+                  type: array
+                  items: { type: integer }
+              required: [episode_ids]
+      responses:
+        "200":
+          description: Updated title
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Title" }
+        "400": { description: "Invalid request" }
+
+  /titles/{titleID}/seasons/{seasonID}:
+    patch:
+      summary: Update season rating
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { name: titleID, in: path, required: true, schema: { type: integer } }
+        - { name: seasonID, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 10 }
+              required: [rating]
+      responses:
+        "200": { description: "Updated" }
+        "400": { description: "Invalid ID or body" }
+
+  /push/subscribe:
+    post:
+      summary: Subscribe to push notifications
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Browser PushSubscription object
+      responses:
+        "204": { description: "Subscribed" }
+        "400": { description: "Invalid subscription" }
+    delete:
+      summary: Unsubscribe from push notifications
+      security: [{ cookieAuth: [] }]
+      responses:
+        "204": { description: "Unsubscribed" }
+
+  /stats:
+    get:
+      summary: Get library statistics
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatsResponse" }
+
+  /settings:
+    get:
+      summary: Get user settings
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+
+  /anilist/auth:
+    get:
+      summary: Start AniList OAuth flow
+      security: [{ cookieAuth: [] }]
+      responses:
+        "302": { description: "Redirect to AniList" }
+        "503": { description: "AniList not configured" }
+
+  /anilist/token:
+    post:
+      summary: Save AniList access token
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+              required: [token]
+      responses:
+        "204": { description: "Token saved" }
+        "400": { description: "Invalid request" }
+    delete:
+      summary: Disconnect AniList
+      security: [{ cookieAuth: [] }]
+      responses:
+        "204": { description: "Token deleted" }
