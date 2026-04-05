@@ -1,0 +1,55 @@
+:root {
+  /* Colors — backgrounds */
+  --color-bg-primary: #0D0D0D;
+  --color-bg-card: #161616;
+  --color-bg-surface: #1E1E1E;
+
+  /* Colors — borders */
+  --color-border-subtle: #1A1A1A;
+  --color-border-card: #222222;
+
+  /* Colors — text */
+  --color-text-primary: #F0F0F0;
+  --color-text-secondary: #666666;
+  --color-text-muted: #555555;
+  --color-text-dimmed: #444444;
+
+  /* Colors — accents */
+  --color-accent-amber: #E8A925;
+  --color-accent-teal: #38BDB0;
+  --color-accent-green: #4CAF50;
+  --color-accent-lavender: #9575CD;
+  --color-accent-coral: #EB5757;
+  --color-accent-blue: #5B9CF6;
+  --color-accent-imdb: #F5C518;
+  --color-accent-anilist: #02A9FF;
+
+  /* Wash variants (~12% opacity) */
+  --wash-amber: #E8A9251F;
+  --wash-teal: #38BDB01F;
+  --wash-green: #4CAF501F;
+  --wash-coral: #EB57571F;
+  --wash-blue: #5B9CF61F;
+  --wash-lavender: #9575CD1F;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  /* Border radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Font sizes */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+}
