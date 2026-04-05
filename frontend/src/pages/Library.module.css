@@ -1,0 +1,132 @@
+.page {
+  padding-bottom: 36px;
+}
+
+/* Header */
+.header {
+  padding: var(--space-lg) var(--space-lg) var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-xs);
+}
+
+/* States */
+.centered {
+  padding: 40px var(--space-lg);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* Counter */
+.counter {
+  padding: 0 var(--space-lg) var(--space-sm);
+}
+
+.counterText {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* TitleList */
+.titleList {
+  padding: 0 var(--space-lg) var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* PosterGrid */
+.posterGrid {
+  padding: 0 var(--space-lg) var(--space-sm);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+/* MatchReviewBanner */
+.bannerWrapper {
+  padding: 0 var(--space-lg) var(--space-md);
+  cursor: pointer;
+}
+
+.banner {
+  background: var(--wash-coral);
+  border: 1px solid rgba(235, 87, 87, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--radius-md) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--radius-md);
+}
+
+.bannerBadge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-coral);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bannerBadgeText {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #fff;
+}
+
+.bannerBody {
+  flex: 1;
+}
+
+.bannerTitle {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.bannerSub {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-left: var(--radius-sm);
+}
+
+/* LoadMoreButton */
+.loadMoreWrapper {
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+  text-align: center;
+}
+
+.loadMoreBtn {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: var(--radius-md) var(--space-xl);
+  color: var(--color-accent-teal);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.loadMoreBtn:not(:disabled) {
+  cursor: pointer;
+}
+
+.loadMoreBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

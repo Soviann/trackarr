@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { route } from 'preact-router'
-import { colors } from '../theme'
 import { apiFetch } from '../api'
+import s from './Login.module.css'
 
 declare global {
   interface Window {
@@ -64,30 +64,18 @@ export function Login({ path }: { path?: string }) {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: colors.bgPrimary,
-      padding: '32px',
-    }}>
+    <div className={s.page}>
       {/* Logo / Title */}
-      <div style={{ marginBottom: '48px', textAlign: 'center' }}>
-        <img
-          src="/icon.png"
-          alt="PlexTracker"
-          style={{ width: '80px', height: '80px', margin: '0 auto 20px', display: 'block' }}
-        />
-        <div style={{ fontSize: '24px', fontWeight: 700, color: colors.textPrimary }}>PlexTracker</div>
-        <div style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '6px' }}>
+      <div className={s.header}>
+        <img src="/icon.png" alt="PlexTracker" className={s.logo} />
+        <div className={s.title}>PlexTracker</div>
+        <div className={s.subtitle}>
           Suivez votre bibliothèque multimédia
         </div>
       </div>
 
       {/* Google Sign-In */}
-      <div ref={btnRef} style={{ minHeight: '44px' }} />
+      <div ref={btnRef} className={s.googleBtn} />
 
       {devLogin && (
         <form
@@ -104,9 +92,9 @@ export function Login({ path }: { path?: string }) {
               setDevError('Identifiants invalides')
             }
           }}
-          style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px', width: '320px' }}
+          className={s.devForm}
         >
-          <div style={{ fontSize: '11px', color: colors.textSecondary, textAlign: 'center' }}>Dev Login</div>
+          <div className={s.devLabel}>Dev Login</div>
           <input
             type="text"
             name="username"
@@ -115,7 +103,7 @@ export function Login({ path }: { path?: string }) {
             placeholder="Username"
             value={username}
             onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.borderCard}`, background: colors.bgCard, color: colors.textPrimary, fontSize: '13px' }}
+            className={s.devInput}
           />
           <input
             type="password"
@@ -125,19 +113,16 @@ export function Login({ path }: { path?: string }) {
             placeholder="Password"
             value={password}
             onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.borderCard}`, background: colors.bgCard, color: colors.textPrimary, fontSize: '13px' }}
+            className={s.devInput}
           />
-          {devError && <div style={{ fontSize: '11px', color: '#e74c3c', textAlign: 'center' }}>{devError}</div>}
-          <button
-            type="submit"
-            style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: colors.accentAmber, color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
-          >
+          {devError && <div className={s.devError}>{devError}</div>}
+          <button type="submit" className={s.devSubmit}>
             Se connecter
           </button>
         </form>
       )}
 
-      <div style={{ fontSize: '11px', color: colors.textDimmed, marginTop: '24px', textAlign: 'center' }}>
+      <div className={s.footer}>
         Connectez-vous avec votre compte Google pour commencer
       </div>
     </div>

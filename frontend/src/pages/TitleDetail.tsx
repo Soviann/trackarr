@@ -12,6 +12,7 @@ import { EditSheet } from '../components/EditSheet'
 import { AniListSheet } from '../components/AniListSheet'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import s from './TitleDetail.module.css'
 
 function getNextUnwatched(title: Title) {
   for (const season of [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)) {
@@ -22,9 +23,9 @@ function getNextUnwatched(title: Title) {
   return null
 }
 
-function formatSeriesStatus(s: string | null) {
-  if (!s) return ''
-  return s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')
+function formatSeriesStatus(st: string | null) {
+  if (!st) return ''
+  return st.charAt(0).toUpperCase() + st.slice(1).replace('_', ' ')
 }
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
@@ -36,7 +37,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
   if (loading || !title) {
     return (
-      <div style={{ padding: '40px 16px', textAlign: 'center', color: colors.textSecondary }}>
+      <div className={s.loading}>
         {error ? <ErrorBanner message={error} onRetry={mutate} /> : loading ? 'Loading...' : 'Title not found'}
       </div>
     )
@@ -45,8 +46,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
   const sortedSeasons = [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)
-  const current = sortedSeasons.find((s) => s.season_number === activeSeason)
-    ?? sortedSeasons.find((s) => (s.episodes ?? []).some((e) => !e.watched))
+  const current = sortedSeasons.find((ss) => ss.season_number === activeSeason)
+    ?? sortedSeasons.find((ss) => (ss.episodes ?? []).some((e) => !e.watched))
     ?? sortedSeasons[sortedSeasons.length - 1]
 
   const currentEps = current?.episodes ?? []
@@ -91,36 +92,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   }
 
   return (
-    <div style={{ paddingBottom: '36px' }}>
+    <div className={s.page}>
       {/* Hero cover */}
-      <div style={{
-        position: 'relative',
-        height: '160px',
-        background: coverBackground(title.cover_url, title.type),
-        display: 'flex',
-        alignItems: 'flex-end',
-      }}>
+      <div
+        className={s.hero}
+        style={{ background: coverBackground(title.cover_url, title.type) }}
+      >
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
         {/* Back button */}
-        <button
-          onClick={() => history.back()}
-          aria-label="Retour"
-          style={{
-            position: 'absolute',
-            top: '14px',
-            left: '14px',
-            width: '32px',
-            height: '32px',
-            background: 'rgba(0,0,0,0.5)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            border: 'none',
-            padding: 0,
-          }}
-        >
+        <button onClick={() => history.back()} aria-label="Retour" className={s.backBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
@@ -128,52 +108,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </button>
 
         {/* Top-right buttons */}
-        <div style={{ position: 'absolute', top: '14px', right: '14px', display: 'flex', gap: '8px' }}>
+        <div className={s.topRight}>
           {title.type === 'anime' && (
-            <button
-              onClick={() => setShowAniList(true)}
-              aria-label="AniList"
-              style={{
-                width: '32px',
-                height: '32px',
-                background: 'rgba(0,0,0,0.5)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                cursor: 'pointer',
-                border: 'none',
-                padding: 0,
-              }}
-            >
-              <span style={{ fontSize: '10px', fontWeight: 700, color: colors.accentAnilist }}>AL</span>
-              {title.match_status === 'pending_review' && (
-                <div style={{
-                  position: 'absolute', top: 0, right: 0,
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: colors.accentAmber, border: '1.5px solid rgba(0,0,0,0.5)',
-                }} />
-              )}
+            <button onClick={() => setShowAniList(true)} aria-label="AniList" className={s.anilistBtn}>
+              <span className={s.anilistLabel}>AL</span>
+              {title.match_status === 'pending_review' && <div className={s.pendingDot} />}
             </button>
           )}
           {/* Edit button */}
-          <button
-            onClick={() => setShowEdit(true)}
-            aria-label="Modifier"
-            style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(0,0,0,0.5)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              border: 'none',
-              padding: 0,
-            }}
-          >
+          <button onClick={() => setShowEdit(true)} aria-label="Modifier" className={s.overlayBtn}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -182,19 +125,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </div>
 
         {/* Title info over gradient */}
-        <div style={{
-          width: '100%',
-          padding: '14px 16px',
-          background: 'linear-gradient(transparent, #0D0D0D)',
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-            <span style={{ fontSize: '11px', color: '#aaa' }}>
+        <div className={s.heroInfo}>
+          <div className={s.heroTitle}>{name}</div>
+          <div className={s.heroMeta}>
+            <span className={s.heroSubtitle}>
               {typeLabel} · {title.year}
               {title.series_status && ` · ${formatSeriesStatus(title.series_status)}`}
             </span>
             {title.my_rating != null && (
-              <span style={{ fontSize: '12px', fontWeight: 600, color: colors.accentAmber }}>
+              <span className={s.heroRating}>
                 ★ {title.my_rating}/10
               </span>
             )}
@@ -204,11 +143,11 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Progress bar */}
       {current && title.type !== 'movie' && (
-        <div style={{ padding: '12px 16px 10px' }}>
-          <div style={{ height: '3px', background: '#2A2A2A', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', background: colors.accentAmber, borderRadius: '2px' }} />
+        <div className={s.progressWrap}>
+          <div className={s.progressTrack}>
+            <div className={s.progressBar} style={{ width: `${pct}%` }} />
           </div>
-          <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '4px' }}>
+          <div className={s.progressLabel}>
             S{current.season_number} · {watched} of {total} episodes watched
           </div>
         </div>
@@ -216,13 +155,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Season tabs */}
       {sortedSeasons.length > 1 && (
-        <div style={{ padding: '0 16px 10px', display: 'flex', gap: '8px', overflowX: 'auto' }}>
-          {sortedSeasons.map((s) => (
+        <div className={s.seasonTabs}>
+          {sortedSeasons.map((ss) => (
             <SeasonTab
-              key={s.id}
-              season={s}
-              active={s.id === current?.id}
-              onClick={() => setActiveSeason(s.season_number)}
+              key={ss.id}
+              season={ss}
+              active={ss.id === current?.id}
+              onClick={() => setActiveSeason(ss.season_number)}
             />
           ))}
         </div>
@@ -230,7 +169,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Episode list */}
       {current && (
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className={s.episodeList}>
           {[...(current.episodes ?? [])]
             .sort((a, b) => a.episode - b.episode)
             .map((ep) => (
