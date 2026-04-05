@@ -3,6 +3,7 @@ package handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -81,7 +82,7 @@ func TestTitleHandler_GetByID(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
 
-	req := httptest.NewRequest("GET", "/api/titles/"+itoa(id), nil)
+	req := httptest.NewRequest("GET", fmt.Sprintf("/api/titles/%d", id), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -91,6 +92,108 @@ func TestTitleHandler_GetByID(t *testing.T) {
 	assert.Equal(t, "Test", title.PrimaryName())
 }
 
-func itoa(i int64) string {
-	return json.Number(json.Number(string(rune('0') + rune(i)))).String()
+func TestTitleHandler_GetByID_InvalidID(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
+
+	req := httptest.NewRequest("GET", "/api/titles/notanumber", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestTitleHandler_GetByID_NotFound(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
+
+	req := httptest.NewRequest("GET", "/api/titles/99999", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestTitleHandler_Create_InvalidJSON(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader([]byte("not json")))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Post("/api/titles", httputil.WrapHandler(h.Create))
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestTitleHandler_Update(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
+	req := httptest.NewRequest("PUT", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Put("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var title model.Title
+	_ = json.NewDecoder(rr.Body).Decode(&title)
+	assert.Equal(t, model.TitleStatusCompleted, title.Status)
+}
+
+func TestTitleHandler_Update_InvalidID(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
+	req := httptest.NewRequest("PUT", "/api/titles/abc", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Put("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestTitleHandler_Update_InvalidJSON(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	req := httptest.NewRequest("PUT", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader([]byte("{invalid")))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Put("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestTitleHandler_List_WithPagination(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	for i := 0; i < 5; i++ {
+		titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+	}
+
+	req := httptest.NewRequest("GET", "/api/titles?limit=2&offset=0", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.List(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var result repository.PaginatedResult
+	_ = json.NewDecoder(rr.Body).Decode(&result)
+	assert.Len(t, result.Titles, 2)
+	assert.Equal(t, 5, result.Total)
+	assert.True(t, result.HasMore)
 }
