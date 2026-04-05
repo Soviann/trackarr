@@ -148,9 +148,11 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 
 	// Detect series status change
 	newStatus := mapTMDBSeriesStatus(details)
-	if newStatus != nil && title.SeriesStatus != nil && *newStatus != *title.SeriesStatus {
+	if newStatus != nil && (title.SeriesStatus == nil || *newStatus != *title.SeriesStatus) {
 		result.StatusChanged = true
-		result.OldStatus = *title.SeriesStatus
+		if title.SeriesStatus != nil {
+			result.OldStatus = *title.SeriesStatus
+		}
 		result.NewStatus = *newStatus
 		_ = s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
 		title.SeriesStatus = newStatus
@@ -223,10 +225,20 @@ func (s *BackgroundService) allEpisodesWatched(title *model.Title) bool {
 }
 
 func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
-	// TMDB doesn't expose status directly in our current model,
-	// but we can infer from season data. For now return nil.
-	// This will be enhanced when TMDB status field is added.
-	return nil
+	var status model.SeriesStatus
+	switch details.Status {
+	case "Ended":
+		status = model.SeriesStatusEnded
+	case "Canceled":
+		status = model.SeriesStatusCancelled
+	case "Returning Series":
+		status = model.SeriesStatusReturning
+	case "In Production":
+		status = model.SeriesStatusInProduction
+	default:
+		return nil
+	}
+	return &status
 }
 
 // FetchMissingCovers downloads covers for all titles that have a TMDB ID but no cover.

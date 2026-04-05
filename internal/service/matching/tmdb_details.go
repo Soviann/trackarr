@@ -20,6 +20,7 @@ type TMDBMovieDetails struct {
 type TMDBTVDetails struct {
 	ID           int64   `json:"id"`
 	Name         string  `json:"name"`
+	Status       string  `json:"status"`
 	FirstAirDate string  `json:"first_air_date"`
 	PosterPath   *string `json:"poster_path"`
 	Seasons      []struct {

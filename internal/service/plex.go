@@ -225,7 +225,60 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		log.Printf("backfill warning: %v", err)
 	}
 
+	// Auto-complete if this is the last episode of the last season of an ended/cancelled series
+	if tmdbClient != nil && backfillTMDBID != nil {
+		if completed, seriesStatus := checkSeriesCompleted(tmdbClient, *backfillTMDBID, meta.ParentIndex, meta.Index); completed {
+			completedStatus := model.TitleStatusCompleted
+			update := repository.TitleUpdate{Status: &completedStatus}
+			if seriesStatus != nil {
+				update.SeriesStatus = seriesStatus
+			}
+			if err := titles.Update(title.ID, update); err != nil {
+				log.Printf("auto-complete warning: %v", err)
+			} else {
+				log.Printf("auto-completed series (title %d) on last episode", title.ID)
+			}
+		}
+	}
+
 	return nil
+}
+
+// checkSeriesCompleted checks if the given season/episode is the last episode
+// of the last season of an ended or cancelled series (via TMDB).
+func checkSeriesCompleted(tmdb *matching.TMDBClient, tmdbID int64, seasonNum, episodeNum int) (bool, *model.SeriesStatus) {
+	details, err := tmdb.GetTVDetails(tmdbID)
+	if err != nil {
+		return false, nil
+	}
+
+	// Check series status — only auto-complete for ended/cancelled
+	seriesStatus := mapTMDBSeriesStatus(details)
+	if seriesStatus == nil {
+		return false, nil
+	}
+	if *seriesStatus != model.SeriesStatusEnded && *seriesStatus != model.SeriesStatusCancelled {
+		return false, nil
+	}
+
+	// Find the last season (highest number, excluding specials S00)
+	lastSeasonNum := 0
+	lastSeasonEpisodeCount := 0
+	for _, s := range details.Seasons {
+		if s.SeasonNumber == 0 {
+			continue
+		}
+		if s.SeasonNumber > lastSeasonNum {
+			lastSeasonNum = s.SeasonNumber
+			lastSeasonEpisodeCount = s.EpisodeCount
+		}
+	}
+
+	if lastSeasonNum == 0 || lastSeasonEpisodeCount == 0 {
+		return false, nil
+	}
+
+	return seasonNum == lastSeasonNum && episodeNum == lastSeasonEpisodeCount, seriesStatus
 }
 
 // needsEnrichment returns true if a title lacks enrichment data.
