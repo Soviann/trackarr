@@ -1,5 +1,25 @@
 # Changelog
 
+## [v0.5.0] — 2026-04-05
+
+### Ajouté
+- File d'attente avec retry automatique pour les tâches async (enrichissement, refresh, couvertures) — les erreurs de rate limit ou réseau ne perdent plus la tâche
+- Retry en 2 niveaux : 5 tentatives jour même avec backoff exponentiel, report au lendemain si échec, puis tâche morte
+- Section Admin dans la navbar avec page hub (Validations, Tâches, Notifications)
+- Page de gestion des tâches échouées (relancer / supprimer)
+- Préférences de notifications push activables/désactivables par type (rappel de notation, tâche échouée)
+- Notification push quand une tâche meurt définitivement
+- Tiroir de filtres unifié sur les pages Library et Search
+- Auto-complétion des séries terminées au dernier épisode
+
+### Corrigé
+- Couleur du filtre "All" actif dans le tiroir
+- Espace entre l'ActionBar et la Navbar sur la page de détail
+
+### Amélioré
+- Gestion des séries/anime à la réception des webhooks Plex
+- Comportement des filtres de statut et de type
+
 ## [v0.4.0] — 2026-04-05
 
 ### Ajouté
