@@ -28,6 +28,8 @@ type TitleFilter struct {
 	WatchingBehind bool // server-side "watching but behind" filter (watching + has unwatched episodes)
 	Limit          int
 	Offset         int
+	Sort           string // column name: updated_at, original_title, year, my_rating, created_at
+	Order          string // asc or desc
 }
 
 const DefaultPageSize = 50

@@ -179,6 +179,39 @@ func TestTitleHandler_Update_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestTitleHandler_List_WithSort(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
+
+	req := httptest.NewRequest("GET", "/api/titles?status=completed&sort=year&order=asc", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.List(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var result repository.PaginatedResult
+	_ = json.NewDecoder(rr.Body).Decode(&result)
+	require.Len(t, result.Titles, 2)
+	assert.Equal(t, "Old Movie", result.Titles[0].PrimaryName())
+	assert.Equal(t, "New Movie", result.Titles[1].PrimaryName())
+}
+
+func TestTitleHandler_List_InvalidSortFallsBack(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	req := httptest.NewRequest("GET", "/api/titles?status=watching&sort=bobby_tables&order=sideways", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.List(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var result repository.PaginatedResult
+	_ = json.NewDecoder(rr.Body).Decode(&result)
+	assert.Len(t, result.Titles, 1)
+}
+
 func TestTitleHandler_List_WithPagination(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 
