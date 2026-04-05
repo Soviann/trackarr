@@ -205,7 +205,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		_ = s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
 		title.SeriesStatus = newStatus
 
-		if *newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled {
+		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
 			_ = s.push.SendNotification(
 				title.PrimaryName(),
 				"La série est terminée",

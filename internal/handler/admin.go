@@ -96,6 +96,7 @@ func (h *AdminHandler) GetNotificationPrefs(w http.ResponseWriter, r *http.Reque
 	prefs := map[string]bool{
 		service.NotifRatingPrompt: service.IsNotificationEnabled(h.settings, service.NotifRatingPrompt),
 		service.NotifDeadTask:     service.IsNotificationEnabled(h.settings, service.NotifDeadTask),
+		service.NotifSeriesEnded:  service.IsNotificationEnabled(h.settings, service.NotifSeriesEnded),
 	}
 	httputil.WriteJSON(w, http.StatusOK, prefs)
 	return nil
@@ -111,7 +112,7 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 	for key, enabled := range prefs {
 		// Only allow known keys
 		switch key {
-		case service.NotifRatingPrompt, service.NotifDeadTask:
+		case service.NotifRatingPrompt, service.NotifDeadTask, service.NotifSeriesEnded:
 			val := "true"
 			if !enabled {
 				val = "false"

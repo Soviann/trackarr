@@ -5,6 +5,7 @@ import s from './AdminNotifications.module.css'
 interface NotifPrefs {
   notif_rating_prompt: boolean
   notif_dead_task: boolean
+  notif_series_ended: boolean
 }
 
 const notifTypes = [
@@ -17,6 +18,11 @@ const notifTypes = [
     key: 'notif_dead_task' as const,
     label: 'Tâche échouée',
     description: 'Quand une tâche d\'enrichissement échoue définitivement',
+  },
+  {
+    key: 'notif_series_ended' as const,
+    label: 'Série terminée',
+    description: 'Quand une série passe au statut terminée ou annulée',
   },
 ]
 

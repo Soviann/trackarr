@@ -404,6 +404,7 @@ func calculateNextRunAt(attempts int, retryAfter time.Duration) time.Time {
 const (
 	NotifRatingPrompt = "notif_rating_prompt"
 	NotifDeadTask     = "notif_dead_task"
+	NotifSeriesEnded  = "notif_series_ended"
 )
 
 // IsNotificationEnabled checks whether a notification type is enabled.
