@@ -123,7 +123,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |
 | SeasonTab | `components/SeasonTab.tsx` | Season pill with progress/check |
 | EpisodeRow | `components/EpisodeRow.tsx` | Episode row with toggle watched |
-| ActionBar | `components/ActionBar.tsx` | Title detail action bar (next ep, IMDb, AniList, Rate) |
+| ActionDrawer | `components/ActionDrawer.tsx` | Collapsible drawer with quick actions (next ep, rate, IMDb, AniList) + manage (edit, fix match) |
 | BottomSheet | `components/BottomSheet.tsx` | Reusable slide-up sheet with backdrop |
 | RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList buttons |
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
