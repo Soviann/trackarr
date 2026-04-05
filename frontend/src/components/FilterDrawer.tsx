@@ -29,14 +29,14 @@ const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
 ]
 
 const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.textSecondary },
+  { id: null, label: 'All', color: colors.accentTeal },
   { id: 'anime', label: 'Anime', color: colors.accentAnilist },
   { id: 'movie', label: 'Movie', color: colors.accentAmber },
   { id: 'series', label: 'Series', color: colors.accentLavender },
 ]
 
 const seriesStatusFilters: { id: SeriesStatusFilter; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.textSecondary },
+  { id: null, label: 'All', color: colors.accentTeal },
   { id: 'returning', label: 'Returning', color: colors.accentGreen },
   { id: 'ended', label: 'Ended', color: colors.textSecondary },
   { id: 'cancelled', label: 'Cancelled', color: colors.accentCoral },
