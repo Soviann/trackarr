@@ -1,10 +1,11 @@
 import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
+import clsx from 'clsx'
 import type { Title } from '../types'
-import { colors } from '../theme'
 import { apiFetch } from '../api'
 import { getName, getTypeLabel } from '../utils'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import s from './TitleCard.module.css'
 
 interface TitleCardProps {
   title: Title
@@ -57,64 +58,27 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
   }
 
   return (
-    <div
-      onClick={() => route(`/title/${title.id}`)}
-      style={{
-        display: 'flex',
-        gap: '12px',
-        alignItems: 'center',
-        background: colors.bgCard,
-        borderRadius: '12px',
-        padding: '10px',
-        border: `1px solid ${colors.borderCard}`,
-        cursor: 'pointer',
-      }}
-    >
+    <div onClick={() => route(`/title/${title.id}`)} className={s.card}>
       {/* Cover */}
-      <div style={{
-        width: '48px',
-        height: '68px',
-        borderRadius: '6px',
-        flexShrink: 0,
-        background: coverBackground(title.cover_url, title.type),
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+      <div
+        className={s.cover}
+        style={{ background: coverBackground(title.cover_url, title.type) }}
+      >
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="20px" />}
       </div>
 
       {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: '13px',
-          fontWeight: 600,
-          color: colors.textPrimary,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {name}
-        </div>
-        <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '2px' }}>
+      <div className={s.info}>
+        <div className={s.name}>{name}</div>
+        <div className={s.meta}>
           {typeLabel} · {title.year}
         </div>
         {season && (
           <>
-            <div style={{
-              marginTop: '6px',
-              height: '3px',
-              background: '#2A2A2A',
-              borderRadius: '2px',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                width: `${pct}%`,
-                height: '100%',
-                background: colors.accentAmber,
-                borderRadius: '2px',
-              }} />
+            <div className={s.progressTrack}>
+              <div className={s.progressFill} style={{ width: `${pct}%` }} />
             </div>
-            <div style={{ fontSize: '9px', color: colors.textSecondary, marginTop: '2px' }}>
+            <div className={s.progressLabel}>
               S{season.season_number} · {watched}/{total}
             </div>
           </>
@@ -125,23 +89,9 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
       {ne && (
         <div
           onClick={handleQuickMark}
-          style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '50%',
-            background: toggling ? colors.textMuted : colors.accentAmber,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }}
+          className={clsx(s.badge, toggling ? s.badgeToggling : s.badgeDefault)}
         >
-          <span style={{
-            fontSize: ne.episode >= 10 ? '10px' : '11px',
-            fontWeight: 700,
-            color: colors.bgPrimary,
-          }}>
+          <span className={clsx(s.badgeLabel, ne.episode >= 10 ? s.badgeLabelSmall : s.badgeLabelLarge)}>
             E{ne.episode}
           </span>
         </div>

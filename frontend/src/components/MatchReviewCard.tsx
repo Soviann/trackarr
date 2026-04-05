@@ -1,9 +1,9 @@
 import { route } from 'preact-router'
 import type { Title } from '../types'
-import { colors } from '../theme'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import s from './MatchReviewCard.module.css'
 
 interface MatchReviewCardProps {
   title: Title
@@ -20,10 +20,15 @@ const matchSourceLabels: Record<string, string> = {
   none: 'No automatic match found',
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  unconfirmed: 'var(--color-accent-coral)',
+  default: 'var(--color-accent-amber)',
+}
+
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
   const name = getName(title)
   const isUnconfirmed = title.match_status === 'unconfirmed'
-  const borderColor = isUnconfirmed ? colors.accentCoral : colors.accentAmber
+  const statusColor = isUnconfirmed ? STATUS_COLORS.unconfirmed : STATUS_COLORS.default
   const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id)
 
   const handleConfirm = async (e: Event) => {
@@ -59,55 +64,34 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
   return (
     <div
       onClick={() => route(`/title/${title.id}`)}
-      style={{
-        background: colors.bgCard,
-        borderRadius: '12px',
-        padding: '12px',
-        border: `1px solid ${borderColor}33`,
-        borderLeft: `3px solid ${borderColor}`,
-        cursor: 'pointer',
-      }}
+      className={s.card}
+      style={{ '--status-color': statusColor }}
     >
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-        <div style={{
-          width: '48px', height: '68px', borderRadius: '6px', flexShrink: 0,
-          background: coverBackground(title.cover_url, title.type),
-          position: 'relative', overflow: 'hidden',
-        }}>
+      <div className={s.layout}>
+        <div
+          className={s.cover}
+          style={{ background: coverBackground(title.cover_url, title.type) }}
+        >
           {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="20px" />}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>{name}</div>
-          <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '2px' }}>
+        <div className={s.body}>
+          <div className={s.name}>{name}</div>
+          <div className={s.meta}>
             {title.type} · {title.year}
           </div>
 
           {/* Original title comparison */}
           {showOriginalTitle && (
-            <div style={{
-              fontSize: '10px',
-              color: colors.textSecondary,
-              marginTop: '4px',
-              fontStyle: 'italic',
-            }}>
+            <div className={s.originalTitle}>
               Plex: "{title.original_title}" → "{name}"
             </div>
           )}
 
           {/* ID chips */}
           {idChips.length > 0 && (
-            <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+            <div className={s.chips}>
               {idChips.map((chip) => (
-                <span
-                  key={chip.label}
-                  style={{
-                    fontSize: '9px',
-                    color: colors.textSecondary,
-                    background: colors.bgSurface,
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                  }}
-                >
+                <span key={chip.label} className={s.chip}>
                   {chip.label}: {chip.value}
                 </span>
               ))}
@@ -115,50 +99,24 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           )}
 
           {/* Match source + contextual explanation */}
-          <div style={{
-            fontSize: '10px',
-            color: borderColor,
-            fontWeight: 500,
-            marginTop: '6px',
-          }}>
+          <div className={s.statusText}>
             {buildStatusText()}
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+      <div className={s.actions}>
         <button
           onClick={handleConfirm}
           disabled={!hasAnyID}
-          style={{
-            flex: 1,
-            padding: '8px',
-            borderRadius: '8px',
-            background: hasAnyID ? `${colors.accentGreen}1F` : `${colors.textMuted}1F`,
-            border: `1px solid ${hasAnyID ? colors.accentGreen : colors.textMuted}33`,
-            color: hasAnyID ? colors.accentGreen : colors.textMuted,
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: hasAnyID ? 'pointer' : 'not-allowed',
-            opacity: hasAnyID ? 1 : 0.5,
-          }}
+          className={s.btnConfirm}
         >
           Confirm
         </button>
         <button
           onClick={(e: Event) => { e.stopPropagation(); route(`/validate?q=${encodeURIComponent(title.original_title ?? name)}`) }}
-          style={{
-            flex: 1,
-            padding: '8px',
-            borderRadius: '8px',
-            background: colors.bgSurface,
-            border: `1px solid ${colors.borderCard}`,
-            color: colors.textSecondary,
-            fontSize: '11px',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
+          className={s.btnFix}
         >
           Fix match
         </button>

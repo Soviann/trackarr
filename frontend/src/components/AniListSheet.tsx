@@ -1,7 +1,8 @@
+import clsx from 'clsx'
 import type { Title } from '../types'
-import { colors } from '../theme'
 import { getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
+import s from './AniListSheet.module.css'
 
 interface AniListSheetProps {
   open: boolean
@@ -14,44 +15,35 @@ interface AniListSheetProps {
 export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniListSheetProps) {
   const name = getName(title)
   const hasAnilistMatch = !!title.anilist_id
+  const isConfirmed = title.match_status === 'confirmed'
 
   return (
     <BottomSheet open={open} onClose={onClose}>
-      <div style={{ padding: '8px 16px 20px' }}>
-        <div style={{ fontSize: '15px', fontWeight: 600, color: colors.textPrimary, marginBottom: '12px' }}>
+      <div className={s.container}>
+        <div className={s.heading}>
           AniList Match
         </div>
 
         {hasAnilistMatch ? (
           <>
             {/* Match card */}
-            <div style={{
-              background: colors.bgSurface,
-              borderRadius: '10px',
-              padding: '12px',
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '12px',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '68px',
-                borderRadius: '6px',
-                background: title.cover_url
-                  ? `url(/api/covers/${title.cover_url}) center/cover`
-                  : `linear-gradient(135deg, ${colors.bgCard}, ${colors.bgSurface})`,
-                flexShrink: 0,
-              }} />
+            <div className={s.matchCard}>
+              <div
+                className={clsx(s.cover, !title.cover_url && s.coverFallback)}
+                style={title.cover_url
+                  ? { background: `url(/api/covers/${title.cover_url}) center/cover` }
+                  : undefined}
+              />
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>{name}</div>
-                <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '2px' }}>
+                <div className={s.titleName}>{name}</div>
+                <div className={s.titleId}>
                   AniList ID: {title.anilist_id}
                 </div>
                 <a
                   href={`https://anilist.co/anime/${title.anilist_id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: '10px', color: colors.accentAnilist, marginTop: '4px', display: 'block' }}
+                  className={s.anilistLink}
                 >
                   View on AniList
                 </a>
@@ -59,54 +51,24 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
             </div>
 
             {/* Confidence */}
-            <div style={{
-              background: title.match_status === 'confirmed' ? `${colors.accentGreen}1F` : `${colors.accentAmber}1F`,
-              borderRadius: '8px',
-              padding: '8px 12px',
-              marginBottom: '16px',
-              fontSize: '11px',
-              color: title.match_status === 'confirmed' ? colors.accentGreen : colors.accentAmber,
-              fontWeight: 500,
-            }}>
-              {title.match_status === 'confirmed' ? 'Match confirmed' : 'Pending confirmation'}
+            <div className={clsx(s.confidence, isConfirmed ? s.confirmed : s.pending)}>
+              {isConfirmed ? 'Match confirmed' : 'Pending confirmation'}
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {title.match_status !== 'confirmed' && (
-                <button
-                  onClick={onConfirm}
-                  style={{
-                    flex: 1,
-                    background: colors.accentAnilist,
-                    borderRadius: '12px',
-                    padding: '13px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Confirm & Sync</span>
+            <div className={s.actions}>
+              {!isConfirmed && (
+                <button onClick={onConfirm} className={s.btnConfirm}>
+                  <span className={s.btnConfirmLabel}>Confirm & Sync</span>
                 </button>
               )}
-              <button
-                onClick={onFix}
-                style={{
-                  flex: 1,
-                  background: colors.bgSurface,
-                  borderRadius: '12px',
-                  padding: '13px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                }}
-              >
-                <span style={{ fontSize: '13px', fontWeight: 500, color: colors.textPrimary }}>Wrong match</span>
+              <button onClick={onFix} className={s.btnWrong}>
+                <span className={s.btnWrongLabel}>Wrong match</span>
               </button>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: '20px 0', color: colors.textSecondary, fontSize: '13px' }}>
+          <div className={s.empty}>
             No AniList match found. Use the Add screen to search manually.
           </div>
         )}

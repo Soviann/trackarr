@@ -1,0 +1,82 @@
+.content {
+  padding: 8px 16px 20px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.typeOptions {
+  display: flex;
+  gap: 8px;
+}
+
+.statusOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.typeOption {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-card);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: center;
+}
+
+.active.typeOption {
+  border-color: var(--color-accent-amber);
+  background: var(--wash-amber);
+  color: var(--color-accent-amber);
+  font-weight: 600;
+}
+
+.statusOption {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-card);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+}
+
+.active.statusOption {
+  border-color: var(--color-accent-amber);
+  background: var(--wash-amber);
+  color: var(--color-accent-amber);
+  font-weight: 600;
+}
+
+.saveButton {
+  width: 100%;
+  background: var(--color-accent-amber);
+  border-radius: 12px;
+  padding: 13px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.saveButtonLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-bg-primary);
+}
