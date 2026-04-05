@@ -1,11 +1,6 @@
 # Changelog
 
-## [v0.5.1] — 2026-04-05
-
-### Ajouté
-- Import Simkl : enrichissement automatique des titres importés via la file d'attente existante
-- Import Simkl : backfill des épisodes précédents (marque vus les épisodes antérieurs au plus avancé)
-- Couvertures AniList : téléchargement automatique des covers depuis AniList quand TMDB n'a pas d'image (fallback pour les anime)
+## [v0.6.1] — 2026-04-05
 
 ### Corrigé
 - Import Simkl : les titres avec un même ID TMDB mais de types différents (film vs série) ne sont plus ignorés à tort
@@ -13,6 +8,16 @@
 - Migration : ajout de la source `backfill` dans la contrainte CHECK de `watch_events`
 - Makefile : le mot de passe NAS avec caractères spéciaux (`$`, `#`) est correctement transmis via SSH
 - Makefile : utilisation du chemin complet `/usr/local/bin/docker` pour les commandes sur le NAS
+
+### Amélioré
+- Makefile : séparation des commandes locales (`import`, `db-reset`) et NAS (`ssh-import`, `ssh-db-reset`) avec helper SSH factorisé
+
+## [v0.6.0] — 2026-04-05
+
+### Ajouté
+- Import Simkl : enrichissement automatique des titres importés via la file d'attente existante
+- Import Simkl : backfill des épisodes précédents (marque vus les épisodes antérieurs au plus avancé)
+- Couvertures AniList : téléchargement automatique des covers depuis AniList quand TMDB n'a pas d'image (fallback pour les anime)
 
 ## [v0.5.0] — 2026-04-05
 
