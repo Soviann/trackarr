@@ -1,15 +1,17 @@
 # Rule Catalog — Business Logic
 
-## Can't use workflowStore in Node components
+## Media type handling
 
 IsUrgent: True
 
-### Description
+Always handle all three media types: `movie`, `series`, `anime`. Use `TitleType` enum, never raw strings. Anime has special paths (AniList integration, cross-referencing).
 
-File path pattern of node components: `web/app/components/workflow/nodes/[nodeName]/node.tsx`
+## API error handling
 
-Node components are also used when creating a RAG Pipe from a template, but in that context there is no workflowStore Provider, which results in a blank screen. [This Issue](https://github.com/langgenius/dify/issues/29168) was caused by exactly this reason.
+IsUrgent: True
 
-### Suggested Fix
+All API calls via `api.ts` must handle errors gracefully. Use `useApi` hook's error state. Show `ErrorBanner` on failure, never silent swallow.
 
-Use `import { useNodes } from 'reactflow'` instead of `import useNodes from '@/app/components/workflow/store/workflow/use-nodes'`.
+## Watch status transitions
+
+Respect valid status transitions. Auto-complete series only when all episodes of last season are watched.

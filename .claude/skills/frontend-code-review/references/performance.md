@@ -1,45 +1,20 @@
 # Rule Catalog — Performance
 
-## React Flow data usage
+## Zustand store subscriptions
 
 IsUrgent: True
-Category: Performance
 
-### Description
+Use selector functions with Zustand to avoid re-renders from unrelated state changes. Never subscribe to the entire store.
 
-When rendering React Flow, prefer `useNodes`/`useEdges` for UI consumption and rely on `useStoreApi` inside callbacks that mutate or read node/edge state. Avoid manually pulling Flow data outside of these hooks.
+Wrong: `const store = useTitleStore()`
+Right: `const titles = useTitleStore(s => s.titles)`
 
-## Complex prop memoization
+## Memoize expensive props
 
 IsUrgent: True
-Category: Performance
 
-### Description
+Wrap object/array props in `useMemo` to prevent child re-renders. Wrap callbacks in `useCallback`.
 
-Wrap complex prop values (objects, arrays, maps) in `useMemo` prior to passing them into child components to guarantee stable references and prevent unnecessary renders.
+## Image optimization
 
-Update this file when adding, editing, or removing Performance rules so the catalog remains accurate.
-
-Wrong:
-
-```tsx
-<HeavyComp
-    config={{
-        provider: ...,
-        detail: ...
-    }}
-/>
-```
-
-Right:
-
-```tsx
-const config = useMemo(() => ({
-    provider: ...,
-    detail: ...
-}), [provider, detail]);
-
-<HeavyComp
-    config={config}
-/>
-```
+Lazy-load cover images below the fold. Use `loading="lazy"` on `<img>` elements. `CoverPlaceholder` component handles missing covers.
