@@ -169,6 +169,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 	}
 
 	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil, &titleType); err == nil && existing != nil {
+		log.Printf("simkl import: skipped %q (%s) — already exists as %q (id=%d)", media.Title, titleType, existing.PrimaryName(), existing.ID)
 		result.Skipped++
 		return nil
 	}

@@ -58,7 +58,7 @@ import-dry: ## Dry-run Simkl import locally (BACKUP_FILE=path)
 	$(EXEC) ./tmp/plextracker import --dry-run $(BACKUP_FILE)
 
 db-reset: ## Reset la BDD locale (supprime + restart pour re-migrer)
-	$(EXEC) rm -f /data/plextracker.db
+	$(EXEC) sh -c 'rm -f $${DATA_DIR}/plextracker.db'
 	$(DC) restart app
 
 # ── NAS (via SSH) ─────────────────────────────────
