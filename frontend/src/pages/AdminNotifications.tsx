@@ -11,18 +11,18 @@ interface NotifPrefs {
 const notifTypes = [
   {
     key: 'notif_rating_prompt' as const,
-    label: 'Rappel de notation',
-    description: 'Après un film ou une saison terminée',
+    label: 'Rating reminder',
+    description: 'After a movie or completed season',
   },
   {
     key: 'notif_dead_task' as const,
-    label: 'Tâche échouée',
-    description: 'Quand une tâche d\'enrichissement échoue définitivement',
+    label: 'Failed task',
+    description: 'When an enrichment task permanently fails',
   },
   {
     key: 'notif_series_ended' as const,
-    label: 'Série terminée',
-    description: 'Quand une série passe au statut terminée ou annulée',
+    label: 'Series ended',
+    description: 'When a series status changes to ended or cancelled',
   },
 ]
 
@@ -60,7 +60,7 @@ export function AdminNotifications({ path }: { path?: string }) {
         <h1 className={s.title}>Notifications</h1>
       </div>
 
-      {!prefs && <div className={s.loading}>Chargement...</div>}
+      {!prefs && <div className={s.loading}>Loading...</div>}
 
       {prefs && (
         <div className={s.list}>
@@ -74,7 +74,7 @@ export function AdminNotifications({ path }: { path?: string }) {
                 className={prefs[notif.key] ? s.toggleOn : s.toggleOff}
                 onClick={() => toggle(notif.key)}
                 disabled={saving}
-                aria-label={`${notif.label}: ${prefs[notif.key] ? 'activé' : 'désactivé'}`}
+                aria-label={`${notif.label}: ${prefs[notif.key] ? 'enabled' : 'disabled'}`}
               >
                 <span className={s.toggleKnob} />
               </button>

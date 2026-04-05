@@ -370,8 +370,8 @@ func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
 	}
 
 	_ = w.push.SendNotification(
-		"Tâche échouée",
-		fmt.Sprintf("Impossible de traiter : %s", titleName),
+		"Task failed",
+		fmt.Sprintf("Unable to process: %s", titleName),
 		"/admin/tasks",
 	)
 }
