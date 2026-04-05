@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.4.0] — 2026-04-05
+
+### Ajouté
+- Backfill automatique : marquer un épisode comme vu marque aussi tous les épisodes précédents de la même saison
+
 ## [v0.3.2] — 2026-04-05
 
 ### Corrigé
