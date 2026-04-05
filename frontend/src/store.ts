@@ -23,8 +23,6 @@ interface TitleState {
   fetchTitles: () => Promise<void>
   loadMore: () => Promise<void>
   invalidate: () => Promise<void>
-  getTitleById: (id: number) => Title | undefined
-  updateTitleInCache: (title: Title) => void
 }
 
 export const useTitleStore = create<TitleState>((set, get) => ({
@@ -96,13 +94,5 @@ export const useTitleStore = create<TitleState>((set, get) => ({
 
   invalidate: async () => {
     await get().fetchTitles()
-  },
-
-  getTitleById: (id) => get().titles.find((t) => t.id === id),
-
-  updateTitleInCache: (title) => {
-    set({
-      titles: get().titles.map((t) => (t.id === title.id ? title : t)),
-    })
   },
 }))

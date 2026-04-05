@@ -21,6 +21,8 @@ func RateLimit(max int, window time.Duration) func(http.Handler) http.Handler {
 		window:   window,
 	}
 
+	go rl.cleanup(window)
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !rl.allow(r.RemoteAddr) {
@@ -54,4 +56,29 @@ func (rl *rateLimiter) allow(ip string) bool {
 
 	rl.attempts[ip] = append(valid, now)
 	return true
+}
+
+// cleanup periodically removes stale IP entries.
+func (rl *rateLimiter) cleanup(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		rl.mu.Lock()
+		cutoff := time.Now().Add(-rl.window)
+		for ip, attempts := range rl.attempts {
+			valid := attempts[:0]
+			for _, t := range attempts {
+				if t.After(cutoff) {
+					valid = append(valid, t)
+				}
+			}
+			if len(valid) == 0 {
+				delete(rl.attempts, ip)
+			} else {
+				rl.attempts[ip] = valid
+			}
+		}
+		rl.mu.Unlock()
+	}
 }

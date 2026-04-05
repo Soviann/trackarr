@@ -25,6 +25,6 @@ func (h *CoverHandler) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=604800")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeFile(w, r, filepath.Join(h.coversDir, filename))
 }
