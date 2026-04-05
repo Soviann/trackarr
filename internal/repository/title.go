@@ -46,16 +46,19 @@ type StatusCounts struct {
 }
 
 type TitleUpdate struct {
-	Status       *model.TitleStatus
-	MatchStatus  *model.MatchStatus
-	MyRating     *int
-	SeriesStatus *model.SeriesStatus
-	CoverURL     *string
-	IMDBID       *string
-	AniListID    *int64
-	TMDBID       *int64
-	TVDBID       *int64
+	Status        *model.TitleStatus
+	MatchStatus   *model.MatchStatus
+	MyRating      *int
+	SeriesStatus  *model.SeriesStatus
+	CoverURL      *string
+	IMDBID        *string
+	AniListID     *int64
+	TMDBID        *int64
+	TVDBID        *int64
 	PlexRatingKey *string
+	MatchSource   *string
+	OriginalTitle *string
+	Type          *model.TitleType
 }
 
 func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (int64, error) {
@@ -446,6 +449,18 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	if update.PlexRatingKey != nil {
 		sets = append(sets, `plex_rating_key = ?`)
 		args = append(args, *update.PlexRatingKey)
+	}
+	if update.MatchSource != nil {
+		sets = append(sets, `match_source = ?`)
+		args = append(args, *update.MatchSource)
+	}
+	if update.OriginalTitle != nil {
+		sets = append(sets, `original_title = ?`)
+		args = append(args, *update.OriginalTitle)
+	}
+	if update.Type != nil {
+		sets = append(sets, `type = ?`)
+		args = append(args, *update.Type)
 	}
 
 	if len(sets) == 0 {

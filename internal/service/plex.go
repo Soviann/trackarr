@@ -116,6 +116,10 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 		return nil
 	}
 
+	if needsEnrichment(title) {
+		s.triggerAsyncEnrichment(title.ID, meta.Title, meta.Year, title.Type, ids)
+	}
+
 	_, _ = events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		Source:      model.WatchEventSourcePlex,
@@ -170,6 +174,20 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 			return fmt.Errorf("create series: %w", createErr)
 		}
 		title = &model.Title{ID: titleID}
+	} else {
+		if title.Status != model.TitleStatusCompleted && title.Status != model.TitleStatusWatching {
+			watchingStatus := model.TitleStatusWatching
+			if updateErr := titles.Update(title.ID, repository.TitleUpdate{Status: &watchingStatus}); updateErr != nil {
+				log.Printf("update status to watching: %v", updateErr)
+			}
+		}
+		if needsEnrichment(title) {
+			seriesName := meta.GrandparentTitle
+			if seriesName == "" {
+				seriesName = meta.Title
+			}
+			s.triggerAsyncEnrichment(title.ID, seriesName, meta.Year, title.Type, ids)
+		}
 	}
 
 	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
@@ -208,6 +226,64 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 	}
 
 	return nil
+}
+
+// needsEnrichment returns true if a title lacks enrichment data.
+func needsEnrichment(title *model.Title) bool {
+	return title.TMDBID == nil && title.AniListID == nil
+}
+
+// triggerAsyncEnrichment runs the matching pipeline in a goroutine and updates the title.
+func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
+	if s.pipeline == nil {
+		return
+	}
+
+	go func() {
+		result, err := s.pipeline.Run(matching.MatchInput{
+			Title:  titleName,
+			Year:   year,
+			Type:   titleType,
+			IMDBID: ids.IMDB,
+			TMDBID: ids.TMDB,
+			TVDBID: ids.TVDB,
+		})
+		if err != nil {
+			log.Printf("async enrichment failed for title %d: %v", titleID, err)
+			return
+		}
+
+		update := repository.TitleUpdate{
+			MatchStatus:   &result.MatchStatus,
+			MatchSource:   &result.MatchSource,
+			OriginalTitle: &titleName,
+		}
+		if result.IMDBID != "" {
+			update.IMDBID = &result.IMDBID
+		}
+		if result.TMDBID != 0 {
+			update.TMDBID = &result.TMDBID
+		}
+		if result.TVDBID != 0 {
+			update.TVDBID = &result.TVDBID
+		}
+		if result.AniListID != 0 {
+			update.AniListID = &result.AniListID
+		}
+		if result.CoverFile != "" {
+			coverURL := "/covers/" + result.CoverFile
+			update.CoverURL = &coverURL
+		}
+		if result.TitleType != titleType {
+			update.Type = &result.TitleType
+		}
+
+		if err := s.titles.Update(titleID, update); err != nil {
+			log.Printf("async enrichment update failed for title %d: %v", titleID, err)
+		} else {
+			log.Printf("async enrichment completed for title %d", titleID)
+		}
+	}()
 }
 
 // buildNewTitle runs the matching pipeline (if available) and constructs a Title + names.

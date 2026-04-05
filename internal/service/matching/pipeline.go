@@ -121,8 +121,8 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 		}
 	}
 
-	// Step 4: AniList search (anime only)
-	if p.anilist != nil && input.Type == model.TitleTypeAnime {
+	// Step 4: AniList search (anime and series — Plex sends anime as "show")
+	if p.anilist != nil && (input.Type == model.TitleTypeAnime || input.Type == model.TitleTypeSeries) {
 		found := p.searchAniList(input, result)
 		if found {
 			result.MatchSource = MatchSourceAniListSearch
@@ -274,6 +274,17 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 		})
 		if crossIDs != nil {
 			mergeIDs(result, crossIDs)
+		}
+	}
+
+	// Try AniList search if AniListID still unknown (anime not in cross-ref DB)
+	if result.AniListID == 0 && p.anilist != nil &&
+		(result.TitleType == model.TitleTypeSeries || result.TitleType == model.TitleTypeAnime) {
+		searchResults, err := p.anilist.SearchAnime(input.Title)
+		if err != nil {
+			log.Printf("anilist enrichment search failed: %v", err)
+		} else if len(searchResults) > 0 {
+			result.AniListID = searchResults[0].ID
 		}
 	}
 
