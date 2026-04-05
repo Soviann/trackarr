@@ -65,7 +65,7 @@ func (r *TitleRepository) searchTitlesPaginated(searchTerm string, filter TitleF
 func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([]model.Title, error) {
 	useFTS := len(searchTerm) >= 2
 
-	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.created_at, t.updated_at`
+	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.created_at, t.updated_at`
 
 	var query string
 	var conditions []string
@@ -112,7 +112,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		var matchedName, matchedLang string
 		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits,
+			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.CreatedAt, &t.UpdatedAt,
 			&matchedName, &matchedLang); err != nil {
 			rows.Close()
@@ -318,7 +318,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	placeholders := strings.Repeat("?,", len(ids))
 	placeholders = placeholders[:len(placeholders)-1]
 
-	query := `SELECT t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.created_at, t.updated_at FROM titles t WHERE t.id IN (` + placeholders + `)`
+	query := `SELECT t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.created_at, t.updated_at FROM titles t WHERE t.id IN (` + placeholders + `)`
 	var args []interface{}
 	args = append(args, ids...)
 
@@ -341,7 +341,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 		var t model.Title
 		if err := tRows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits,
+			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.CreatedAt, &t.UpdatedAt); err != nil {
 			tRows.Close()
 			return nil, fmt.Errorf("scan fuzzy title: %w", err)

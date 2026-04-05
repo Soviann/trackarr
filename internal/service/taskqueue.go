@@ -215,6 +215,9 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	if result.Credits != "" {
 		update.Credits = &result.Credits
 	}
+	if result.AniListRating != nil {
+		update.AniListRating = result.AniListRating
+	}
 
 	if err := w.titles.Update(payload.TitleID, update); err != nil {
 		return err

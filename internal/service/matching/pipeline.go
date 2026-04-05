@@ -59,11 +59,12 @@ type MatchResult struct {
 	CoverFile   string            // local filename in covers dir
 	TitleType   model.TitleType   // resolved type (may differ from input if anime detected)
 	// TMDB metadata
-	Overview   string
-	Genres     string // JSON array
-	Runtime    *int
-	TMDBRating *float64
-	Credits    string // JSON array
+	Overview      string
+	Genres        string // JSON array
+	Runtime       *int
+	TMDBRating    *float64
+	Credits       string // JSON array
+	AniListRating *int
 }
 
 // MatchInput holds the info needed to start the matching pipeline.
@@ -390,7 +391,15 @@ func (p *Pipeline) downloadPoster(posterPath string, result *MatchResult) {
 
 func (p *Pipeline) downloadAniListCover(result *MatchResult) {
 	details, err := p.anilist.GetAnimeDetails(result.AniListID)
-	if err != nil || details.CoverURL == "" {
+	if err != nil {
+		return
+	}
+
+	if details.AverageScore != nil {
+		result.AniListRating = details.AverageScore
+	}
+
+	if details.CoverURL == "" {
 		return
 	}
 

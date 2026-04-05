@@ -3,3 +3,4 @@ ALTER TABLE titles ADD COLUMN genres TEXT;
 ALTER TABLE titles ADD COLUMN runtime INTEGER;
 ALTER TABLE titles ADD COLUMN tmdb_rating REAL;
 ALTER TABLE titles ADD COLUMN credits TEXT;
+ALTER TABLE titles ADD COLUMN anilist_rating INTEGER;

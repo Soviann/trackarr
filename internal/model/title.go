@@ -57,6 +57,7 @@ type Title struct {
 	Runtime       *int          `json:"runtime"`
 	TMDBRating    *float64      `json:"tmdb_rating"`
 	Credits       *string       `json:"credits"`
+	AniListRating *int          `json:"anilist_rating"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 
