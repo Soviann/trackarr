@@ -18,6 +18,14 @@ export interface Title {
   match_status: MatchStatus
   original_title: string | null
   match_source: string | null
+  overview: string | null
+  genres: string | null
+  runtime: number | null
+  tmdb_rating: number | null
+  credits: string | null
+  anilist_rating: number | null
+  created_at: string
+  updated_at: string
   names: TitleName[]
   seasons: Season[]
   next_episode?: NextEpisode
