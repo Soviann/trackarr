@@ -29,6 +29,7 @@ var allowedSorts = map[string]bool{
 	"year":           true,
 	"my_rating":      true,
 	"created_at":     true,
+	"release_date":   true,
 }
 
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
@@ -67,6 +68,21 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 	if ss := r.URL.Query().Get("series_status"); ss != "" {
 		seriesStatus := model.SeriesStatus(ss)
 		filter.SeriesStatus = &seriesStatus
+	}
+	if d := r.URL.Query().Get("decade"); d != "" {
+		if decade := httputil.ParseQueryInt(r, "decade", 0); decade >= 1900 && decade <= 2100 {
+			filter.Decade = &decade
+		}
+	}
+	if rf := r.URL.Query().Get("release_from"); rf != "" {
+		filter.ReleaseFrom = &rf
+	}
+	if rt := r.URL.Query().Get("release_to"); rt != "" {
+		filter.ReleaseTo = &rt
+	}
+	filter.IncludeNoRelease = true // default: include titles without release date
+	if r.URL.Query().Get("include_no_release") == "false" {
+		filter.IncludeNoRelease = false
 	}
 
 	result, err := h.titles.List(filter)
