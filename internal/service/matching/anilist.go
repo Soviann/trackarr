@@ -62,7 +62,7 @@ func (c *AniListClient) query(gql string, variables map[string]interface{}, acce
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("AniList API error %d: %s", resp.StatusCode, string(respBody))
+		return newAPIError("AniList", resp, respBody)
 	}
 
 	var gqlResp graphqlResponse

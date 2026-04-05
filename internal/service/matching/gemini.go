@@ -168,7 +168,7 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("Gemini API error %d: %s", resp.StatusCode, string(respBody))
+			return "", newAPIError("Gemini", resp, respBody)
 		}
 
 		var gResp geminiResponse
@@ -183,7 +183,7 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 		return gResp.Candidates[0].Content.Parts[0].Text, nil
 	}
 
-	return "", fmt.Errorf("all Gemini API keys rate-limited")
+	return "", &APIError{Service: "Gemini", StatusCode: http.StatusTooManyRequests, Body: "all API keys rate-limited"}
 }
 
 // parseJSONFromResponse extracts JSON from a Gemini response that may contain markdown fences.

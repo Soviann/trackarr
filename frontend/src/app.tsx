@@ -12,6 +12,9 @@ import { Validate } from './pages/Validate'
 import { MatchReview } from './pages/MatchReview'
 import { Login } from './pages/Login'
 import { Stats } from './pages/Stats'
+import { Admin } from './pages/Admin'
+import { AdminTasks } from './pages/AdminTasks'
+import { AdminNotifications } from './pages/AdminNotifications'
 import { usePush } from './hooks/usePush'
 import { useTitleStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -76,7 +79,7 @@ export function App() {
     setFilter({ series_status: ss ?? undefined })
   }, [setFilter])
 
-  const hideNavbar = currentPath === '/login' || currentPath.startsWith('/validate')
+  const hideNavbar = currentPath === '/login'
   const showDrawer = currentPath === '/' || currentPath === '/search'
 
   return (
@@ -89,7 +92,10 @@ export function App() {
           <Stats path="/stats" />
           <Login path="/login" />
           <TitleDetail path="/title/:id" />
-          <Validate path="/validate" />
+          <Admin path="/admin" />
+          <Validate path="/admin/validate" />
+          <AdminTasks path="/admin/tasks" />
+          <AdminNotifications path="/admin/notifications" />
           <MatchReview path="/match-review" />
         </Router>
         {!hideNavbar && (

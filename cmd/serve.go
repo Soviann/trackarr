@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"log"
@@ -39,8 +40,10 @@ func Serve(distFS embed.FS) error {
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 
 	var tmdbClient *matching.TMDBClient
+	var pipeline *matching.Pipeline
 	if cfg.TMDBAPIKey != "" {
 		tmdbClient = matching.NewTMDBClient(cfg.TMDBAPIKey)
 	}
@@ -50,8 +53,12 @@ func Serve(distFS embed.FS) error {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, tmdbClient, pushSvc, cfg.DataDir)
+	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, pushSvc, cfg.DataDir)
 	bgSvc.StartTicker(24 * time.Hour)
+
+	// Task queue worker
+	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, pushSvc, settingRepo, cfg.DataDir)
+	worker.Start(context.Background())
 
 	log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
 	return http.ListenAndServe(cfg.ListenAddr, r)

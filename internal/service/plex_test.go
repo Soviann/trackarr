@@ -29,7 +29,8 @@ func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepo
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 
-	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, nil, service.NewNoopNotifier())
+	settingRepo := repository.NewSettingRepository(db)
+	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, nil, settingRepo, nil, service.NewNoopNotifier())
 	return svc, titleRepo
 }
 
@@ -147,8 +148,9 @@ func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*s
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 
+	settingRepo := repository.NewSettingRepository(db)
 	pipeline := matching.NewPipeline(tmdbClient, nil, nil, nil, t.TempDir())
-	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, service.NewNoopNotifier())
+	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, nil, settingRepo, pipeline, service.NewNoopNotifier())
 	return svc, titleRepo
 }
 

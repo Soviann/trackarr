@@ -63,7 +63,8 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
+	taskRepo := repository.NewTaskRepository(db)
+	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc)
 
 	// Backfill service (optional — requires TMDB for full backfill)
 	var tmdbClient *matching.TMDBClient
@@ -77,7 +78,8 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
-	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc, backfillSvc)
+	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc)
+	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
@@ -132,6 +134,13 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 			r.Get("/anilist/auth", httputil.WrapHandler(anilistAuth.Authorize))
 			r.Post("/anilist/token", httputil.WrapHandler(anilistAuth.SaveToken))
 			r.Delete("/anilist/token", httputil.WrapHandler(anilistAuth.Disconnect))
+
+			r.Get("/admin/counts", httputil.WrapHandler(admin.Counts))
+			r.Get("/admin/tasks", httputil.WrapHandler(admin.ListTasks))
+			r.Post("/admin/tasks/{id}/retry", httputil.WrapHandler(admin.RetryTask))
+			r.Delete("/admin/tasks/{id}", httputil.WrapHandler(admin.DeleteTask))
+			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
+			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
 		})
 	})
 

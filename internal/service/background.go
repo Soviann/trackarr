@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -16,6 +17,8 @@ type BackgroundService struct {
 	titles   *repository.TitleRepository
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
+	tasks    *repository.TaskRepository
+	settings *repository.SettingRepository
 	tmdb     *matching.TMDBClient
 	push     PushNotifier
 	dataDir  string
@@ -26,6 +29,8 @@ func NewBackgroundService(
 	titles *repository.TitleRepository,
 	seasons *repository.SeasonRepository,
 	episodes *repository.EpisodeRepository,
+	tasks *repository.TaskRepository,
+	settings *repository.SettingRepository,
 	tmdb *matching.TMDBClient,
 	push PushNotifier,
 	dataDir string,
@@ -34,6 +39,8 @@ func NewBackgroundService(
 		titles:   titles,
 		seasons:  seasons,
 		episodes: episodes,
+		tasks:    tasks,
+		settings: settings,
 		tmdb:     tmdb,
 		push:     push,
 		dataDir:  dataDir,
@@ -127,6 +134,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 	details, err := s.tmdb.GetMovieDetails(*title.TMDBID)
 	if err != nil {
 		result.Error = err
+		s.enqueueRefreshOnRetryable(title.ID, err)
 		return
 	}
 
@@ -143,6 +151,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 	details, err := s.tmdb.GetTVDetails(*title.TMDBID)
 	if err != nil {
 		result.Error = err
+		s.enqueueRefreshOnRetryable(title.ID, err)
 		return
 	}
 
@@ -263,12 +272,16 @@ func (s *BackgroundService) FetchMissingCovers() int {
 		var posterPath *string
 		if title.Type == model.TitleTypeMovie {
 			details, err := s.tmdb.GetMovieDetails(*title.TMDBID)
-			if err == nil {
+			if err != nil {
+				s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.Type, err)
+			} else {
 				posterPath = details.PosterPath
 			}
 		} else {
 			details, err := s.tmdb.GetTVDetails(*title.TMDBID)
-			if err == nil {
+			if err != nil {
+				s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.Type, err)
+			} else {
 				posterPath = details.PosterPath
 			}
 		}
@@ -311,4 +324,26 @@ func (s *BackgroundService) StartTicker(interval time.Duration) {
 			s.RefreshTitles()
 		}
 	}()
+}
+
+func (s *BackgroundService) enqueueRefreshOnRetryable(titleID int64, err error) {
+	if s.tasks == nil || !matching.IsRetryableError(err) {
+		return
+	}
+	payload, _ := json.Marshal(RefreshPayload{TitleID: titleID})
+	dedupKey := fmt.Sprintf("refresh:%d", titleID)
+	if _, enqErr := s.tasks.Enqueue(model.TaskTypeRefresh, string(payload), &dedupKey); enqErr != nil {
+		log.Printf("enqueue refresh for title %d: %v", titleID, enqErr)
+	}
+}
+
+func (s *BackgroundService) enqueueCoverOnRetryable(titleID, tmdbID int64, titleType model.TitleType, err error) {
+	if s.tasks == nil || !matching.IsRetryableError(err) {
+		return
+	}
+	payload, _ := json.Marshal(CoverFetchPayload{TitleID: titleID, TMDBID: tmdbID, TitleType: titleType})
+	dedupKey := fmt.Sprintf("cover_fetch:%d", titleID)
+	if _, enqErr := s.tasks.Enqueue(model.TaskTypeCoverFetch, string(payload), &dedupKey); enqErr != nil {
+		log.Printf("enqueue cover fetch for title %d: %v", titleID, enqErr)
+	}
 }

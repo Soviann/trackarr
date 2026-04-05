@@ -22,7 +22,7 @@ export function Add({ path }: { path?: string }) {
 
   const handleSubmit = () => {
     if (!query.trim()) return
-    route(`/validate?q=${encodeURIComponent(query.trim())}`)
+    route(`/admin/validate?q=${encodeURIComponent(query.trim())}`)
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {

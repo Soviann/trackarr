@@ -48,7 +48,7 @@ func (c *TMDBClient) get(path string, params url.Values, dest interface{}) error
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("TMDB API error %d: %s", resp.StatusCode, string(body))
+		return newAPIError("TMDB", resp, body)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dest)

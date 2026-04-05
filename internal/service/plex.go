@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
@@ -46,12 +47,14 @@ type PlexService struct {
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
+	tasks    *repository.TaskRepository
+	settings *repository.SettingRepository
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
 	push     PushNotifier
 }
 
-func NewPlexService(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, pipeline *matching.Pipeline, push PushNotifier) *PlexService {
-	return &PlexService{db: db, titles: titles, seasons: seasons, episodes: episodes, events: events, pipeline: pipeline, push: push}
+func NewPlexService(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, settings *repository.SettingRepository, pipeline *matching.Pipeline, push PushNotifier) *PlexService {
+	return &PlexService{db: db, titles: titles, seasons: seasons, episodes: episodes, events: events, tasks: tasks, settings: settings, pipeline: pipeline, push: push}
 }
 
 func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
@@ -73,12 +76,14 @@ func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload 
 }
 
 func (s *PlexService) processMovie(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+	// Check notification preference before the transaction to avoid SQLite deadlock (MaxOpenConns=1).
+	ratingNotifEnabled := IsNotificationEnabled(s.settings, NotifRatingPrompt)
 	return database.WithTx(s.db, func(tx *sql.Tx) error {
-		return s.processMovieInTx(tx, meta, ids, rawPayload)
+		return s.processMovieInTx(tx, meta, ids, rawPayload, ratingNotifEnabled)
 	})
 }
 
-func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, ratingNotifEnabled bool) error {
 	titles := repository.NewTitleRepository(tx)
 	events := repository.NewWatchEventRepository(tx)
 	var imdbID *string
@@ -108,11 +113,13 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 			PlexPayload: &rawPayload,
 		})
 
-		_ = s.push.SendNotification(
-			fmt.Sprintf("Note %s ?", meta.Title),
-			"Tu viens de regarder ce film",
-			fmt.Sprintf("/title/%d", titleID),
-		)
+		if ratingNotifEnabled {
+			_ = s.push.SendNotification(
+				fmt.Sprintf("Note %s ?", meta.Title),
+				"Tu viens de regarder ce film",
+				fmt.Sprintf("/title/%d", titleID),
+			)
+		}
 		return nil
 	}
 
@@ -126,7 +133,7 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 		PlexPayload: &rawPayload,
 	})
 
-	if title.MyRating == nil {
+	if title.MyRating == nil && ratingNotifEnabled {
 		_ = s.push.SendNotification(
 			fmt.Sprintf("Note %s ?", meta.Title),
 			"Tu viens de regarder ce film",
@@ -303,6 +310,9 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		})
 		if err != nil {
 			log.Printf("async enrichment failed for title %d: %v", titleID, err)
+			if matching.IsRetryableError(err) {
+				s.enqueueEnrichment(titleID, titleName, year, titleType, ids)
+			}
 			return
 		}
 
@@ -337,6 +347,25 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 			log.Printf("async enrichment completed for title %d", titleID)
 		}
 	}()
+}
+
+func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
+	if s.tasks == nil {
+		return
+	}
+	payload, _ := json.Marshal(EnrichmentPayload{
+		TitleID:   titleID,
+		TitleName: titleName,
+		Year:      year,
+		TitleType: titleType,
+		IMDBID:    ids.IMDB,
+		TMDBID:    ids.TMDB,
+		TVDBID:    ids.TVDB,
+	})
+	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
+	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+		log.Printf("enqueue enrichment for title %d: %v", titleID, err)
+	}
 }
 
 // buildNewTitle runs the matching pipeline (if available) and constructs a Title + names.

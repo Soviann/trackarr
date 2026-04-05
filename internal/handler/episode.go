@@ -15,12 +15,13 @@ type EpisodeHandler struct {
 	titles   *repository.TitleRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
+	settings *repository.SettingRepository
 	push     service.PushNotifier
 	backfill *service.BackfillService
 }
 
-func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, push service.PushNotifier, backfill *service.BackfillService) *EpisodeHandler {
-	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, push: push, backfill: backfill}
+func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, settings *repository.SettingRepository, push service.PushNotifier, backfill *service.BackfillService) *EpisodeHandler {
+	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, settings: settings, push: push, backfill: backfill}
 }
 
 func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) error {
@@ -123,7 +124,7 @@ func (h *EpisodeHandler) maybePromptRating(title *model.Title) {
 				break
 			}
 		}
-		if allWatched {
+		if allWatched && service.IsNotificationEnabled(h.settings, service.NotifRatingPrompt) {
 			_ = h.push.SendNotification(
 				fmt.Sprintf("Note %s ?", title.PrimaryName()),
 				fmt.Sprintf("Tu as terminé la saison %d", season.SeasonNumber),
