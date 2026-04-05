@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Tri par date de sortie (nouveau tri par défaut)
+- Filtre par date de sortie : décennie, intervalle de dates, option d'inclusion des titres sans date
+- Enrichissement TMDB : la date de sortie est désormais persistée depuis TMDB
+
 ## [v0.7.1] — 2026-04-05
 
 ### Corrigé

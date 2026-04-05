@@ -65,6 +65,7 @@ type MatchResult struct {
 	TMDBRating    *float64
 	Credits       string // JSON array
 	AniListRating *int
+	ReleaseDate   string
 }
 
 // MatchInput holds the info needed to start the matching pipeline.
@@ -358,6 +359,7 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 		result.Credits = credits
 		result.Runtime = runtime
 		result.TMDBRating = rating
+		result.ReleaseDate = details.ReleaseDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
 			p.downloadPoster(*details.PosterPath, result)
 		}
@@ -373,6 +375,7 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 		result.Credits = credits
 		result.Runtime = runtime
 		result.TMDBRating = rating
+		result.ReleaseDate = details.FirstAirDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
 			p.downloadPoster(*details.PosterPath, result)
 		}

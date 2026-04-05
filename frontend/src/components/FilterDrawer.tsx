@@ -22,6 +22,14 @@ interface FilterDrawerProps {
   onSortChange: (sort: SortState) => void
   isSearchActive: boolean
   defaultOpen?: boolean
+  decade: string | null
+  releaseFrom: string
+  releaseTo: string
+  includeNoRelease: boolean
+  onDecadeChange: (decade: string | null) => void
+  onReleaseFromChange: (date: string) => void
+  onReleaseToChange: (date: string) => void
+  onIncludeNoReleaseChange: (include: boolean) => void
 }
 
 const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
@@ -43,7 +51,7 @@ const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
 const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[] = [
   { field: 'updated_at', label: 'Last updated', defaultOrder: 'desc' },
   { field: 'original_title', label: 'Title', defaultOrder: 'asc' },
-  { field: 'year', label: 'Year', defaultOrder: 'desc' },
+  { field: 'release_date', label: 'Release date', defaultOrder: 'desc' },
   { field: 'my_rating', label: 'Rating', defaultOrder: 'desc' },
   { field: 'created_at', label: 'Date added', defaultOrder: 'desc' },
 ]
@@ -54,6 +62,13 @@ const seriesStatusFilters: { id: SeriesStatusFilter; label: string; color: strin
   { id: 'ended', label: 'Ended', color: colors.textSecondary },
   { id: 'cancelled', label: 'Cancelled', color: colors.accentCoral },
   { id: 'in_production', label: 'In prod.', color: colors.accentTeal },
+]
+
+const decadeOptions = [
+  { value: '', label: 'All' },
+  { value: '2000', label: '2000s' },
+  { value: '2010', label: '2010s' },
+  { value: '2020', label: '2020s' },
 ]
 
 function Chip<T>({ filter, active, onClick }: {
@@ -77,6 +92,8 @@ export function FilterDrawer({
   onStatusChange, onTypeChange, onSeriesStatusChange,
   sort, onSortChange, isSearchActive,
   defaultOpen = true,
+  decade, releaseFrom, releaseTo, includeNoRelease,
+  onDecadeChange, onReleaseFromChange, onReleaseToChange, onIncludeNoReleaseChange,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
     if (!defaultOpen) return false
@@ -106,7 +123,7 @@ export function FilterDrawer({
   // Build active tags for collapsed state
   const activeTags: { label: string; color: string }[] = []
   const activeSort = sortOptions.find((o) => o.field === sort.field)
-  if (!isSearchActive && activeSort && sort.field !== 'updated_at') {
+  if (!isSearchActive && activeSort && sort.field !== 'release_date') {
     activeTags.push({ label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`, color: colors.accentTeal })
   }
   const activeStatus = statusFilters.find((f) => f.id === status)
@@ -116,6 +133,15 @@ export function FilterDrawer({
   if (showSeriesStatus && seriesStatus !== null) {
     const activeSeries = seriesStatusFilters.find((f) => f.id === seriesStatus)
     activeTags.push({ label: activeSeries?.label ?? '', color: activeSeries?.color ?? '' })
+  }
+  if (decade) {
+    const decadeLabel = decadeOptions.find((o) => o.value === decade)?.label ?? decade
+    activeTags.push({ label: decadeLabel, color: colors.accentTeal })
+  } else if (releaseFrom || releaseTo) {
+    const tag = releaseFrom && releaseTo
+      ? `${releaseFrom.slice(0, 7)} → ${releaseTo.slice(0, 7)}`
+      : releaseFrom ? `≥ ${releaseFrom}` : `≤ ${releaseTo}`
+    activeTags.push({ label: tag, color: colors.accentTeal })
   }
 
   return (
@@ -195,6 +221,58 @@ export function FilterDrawer({
               ))}
             </div>
           </>
+        )}
+
+        <div className={s.filterLabel}>Release date</div>
+        <div className={s.filterRow}>
+          <select
+            className={s.select}
+            value={decade ?? ''}
+            onChange={(e) => {
+              const val = (e.target as HTMLSelectElement).value
+              onDecadeChange(val || null)
+              if (val) {
+                onReleaseFromChange('')
+                onReleaseToChange('')
+              }
+            }}
+          >
+            {decadeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className={s.dateInput}
+            value={releaseFrom}
+            placeholder="From"
+            onChange={(e) => {
+              onReleaseFromChange((e.target as HTMLInputElement).value)
+              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+            }}
+          />
+          <input
+            type="date"
+            className={s.dateInput}
+            value={releaseTo}
+            placeholder="To"
+            onChange={(e) => {
+              onReleaseToChange((e.target as HTMLInputElement).value)
+              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+            }}
+          />
+        </div>
+        {(decade || releaseFrom || releaseTo) && (
+          <div className={s.filterRow}>
+            <label className={s.toggleLabel}>
+              <input
+                type="checkbox"
+                checked={includeNoRelease}
+                onChange={(e) => onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
+              />
+              <span>Include without release date</span>
+            </label>
+          </div>
         )}
 
         <div className={s.bottomPad} />

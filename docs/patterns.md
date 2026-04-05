@@ -81,7 +81,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | POST | `/api/auth/logout` | Logout | No |
 | POST | `/api/webhook/plex/{secret}` | HandlePlex | No (secret in URL) |
 | GET | `/api/covers/{filename}` | Serve | No |
-| GET | `/api/titles` | List | Yes | `?sort=updated_at\|original_title\|year\|my_rating\|created_at&order=asc\|desc` |
+| GET | `/api/titles` | List | Yes | `?sort=updated_at\|original_title\|release_date\|my_rating\|created_at&order=asc\|desc&decade=2020&release_from=YYYY-MM-DD&release_to=YYYY-MM-DD&include_no_release=false` |
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
@@ -117,7 +117,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | Component | File | Purpose |
 |---|---|---|
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
-| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status), shared by Library+Search. Sort hidden during search |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date), shared by Library+Search. Sort hidden during search. Release date section: decade dropdown, date range inputs, include-no-release toggle |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
 | PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3 aspect, gradient overlay) |
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |

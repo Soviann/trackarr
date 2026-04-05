@@ -59,7 +59,7 @@
 }
 
 .drawerExpanded {
-  max-height: 300px;
+  max-height: 400px;
   opacity: 1;
 }
 
@@ -104,6 +104,51 @@
 .sortArrow {
   font-size: 8px;
   margin-left: 2px;
+}
+
+.select {
+  font-size: 9px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dateInput {
+  font-size: 9px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  min-width: 0;
+  flex: 1;
+}
+
+.dateInput::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.toggleLabel input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--color-accent-teal);
 }
 
 .bottomPad {

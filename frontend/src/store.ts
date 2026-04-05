@@ -6,7 +6,7 @@ const PAGE_SIZE = 48
 
 const SORT_STORAGE_KEY = 'title-sort'
 
-export type SortField = 'updated_at' | 'original_title' | 'year' | 'my_rating' | 'created_at'
+export type SortField = 'updated_at' | 'original_title' | 'release_date' | 'my_rating' | 'created_at'
 export type SortOrder = 'asc' | 'desc'
 
 export interface SortState {
@@ -14,7 +14,7 @@ export interface SortState {
   order: SortOrder
 }
 
-const DEFAULT_SORT: SortState = { field: 'updated_at', order: 'desc' }
+const DEFAULT_SORT: SortState = { field: 'release_date', order: 'desc' }
 
 function loadSort(): SortState {
   try {
@@ -46,6 +46,10 @@ interface TitleState {
     search?: string
     match_status?: string
     series_status?: string
+    decade?: string
+    release_from?: string
+    release_to?: string
+    include_no_release?: string
   }
   setFilter: (filter: Partial<TitleState['filter']>) => void
   setSort: (sort: SortState) => void
@@ -86,6 +90,10 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (f.search) params.set('search', f.search)
       if (f.match_status) params.set('match_status', f.match_status)
       if (f.series_status) params.set('series_status', f.series_status)
+      if (f.decade) params.set('decade', f.decade)
+      if (f.release_from) params.set('release_from', f.release_from)
+      if (f.release_to) params.set('release_to', f.release_to)
+      if (f.include_no_release) params.set('include_no_release', f.include_no_release)
       if (!f.search) {
         params.set('sort', get().sort.field)
         params.set('order', get().sort.order)
@@ -117,6 +125,10 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (filter.search) params.set('search', filter.search)
       if (filter.match_status) params.set('match_status', filter.match_status)
       if (filter.series_status) params.set('series_status', filter.series_status)
+      if (filter.decade) params.set('decade', filter.decade)
+      if (filter.release_from) params.set('release_from', filter.release_from)
+      if (filter.release_to) params.set('release_to', filter.release_to)
+      if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
       if (!filter.search) {
         params.set('sort', get().sort.field)
         params.set('order', get().sort.order)

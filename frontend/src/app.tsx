@@ -41,7 +41,7 @@ export function App() {
     setCurrentPath(e.url)
   }
 
-  const defaultFilter = { status: 'plan_to_watch', type: undefined, series_status: undefined, search: undefined }
+  const defaultFilter = { status: 'plan_to_watch', type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
 
   const navigate = (path: string) => {
     if (path === '/' || path === '/search') {
@@ -79,6 +79,22 @@ export function App() {
     setFilter({ series_status: ss ?? undefined })
   }, [setFilter])
 
+  const handleDecadeChange = useCallback((d: string | null) => {
+    setFilter({ decade: d ?? undefined, release_from: undefined, release_to: undefined })
+  }, [setFilter])
+
+  const handleReleaseFromChange = useCallback((d: string) => {
+    setFilter({ release_from: d || undefined, decade: undefined })
+  }, [setFilter])
+
+  const handleReleaseToChange = useCallback((d: string) => {
+    setFilter({ release_to: d || undefined, decade: undefined })
+  }, [setFilter])
+
+  const handleIncludeNoReleaseChange = useCallback((include: boolean) => {
+    setFilter({ include_no_release: include ? undefined : 'false' })
+  }, [setFilter])
+
   const hideNavbar = currentPath === '/login'
   const showDrawer = currentPath === '/' || currentPath === '/search'
 
@@ -114,6 +130,14 @@ export function App() {
                 onSortChange={setSort}
                 isSearchActive={currentPath === '/search'}
                 defaultOpen={currentPath === '/'}
+                decade={filter.decade ?? null}
+                releaseFrom={filter.release_from ?? ''}
+                releaseTo={filter.release_to ?? ''}
+                includeNoRelease={filter.include_no_release !== 'false'}
+                onDecadeChange={handleDecadeChange}
+                onReleaseFromChange={handleReleaseFromChange}
+                onReleaseToChange={handleReleaseToChange}
+                onIncludeNoReleaseChange={handleIncludeNoReleaseChange}
               />
             ) : undefined}
           />

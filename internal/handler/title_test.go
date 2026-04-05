@@ -198,6 +198,15 @@ func TestTitleHandler_List_WithSort(t *testing.T) {
 	assert.Equal(t, "New Movie", result.Titles[1].PrimaryName())
 }
 
+func TestTitleHandler_List_WithReleaseDateSort(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	req := httptest.NewRequest("GET", "/api/titles?status=completed&sort=release_date&order=desc", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.List(rr, req))
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
 func TestTitleHandler_List_InvalidSortFallsBack(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 
