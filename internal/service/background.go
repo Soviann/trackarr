@@ -155,6 +155,22 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 		}
 	}
 
+	// Update metadata from TMDB details
+	genres, credits, runtime, rating := matching.ExtractMovieMetadata(details)
+	overview := details.Overview
+	metaUpdate := repository.TitleUpdate{
+		Overview: &overview,
+		Genres:   &genres,
+		Credits:  &credits,
+	}
+	if runtime != nil {
+		metaUpdate.Runtime = runtime
+	}
+	if rating != nil {
+		metaUpdate.TMDBRating = rating
+	}
+	_ = s.titles.Update(title.ID, metaUpdate)
+
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
 		s.downloadAniListCover(title)
@@ -197,6 +213,22 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 			title.CoverURL = &coverPath
 		}
 	}
+
+	// Update metadata from TMDB details
+	genres, credits, runtime, rating := matching.ExtractTVMetadata(details)
+	overview := details.Overview
+	metaUpdate := repository.TitleUpdate{
+		Overview: &overview,
+		Genres:   &genres,
+		Credits:  &credits,
+	}
+	if runtime != nil {
+		metaUpdate.Runtime = runtime
+	}
+	if rating != nil {
+		metaUpdate.TMDBRating = rating
+	}
+	_ = s.titles.Update(title.ID, metaUpdate)
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
