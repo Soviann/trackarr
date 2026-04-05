@@ -44,13 +44,15 @@ migrate: ## Run database migrations
 	$(EXEC) ./tmp/plextracker migrate
 
 import: ## Import Simkl backup on NAS (BACKUP_FILE=filename in /volume1/downloads)
-	sshpass -p '$(NAS_PASSWORD)' ssh -p $(NAS_PORT) $(NAS_USERNAME)@$(NAS_HOST) \
-		'docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
-		 docker exec plextracker ./plextracker import /tmp/$(BACKUP_FILE) && \
-		 docker exec plextracker rm /tmp/$(BACKUP_FILE)'
+	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+		sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST \
+		"/usr/local/bin/docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
+		 /usr/local/bin/docker exec plextracker plextracker import /tmp/$(BACKUP_FILE) && \
+		 /usr/local/bin/docker exec plextracker rm /tmp/$(BACKUP_FILE)"'
 
 import-dry: ## Dry-run Simkl import on NAS (BACKUP_FILE=filename in /volume1/downloads)
-	sshpass -p '$(NAS_PASSWORD)' ssh -p $(NAS_PORT) $(NAS_USERNAME)@$(NAS_HOST) \
-		'docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
-		 docker exec plextracker ./plextracker import --dry-run /tmp/$(BACKUP_FILE) && \
-		 docker exec plextracker rm /tmp/$(BACKUP_FILE)'
+	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+		sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST \
+		"/usr/local/bin/docker cp /volume1/downloads/$(BACKUP_FILE) plextracker:/tmp/$(BACKUP_FILE) && \
+		 /usr/local/bin/docker exec plextracker plextracker import --dry-run /tmp/$(BACKUP_FILE) && \
+		 /usr/local/bin/docker exec plextracker rm /tmp/$(BACKUP_FILE)"'

@@ -484,7 +484,9 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 }
 
 // FindByExternalID looks up a title by external IDs (IMDB, TMDB, Plex rating key).
-func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRatingKey *string) (*model.Title, error) {
+// If titleType is non-nil, results are filtered by type (useful because TMDB IDs
+// are only unique within a media type).
+func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRatingKey *string, titleType *model.TitleType) (*model.Title, error) {
 	var conditions []string
 	var args []interface{}
 
@@ -505,7 +507,13 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 		return nil, sql.ErrNoRows
 	}
 
-	query := `SELECT id FROM titles WHERE ` + strings.Join(conditions, ` OR `) + ` LIMIT 1`
+	query := `SELECT id FROM titles WHERE (` + strings.Join(conditions, ` OR `) + `)`
+	if titleType != nil {
+		query += ` AND type = ?`
+		args = append(args, *titleType)
+	}
+	query += ` LIMIT 1`
+
 	var id int64
 	if err := r.db.QueryRow(query, args...).Scan(&id); err != nil {
 		return nil, err

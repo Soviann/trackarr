@@ -227,7 +227,7 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey)
+			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey, nil)
 			if tc.wantErr {
 				assert.Error(t, err)
 				return
@@ -236,6 +236,43 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 			assert.Equal(t, tc.wantTitle, got.PrimaryName())
 		})
 	}
+}
+
+func TestTitleRepository_FindByExternalID_TypeFilter(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	// Same TMDB ID for a movie and a series (real-world: TMDB 1891 = "The Empire Strikes Back" movie + "Rome" series)
+	tmdb := int64(1891)
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 1980, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "The Empire Strikes Back", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2005, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "Rome", Language: "en", IsPrimary: true}})
+
+	movieType := model.TitleTypeMovie
+	seriesType := model.TitleTypeSeries
+	animeType := model.TitleTypeAnime
+
+	t.Run("without type filter returns first match", func(t *testing.T) {
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil)
+		require.NoError(t, err)
+		assert.Contains(t, []string{"The Empire Strikes Back", "Rome"}, got.PrimaryName())
+	})
+
+	t.Run("filter by movie type", func(t *testing.T) {
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, &movieType)
+		require.NoError(t, err)
+		assert.Equal(t, "The Empire Strikes Back", got.PrimaryName())
+	})
+
+	t.Run("filter by series type", func(t *testing.T) {
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, &seriesType)
+		require.NoError(t, err)
+		assert.Equal(t, "Rome", got.PrimaryName())
+	})
+
+	t.Run("filter by non-existing type returns no match", func(t *testing.T) {
+		_, err := repo.FindByExternalID(nil, &tmdb, nil, &animeType)
+		assert.Error(t, err)
+	})
 }
 
 func TestTitleRepository_GetStatusCounts(t *testing.T) {

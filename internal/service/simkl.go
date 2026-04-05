@@ -168,7 +168,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 		tmdbID = &v
 	}
 
-	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil); err == nil && existing != nil {
+	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil, &titleType); err == nil && existing != nil {
 		result.Skipped++
 		return nil
 	}
@@ -260,6 +260,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 		if maxSeason > 0 && maxEpisode > 0 {
 			if err := BackfillPreviousEpisodes(s.db, nil, titleID, tmdbID, maxSeason, maxEpisode, latestWatchedAt); err != nil {
 				log.Printf("simkl import: backfill for title %d: %v", titleID, err)
+				result.Errors++
 			}
 		}
 	}
