@@ -43,7 +43,7 @@ const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
 const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[] = [
   { field: 'updated_at', label: 'Last updated', defaultOrder: 'desc' },
   { field: 'original_title', label: 'Title', defaultOrder: 'asc' },
-  { field: 'year', label: 'Year', defaultOrder: 'desc' },
+  { field: 'release_date', label: 'Release date', defaultOrder: 'desc' },
   { field: 'my_rating', label: 'Rating', defaultOrder: 'desc' },
   { field: 'created_at', label: 'Date added', defaultOrder: 'desc' },
 ]
@@ -106,7 +106,7 @@ export function FilterDrawer({
   // Build active tags for collapsed state
   const activeTags: { label: string; color: string }[] = []
   const activeSort = sortOptions.find((o) => o.field === sort.field)
-  if (!isSearchActive && activeSort && sort.field !== 'updated_at') {
+  if (!isSearchActive && activeSort && sort.field !== 'release_date') {
     activeTags.push({ label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`, color: colors.accentTeal })
   }
   const activeStatus = statusFilters.find((f) => f.id === status)

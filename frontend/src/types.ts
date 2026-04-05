@@ -24,6 +24,7 @@ export interface Title {
   tmdb_rating: number | null
   credits: string | null
   anilist_rating: number | null
+  release_date: string | null
   created_at: string
   updated_at: string
   names: TitleName[]
