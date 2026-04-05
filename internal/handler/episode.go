@@ -126,8 +126,8 @@ func (h *EpisodeHandler) maybePromptRating(title *model.Title) {
 		}
 		if allWatched && service.IsNotificationEnabled(h.settings, service.NotifRatingPrompt) {
 			_ = h.push.SendNotification(
-				fmt.Sprintf("Rate %s?", title.PrimaryName()),
-				fmt.Sprintf("You finished season %d", season.SeasonNumber),
+				"PlexTracker",
+				fmt.Sprintf("Rate %s? You finished season %d", title.PrimaryName(), season.SeasonNumber),
 				fmt.Sprintf("/title/%d", title.ID),
 			)
 			return // One notification per batch

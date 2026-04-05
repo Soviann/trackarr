@@ -207,8 +207,8 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 
 		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
 			_ = s.push.SendNotification(
-				title.PrimaryName(),
-				"Series ended",
+				"PlexTracker",
+				fmt.Sprintf("%s — Series ended", title.PrimaryName()),
 				fmt.Sprintf("/title/%d", title.ID),
 			)
 		}

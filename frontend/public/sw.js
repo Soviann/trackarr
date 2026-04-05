@@ -5,6 +5,7 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: '/icon.png',
     badge: '/favicon-32.png',
+    tag: 'plextracker',
     data: { url: data.url || '/' },
   }
   event.waitUntil(self.registration.showNotification(title, options))

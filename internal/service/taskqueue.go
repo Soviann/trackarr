@@ -370,8 +370,8 @@ func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
 	}
 
 	_ = w.push.SendNotification(
-		"Task failed",
-		fmt.Sprintf("Unable to process: %s", titleName),
+		"PlexTracker",
+		fmt.Sprintf("Task failed — Unable to process: %s", titleName),
 		"/admin/tasks",
 	)
 }
