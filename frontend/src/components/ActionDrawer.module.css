@@ -1,0 +1,124 @@
+.container {
+  position: fixed;
+  bottom: 69px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0 4px;
+  cursor: pointer;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.handleBar {
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: #333;
+}
+
+.handleText {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-dimmed);
+}
+
+.chevron {
+  font-size: 8px;
+  color: var(--color-text-dimmed);
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.drawer {
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.drawerCollapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.drawerExpanded {
+  max-height: 200px;
+  opacity: 1;
+}
+
+.sectionLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #B0B0B0;
+  padding: 6px var(--space-lg) 2px;
+}
+
+.sectionLabelFirst {
+  padding-top: 4px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+  padding: 4px var(--space-lg);
+}
+
+.actionBtn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 4px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rate {
+  composes: actionBtn;
+  background: var(--wash-amber);
+  color: var(--color-accent-amber);
+}
+
+.imdb {
+  composes: actionBtn;
+  background: #F5C5181F;
+  color: var(--color-accent-imdb);
+}
+
+.anilist {
+  composes: actionBtn;
+  background: #02A9FF1F;
+  color: var(--color-accent-anilist);
+}
+
+.markNext {
+  composes: actionBtn;
+  background: var(--wash-coral);
+  color: var(--color-accent-coral);
+}
+
+.manage {
+  composes: actionBtn;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+}
+
+.bottomPad {
+  height: 4px;
+}
