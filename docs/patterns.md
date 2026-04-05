@@ -62,7 +62,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Repositories
 
-`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
+`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
 
 ### Handlers
 
@@ -113,7 +113,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | Component | File | Purpose |
 |---|---|---|
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
-| FilterBar | `components/FilterBar.tsx` | Library filter tabs (All/Watching/Up to date/Completed/Dropped/Plan) |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (status/type/series status), shared by Library+Search |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
 | PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3 aspect, gradient overlay) |
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |

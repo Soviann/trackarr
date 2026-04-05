@@ -17,6 +17,7 @@ interface TitleState {
     type?: string
     search?: string
     match_status?: string
+    series_status?: string
   }
   setFilter: (filter: Partial<TitleState['filter']>) => void
   fetchTitles: () => Promise<void>
@@ -50,6 +51,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (f.type) params.set('type', f.type)
       if (f.search) params.set('search', f.search)
       if (f.match_status) params.set('match_status', f.match_status)
+      if (f.series_status) params.set('series_status', f.series_status)
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', '0')
       const qs = params.toString()
@@ -76,6 +78,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (filter.type) params.set('type', filter.type)
       if (filter.search) params.set('search', filter.search)
       if (filter.match_status) params.set('match_status', filter.match_status)
+      if (filter.series_status) params.set('series_status', filter.series_status)
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', String(titles.length))
       const qs = params.toString()

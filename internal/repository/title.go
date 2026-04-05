@@ -19,10 +19,11 @@ func NewTitleRepository(db database.DBTX) *TitleRepository {
 }
 
 type TitleFilter struct {
-	Status      *model.TitleStatus
-	Type        *model.TitleType
-	Search      *string
-	MatchStatus *model.MatchStatus
+	Status       *model.TitleStatus
+	Type         *model.TitleType
+	Search       *string
+	MatchStatus  *model.MatchStatus
+	SeriesStatus *model.SeriesStatus
 	UpToDate       bool // server-side "up to date" filter (watching + all episodes watched)
 	WatchingBehind bool // server-side "watching but behind" filter (watching + has unwatched episodes)
 	Limit          int
@@ -203,6 +204,10 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	if filter.MatchStatus != nil {
 		conditions = append(conditions, `t.match_status = ?`)
 		args = append(args, *filter.MatchStatus)
+	}
+	if filter.SeriesStatus != nil {
+		conditions = append(conditions, `t.series_status = ?`)
+		args = append(args, *filter.SeriesStatus)
 	}
 
 	whereClause := ""

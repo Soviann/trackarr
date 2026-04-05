@@ -46,6 +46,10 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		matchStatus := model.MatchStatus(m)
 		filter.MatchStatus = &matchStatus
 	}
+	if ss := r.URL.Query().Get("series_status"); ss != "" {
+		seriesStatus := model.SeriesStatus(ss)
+		filter.SeriesStatus = &seriesStatus
+	}
 
 	result, err := h.titles.List(filter)
 	if err != nil {

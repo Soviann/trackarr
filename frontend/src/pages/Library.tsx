@@ -4,20 +4,10 @@ import { apiFetch } from '../api'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
-import type { FilterTab } from '../components/FilterBar'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
 import s from './Library.module.css'
-
-const tabToStatus: Record<FilterTab, string | undefined> = {
-  all: undefined,
-  watching: 'watching_behind',
-  up_to_date: 'up_to_date',
-  completed: 'completed',
-  dropped: 'dropped',
-  plan: 'plan_to_watch',
-}
 
 function TitleList({ titles, onUpdate }: { titles: Title[]; onUpdate: () => void }) {
   if (titles.length === 0) return null
@@ -77,24 +67,21 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
   )
 }
 
-export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?: FilterTab }) {
+export function Library(_props: { path?: string }) {
   const {
-    titles, total, hasMore, counts,
+    titles, total, hasMore, counts, filter,
     loading, loadingMore, error,
-    setFilter, loadMore, invalidate,
+    fetchTitles, loadMore, invalidate,
   } = useTitleStore()
 
-  // Sync tab with store filter
-  useEffect(() => {
-    const status = tabToStatus[tab]
-    setFilter({ status, search: undefined })
-  }, [tab])
+  // Initial fetch on mount
+  useEffect(() => { fetchTitles() }, [])
 
   const pendingCount = counts?.pending_review ?? 0
   const unconfirmedCount = counts?.unconfirmed ?? 0
   const reviewCount = pendingCount + unconfirmedCount
 
-  const useListView = tab === 'watching' || tab === 'up_to_date'
+  const useListView = filter.status === 'watching_behind' || filter.status === 'up_to_date'
 
   return (
     <div className={s.page}>
@@ -121,7 +108,7 @@ export function Library({ filterTab: tab = 'all' }: { path?: string; filterTab?:
 
       {!loading && titles.length === 0 && (
         <div className={s.centered}>
-          {tab === 'all' ? "No titles yet. Add one with the + tab!" : "No titles in this category."}
+          {!filter.status ? "No titles yet. Add one with the + tab!" : "No titles in this category."}
         </div>
       )}
 

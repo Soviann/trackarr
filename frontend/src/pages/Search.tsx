@@ -4,6 +4,7 @@ import clsx from 'clsx'
 import type { Title, TitleStatus, PaginatedResponse } from '../types'
 import { colors, accentWash } from '../theme'
 import { apiFetch } from '../api'
+import { useTitleStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
@@ -12,17 +13,19 @@ import s from './Search.module.css'
 
 const PAGE_SIZE = 50
 
-const statusFilters: { id: TitleStatus | null; label: string; color: string }[] = [
+type StatusFilterValue = TitleStatus | 'up_to_date' | null
+
+const statusFilters: { id: StatusFilterValue; label: string; color: string }[] = [
   { id: null, label: 'All', color: colors.accentTeal },
   { id: 'watching', label: 'Watching', color: colors.accentAmber },
+  { id: 'plan_to_watch', label: 'Plan', color: colors.accentLavender },
+  { id: 'up_to_date', label: 'Caught up', color: colors.accentBlue },
   { id: 'completed', label: 'Completed', color: colors.accentGreen },
   { id: 'dropped', label: 'Dropped', color: colors.accentCoral },
-  { id: 'plan_to_watch', label: 'Plan', color: colors.textSecondary },
 ]
 
 export function Search({ path: _ }: { path?: string }) {
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<TitleStatus | null>(null)
   const [results, setResults] = useState<Title[]>([])
   const [total, setTotal] = useState(0)
   const [hasMore, setHasMore] = useState(false)
@@ -31,16 +34,36 @@ export function Search({ path: _ }: { path?: string }) {
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const { filter, setFilter } = useTitleStore()
+
+  // Derive status filter value from store
+  const statusFilter: StatusFilterValue = filter.status === 'watching_behind'
+    ? 'watching'
+    : filter.status === 'up_to_date'
+      ? 'up_to_date'
+      : (filter.status as TitleStatus | undefined) ?? null
+
+  const setStatusFilter = useCallback((sf: StatusFilterValue) => {
+    let storeStatus: string | undefined
+    if (sf === 'watching') storeStatus = 'watching_behind'
+    else if (sf === 'up_to_date') storeStatus = 'up_to_date'
+    else if (sf === null) storeStatus = undefined
+    else storeStatus = sf
+    setFilter({ status: storeStatus })
+  }, [setFilter])
+
   const buildUrl = useCallback((offset: number) => {
     const trimmed = query.trim()
     if (!trimmed) return null
     const params = new URLSearchParams()
     params.set('search', trimmed)
-    if (statusFilter) params.set('status', statusFilter)
+    if (filter.status) params.set('status', filter.status)
+    if (filter.type) params.set('type', filter.type)
+    if (filter.series_status) params.set('series_status', filter.series_status)
     params.set('limit', String(PAGE_SIZE))
     params.set('offset', String(offset))
     return `/titles?${params.toString()}`
-  }, [query, statusFilter])
+  }, [query, filter.status, filter.type, filter.series_status])
 
   // Fetch first page
   useEffect(() => {
