@@ -5,21 +5,10 @@
   },
   "permissions": {
     "allow": [
-      "Bash(docker compose *)",
-      "Bash(make *)",
-      "Bash(gh issue list*)",
-      "Bash(gh issue view*)",
-      "Bash(gh pr checks*)",
-      "Bash(gh pr list*)",
-      "Bash(gh pr view*)",
-      "Bash(gh run list*)",
-      "Bash(gh run view*)",
-      "Bash(git branch*)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git show*)",
-      "Bash(git stash list*)",
-      "Bash(git status*)",
+      "Bash(make:*)",
+      "Bash(docker compose:*)",
+      "Bash(gh:*)",
+      "Bash(git:*)",
       "Edit",
       "Write",
       "mcp__plugin_context7_context7__query-docs",
@@ -27,17 +16,6 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | jq -e '.subagent_type == \"Explore\"' > /dev/null 2>&1; then if [ -f docs/patterns.md ]; then echo 'STOP — Read docs/patterns.md BEFORE exploring. Only launch Explore if patterns.md does not cover your need.'; else echo 'No docs/patterns.md found. After exploration, create one with the codebase map.'; fi; fi"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
