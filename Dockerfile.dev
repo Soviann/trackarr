@@ -21,6 +21,6 @@ RUN cd frontend && npm ci 2>/dev/null || true
 
 COPY . .
 
-EXPOSE 8080 5173
+EXPOSE 8080 5174
 
 CMD ["air", "-c", ".air.toml"]
