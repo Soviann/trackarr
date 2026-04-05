@@ -1,0 +1,38 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.emoticon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.description {
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.reloadButton {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-accent-teal) 30%, transparent);
+  background: color-mix(in srgb, var(--color-accent-teal) 10%, transparent);
+  color: var(--color-accent-teal);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}

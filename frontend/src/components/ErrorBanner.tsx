@@ -1,4 +1,4 @@
-import { colors } from '../theme'
+import s from './ErrorBanner.module.css'
 
 interface Props {
   message: string
@@ -10,48 +10,15 @@ export function ErrorBanner({ message, onRetry, onDismiss }: Props) {
   if (!message) return null
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '10px 14px',
-      margin: '8px 12px',
-      background: `${colors.accentCoral}26`,
-      border: `1px solid ${colors.accentCoral}4D`,
-      borderRadius: '8px',
-      color: '#fca5a5',
-      fontSize: '13px',
-    }}>
-      <span style={{ flex: 1 }}>{message}</span>
+    <div className={s.banner}>
+      <span className={s.message}>{message}</span>
       {onRetry && (
-        <button
-          onClick={onRetry}
-          style={{
-            background: 'none',
-            border: `1px solid ${colors.accentCoral}4D`,
-            color: '#fca5a5',
-            cursor: 'pointer',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            marginLeft: '8px',
-          }}
-        >
+        <button onClick={onRetry} className={s.retryButton}>
           Retry
         </button>
       )}
       {onDismiss && (
-        <button
-          onClick={onDismiss}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#fca5a5',
-            cursor: 'pointer',
-            padding: '0 0 0 8px',
-            fontSize: '14px',
-          }}
-        >
+        <button onClick={onDismiss} className={s.dismissButton}>
           ✕
         </button>
       )}

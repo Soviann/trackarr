@@ -1,0 +1,18 @@
+.placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cover-color) 14.5%, transparent),
+    color-mix(in srgb, var(--cover-color) 3.9%, transparent)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--cover-color) 31.4%, transparent);
+}
+
+.icon {
+  width: var(--icon-size, 40%);
+  height: var(--icon-size, 40%);
+}
