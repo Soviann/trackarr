@@ -11,7 +11,7 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './Search.module.css'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 48
 
 type StatusFilterValue = TitleStatus | 'up_to_date' | null
 

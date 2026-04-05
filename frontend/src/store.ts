@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { apiFetch } from './api'
 import { Title, PaginatedResponse, StatusCounts } from './types'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 48
 
 const SORT_STORAGE_KEY = 'title-sort'
 
