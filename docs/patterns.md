@@ -62,7 +62,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Repositories
 
-`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
+`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
 
 ### Handlers
 
@@ -79,7 +79,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | POST | `/api/auth/logout` | Logout | No |
 | POST | `/api/webhook/plex/{secret}` | HandlePlex | No (secret in URL) |
 | GET | `/api/covers/{filename}` | Serve | No |
-| GET | `/api/titles` | List | Yes |
+| GET | `/api/titles` | List | Yes | `?sort=updated_at\|original_title\|year\|my_rating\|created_at&order=asc\|desc` |
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
@@ -105,7 +105,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | Hook | File | Purpose |
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
-| `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, loadMore, cache |
+| `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, sort (localStorage-persisted), loadMore, cache |
 | `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
 
 ### Components
@@ -113,7 +113,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | Component | File | Purpose |
 |---|---|---|
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
-| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (status/type/series status), shared by Library+Search |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status), shared by Library+Search. Sort hidden during search |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
 | PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3 aspect, gradient overlay) |
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |
