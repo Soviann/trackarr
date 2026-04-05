@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
+import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeRow } from '../components/EpisodeRow'
@@ -41,8 +42,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     )
   }
 
-  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
-  const typeLabel = title.type.charAt(0).toUpperCase() + title.type.slice(1)
+  const name = getName(title)
+  const typeLabel = getTypeLabel(title.type)
   const sortedSeasons = [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)
   const current = sortedSeasons.find((s) => s.season_number === activeSeason)
     ?? sortedSeasons.find((s) => (s.episodes ?? []).some((e) => !e.watched))

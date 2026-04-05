@@ -1,6 +1,7 @@
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
+import { getName } from '../utils'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface PosterCardProps {
@@ -8,7 +9,7 @@ interface PosterCardProps {
 }
 
 export function PosterCard({ title }: PosterCardProps) {
-  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = getName(title)
 
   return (
     <div

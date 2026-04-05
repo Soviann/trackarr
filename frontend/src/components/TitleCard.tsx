@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { apiFetch } from '../api'
+import { getName, getTypeLabel } from '../utils'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface TitleCardProps {
@@ -33,8 +34,8 @@ function getProgress(title: Title) {
 
 export function TitleCard({ title, onUpdate }: TitleCardProps) {
   const [toggling, setToggling] = useState(false)
-  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
-  const typeLabel = title.type.charAt(0).toUpperCase() + title.type.slice(1)
+  const name = getName(title)
+  const typeLabel = getTypeLabel(title.type)
 
   const progress = title.type !== 'movie' ? getProgress(title) : null
   const season = progress?.season

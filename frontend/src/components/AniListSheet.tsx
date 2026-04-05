@@ -1,5 +1,6 @@
 import type { Title } from '../types'
 import { colors } from '../theme'
+import { getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
 
 interface AniListSheetProps {
@@ -11,7 +12,7 @@ interface AniListSheetProps {
 }
 
 export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniListSheetProps) {
-  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = getName(title)
   const hasAnilistMatch = !!title.anilist_id
 
   return (

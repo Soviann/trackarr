@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import type { Title, TitleStatus } from '../types'
 import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
+import { getName } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../api'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -14,8 +15,6 @@ export function Validate({ path }: { path?: string }) {
   const { data: results, loading } = useApi<Title[]>(searchPath)
   const [adding, setAdding] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TitleStatus>('plan_to_watch')
-
-  const getName = (t: Title) => (t.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
 
   const handleAdd = async () => {
     if (adding) return

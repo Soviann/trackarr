@@ -2,6 +2,7 @@ import { route } from 'preact-router'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { apiFetch } from '../api'
+import { getName } from '../utils'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 
 interface MatchReviewCardProps {
@@ -20,7 +21,7 @@ const matchSourceLabels: Record<string, string> = {
 }
 
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
-  const name = (title.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
+  const name = getName(title)
   const isUnconfirmed = title.match_status === 'unconfirmed'
   const borderColor = isUnconfirmed ? colors.accentCoral : colors.accentAmber
   const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id)

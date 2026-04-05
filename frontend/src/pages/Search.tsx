@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import type { Title, TitleStatus, PaginatedResponse } from '../types'
 import { colors, accentWash } from '../theme'
 import { apiFetch } from '../api'
+import { getName, getTypeLabel } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -95,11 +96,8 @@ export function Search({ path: _ }: { path?: string }) {
     inputRef.current?.focus()
   }, [])
 
-  const getName = (t: Title) => (t.names ?? []).find((n) => n.is_primary)?.name ?? 'Untitled'
-  const getTypeLabel = (t: Title) => t.type.charAt(0).toUpperCase() + t.type.slice(1)
-
   const getMetadata = (t: Title) => {
-    const parts = [getTypeLabel(t), String(t.year)]
+    const parts = [getTypeLabel(t.type), String(t.year)]
     const seasons = t.seasons ?? []
     if (t.type !== 'movie' && seasons.length > 0) {
       const s = seasons[seasons.length - 1]
