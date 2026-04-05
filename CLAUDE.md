@@ -11,11 +11,11 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update patterns.md when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
 - CLAUDE.md and patterns.md must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
-- Plans: `docs/superpowers/plans/`.
+## Plans & Specs
 
-## Plans
-
-Audience = PO (non-technical). Structure plans around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in a collapsed/separate section if essential for scope estimation.
+Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder.
+Audience = PO (non-technical). Structure around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in collapsed section if essential for scope estimation.
+Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
 
 ## Commands
 
