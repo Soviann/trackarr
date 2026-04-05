@@ -1,5 +1,5 @@
 .page {
-  padding-bottom: 36px;
+  padding-bottom: 140px; /* space for drawer + navbar */
 }
 
 .loading {
@@ -8,14 +8,27 @@
   color: var(--color-text-secondary);
 }
 
+/* Hero — pure visual, no text */
 .hero {
   position: relative;
-  height: 160px;
+  height: 260px;
   display: flex;
   align-items: flex-end;
 }
 
-.overlayBtn {
+.heroFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(transparent, var(--color-bg-primary));
+}
+
+.backBtn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
   width: 32px;
   height: 32px;
   background: rgba(0, 0, 0, 0.5);
@@ -28,73 +41,187 @@
   padding: 0;
 }
 
-.backBtn {
-  composes: overlayBtn;
-  position: absolute;
-  top: 14px;
-  left: 14px;
-}
-
-.topRight {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+/* Identity zone */
+.identity {
   display: flex;
-  gap: var(--space-sm);
-}
-
-.anilistBtn {
-  composes: overlayBtn;
+  gap: 14px;
+  padding: 0 var(--space-lg);
+  margin-top: -32px;
   position: relative;
+  z-index: 1;
 }
 
-.anilistLabel {
-  font-size: 10px;
-  font-weight: 700;
-  color: #02a9ff;
+.miniPoster {
+  width: 80px;
+  height: 120px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  object-fit: cover;
+  border: 1px solid #2a2a2a;
 }
 
-.pendingDot {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-accent-amber);
-  border: 1.5px solid rgba(0, 0, 0, 0.5);
+.miniPosterPlaceholder {
+  composes: miniPoster;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.heroInfo {
-  width: 100%;
-  padding: 14px var(--space-lg);
-  background: linear-gradient(transparent, #0d0d0d);
+.identityInfo {
+  flex: 1;
+  padding-top: 36px;
 }
 
-.heroTitle {
+.identityTitle {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: #fff;
+  line-height: 1.2;
 }
 
-.heroMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.identityMeta {
+  font-size: var(--font-size-xs);
+  color: #aaa;
   margin-top: 3px;
 }
 
-.heroSubtitle {
+.genrePills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.genrePill {
   font-size: var(--font-size-xs);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
   color: #aaa;
+  border: 1px solid #2a2a2a;
 }
 
-.heroRating {
-  font-size: 12px;
-  font-weight: 600;
+/* Content cards */
+.card {
+  margin: 10px var(--space-lg);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) 14px;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.cardLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+/* Ratings card */
+.ratingsRow {
+  display: flex;
+  align-items: center;
+}
+
+.myRating {
+  font-size: 28px;
+  font-weight: 700;
   color: var(--color-accent-amber);
+  line-height: 1;
 }
 
+.myRatingSuffix {
+  font-size: 16px;
+  color: var(--color-text-muted);
+}
+
+.noRating {
+  font-size: 14px;
+  color: var(--color-text-dimmed);
+}
+
+.extRatings {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.extItem {
+  text-align: center;
+}
+
+.extScore {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.extSource {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+.tmdbColor { color: var(--color-accent-teal); }
+.anilistColor { color: var(--color-accent-anilist); }
+
+/* Synopsis card */
+.synopsisText {
+  font-size: var(--font-size-sm);
+  color: #bbb;
+  line-height: 1.55;
+}
+
+.synopsisClamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.synopsisToggle {
+  color: var(--color-accent-amber);
+  font-size: 12px;
+  margin-top: var(--space-xs);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Cast list */
+.castList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.castEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.castPerson { color: #ccc; }
+.castRole { color: var(--color-text-secondary); font-size: var(--font-size-xs); }
+
+/* Details rows */
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.detailRow:last-child { border-bottom: none; }
+.detailKey { color: var(--color-text-secondary); }
+.detailVal { color: #aaa; text-align: right; }
+
+/* Series-specific (unchanged pattern) */
 .progressWrap {
   padding: var(--space-md) var(--space-lg) 10px;
 }

@@ -200,6 +200,24 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	if result.TitleType != payload.TitleType {
 		update.Type = &result.TitleType
 	}
+	if result.Overview != "" {
+		update.Overview = &result.Overview
+	}
+	if result.Genres != "" {
+		update.Genres = &result.Genres
+	}
+	if result.Runtime != nil {
+		update.Runtime = result.Runtime
+	}
+	if result.TMDBRating != nil {
+		update.TMDBRating = result.TMDBRating
+	}
+	if result.Credits != "" {
+		update.Credits = &result.Credits
+	}
+	if result.AniListRating != nil {
+		update.AniListRating = result.AniListRating
+	}
 
 	if err := w.titles.Update(payload.TitleID, update); err != nil {
 		return err

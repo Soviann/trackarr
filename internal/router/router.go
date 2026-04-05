@@ -18,7 +18,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
+func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -82,7 +82,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
 	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc)
-	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo)
+	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
@@ -147,6 +147,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 			r.Delete("/admin/tasks/{id}", httputil.WrapHandler(admin.DeleteTask))
 			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
+			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
 		})
 	})
 

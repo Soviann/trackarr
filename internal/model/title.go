@@ -52,6 +52,12 @@ type Title struct {
 	MatchStatus   MatchStatus   `json:"match_status"`
 	OriginalTitle *string       `json:"original_title"`
 	MatchSource   *string       `json:"match_source"`
+	Overview      *string       `json:"overview"`
+	Genres        *string       `json:"genres"`
+	Runtime       *int          `json:"runtime"`
+	TMDBRating    *float64      `json:"tmdb_rating"`
+	Credits       *string       `json:"credits"`
+	AniListRating *int          `json:"anilist_rating"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 

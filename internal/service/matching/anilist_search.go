@@ -28,6 +28,7 @@ type AniListDetails struct {
 	Format       string `json:"format"`
 	SeasonYear   *int   `json:"seasonYear"`
 	CoverURL     string `json:"coverURL"` // extraLarge or large
+	AverageScore *int   `json:"averageScore"`
 }
 
 type AniListNames struct {
@@ -59,6 +60,7 @@ query ($id: Int) {
     episodes
     format
     seasonYear
+    averageScore
     coverImage { extraLarge large }
   }
 }
@@ -110,10 +112,11 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 				Romaji  string `json:"romaji"`
 				English string `json:"english"`
 			} `json:"title"`
-			Episodes   *int   `json:"episodes"`
-			Format     string `json:"format"`
-			SeasonYear *int   `json:"seasonYear"`
-			CoverImage struct {
+			Episodes     *int   `json:"episodes"`
+			Format       string `json:"format"`
+			SeasonYear   *int   `json:"seasonYear"`
+			AverageScore *int   `json:"averageScore"`
+			CoverImage   struct {
 				ExtraLarge string `json:"extraLarge"`
 				Large      string `json:"large"`
 			} `json:"coverImage"`
@@ -139,6 +142,7 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 		Format:       resp.Media.Format,
 		SeasonYear:   resp.Media.SeasonYear,
 		CoverURL:     coverURL,
+		AverageScore: resp.Media.AverageScore,
 	}, nil
 }
 

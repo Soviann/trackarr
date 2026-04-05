@@ -69,11 +69,20 @@ type RefreshResult struct {
 // RefreshTitles processes all non-completed titles.
 // Returns a result per processed title.
 func (s *BackgroundService) RefreshTitles() []RefreshResult {
+	return s.refreshTitles(false)
+}
+
+// RefreshAllTitles processes all titles regardless of status.
+// Used to backfill metadata on existing titles.
+func (s *BackgroundService) RefreshAllTitles() []RefreshResult {
+	return s.refreshTitles(true)
+}
+
+func (s *BackgroundService) refreshTitles(includeAll bool) []RefreshResult {
 	if s == nil {
 		return nil
 	}
 
-	// List non-completed, confirmed titles
 	titles, err := s.titles.ListAll()
 	if err != nil {
 		log.Printf("background: list titles: %v", err)
@@ -83,7 +92,7 @@ func (s *BackgroundService) RefreshTitles() []RefreshResult {
 	var results []RefreshResult
 
 	for _, title := range titles {
-		if title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped {
+		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
 			continue
 		}
 
@@ -155,6 +164,22 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 		}
 	}
 
+	// Update metadata from TMDB details
+	genres, credits, runtime, rating := matching.ExtractMovieMetadata(details)
+	overview := details.Overview
+	metaUpdate := repository.TitleUpdate{
+		Overview: &overview,
+		Genres:   &genres,
+		Credits:  &credits,
+	}
+	if runtime != nil {
+		metaUpdate.Runtime = runtime
+	}
+	if rating != nil {
+		metaUpdate.TMDBRating = rating
+	}
+	_ = s.titles.Update(title.ID, metaUpdate)
+
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
 		s.downloadAniListCover(title)
@@ -197,6 +222,22 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 			title.CoverURL = &coverPath
 		}
 	}
+
+	// Update metadata from TMDB details
+	genres, credits, runtime, rating := matching.ExtractTVMetadata(details)
+	overview := details.Overview
+	metaUpdate := repository.TitleUpdate{
+		Overview: &overview,
+		Genres:   &genres,
+		Credits:  &credits,
+	}
+	if runtime != nil {
+		metaUpdate.Runtime = runtime
+	}
+	if rating != nil {
+		metaUpdate.TMDBRating = rating
+	}
+	_ = s.titles.Update(title.ID, metaUpdate)
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {

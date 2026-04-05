@@ -58,6 +58,13 @@ type MatchResult struct {
 	Names       []model.TitleName // multilingual names
 	CoverFile   string            // local filename in covers dir
 	TitleType   model.TitleType   // resolved type (may differ from input if anime detected)
+	// TMDB metadata
+	Overview      string
+	Genres        string // JSON array
+	Runtime       *int
+	TMDBRating    *float64
+	Credits       string // JSON array
+	AniListRating *int
 }
 
 // MatchInput holds the info needed to start the matching pipeline.
@@ -329,44 +336,70 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
 
-	// Download cover: try TMDB first, fallback to AniList
+	// Fetch TMDB details + metadata + cover
 	if p.tmdb != nil && result.TMDBID != 0 {
-		p.downloadCover(result)
+		p.fetchTMDBDetailsAndCover(result)
 	}
 	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
 		p.downloadAniListCover(result)
 	}
 }
 
-func (p *Pipeline) downloadCover(result *MatchResult) {
-	var posterPath *string
-
+func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 	if result.TitleType == model.TitleTypeMovie {
 		details, err := p.tmdb.GetMovieDetails(result.TMDBID)
-		if err == nil {
-			posterPath = details.PosterPath
+		if err != nil {
+			log.Printf("fetch movie details failed: %v", err)
+			return
+		}
+		result.Overview = details.Overview
+		genres, credits, runtime, rating := ExtractMovieMetadata(details)
+		result.Genres = genres
+		result.Credits = credits
+		result.Runtime = runtime
+		result.TMDBRating = rating
+		if details.PosterPath != nil && *details.PosterPath != "" {
+			p.downloadPoster(*details.PosterPath, result)
 		}
 	} else {
 		details, err := p.tmdb.GetTVDetails(result.TMDBID)
-		if err == nil {
-			posterPath = details.PosterPath
-		}
-	}
-
-	if posterPath != nil && *posterPath != "" {
-		coversDir := fmt.Sprintf("%s/covers", p.dataDir)
-		filename, err := p.tmdb.DownloadCover(*posterPath, coversDir)
 		if err != nil {
-			log.Printf("download cover failed: %v", err)
+			log.Printf("fetch tv details failed: %v", err)
 			return
 		}
-		result.CoverFile = filename
+		result.Overview = details.Overview
+		genres, credits, runtime, rating := ExtractTVMetadata(details)
+		result.Genres = genres
+		result.Credits = credits
+		result.Runtime = runtime
+		result.TMDBRating = rating
+		if details.PosterPath != nil && *details.PosterPath != "" {
+			p.downloadPoster(*details.PosterPath, result)
+		}
 	}
+}
+
+func (p *Pipeline) downloadPoster(posterPath string, result *MatchResult) {
+	coversDir := fmt.Sprintf("%s/covers", p.dataDir)
+	filename, err := p.tmdb.DownloadCover(posterPath, coversDir)
+	if err != nil {
+		log.Printf("download cover failed: %v", err)
+		return
+	}
+	result.CoverFile = filename
 }
 
 func (p *Pipeline) downloadAniListCover(result *MatchResult) {
 	details, err := p.anilist.GetAnimeDetails(result.AniListID)
-	if err != nil || details.CoverURL == "" {
+	if err != nil {
+		return
+	}
+
+	if details.AverageScore != nil {
+		result.AniListRating = details.AverageScore
+	}
+
+	if details.CoverURL == "" {
 		return
 	}
 

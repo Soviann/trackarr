@@ -327,4 +327,76 @@ func TestTitleRepository_List_SortByRating_NullsLast(t *testing.T) {
 	assert.Equal(t, "Unrated", result.Titles[1].PrimaryName())
 }
 
+func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	genres := `["Science Fiction","Drama"]`
+	credits := `[{"name":"Jack Arnold","role":"Director"},{"name":"Michel Ray","role":"Bud"}]`
+	overview := "A mysterious brain from space..."
+	runtime := 69
+	tmdbRating := 5.2
+
+	title := &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        1958,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Overview:    &overview,
+		Genres:      &genres,
+		Runtime:     &runtime,
+		TMDBRating:  &tmdbRating,
+		Credits:     &credits,
+	}
+
+	id, err := repo.Create(title, []model.TitleName{{Name: "The Space Children", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, &overview, got.Overview)
+	assert.Equal(t, &genres, got.Genres)
+	assert.Equal(t, &runtime, got.Runtime)
+	assert.Equal(t, &tmdbRating, got.TMDBRating)
+	assert.Equal(t, &credits, got.Credits)
+}
+
+func TestTitleRepository_UpdateMetadata(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	title := &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        1958,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+	}
+
+	id, err := repo.Create(title, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	overview := "Updated overview"
+	genres := `["Action"]`
+	runtime := 120
+	tmdbRating := 7.5
+	credits := `[{"name":"Director","role":"Director"}]`
+
+	err = repo.Update(id, repository.TitleUpdate{
+		Overview:   &overview,
+		Genres:     &genres,
+		Runtime:    &runtime,
+		TMDBRating: &tmdbRating,
+		Credits:    &credits,
+	})
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, &overview, got.Overview)
+	assert.Equal(t, &genres, got.Genres)
+	assert.Equal(t, &runtime, got.Runtime)
+	assert.Equal(t, &tmdbRating, got.TMDBRating)
+	assert.Equal(t, &credits, got.Credits)
+}
+
 func ptr[T any](v T) *T { return &v }
