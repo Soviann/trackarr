@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.3.2] — 2026-04-05
+
+### Corrigé
+- Base de données en lecture seule en prod — le conteneur démarre maintenant en root, corrige les permissions du volume `/data`, puis bascule sur l'utilisateur applicatif via `gosu`
+
 ## [v0.3.1] — 2026-04-05
 
 ### Corrigé
