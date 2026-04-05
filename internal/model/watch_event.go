@@ -5,8 +5,9 @@ import "time"
 type WatchEventSource string
 
 const (
-	WatchEventSourcePlex   WatchEventSource = "plex"
-	WatchEventSourceManual WatchEventSource = "manual"
+	WatchEventSourcePlex     WatchEventSource = "plex"
+	WatchEventSourceManual   WatchEventSource = "manual"
+	WatchEventSourceBackfill WatchEventSource = "backfill"
 )
 
 type WatchEvent struct {

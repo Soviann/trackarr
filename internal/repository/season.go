@@ -37,6 +37,16 @@ func (r *SeasonRepository) GetOrCreate(titleID int64, seasonNumber int) (*model.
 	return &model.Season{ID: id, TitleID: titleID, SeasonNumber: seasonNumber}, nil
 }
 
+func (r *SeasonRepository) GetByID(id int64) (*model.Season, error) {
+	var s model.Season
+	err := r.db.QueryRow(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE id = ?`, id).
+		Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating)
+	if err != nil {
+		return nil, fmt.Errorf("get season: %w", err)
+	}
+	return &s, nil
+}
+
 func (r *SeasonRepository) UpdateRating(id int64, rating int) error {
 	_, err := r.db.Exec(`UPDATE seasons SET my_rating = ? WHERE id = ?`, rating, id)
 	if err != nil {

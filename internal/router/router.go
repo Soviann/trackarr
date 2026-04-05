@@ -65,12 +65,19 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 
 	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, pipeline, pushSvc)
 
+	// Backfill service (optional — requires TMDB for full backfill)
+	var tmdbClient *matching.TMDBClient
+	if pipeline != nil {
+		tmdbClient = pipeline.TMDB()
+	}
+	backfillSvc := service.NewBackfillService(db, tmdbClient)
+
 	// Stats repository
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Handlers
 	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
-	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc)
+	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, pushSvc, backfillSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)

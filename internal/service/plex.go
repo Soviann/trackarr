@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -181,8 +182,9 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		return fmt.Errorf("get/create episode: %w", err)
 	}
 
+	now := time.Now().UTC()
 	if !ep.Watched {
-		_ = episodes.MarkWatched(ep.ID, time.Now().UTC())
+		_ = episodes.MarkWatched(ep.ID, now)
 	}
 
 	_, _ = events.Create(&model.WatchEvent{
@@ -191,6 +193,19 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		Source:      model.WatchEventSourcePlex,
 		PlexPayload: &rawPayload,
 	})
+
+	// Backfill previous episodes — prefer title's TMDB ID (from DB) over Plex GUIDs
+	backfillTMDBID := title.TMDBID
+	if backfillTMDBID == nil {
+		backfillTMDBID = tmdbID
+	}
+	var tmdbClient *matching.TMDBClient
+	if s.pipeline != nil {
+		tmdbClient = s.pipeline.TMDB()
+	}
+	if err := BackfillPreviousEpisodes(tx, tmdbClient, title.ID, backfillTMDBID, meta.ParentIndex, meta.Index, now); err != nil {
+		log.Printf("backfill warning: %v", err)
+	}
 
 	return nil
 }

@@ -16,10 +16,11 @@ type EpisodeHandler struct {
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	push     service.PushNotifier
+	backfill *service.BackfillService
 }
 
-func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, push service.PushNotifier) *EpisodeHandler {
-	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, push: push}
+func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, push service.PushNotifier, backfill *service.BackfillService) *EpisodeHandler {
+	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, push: push, backfill: backfill}
 }
 
 func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) error {
@@ -45,6 +46,11 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 			EpisodeID: &episodeID,
 			Source:    model.WatchEventSourceManual,
 		})
+
+		// Backfill previous episodes
+		if h.backfill != nil {
+			h.backfill.BackfillForEpisode(titleID, ep)
+		}
 	}
 
 	// Return updated title for status auto-update
