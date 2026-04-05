@@ -47,18 +47,20 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### External APIs
 
+### External APIs
+
 | API | File | Purpose |
 |---|---|---|
-### Database
-
-`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)` transaction helper, `DBTX` interface (shared by `*sql.DB` and `*sql.Tx`). SQLite with WAL, `MaxOpenConns=1`.
-
 | TMDB | `internal/service/matching/tmdb.go` | Metadata, episodes, covers, names |
 | AniList | `internal/service/matching/anilist.go` | Anime search, episodes, rating sync |
 | Gemini | `internal/service/matching/gemini.go` | Match verification/fallback |
 | anime-offline-database | `internal/service/matching/crossref.go` | Cross-reference ID mapping |
 | Google OAuth | `internal/handler/auth.go` | Auth |
 | Web Push | `internal/service/push.go` | VAPID notifications |
+
+### Database
+
+`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)` transaction helper, `DBTX` interface (shared by `*sql.DB` and `*sql.Tx`). SQLite with WAL, `MaxOpenConns=1`.
 
 ### Repositories
 
