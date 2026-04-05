@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.7.0] — 2026-04-05
+
 ### Ajouté
+- Refonte complète de la page détail titre : hero plein écran, zone d'identité avec mini-poster, cartes de contenu (notes, synopsis, casting, détails)
+- Métadonnées TMDB stockées en base : synopsis, genres, durée, note TMDB et casting (top 5 acteurs + réalisateurs)
+- Score moyen AniList récupéré et affiché pour les anime
+- ActionDrawer : tiroir d'actions repliable remplaçant l'ancienne barre d'actions (actions rapides + gestion)
+- Bouton admin « Rafraîchir toutes les métadonnées » pour peupler les métadonnées sur les titres existants (TMDB + AniList, async)
 - Tri dans le tiroir de filtres : dernière mise à jour, titre, année, note, date d'ajout — avec direction réversible et persistance localStorage
 - Fix Match : recherche TMDB depuis la fiche titre pour corriger un mauvais match (poster + nom + année), avec saisie manuelle des IDs en fallback
 - L'enrichissement met désormais à jour les noms multilingues en plus du cover et des IDs
