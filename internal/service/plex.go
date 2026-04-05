@@ -2,37 +2,17 @@ package service
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
+	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
-
-type PlexPayload struct {
-	Event    string       `json:"event"`
-	Metadata PlexMetadata `json:"Metadata"`
-}
-
-type PlexMetadata struct {
-	Title                string     `json:"title"`
-	GrandparentTitle     string     `json:"grandparentTitle"`
-	Year                 int        `json:"year"`
-	Type                 string     `json:"type"` // "movie", "episode"
-	ParentIndex          int        `json:"parentIndex"`
-	Index                int        `json:"index"`
-	RatingKey            string     `json:"ratingKey"`
-	GrandparentRatingKey string     `json:"grandparentRatingKey"`
-	GUID                 []PlexGUID `json:"Guid"`
-}
-
-type PlexGUID struct {
-	ID string `json:"id"` // "imdb://tt1234567", "tmdb://12345", "tvdb://12345"
-}
 
 type PlexExternalIDs struct {
 	IMDB string
@@ -40,16 +20,20 @@ type PlexExternalIDs struct {
 	TVDB int64
 }
 
-func ParseGUIDs(guids []PlexGUID) PlexExternalIDs {
+func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 	var ids PlexExternalIDs
 	for _, g := range guids {
+		if g == nil {
+			continue
+		}
+		raw := g.String()
 		switch {
-		case strings.HasPrefix(g.ID, "imdb://"):
-			ids.IMDB = strings.TrimPrefix(g.ID, "imdb://")
-		case strings.HasPrefix(g.ID, "tmdb://"):
-			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tmdb://"), "%d", &ids.TMDB)
-		case strings.HasPrefix(g.ID, "tvdb://"):
-			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tvdb://"), "%d", &ids.TVDB)
+		case strings.HasPrefix(raw, "imdb://"):
+			ids.IMDB = strings.TrimPrefix(raw, "imdb://")
+		case strings.HasPrefix(raw, "tmdb://"):
+			_, _ = fmt.Sscanf(strings.TrimPrefix(raw, "tmdb://"), "%d", &ids.TMDB)
+		case strings.HasPrefix(raw, "tvdb://"):
+			_, _ = fmt.Sscanf(strings.TrimPrefix(raw, "tvdb://"), "%d", &ids.TVDB)
 		}
 	}
 	return ids
@@ -69,31 +53,31 @@ func NewPlexService(db *sql.DB, titles *repository.TitleRepository, seasons *rep
 	return &PlexService{db: db, titles: titles, seasons: seasons, episodes: episodes, events: events, pipeline: pipeline, push: push}
 }
 
-func (s *PlexService) ProcessScrobble(payload *PlexPayload, rawPayload string) error {
-	if payload.Event != "media.scrobble" {
+func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
+	if payload.Event != plexwebhooks.EventTypeScrobble {
 		return nil
 	}
 
 	meta := payload.Metadata
-	ids := ParseGUIDs(meta.GUID)
+	ids := ParseGUIDs(meta.GUIDExternal)
 
 	switch meta.Type {
-	case "movie":
+	case plexwebhooks.MediaTypeMovie:
 		return s.processMovie(meta, ids, rawPayload)
-	case "episode":
+	case plexwebhooks.MediaTypeEpisode:
 		return s.processEpisode(meta, ids, rawPayload)
 	default:
 		return fmt.Errorf("unknown media type: %s", meta.Type)
 	}
 }
 
-func (s *PlexService) processMovie(meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processMovie(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
 	return database.WithTx(s.db, func(tx *sql.Tx) error {
 		return s.processMovieInTx(tx, meta, ids, rawPayload)
 	})
 }
 
-func (s *PlexService) processMovieInTx(tx *sql.Tx, meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
 	titles := repository.NewTitleRepository(tx)
 	events := repository.NewWatchEventRepository(tx)
 	var imdbID *string
@@ -109,8 +93,7 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta PlexMetadata, ids PlexEx
 
 	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey)
 	if err != nil {
-		// Create new title — run matching pipeline if available
-		newTitle, names := s.buildNewTitle(meta, ids, model.TitleTypeMovie, ratingKey)
+		newTitle, names := s.buildNewTitle(meta.Title, meta.Year, ids, model.TitleTypeMovie, ratingKey, meta.GUIDExternal)
 		newTitle.Status = model.TitleStatusCompleted
 
 		titleID, err := titles.Create(newTitle, names)
@@ -138,7 +121,6 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta PlexMetadata, ids PlexEx
 		PlexPayload: &rawPayload,
 	})
 
-	// Prompt rating for movies on re-scrobble too
 	if title.MyRating == nil {
 		_ = s.push.SendNotification(
 			fmt.Sprintf("Note %s ?", meta.Title),
@@ -149,13 +131,13 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta PlexMetadata, ids PlexEx
 	return nil
 }
 
-func (s *PlexService) processEpisode(meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processEpisode(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
 	return database.WithTx(s.db, func(tx *sql.Tx) error {
 		return s.processEpisodeInTx(tx, meta, ids, rawPayload)
 	})
 }
 
-func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta PlexMetadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
 	titles := repository.NewTitleRepository(tx)
 	seasons := repository.NewSeasonRepository(tx)
 	episodes := repository.NewEpisodeRepository(tx)
@@ -179,14 +161,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta PlexMetadata, ids Plex
 			seriesName = meta.Title
 		}
 
-		seriesMeta := PlexMetadata{
-			Title:    seriesName,
-			Year:     meta.Year,
-			Type:     "show",
-			RatingKey: grandparentKey,
-			GUID:     meta.GUID,
-		}
-		newTitle, names := s.buildNewTitle(seriesMeta, ids, model.TitleTypeSeries, grandparentKey)
+		newTitle, names := s.buildNewTitle(seriesName, meta.Year, ids, model.TitleTypeSeries, grandparentKey, meta.GUIDExternal)
 		newTitle.Status = model.TitleStatusWatching
 
 		titleID, createErr := titles.Create(newTitle, names)
@@ -196,7 +171,6 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta PlexMetadata, ids Plex
 		title = &model.Title{ID: titleID}
 	}
 
-	// Get or create season and episode
 	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
 	if err != nil {
 		return fmt.Errorf("get/create season: %w", err)
@@ -207,12 +181,10 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta PlexMetadata, ids Plex
 		return fmt.Errorf("get/create episode: %w", err)
 	}
 
-	// Mark watched (if not already)
 	if !ep.Watched {
 		_ = episodes.MarkWatched(ep.ID, time.Now().UTC())
 	}
 
-	// Log watch event
 	_, _ = events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		EpisodeID:   &ep.ID,
@@ -224,69 +196,61 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta PlexMetadata, ids Plex
 }
 
 // buildNewTitle runs the matching pipeline (if available) and constructs a Title + names.
-func (s *PlexService) buildNewTitle(meta PlexMetadata, ids PlexExternalIDs, titleType model.TitleType, ratingKey string) (*model.Title, []model.TitleName) {
-	title := &model.Title{
+func (s *PlexService) buildNewTitle(title string, year int, ids PlexExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL) (*model.Title, []model.TitleName) {
+	t := &model.Title{
 		Type:          titleType,
-		Year:          meta.Year,
+		Year:          year,
 		PlexRatingKey: &ratingKey,
 	}
 
 	if s.pipeline != nil {
 		result, err := s.pipeline.Run(matching.MatchInput{
-			Title:  meta.Title,
-			Year:   meta.Year,
+			Title:  title,
+			Year:   year,
 			Type:   titleType,
 			IMDBID: ids.IMDB,
 			TMDBID: ids.TMDB,
 			TVDBID: ids.TVDB,
 		})
 		if err == nil {
-			title.MatchStatus = result.MatchStatus
-			title.MatchSource = &result.MatchSource
-			title.OriginalTitle = &meta.Title
-			title.Type = result.TitleType
+			t.MatchStatus = result.MatchStatus
+			t.MatchSource = &result.MatchSource
+			t.OriginalTitle = &title
+			t.Type = result.TitleType
 			if result.IMDBID != "" {
-				title.IMDBID = &result.IMDBID
+				t.IMDBID = &result.IMDBID
 			}
 			if result.TMDBID != 0 {
-				title.TMDBID = &result.TMDBID
+				t.TMDBID = &result.TMDBID
 			}
 			if result.TVDBID != 0 {
-				title.TVDBID = &result.TVDBID
+				t.TVDBID = &result.TVDBID
 			}
 			if result.AniListID != 0 {
-				title.AniListID = &result.AniListID
+				t.AniListID = &result.AniListID
 			}
 			if result.CoverFile != "" {
 				coverURL := "/covers/" + result.CoverFile
-				title.CoverURL = &coverURL
+				t.CoverURL = &coverURL
 			}
-			return title, result.Names
+			return t, result.Names
 		}
 	}
 
 	// Fallback: no pipeline or pipeline error
-	title.MatchStatus = model.MatchStatusConfirmed
-	title.OriginalTitle = &meta.Title
+	t.MatchStatus = model.MatchStatusConfirmed
+	t.OriginalTitle = &title
 	fallbackSource := matching.MatchSourcePlexIDs
-	title.MatchSource = &fallbackSource
+	t.MatchSource = &fallbackSource
 	if ids.IMDB != "" {
-		title.IMDBID = &ids.IMDB
+		t.IMDBID = &ids.IMDB
 	}
 	if ids.TMDB != 0 {
-		title.TMDBID = &ids.TMDB
+		t.TMDBID = &ids.TMDB
 	}
 	if ids.TVDB != 0 {
-		title.TVDBID = &ids.TVDB
+		t.TVDBID = &ids.TVDB
 	}
-	names := []model.TitleName{{Name: meta.Title, Language: "en", IsPrimary: true}}
-	return title, names
-}
-
-func ParsePlexPayload(data []byte) (*PlexPayload, error) {
-	var payload PlexPayload
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("parse plex payload: %w", err)
-	}
-	return &payload, nil
+	names := []model.TitleName{{Name: title, Language: "en", IsPrimary: true}}
+	return t, names
 }

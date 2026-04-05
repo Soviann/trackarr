@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.3.1] — 2026-04-05
+
+### Corrigé
+- Webhooks Plex systématiquement rejetés (erreur 400) — remplacement du parsing multipart manuel par la bibliothèque `plexwebhooks`, avec fallback JSON si le reverse proxy altère le Content-Type
+
 ## [v0.3.0] — 2026-04-04
 
 ### Ajouté

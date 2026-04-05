@@ -1,8 +1,10 @@
 package service_test
 
 import (
+	"net/url"
 	"testing"
 
+	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
@@ -26,11 +28,16 @@ func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepo
 	return svc, titleRepo
 }
 
+func mustParseURL(raw string) *url.URL {
+	u, _ := url.Parse(raw)
+	return u
+}
+
 func TestParseGUIDs(t *testing.T) {
-	guids := []service.PlexGUID{
-		{ID: "imdb://tt1234567"},
-		{ID: "tmdb://12345"},
-		{ID: "tvdb://67890"},
+	guids := []*url.URL{
+		mustParseURL("imdb://tt1234567"),
+		mustParseURL("tmdb://12345"),
+		mustParseURL("tvdb://67890"),
 	}
 
 	ids := service.ParseGUIDs(guids)
@@ -42,16 +49,16 @@ func TestParseGUIDs(t *testing.T) {
 func TestPlexService_MovieScrobble(t *testing.T) {
 	svc, titleRepo := setupPlexService(t)
 
-	payload := &service.PlexPayload{
-		Event: "media.scrobble",
-		Metadata: service.PlexMetadata{
+	payload := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypeScrobble,
+		Metadata: plexwebhooks.Metadata{
 			Title:     "Dune: Part Two",
 			Year:      2024,
-			Type:      "movie",
+			Type:      plexwebhooks.MediaTypeMovie,
 			RatingKey: "12345",
-			GUID: []service.PlexGUID{
-				{ID: "imdb://tt15239678"},
-				{ID: "tmdb://693134"},
+			GUIDExternal: []*url.URL{
+				mustParseURL("imdb://tt15239678"),
+				mustParseURL("tmdb://693134"),
 			},
 		},
 	}
@@ -67,19 +74,19 @@ func TestPlexService_MovieScrobble(t *testing.T) {
 func TestPlexService_EpisodeScrobble(t *testing.T) {
 	svc, titleRepo := setupPlexService(t)
 
-	payload := &service.PlexPayload{
-		Event: "media.scrobble",
-		Metadata: service.PlexMetadata{
+	payload := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypeScrobble,
+		Metadata: plexwebhooks.Metadata{
 			Title:                "Pilot",
 			GrandparentTitle:     "Breaking Bad",
 			Year:                 2008,
-			Type:                 "episode",
+			Type:                 plexwebhooks.MediaTypeEpisode,
 			ParentIndex:          1,
 			Index:                1,
 			RatingKey:            "ep1",
 			GrandparentRatingKey: "series1",
-			GUID: []service.PlexGUID{
-				{ID: "imdb://tt0903747"},
+			GUIDExternal: []*url.URL{
+				mustParseURL("imdb://tt0903747"),
 			},
 		},
 	}
@@ -100,11 +107,11 @@ func TestPlexService_EpisodeScrobble(t *testing.T) {
 func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 	svc, titleRepo := setupPlexService(t)
 
-	payload := &service.PlexPayload{
-		Event: "media.play",
-		Metadata: service.PlexMetadata{
+	payload := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypePlay,
+		Metadata: plexwebhooks.Metadata{
 			Title: "Test",
-			Type:  "movie",
+			Type:  plexwebhooks.MediaTypeMovie,
 		},
 	}
 
