@@ -43,11 +43,12 @@ type PlexExternalIDs struct {
 func ParseGUIDs(guids []PlexGUID) PlexExternalIDs {
 	var ids PlexExternalIDs
 	for _, g := range guids {
-		if strings.HasPrefix(g.ID, "imdb://") {
+		switch {
+		case strings.HasPrefix(g.ID, "imdb://"):
 			ids.IMDB = strings.TrimPrefix(g.ID, "imdb://")
-		} else if strings.HasPrefix(g.ID, "tmdb://") {
+		case strings.HasPrefix(g.ID, "tmdb://"):
 			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tmdb://"), "%d", &ids.TMDB)
-		} else if strings.HasPrefix(g.ID, "tvdb://") {
+		case strings.HasPrefix(g.ID, "tvdb://"):
 			_, _ = fmt.Sscanf(strings.TrimPrefix(g.ID, "tvdb://"), "%d", &ids.TVDB)
 		}
 	}

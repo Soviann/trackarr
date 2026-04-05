@@ -241,12 +241,13 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 			PlexInfo{Title: input.Title, Year: input.Year, Type: string(input.Type)},
 			MatchCandidate{Title: candidateTitle, Year: candidateYear, TMDBID: result.TMDBID, IMDBID: result.IMDBID},
 		)
-		if err != nil {
+		switch {
+		case err != nil:
 			log.Printf("gemini verification failed: %v", err)
 			result.MatchStatus = model.MatchStatusUnconfirmed
-		} else if verification.Confirmed && verification.Confidence == ConfidenceHigh {
+		case verification.Confirmed && verification.Confidence == ConfidenceHigh:
 			result.MatchStatus = model.MatchStatusPendingReview
-		} else {
+		default:
 			result.MatchStatus = model.MatchStatusUnconfirmed
 		}
 	} else {

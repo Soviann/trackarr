@@ -1,0 +1,9 @@
+run:
+  build-tags:
+    - sqlite_fts5
+
+linters:
+  enable:
+    - errcheck
+    - gocritic
+    - govet

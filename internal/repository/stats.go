@@ -122,11 +122,12 @@ func (r *StatsRepository) ratings() (*model.StatsRatings, error) {
 
 	if totalRated > 0 {
 		pct := int(math.Round(float64(highRated) / float64(totalRated) * 100))
-		if pct >= 60 {
+		switch {
+		case pct >= 60:
 			s.Insight = fmt.Sprintf("Tu notes plutôt généreusement — %d%% de tes notes sont à 7 ou plus.", pct)
-		} else if pct <= 30 {
+		case pct <= 30:
 			s.Insight = fmt.Sprintf("Tu es plutôt exigeant — seulement %d%% de tes notes sont à 7 ou plus.", pct)
-		} else {
+		default:
 			s.Insight = fmt.Sprintf("%d%% de tes notes sont à 7 ou plus.", pct)
 		}
 	}

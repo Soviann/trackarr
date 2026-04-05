@@ -176,17 +176,18 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	var conditions []string
 	var args []interface{}
 
-	if filter.UpToDate {
+	switch {
+	case filter.UpToDate:
 		// "Up to date" = watching + every episode watched (no unwatched episodes)
 		conditions = append(conditions, `t.status = 'watching'`)
 		conditions = append(conditions, `t.type != 'movie'`)
 		conditions = append(conditions, `EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id)`)
 		conditions = append(conditions, `NOT EXISTS (SELECT 1 FROM seasons s3 JOIN episodes e3 ON e3.season_id = s3.id WHERE s3.title_id = t.id AND e3.watched = 0)`)
-	} else if filter.WatchingBehind {
+	case filter.WatchingBehind:
 		// "Watching behind" = watching + has at least one unwatched episode (or is a movie, or has no episodes)
 		conditions = append(conditions, `t.status = 'watching'`)
 		conditions = append(conditions, `(t.type = 'movie' OR NOT EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id) OR EXISTS (SELECT 1 FROM seasons s4 JOIN episodes e4 ON e4.season_id = s4.id WHERE s4.title_id = t.id AND e4.watched = 0))`)
-	} else {
+	default:
 		if filter.Status != nil {
 			conditions = append(conditions, `t.status = ?`)
 			args = append(args, *filter.Status)
@@ -221,7 +222,9 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	offset := filter.Offset
 
 	query := `SELECT DISTINCT ` + baseCols + ` FROM titles t` + whereClause + ` ORDER BY t.updated_at DESC LIMIT ? OFFSET ?`
-	queryArgs := append(args, limit, offset)
+	queryArgs := make([]interface{}, len(args), len(args)+2)
+	copy(queryArgs, args)
+	queryArgs = append(queryArgs, limit, offset)
 
 	rows, err := r.db.Query(query, queryArgs...)
 	if err != nil {
