@@ -241,9 +241,9 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 			dir = "DESC"
 		}
 		col := "t." + filter.Sort
-		// NULLS LAST: for nullable columns (my_rating, year), sort nulls to the end
+		// NULLS LAST: for nullable columns, sort nulls to the end
 		switch filter.Sort {
-		case "my_rating", "year":
+		case "my_rating", "year", "original_title":
 			orderBy = fmt.Sprintf("CASE WHEN %s IS NULL THEN 1 ELSE 0 END, %s %s", col, col, dir)
 		default:
 			orderBy = fmt.Sprintf("%s %s", col, dir)

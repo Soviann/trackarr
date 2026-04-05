@@ -112,7 +112,7 @@ export function App() {
                 onSeriesStatusChange={handleSeriesStatusChange}
                 sort={sort}
                 onSortChange={setSort}
-                isSearchActive={!!filter.search}
+                isSearchActive={currentPath === '/search'}
                 defaultOpen={currentPath === '/'}
               />
             ) : undefined}
