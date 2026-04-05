@@ -23,6 +23,10 @@ Audience = PO (non-technical). Structure plans around: user-visible behavior, UX
 
 `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
 
+## Deploy
+
+`.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: update `CHANGELOG.md` + push `v*` tag. Hotfix: `gh workflow run deploy.yml`.
+
 ## Environment
 
 `.env` (committed, defaults) + `.env.local` (gitignored, secrets). Keys: `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_EMAIL`, `JWT_SECRET`, `TMDB_API_KEY`, `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET`, `GEMINI_API_KEY`, `VAPID_*`.
