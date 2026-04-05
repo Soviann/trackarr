@@ -327,6 +327,114 @@ func TestTitleRepository_List_SortByRating_NullsLast(t *testing.T) {
 	assert.Equal(t, "Unrated", result.Titles[1].PrimaryName())
 }
 
+func TestTitleRepository_List_SortByReleaseDate(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	rd1 := "2020-03-15"
+	rd2 := "2024-11-01"
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
+
+	result, err := repo.List(repository.TitleFilter{
+		Status: ptr(model.TitleStatusCompleted),
+		Sort:   "release_date",
+		Order:  "asc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 2)
+	assert.Equal(t, "Old Movie", result.Titles[0].PrimaryName())
+	assert.Equal(t, "New Movie", result.Titles[1].PrimaryName())
+}
+
+func TestTitleRepository_List_SortByReleaseDate_NullsLast(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	rd := "2024-06-01"
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
+
+	result, err := repo.List(repository.TitleFilter{
+		Status: ptr(model.TitleStatusCompleted),
+		Sort:   "release_date",
+		Order:  "desc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 2)
+	assert.Equal(t, "With Date", result.Titles[0].PrimaryName())
+	assert.Equal(t, "No Date", result.Titles[1].PrimaryName())
+}
+
+func TestTitleRepository_List_FilterByDecade(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2015, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2010s Movie", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2022, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2020s Movie", Language: "en", IsPrimary: true}})
+
+	decade := 2020
+	result, err := repo.List(repository.TitleFilter{
+		Status: ptr(model.TitleStatusCompleted),
+		Decade: &decade,
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 1)
+	assert.Equal(t, "2020s Movie", result.Titles[0].PrimaryName())
+}
+
+func TestTitleRepository_List_FilterByDateRange(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	rd1 := "2023-01-15"
+	rd2 := "2024-06-20"
+	rd3 := "2025-01-01"
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Early", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "Mid", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2025, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd3}, []model.TitleName{{Name: "Late", Language: "en", IsPrimary: true}})
+
+	from := "2024-01-01"
+	to := "2024-12-31"
+	result, err := repo.List(repository.TitleFilter{
+		Status:      ptr(model.TitleStatusCompleted),
+		ReleaseFrom: &from,
+		ReleaseTo:   &to,
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 1)
+	assert.Equal(t, "Mid", result.Titles[0].PrimaryName())
+}
+
+func TestTitleRepository_List_FilterByDateRange_ExcludeNoRelease(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	rd := "2024-06-20"
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
+
+	from := "2024-01-01"
+	// IncludeNoRelease = true → include NULL release_date
+	result, err := repo.List(repository.TitleFilter{
+		Status:           ptr(model.TitleStatusCompleted),
+		ReleaseFrom:      &from,
+		IncludeNoRelease: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 2)
+
+	// IncludeNoRelease = false → exclude NULL release_date
+	result2, err := repo.List(repository.TitleFilter{
+		Status:           ptr(model.TitleStatusCompleted),
+		ReleaseFrom:      &from,
+		IncludeNoRelease: false,
+	})
+	require.NoError(t, err)
+	require.Len(t, result2.Titles, 1)
+	assert.Equal(t, "With Date", result2.Titles[0].PrimaryName())
+}
+
 func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

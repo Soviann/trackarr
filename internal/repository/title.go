@@ -231,18 +231,23 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		args = append(args, *filter.Decade, *filter.Decade+9)
 	}
 	if filter.ReleaseFrom != nil {
-		conditions = append(conditions, `t.release_date >= ?`)
-		args = append(args, *filter.ReleaseFrom)
-		if !filter.IncludeNoRelease {
-			conditions = append(conditions, `t.release_date IS NOT NULL`)
+		if filter.IncludeNoRelease {
+			conditions = append(conditions, `(t.release_date >= ? OR t.release_date IS NULL)`)
+		} else {
+			conditions = append(conditions, `t.release_date >= ?`)
 		}
+		args = append(args, *filter.ReleaseFrom)
 	}
 	if filter.ReleaseTo != nil {
-		conditions = append(conditions, `t.release_date <= ?`)
-		args = append(args, *filter.ReleaseTo)
-		if !filter.IncludeNoRelease && filter.ReleaseFrom == nil {
-			conditions = append(conditions, `t.release_date IS NOT NULL`)
+		if filter.IncludeNoRelease {
+			conditions = append(conditions, `(t.release_date <= ? OR t.release_date IS NULL)`)
+		} else {
+			conditions = append(conditions, `t.release_date <= ?`)
 		}
+		args = append(args, *filter.ReleaseTo)
+	}
+	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
+		conditions = append(conditions, `t.release_date IS NOT NULL`)
 	}
 
 	whereClause := ""
