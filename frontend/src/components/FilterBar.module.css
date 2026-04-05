@@ -1,0 +1,33 @@
+.bar {
+  display: flex;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-primary);
+  overflow-x: auto;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 12px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabActive {
+  background: var(--wash-blue);
+  border-top-color: var(--color-accent-blue);
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.labelActive {
+  font-weight: 600;
+  color: var(--color-accent-blue);
+}

@@ -1,4 +1,5 @@
-import { colors, accentWash } from '../theme'
+import clsx from 'clsx'
+import s from './FilterBar.module.css'
 
 export type FilterTab = 'all' | 'watching' | 'up_to_date' | 'completed' | 'dropped' | 'plan'
 
@@ -18,37 +19,16 @@ interface FilterBarProps {
 
 export function FilterBar({ active, onChange }: FilterBarProps) {
   return (
-    <div style={{
-      display: 'flex',
-      borderTop: `1px solid ${colors.borderSubtle}`,
-      background: colors.bgPrimary,
-      overflowX: 'auto',
-    }}>
+    <div className={s.bar}>
       {tabs.map((tab) => {
         const isActive = active === tab.id
         return (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              textAlign: 'center',
-              background: isActive ? accentWash(colors.accentBlue) : 'transparent',
-              borderTop: `2px solid ${isActive ? colors.accentBlue : 'transparent'}`,
-              border: 'none',
-              borderTopStyle: 'solid',
-              borderTopWidth: '2px',
-              borderTopColor: isActive ? colors.accentBlue : 'transparent',
-              cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}
+            className={clsx(s.tab, isActive && s.tabActive)}
           >
-            <span style={{
-              fontSize: '10px',
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? colors.accentBlue : colors.textMuted,
-            }}>
+            <span className={clsx(s.label, isActive && s.labelActive)}>
               {tab.label}
             </span>
           </button>

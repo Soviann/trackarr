@@ -1,5 +1,7 @@
 import type { ComponentChildren } from 'preact'
+import clsx from 'clsx'
 import { colors, accentWash } from '../theme'
+import s from './Navbar.module.css'
 
 const tabs = [
   {
@@ -65,20 +67,9 @@ export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
   const activePath = currentPath === '/' ? '/' : `/${currentPath.split('/')[1]}`
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      zIndex: 100,
-      background: colors.bgPrimary,
-    }}>
+    <div className={s.wrapper}>
       {above}
-      <nav style={{
-        display: 'flex',
-        borderTop: `1px solid ${colors.borderSubtle}`,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
+      <nav className={s.nav}>
       {tabs.map((tab) => {
         const active = activePath === tab.path
         const iconColor = active ? tab.color : colors.textMuted
@@ -87,27 +78,14 @@ export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
           <button
             key={tab.id}
             onClick={() => onNavigate(tab.path)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
-              padding: '12px 0 16px',
-              border: 'none',
-              borderTop: `2px solid ${active ? tab.color : 'transparent'}`,
-              background: active ? accentWash(tab.color) : 'transparent',
-              cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}
+            className={clsx(s.tab, active && s.tabActive)}
+            style={active ? {
+              '--tab-color': tab.color,
+              '--tab-wash': accentWash(tab.color),
+            } as Record<string, string> : undefined}
           >
             {tab.icon(iconColor)}
-            <span style={{
-              fontSize: '10px',
-              color: active ? tab.color : colors.textMuted,
-              fontWeight: active ? 600 : 400,
-            }}>
+            <span className={clsx(s.label, active && s.labelActive)}>
               {tab.label}
             </span>
           </button>
