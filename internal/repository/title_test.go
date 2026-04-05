@@ -290,4 +290,41 @@ func TestTitleRepository_GetStatusCounts(t *testing.T) {
 	assert.Equal(t, 2, counts.Unconfirmed)
 }
 
+func TestTitleRepository_List_SortByYear(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old", Language: "en", IsPrimary: true}})
+	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New", Language: "en", IsPrimary: true}})
+
+	result, err := repo.List(repository.TitleFilter{
+		Status: ptr(model.TitleStatusCompleted),
+		Sort:   "year",
+		Order:  "asc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 2)
+	assert.Equal(t, "Old", result.Titles[0].PrimaryName())
+	assert.Equal(t, "New", result.Titles[1].PrimaryName())
+}
+
+func TestTitleRepository_List_SortByRating_NullsLast(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	rating := 8
+	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, MyRating: &rating}, []model.TitleName{{Name: "Rated", Language: "en", IsPrimary: true}})
+	repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Unrated", Language: "en", IsPrimary: true}})
+
+	result, err := repo.List(repository.TitleFilter{
+		Status: ptr(model.TitleStatusCompleted),
+		Sort:   "my_rating",
+		Order:  "desc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 2)
+	assert.Equal(t, "Rated", result.Titles[0].PrimaryName())
+	assert.Equal(t, "Unrated", result.Titles[1].PrimaryName())
+}
+
 func ptr[T any](v T) *T { return &v }
