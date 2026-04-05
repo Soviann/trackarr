@@ -33,8 +33,6 @@ func Serve(distFS embed.FS) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
-	r := router.New(cfg, db, distFS)
-
 	// Background refresh job
 	titleRepo := repository.NewTitleRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
@@ -56,6 +54,8 @@ func Serve(distFS embed.FS) error {
 
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	bgSvc.StartTicker(24 * time.Hour)
+
+	r := router.New(cfg, db, distFS, bgSvc)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir)

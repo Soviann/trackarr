@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -15,10 +16,11 @@ type AdminHandler struct {
 	tasks    *repository.TaskRepository
 	titles   *repository.TitleRepository
 	settings *repository.SettingRepository
+	bgSvc    *service.BackgroundService
 }
 
-func NewAdminHandler(tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository) *AdminHandler {
-	return &AdminHandler{tasks: tasks, titles: titles, settings: settings}
+func NewAdminHandler(tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
+	return &AdminHandler{tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
 }
 
 // Counts returns aggregate counts for the admin hub badges.
@@ -121,5 +123,17 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// RefreshAll triggers a background refresh on all titles (including completed/dropped).
+func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error {
+	if h.bgSvc == nil {
+		return httputil.InternalError("refresh all", fmt.Errorf("background service not available"))
+	}
+
+	go h.bgSvc.RefreshAllTitles()
+
+	w.WriteHeader(http.StatusAccepted)
 	return nil
 }

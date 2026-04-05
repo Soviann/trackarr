@@ -1,5 +1,7 @@
+import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
+import { apiFetch } from '../api'
 import { colors } from '../theme'
 import s from './Admin.module.css'
 
@@ -54,6 +56,17 @@ const cards = [
 
 export function Admin({ path }: { path?: string }) {
   const { data: counts } = useApi<AdminCounts>('/admin/counts')
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefreshAll = async () => {
+    if (!confirm('Rafraîchir les métadonnées TMDB de tous les titres ?\n\nCette opération tourne en arrière-plan et peut prendre plusieurs minutes.')) return
+    setRefreshing(true)
+    try {
+      await apiFetch('/admin/refresh-all', { method: 'POST' })
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   return (
     <div className={s.page}>
@@ -84,6 +97,22 @@ export function Admin({ path }: { path?: string }) {
             </button>
           )
         })}
+      </div>
+
+      <div className={s.actions}>
+        <button className={s.actionBtn} onClick={handleRefreshAll} disabled={refreshing}>
+          <div className={s.actionIcon}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </div>
+          <div>
+            <div className={s.actionLabel}>{refreshing ? 'Rafraîchissement lancé...' : 'Rafraîchir toutes les métadonnées'}</div>
+            <div className={s.actionDesc}>Met à jour synopsis, genres, casting et notes depuis TMDB/AniList</div>
+          </div>
+        </button>
       </div>
     </div>
   )

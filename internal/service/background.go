@@ -69,11 +69,20 @@ type RefreshResult struct {
 // RefreshTitles processes all non-completed titles.
 // Returns a result per processed title.
 func (s *BackgroundService) RefreshTitles() []RefreshResult {
+	return s.refreshTitles(false)
+}
+
+// RefreshAllTitles processes all titles regardless of status.
+// Used to backfill metadata on existing titles.
+func (s *BackgroundService) RefreshAllTitles() []RefreshResult {
+	return s.refreshTitles(true)
+}
+
+func (s *BackgroundService) refreshTitles(includeAll bool) []RefreshResult {
 	if s == nil {
 		return nil
 	}
 
-	// List non-completed, confirmed titles
 	titles, err := s.titles.ListAll()
 	if err != nil {
 		log.Printf("background: list titles: %v", err)
@@ -83,7 +92,7 @@ func (s *BackgroundService) RefreshTitles() []RefreshResult {
 	var results []RefreshResult
 
 	for _, title := range titles {
-		if title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped {
+		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
 			continue
 		}
 
