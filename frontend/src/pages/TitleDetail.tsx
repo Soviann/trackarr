@@ -9,6 +9,7 @@ import { EpisodeRow } from '../components/EpisodeRow'
 import { ActionBar } from '../components/ActionBar'
 import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
+import { RematchSheet } from '../components/RematchSheet'
 import { AniListSheet } from '../components/AniListSheet'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -34,6 +35,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showAniList, setShowAniList] = useState(false)
+  const [showRematch, setShowRematch] = useState(false)
 
   if (loading || !title) {
     return (
@@ -115,6 +117,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
               {title.match_status === 'pending_review' && <div className={s.pendingDot} />}
             </button>
           )}
+          {/* Fix match button */}
+          <button onClick={() => setShowRematch(true)} aria-label="Fix match" className={s.overlayBtn}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
           {/* Edit button */}
           <button onClick={() => setShowEdit(true)} aria-label="Modifier" className={s.overlayBtn}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -218,6 +227,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           onConfirm={handleConfirmAniList}
         />
       )}
+
+      <RematchSheet
+        open={showRematch}
+        onClose={() => setShowRematch(false)}
+        title={title}
+        onDone={mutate}
+      />
     </div>
   )
 }

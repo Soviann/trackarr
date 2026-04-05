@@ -4,6 +4,8 @@
 
 ### Ajouté
 - Tri dans le tiroir de filtres : dernière mise à jour, titre, année, note, date d'ajout — avec direction réversible et persistance localStorage
+- Fix Match : recherche TMDB depuis la fiche titre pour corriger un mauvais match (poster + nom + année), avec saisie manuelle des IDs en fallback
+- L'enrichissement met désormais à jour les noms multilingues en plus du cover et des IDs
 
 ## [v0.6.1] — 2026-04-05
 

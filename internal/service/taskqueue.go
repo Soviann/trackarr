@@ -17,13 +17,13 @@ import (
 // Task payloads
 
 type EnrichmentPayload struct {
-	TitleID   int64            `json:"title_id"`
-	TitleName string           `json:"title_name"`
-	Year      int              `json:"year"`
-	TitleType model.TitleType  `json:"title_type"`
-	IMDBID    string           `json:"imdb_id,omitempty"`
-	TMDBID    int64            `json:"tmdb_id,omitempty"`
-	TVDBID    int64            `json:"tvdb_id,omitempty"`
+	TitleID   int64           `json:"title_id"`
+	TitleName string          `json:"title_name"`
+	Year      int             `json:"year"`
+	TitleType model.TitleType `json:"title_type"`
+	IMDBID    string          `json:"imdb_id,omitempty"`
+	TMDBID    int64           `json:"tmdb_id,omitempty"`
+	TVDBID    int64           `json:"tvdb_id,omitempty"`
 }
 
 type RefreshPayload struct {
@@ -31,10 +31,10 @@ type RefreshPayload struct {
 }
 
 type CoverFetchPayload struct {
-	TitleID    int64           `json:"title_id"`
-	TMDBID     int64           `json:"tmdb_id"`
-	AniListID  int64           `json:"anilist_id,omitempty"`
-	TitleType  model.TitleType `json:"title_type"`
+	TitleID   int64           `json:"title_id"`
+	TMDBID    int64           `json:"tmdb_id"`
+	AniListID int64           `json:"anilist_id,omitempty"`
+	TitleType model.TitleType `json:"title_type"`
 }
 
 // TaskQueueWorker processes retryable tasks from the queue.
@@ -201,7 +201,17 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 		update.Type = &result.TitleType
 	}
 
-	return w.titles.Update(payload.TitleID, update)
+	if err := w.titles.Update(payload.TitleID, update); err != nil {
+		return err
+	}
+
+	if len(result.Names) > 0 {
+		if err := w.titles.ReplaceNames(payload.TitleID, result.Names); err != nil {
+			log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+		}
+	}
+
+	return nil
 }
 
 func (w *TaskQueueWorker) handleRefresh(task model.Task) error {

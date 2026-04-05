@@ -45,7 +45,6 @@ func (s *BackfillService) BackfillForEpisode(titleID int64, episode *model.Episo
 	}
 }
 
-
 // BackfillPreviousEpisodes creates and marks as watched all episodes before the
 // given season/episode number. If TMDB is available, previous seasons are also
 // backfilled. Without TMDB, only episodes in the current season are backfilled.

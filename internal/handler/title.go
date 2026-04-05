@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
 type TitleHandler struct {
@@ -13,10 +16,11 @@ type TitleHandler struct {
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
+	tasks    *repository.TaskRepository
 }
 
-func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository) *TitleHandler {
-	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events}
+func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository) *TitleHandler {
+	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events, tasks: tasks}
 }
 
 var allowedSorts = map[string]bool{
@@ -150,10 +154,10 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		Status      *model.TitleStatus  `json:"status"`
-		MatchStatus *model.MatchStatus  `json:"match_status"`
-		MyRating    *int                `json:"my_rating"`
-		Type        *model.TitleType    `json:"type"`
+		Status      *model.TitleStatus `json:"status"`
+		MatchStatus *model.MatchStatus `json:"match_status"`
+		MyRating    *int               `json:"my_rating"`
+		Type        *model.TitleType   `json:"type"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
@@ -172,5 +176,83 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 
 	title, _ := h.titles.GetByID(id)
 	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
+}
+
+func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	title, err := h.titles.GetByID(id)
+	if err != nil {
+		return httputil.NotFound("Not found")
+	}
+
+	var body struct {
+		TMDBID    *int64  `json:"tmdb_id"`
+		IMDBID    *string `json:"imdb_id"`
+		AniListID *int64  `json:"anilist_id"`
+	}
+
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	if body.TMDBID == nil && body.IMDBID == nil && body.AniListID == nil {
+		return httputil.BadRequest("At least one ID is required")
+	}
+
+	// Update IDs + match status
+	matchStatus := model.MatchStatusConfirmed
+	matchSource := "manual"
+	update := repository.TitleUpdate{
+		MatchStatus: &matchStatus,
+		MatchSource: &matchSource,
+	}
+	if body.TMDBID != nil {
+		update.TMDBID = body.TMDBID
+	}
+	if body.IMDBID != nil {
+		update.IMDBID = body.IMDBID
+	}
+	if body.AniListID != nil {
+		update.AniListID = body.AniListID
+	}
+
+	if err := h.titles.Update(id, update); err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+
+	// Enqueue enrichment task with the new IDs
+	tmdbID := int64(0)
+	if body.TMDBID != nil {
+		tmdbID = *body.TMDBID
+	} else if title.TMDBID != nil {
+		tmdbID = *title.TMDBID
+	}
+	imdbID := ""
+	if body.IMDBID != nil {
+		imdbID = *body.IMDBID
+	} else if title.IMDBID != nil {
+		imdbID = *title.IMDBID
+	}
+
+	payload, _ := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: title.PrimaryName(),
+		Year:      title.Year,
+		TitleType: title.Type,
+		IMDBID:    imdbID,
+		TMDBID:    tmdbID,
+	})
+	dedupKey := fmt.Sprintf("enrichment:%d", id)
+	if _, err := h.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+		return httputil.InternalError("Failed to enqueue enrichment", err)
+	}
+
+	updated, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

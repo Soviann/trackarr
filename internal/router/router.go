@@ -77,7 +77,10 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Handlers
-	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo)
+	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+
+	// TMDB search handler (optional — requires TMDB key)
+	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
 	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc)
 	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo)
 	seasons := handler.NewSeasonHandler(seasonRepo)
@@ -118,6 +121,9 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS) *chi.Mux {
 			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
 			r.Post("/titles", httputil.WrapHandler(titles.Create))
 			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
+			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
+
+			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
 			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))

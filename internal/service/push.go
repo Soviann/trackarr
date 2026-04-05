@@ -108,7 +108,7 @@ func NewNoopNotifier() PushNotifier {
 	return noopNotifier{}
 }
 
-func (noopNotifier) Subscribe(string) error           { return fmt.Errorf("push notifications not configured") }
-func (noopNotifier) Unsubscribe() error               { return fmt.Errorf("push notifications not configured") }
-func (noopNotifier) HasSubscription() bool             { return false }
+func (noopNotifier) Subscribe(string) error                { return fmt.Errorf("push notifications not configured") }
+func (noopNotifier) Unsubscribe() error                    { return fmt.Errorf("push notifications not configured") }
+func (noopNotifier) HasSubscription() bool                 { return false }
 func (noopNotifier) SendNotification(_, _, _ string) error { return nil }

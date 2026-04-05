@@ -85,8 +85,8 @@ func TestTitleRepository_List(t *testing.T) {
 		wantName string // first result name (if wantLen > 0)
 	}{
 		{
-			name:   "filter by status watching",
-			filter: repository.TitleFilter{Status: ptr(model.TitleStatusWatching)},
+			name:    "filter by status watching",
+			filter:  repository.TitleFilter{Status: ptr(model.TitleStatusWatching)},
 			wantLen: 3,
 		},
 		{
@@ -108,8 +108,8 @@ func TestTitleRepository_List(t *testing.T) {
 			wantName: "Shogun",
 		},
 		{
-			name:   "pagination limit",
-			filter: repository.TitleFilter{Limit: 2},
+			name:    "pagination limit",
+			filter:  repository.TitleFilter{Limit: 2},
 			wantLen: 2,
 		},
 		{
@@ -124,9 +124,9 @@ func TestTitleRepository_List(t *testing.T) {
 			wantName: "Naruto",
 		},
 		{
-			name:     "watching behind filter",
-			filter:   repository.TitleFilter{WatchingBehind: true},
-			wantLen:  2, // Dune (movie) + The Bear (has unwatched)
+			name:    "watching behind filter",
+			filter:  repository.TitleFilter{WatchingBehind: true},
+			wantLen: 2, // Dune (movie) + The Bear (has unwatched)
 		},
 		{
 			name:    "no results for dropped",

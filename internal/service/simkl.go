@@ -77,7 +77,7 @@ func (f *flexInt64) UnmarshalJSON(data []byte) error {
 }
 
 type SimklSeason struct {
-	Number   int           `json:"number"`
+	Number   int            `json:"number"`
 	Episodes []SimklEpisode `json:"episodes"`
 }
 
@@ -98,7 +98,7 @@ type SimklImporter struct {
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	tasks    *repository.TaskRepository // optional, enables enrichment enqueue
-	db       database.DBTX             // optional, enables episode backfill
+	db       database.DBTX              // optional, enables episode backfill
 }
 
 type SimklImporterOption func(*SimklImporter)

@@ -82,10 +82,10 @@ func (t *Title) PrimaryName() string {
 
 // NextEpisode represents the first unwatched episode (for quick-mark in listing).
 type NextEpisode struct {
-	ID            int64 `json:"id"`
-	SeasonID      int64 `json:"season_id"`
-	Episode       int   `json:"episode"`
-	SeasonNumber  int   `json:"season_number"`
+	ID           int64 `json:"id"`
+	SeasonID     int64 `json:"season_id"`
+	Episode      int   `json:"episode"`
+	SeasonNumber int   `json:"season_number"`
 }
 
 type TitleName struct {

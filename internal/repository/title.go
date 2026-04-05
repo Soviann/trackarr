@@ -3,8 +3,8 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/nicolasvasse/plextracker/internal/database"
 	"fmt"
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"strings"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -19,11 +19,11 @@ func NewTitleRepository(db database.DBTX) *TitleRepository {
 }
 
 type TitleFilter struct {
-	Status       *model.TitleStatus
-	Type         *model.TitleType
-	Search       *string
-	MatchStatus  *model.MatchStatus
-	SeriesStatus *model.SeriesStatus
+	Status         *model.TitleStatus
+	Type           *model.TitleType
+	Search         *string
+	MatchStatus    *model.MatchStatus
+	SeriesStatus   *model.SeriesStatus
 	UpToDate       bool // server-side "up to date" filter (watching + all episodes watched)
 	WatchingBehind bool // server-side "watching but behind" filter (watching + has unwatched episodes)
 	Limit          int
@@ -501,6 +501,20 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 		return fmt.Errorf("update title: %w", err)
 	}
 
+	return nil
+}
+
+// ReplaceNames deletes all existing names for a title and inserts new ones.
+func (r *TitleRepository) ReplaceNames(titleID int64, names []model.TitleName) error {
+	if _, err := r.db.Exec(`DELETE FROM title_names WHERE title_id = ?`, titleID); err != nil {
+		return fmt.Errorf("delete title names: %w", err)
+	}
+	for _, name := range names {
+		if _, err := r.db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, ?)`,
+			titleID, name.Name, name.Language, name.IsPrimary); err != nil {
+			return fmt.Errorf("insert title name: %w", err)
+		}
+	}
 	return nil
 }
 

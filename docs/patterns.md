@@ -68,7 +68,7 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, tmdb, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
 
 ### Routes
 
@@ -85,6 +85,8 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
+| POST | `/api/titles/{id}/rematch` | Rematch | Yes | Set IDs + enqueue enrichment |
+| GET | `/api/tmdb/search` | Search | Yes | `?query=...&type=movie\|tv` |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | BatchMarkWatched | Yes |
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
@@ -126,6 +128,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList buttons |
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
 | AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
+| RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix wrong match |
 | MatchReviewCard | `components/MatchReviewCard.tsx` | Match review card with ID chips + confirm/fix |
 | CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for titles without cover (movie=blue, series=teal, anime=lavender). `coverBackground()` helper for CSS background string |
 

@@ -47,7 +47,6 @@ func NewPipeline(tmdb *TMDBClient, anilist *AniListClient, gemini *GeminiClient,
 // TMDB returns the underlying TMDB client.
 func (p *Pipeline) TMDB() *TMDBClient { return p.tmdb }
 
-
 // MatchResult holds the outcome of running the matching pipeline.
 type MatchResult struct {
 	IMDBID      string

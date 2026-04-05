@@ -116,8 +116,8 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 					"Page": map[string]interface{}{
 						"media": []interface{}{
 							map[string]interface{}{
-								"id":    21,
-								"title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
+								"id":       21,
+								"title":    map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
 								"episodes": eps, "format": "TV", "seasonYear": year,
 							},
 						},
@@ -354,9 +354,9 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 
 	// Input: only TVDB ID known → crossref should resolve TMDB + IMDB + AniList
 	result, err := pipeline.Run(MatchInput{
-		Title: "One Piece",
-		Year:  1999,
-		Type:  model.TitleTypeSeries,
+		Title:  "One Piece",
+		Year:   1999,
+		Type:   model.TitleTypeSeries,
 		TVDBID: 85004,
 	})
 	require.NoError(t, err)

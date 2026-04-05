@@ -199,4 +199,3 @@ func createTitle(t *testing.T, repo *repository.TitleRepository, name string, ti
 	require.NoError(t, err)
 	return id
 }
-

@@ -2,21 +2,21 @@ package model
 
 // StatsResponse is the full response for GET /api/stats.
 type StatsResponse struct {
-	Overview  StatsOverview   `json:"overview"`
-	Ratings   StatsRatings    `json:"ratings"`
-	Breakdown StatsBreakdown  `json:"breakdown"`
-	FunStats  []FunStat       `json:"fun_stats"`
-	Year      StatsYear       `json:"year_summary"`
+	Overview  StatsOverview  `json:"overview"`
+	Ratings   StatsRatings   `json:"ratings"`
+	Breakdown StatsBreakdown `json:"breakdown"`
+	FunStats  []FunStat      `json:"fun_stats"`
+	Year      StatsYear      `json:"year_summary"`
 }
 
 type StatsOverview struct {
-	TotalTitles    int     `json:"total_titles"`
-	TotalMovies    int     `json:"total_movies"`
-	TotalSeries    int     `json:"total_series"`
-	TotalAnime     int     `json:"total_anime"`
-	EpisodesWatched int    `json:"episodes_watched"`
-	CompletionRate float64 `json:"completion_rate"`
-	AverageRating  float64 `json:"average_rating"`
+	TotalTitles     int     `json:"total_titles"`
+	TotalMovies     int     `json:"total_movies"`
+	TotalSeries     int     `json:"total_series"`
+	TotalAnime      int     `json:"total_anime"`
+	EpisodesWatched int     `json:"episodes_watched"`
+	CompletionRate  float64 `json:"completion_rate"`
+	AverageRating   float64 `json:"average_rating"`
 }
 
 type StatsRatings struct {

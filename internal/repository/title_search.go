@@ -13,12 +13,12 @@ const searchResultLimit = 50
 // searchRelevance scores how well a name matches the search term.
 // Lower score = better match.
 const (
-	relevanceExact      = 0 // name == search (case-insensitive)
-	relevanceWordExact  = 1 // a word in name == search
-	relevancePrefix     = 2 // name starts with search
-	relevanceWordPrefix = 3 // a word in name starts with search
-	relevanceContains   = 4 // name contains search
-	relevanceFTS        = 5 // FTS match (other)
+	relevanceExact      = 0  // name == search (case-insensitive)
+	relevanceWordExact  = 1  // a word in name == search
+	relevancePrefix     = 2  // name starts with search
+	relevanceWordPrefix = 3  // a word in name starts with search
+	relevanceContains   = 4  // name contains search
+	relevanceFTS        = 5  // FTS match (other)
 	relevanceFuzzy      = 10 // fuzzy match base (+ levenshtein distance)
 )
 
