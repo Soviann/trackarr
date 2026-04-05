@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(docker compose *)",
@@ -21,13 +25,6 @@
       "mcp__plugin_context7_context7__query-docs",
       "mcp__plugin_context7_context7__resolve-library-id"
     ]
-  },
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
-  "enabledPlugins": {
-    "commit-commands@claude-plugins-official": false
   },
   "hooks": {
     "PreToolUse": [
@@ -61,5 +58,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "commit-commands@claude-plugins-official": false,
+    "gopls-lsp@claude-plugins-official": true
   }
 }
