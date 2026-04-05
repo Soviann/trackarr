@@ -4,6 +4,33 @@ import { Title, PaginatedResponse, StatusCounts } from './types'
 
 const PAGE_SIZE = 50
 
+const SORT_STORAGE_KEY = 'title-sort'
+
+export type SortField = 'updated_at' | 'original_title' | 'year' | 'my_rating' | 'created_at'
+export type SortOrder = 'asc' | 'desc'
+
+export interface SortState {
+  field: SortField
+  order: SortOrder
+}
+
+const DEFAULT_SORT: SortState = { field: 'updated_at', order: 'desc' }
+
+function loadSort(): SortState {
+  try {
+    const raw = localStorage.getItem(SORT_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.field && parsed.order) return parsed
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_SORT
+}
+
+function saveSort(sort: SortState) {
+  localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort))
+}
+
 interface TitleState {
   titles: Title[]
   total: number
@@ -12,6 +39,7 @@ interface TitleState {
   loading: boolean
   loadingMore: boolean
   error: string | null
+  sort: SortState
   filter: {
     status?: string
     type?: string
@@ -20,6 +48,7 @@ interface TitleState {
     series_status?: string
   }
   setFilter: (filter: Partial<TitleState['filter']>) => void
+  setSort: (sort: SortState) => void
   fetchTitles: () => Promise<void>
   loadMore: () => Promise<void>
   invalidate: () => Promise<void>
@@ -33,10 +62,17 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   loading: false,
   loadingMore: false,
   error: null,
+  sort: loadSort(),
   filter: { status: 'plan_to_watch' },
 
   setFilter: (filter) => {
     set({ filter: { ...get().filter, ...filter } })
+    get().fetchTitles()
+  },
+
+  setSort: (sort) => {
+    set({ sort })
+    saveSort(sort)
     get().fetchTitles()
   },
 
@@ -50,6 +86,10 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (f.search) params.set('search', f.search)
       if (f.match_status) params.set('match_status', f.match_status)
       if (f.series_status) params.set('series_status', f.series_status)
+      if (!f.search) {
+        params.set('sort', get().sort.field)
+        params.set('order', get().sort.order)
+      }
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', '0')
       const qs = params.toString()
@@ -77,6 +117,10 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       if (filter.search) params.set('search', filter.search)
       if (filter.match_status) params.set('match_status', filter.match_status)
       if (filter.series_status) params.set('series_status', filter.series_status)
+      if (!filter.search) {
+        params.set('sort', get().sort.field)
+        params.set('order', get().sort.order)
+      }
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', String(titles.length))
       const qs = params.toString()
