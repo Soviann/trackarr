@@ -27,10 +27,10 @@ Un clic sur le chip actif inverse l'ordre (asc ↔ desc). Un clic sur un autre c
 
 Nouvelle section dans le tiroir de filtres, après "Series status" :
 
-**Ligne 1 — Chips décennie** : `2000s`, `2010s`, `2020s`.
-- Cliquer sur un chip filtre par la colonne `year` (entier) : `year BETWEEN 2020 AND 2029`.
-- Cliquer sur le chip actif désactive le filtre.
-- Sélectionner un chip décennie vide les champs date (from/to).
+**Ligne 1 — Dropdown décennie** : menu déroulant avec les options "All", "2000s", "2010s", "2020s".
+- Sélectionner une décennie filtre par la colonne `year` (entier) : `year BETWEEN 2020 AND 2029`.
+- Revenir sur "All" désactive le filtre.
+- Sélectionner une décennie vide les champs date (from/to).
 
 **Ligne 2 — Intervalle de dates** : deux champs date (type `date`), libellés "From" et "To".
 - Chaque champ peut rester vide (intervalle ouvert d'un côté ou des deux).
@@ -42,7 +42,7 @@ Nouvelle section dans le tiroir de filtres, après "Series status" :
 - Quand désactivé : exclut les titres dont `release_date IS NULL`.
 - Quand activé (défaut) : inclut tous les titres, ceux sans date apparaissent en fin si triés par release date.
 
-**Comportement combiné** : décennie et intervalle sont mutuellement exclusifs. Les chips décennie filtrent sur `year` (entier, déjà renseigné pour quasi tous les titres). L'intervalle de dates filtre sur `release_date` (texte, renseigné après enrichissement TMDB).
+**Comportement combiné** : décennie et intervalle sont mutuellement exclusifs. Le dropdown décennie filtre sur `year` (entier, déjà renseigné pour quasi tous les titres). L'intervalle de dates filtre sur `release_date` (texte, renseigné après enrichissement TMDB).
 
 **Tag en mode réduit** : quand le tiroir est fermé, le filtre actif s'affiche comme tag — ex. "2020s", "2024-01 → 2025-03", "≥ 2020-01-01".
 
@@ -68,7 +68,7 @@ Après déploiement, l'utilisateur clique sur **"Rafraîchir tout"** dans la pag
 - [ ] Le chip "Year" est remplacé par "Release date" dans le tiroir de filtres.
 - [ ] Les titres sans date de sortie apparaissent en fin de liste quel que soit l'ordre.
 - [ ] La section "Release date" avec chips décennie, champs date et toggle est visible dans le tiroir.
-- [ ] Les chips décennie filtrent correctement sur la colonne `year`.
+- [ ] Le dropdown décennie filtre correctement sur la colonne `year`.
 - [ ] L'intervalle de dates filtre correctement sur la colonne `release_date`.
 - [ ] Décennie et intervalle sont mutuellement exclusifs.
 - [ ] Le toggle "Include without release date" exclut/inclut les titres sans date.
