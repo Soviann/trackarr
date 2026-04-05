@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import Router from 'preact-router'
+import clsx from 'clsx'
 import { Navbar } from './components/Navbar'
 import { FilterBar, FilterTab } from './components/FilterBar'
 import { Library } from './pages/Library'
@@ -13,6 +14,7 @@ import { Login } from './pages/Login'
 import { Stats } from './pages/Stats'
 import { usePush } from './hooks/usePush'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import s from './app.module.css'
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
@@ -40,7 +42,7 @@ export function App() {
 
   return (
     <ErrorBoundary>
-      <div style={{ minHeight: '100vh', paddingBottom: hideNavbar ? 0 : '108px' }}>
+      <div className={clsx(s.root, !hideNavbar && s.withNavbar)}>
         <Router onChange={handleRoute}>
           <Library path="/" filterTab={filterTab} />
           <Search path="/search" />
