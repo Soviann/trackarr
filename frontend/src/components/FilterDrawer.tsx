@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import clsx from 'clsx'
 import type { TitleStatus, TitleType, SeriesStatus } from '../types'
 import type { SortField, SortOrder, SortState } from '../store'
@@ -101,6 +101,30 @@ export function FilterDrawer({
     const stored = localStorage.getItem(STORAGE_KEY_HOME)
     return stored !== null ? stored === 'true' : true
   })
+  const [dragY, setDragY] = useState(0)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: any) => {
+    if (!open) return
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: any) => {
+    if (!open || touchStartY.current === null) return
+    const deltaY = e.touches[0].clientY - touchStartY.current
+    if (deltaY > 0) {
+      setDragY(deltaY)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (!open || touchStartY.current === null) return
+    if (dragY > 100) {
+      setOpen(false)
+    }
+    setDragY(0)
+    touchStartY.current = null
+  }
 
   // Reset to closed when switching to a page with defaultOpen=false
   useEffect(() => {
@@ -146,7 +170,13 @@ export function FilterDrawer({
   }
 
   return (
-    <>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
+      className={s.container}
+    >
       {/* Handle */}
       <div className={s.handle} onClick={() => setOpen(!open)}>
         <div className={s.handleBar} />
@@ -278,6 +308,6 @@ export function FilterDrawer({
 
         <div className={s.bottomPad} />
       </div>
-    </>
+    </div>
   )
 }

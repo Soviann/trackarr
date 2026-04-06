@@ -13,6 +13,7 @@
   border-radius: 16px 16px 0 0;
   max-height: 85vh;
   overflow-y: auto;
+  transition: transform 0.2s ease-out;
 }
 
 .handleBar {

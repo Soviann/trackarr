@@ -80,7 +80,7 @@ export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
 
   return (
     <div className={s.wrapper}>
-      {above}
+      {above && <div className={s.above}>{above}</div>}
       <nav className={s.nav}>
       {tabs.map((tab) => {
         const active = activePath === tab.path

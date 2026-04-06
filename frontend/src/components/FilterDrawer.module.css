@@ -1,3 +1,7 @@
+.container {
+  transition: transform 0.2s ease-out;
+}
+
 .handle {
   display: flex;
   align-items: center;

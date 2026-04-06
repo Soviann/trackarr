@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useRef } from 'preact/hooks'
 import clsx from 'clsx'
 import type { Title, Episode } from '../types'
 import s from './ActionDrawer.module.css'
@@ -19,14 +19,47 @@ export function ActionDrawer({
   onMarkNext, onRate, onEdit, onRematch, onAniList,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
+  const [dragY, setDragY] = useState(0)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: any) => {
+    if (!open) return
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: any) => {
+    if (!open || touchStartY.current === null) return
+    const deltaY = e.touches[0].clientY - touchStartY.current
+    if (deltaY > 0) {
+      setDragY(deltaY)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (!open || touchStartY.current === null) return
+    if (dragY > 100) {
+      setOpen(false)
+    }
+    setDragY(0)
+    touchStartY.current = null
+  }
 
   const hasImdb = !!title.imdb_id
   const hasAnilist = title.type === 'anime'
   const hasSeries = title.type !== 'movie'
 
   return (
-    <div className={s.container}>
-      <div className={s.handle} onClick={() => setOpen(!open)}>
+    <div
+      className={s.container}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
+    >
+      <div
+        className={s.handle}
+        onClick={() => setOpen(!open)}
+      >
         <div className={s.handleBar} />
         <span className={s.handleText}>Actions</span>
         <span className={clsx(s.chevron, open && s.chevronOpen)}>&#9650;</span>

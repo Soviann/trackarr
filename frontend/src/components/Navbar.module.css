@@ -5,12 +5,22 @@
   right: 0;
   z-index: 100;
   background: var(--color-bg-primary);
+  display: flex;
+  flex-direction: column;
 }
 
 .nav {
   display: flex;
   border-top: 1px solid var(--color-border-subtle);
   padding-bottom: env(safe-area-inset-bottom);
+  position: relative;
+  z-index: 2;
+  background: var(--color-bg-primary);
+}
+
+.above {
+  position: relative;
+  z-index: 1;
 }
 
 .tab {

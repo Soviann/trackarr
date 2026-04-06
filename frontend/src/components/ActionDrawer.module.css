@@ -4,6 +4,7 @@
   left: 0;
   right: 0;
   z-index: 99;
+  transition: transform 0.2s ease-out;
 }
 
 .handle {

@@ -5,7 +5,7 @@ export
 DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
-.PHONY: help up down logs shell test test-front lint fmt dev-frontend build migrate
+.PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate
 .PHONY: import import-dry db-reset
 .PHONY: ssh-import ssh-import-dry ssh-db-reset
 
@@ -36,6 +36,9 @@ test-front: ## Run frontend tests
 
 lint: ## Run Go linter
 	$(EXEC) golangci-lint run ./...
+
+lint-front: ## Run frontend type check
+	$(EXEC) bash -c "cd frontend && npx tsc"
 
 fmt: ## Format Go code
 	$(EXEC) gofmt -w .
