@@ -114,7 +114,7 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 			PlexPayload: &rawPayload,
 		})
 
-		if ratingNotifEnabled {
+		if ratingNotifEnabled && s.push != nil {
 			_ = s.push.SendNotification(
 				"PlexTracker",
 				fmt.Sprintf("Rate %s? You just watched this movie", meta.Title),
@@ -134,7 +134,7 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 		PlexPayload: &rawPayload,
 	})
 
-	if title.MyRating == nil && ratingNotifEnabled {
+	if title.MyRating == nil && ratingNotifEnabled && s.push != nil {
 		_ = s.push.SendNotification(
 			"PlexTracker",
 			fmt.Sprintf("Rate %s? You just watched this movie", meta.Title),

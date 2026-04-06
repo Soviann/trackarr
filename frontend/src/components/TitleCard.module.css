@@ -38,6 +38,10 @@
   margin-top: 2px;
 }
 
+.lastWatched {
+  color: var(--color-accent-teal);
+}
+
 .progressTrack {
   margin-top: 6px;
   height: 3px;

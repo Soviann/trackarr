@@ -39,7 +39,8 @@ function parseJSON<T>(json: string | null): T | null {
   try { return JSON.parse(json) } catch { return null }
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -220,6 +221,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <span className={s.detailKey}>Added</span>
           <span className={s.detailVal}>{formatDate(title.created_at)}</span>
         </div>
+        {title.last_watched_at && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Last watched</span>
+            <span className={s.detailVal}>{formatDate(title.last_watched_at)}</span>
+          </div>
+        )}
         {title.match_source && (
           <div className={s.detailRow}>
             <span className={s.detailKey}>Match</span>

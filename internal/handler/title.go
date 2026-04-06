@@ -30,6 +30,7 @@ var allowedSorts = map[string]bool{
 	"my_rating":      true,
 	"created_at":     true,
 	"release_date":   true,
+	"last_watched_at": true,
 }
 
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {

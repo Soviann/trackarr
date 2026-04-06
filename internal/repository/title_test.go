@@ -507,4 +507,43 @@ func TestTitleRepository_UpdateMetadata(t *testing.T) {
 	assert.Equal(t, &credits, got.Credits)
 }
 
+func TestTitleRepository_List_SortByLastWatched(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	idA, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
+	idB, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
+	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
+
+	// Create events in specific order: C watched first (older), then A (newer), then B (not watched)
+	_, _ = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', '2024-01-01 10:00:00')`, idC)
+	_, _ = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', '2024-01-02 10:00:00')`, idA)
+	_ = idB // explicitly ignore idB as it has no events
+
+	// Sort DESC: A (newest), then C (older), then B (null)
+	result, err := repo.List(repository.TitleFilter{
+		Sort:  "last_watched_at",
+		Order: "desc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 3)
+	assert.Equal(t, "A", result.Titles[0].PrimaryName())
+	assert.Equal(t, "C", result.Titles[1].PrimaryName())
+	assert.Equal(t, "B", result.Titles[2].PrimaryName())
+	assert.NotNil(t, result.Titles[0].LastWatchedAt)
+	assert.NotNil(t, result.Titles[1].LastWatchedAt)
+	assert.Nil(t, result.Titles[2].LastWatchedAt)
+
+	// Sort ASC: C (older), then A (newer), then B (null last)
+	result2, err := repo.List(repository.TitleFilter{
+		Sort:  "last_watched_at",
+		Order: "asc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result2.Titles, 3)
+	assert.Equal(t, "C", result2.Titles[0].PrimaryName())
+	assert.Equal(t, "A", result2.Titles[1].PrimaryName())
+	assert.Equal(t, "B", result2.Titles[2].PrimaryName())
+}
+
 func ptr[T any](v T) *T { return &v }
