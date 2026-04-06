@@ -30,6 +30,9 @@ func NewGeminiClient(apiKeys []string) *GeminiClient {
 	}
 }
 
+// SetBaseURL overrides the Gemini base URL (for tests).
+func (c *GeminiClient) SetBaseURL(u string) { c.apiURL = u }
+
 type MatchVerification struct {
 	Confirmed  bool   `json:"confirmed"`
 	Confidence string `json:"confidence"` // "high", "medium", "low"
@@ -184,6 +187,45 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 	}
 
 	return "", &APIError{Service: "Gemini", StatusCode: http.StatusTooManyRequests, Body: "all API keys rate-limited"}
+}
+
+type AnimeSeasonIdentification struct {
+	IsSeason         bool   `json:"is_season"`
+	ParentSeriesName string `json:"parent_series_name"`
+	SeasonNumber     int    `json:"season_number"`
+	Confidence       string `json:"confidence"`
+	Reason           string `json:"reason"`
+}
+
+// IdentifyAnimeSeason asks Gemini if a title is actually a specific season of a series.
+// Useful for anime where sequels have different names (e.g. "Solo Leveling: Arise from the Shadow" -> Season 2).
+func (c *GeminiClient) IdentifyAnimeSeason(title string, year int) (*AnimeSeasonIdentification, error) {
+	prompt := fmt.Sprintf(`You are an anime metadata expert. Identify if the following title is a specific season of a parent series.
+Many anime sequels have distinct names instead of "Season 2".
+
+Input:
+- Title: %q
+- Year: %d
+
+Respond with ONLY a JSON object:
+{
+  "is_season": true/false,
+  "parent_series_name": "The main series name (e.g. 'Solo Leveling')",
+  "season_number": 1, 2, 3, etc,
+  "confidence": "high"/"medium"/"low",
+  "reason": "brief explanation"
+}`, title, year)
+
+	body, err := c.generate(prompt)
+	if err != nil {
+		return nil, fmt.Errorf("identify anime season: %w", err)
+	}
+
+	var result AnimeSeasonIdentification
+	if err := parseJSONFromResponse(body, &result); err != nil {
+		return nil, fmt.Errorf("parse identification response: %w", err)
+	}
+	return &result, nil
 }
 
 // parseJSONFromResponse extracts JSON from a Gemini response that may contain markdown fences.
