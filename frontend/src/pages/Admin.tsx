@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { colors } from '../theme'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import s from './Admin.module.css'
 
 interface AdminCounts {
@@ -57,9 +58,9 @@ const cards = [
 export function Admin({ path }: { path?: string }) {
   const { data: counts } = useApi<AdminCounts>('/admin/counts')
   const [refreshing, setRefreshing] = useState(false)
+  const [showRefreshModal, setShowRefreshModal] = useState(false)
 
   const handleRefreshAll = async () => {
-    if (!confirm('Rafraîchir les métadonnées TMDB de tous les titres ?\n\nCette opération tourne en arrière-plan et peut prendre plusieurs minutes.')) return
     setRefreshing(true)
     try {
       await apiFetch('/admin/refresh-all', { method: 'POST' })
@@ -100,7 +101,7 @@ export function Admin({ path }: { path?: string }) {
       </div>
 
       <div className={s.actions}>
-        <button className={s.actionBtn} onClick={handleRefreshAll} disabled={refreshing}>
+        <button className={s.actionBtn} onClick={() => setShowRefreshModal(true)} disabled={refreshing}>
           <div className={s.actionIcon}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10" />
@@ -114,6 +115,17 @@ export function Admin({ path }: { path?: string }) {
           </div>
         </button>
       </div>
+
+      <ConfirmationDrawer
+        open={showRefreshModal}
+        onClose={() => setShowRefreshModal(false)}
+        onConfirm={handleRefreshAll}
+        title="Rafraîchir les métadonnées ?"
+        description="Cette opération tourne en arrière-plan et peut prendre plusieurs minutes."
+        confirmText="Rafraîchir"
+        cancelText="Annuler"
+      />
     </div>
   )
 }
+
