@@ -10,9 +10,9 @@
 
   /* Colors — text */
   --color-text-primary: #F0F0F0;
-  --color-text-secondary: #666666;
-  --color-text-muted: #555555;
-  --color-text-dimmed: #444444;
+  --color-text-secondary: #E0E0E0;
+  --color-text-muted: #D0D0D0;
+  --color-text-dimmed: #C0C0C0;
 
   /* Colors — accents */
   --color-accent-amber: #E8A925;

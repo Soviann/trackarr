@@ -118,7 +118,7 @@ export function Search({ path: _ }: { path?: string }) {
           <div className={s.emptyState}>
             <div className={s.emptyInner}>
               <div className={s.emptyIcon}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2A2A2A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
@@ -164,7 +164,7 @@ export function Search({ path: _ }: { path?: string }) {
                     )}
                     <div className={s.cardMeta}>{getMetadata(t)}</div>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </div>

@@ -82,7 +82,7 @@
 
 .identityMeta {
   font-size: var(--font-size-xs);
-  color: #aaa;
+  color: #fff;
   margin-top: 3px;
 }
 
@@ -98,7 +98,7 @@
   padding: 3px 10px;
   border-radius: var(--radius-full);
   background: var(--color-bg-surface);
-  color: #aaa;
+  color: #fff;
   border: 1px solid #2a2a2a;
 }
 
@@ -169,7 +169,7 @@
 /* Synopsis card */
 .synopsisText {
   font-size: var(--font-size-sm);
-  color: #bbb;
+  color: #fff;
   line-height: 1.55;
 }
 
@@ -205,7 +205,7 @@
   font-size: 12px;
 }
 
-.castPerson { color: #ccc; }
+.castPerson { color: #fff; }
 .castRole { color: var(--color-text-secondary); font-size: var(--font-size-xs); }
 
 /* Details rows */
@@ -219,7 +219,7 @@
 
 .detailRow:last-child { border-bottom: none; }
 .detailKey { color: var(--color-text-secondary); }
-.detailVal { color: #aaa; text-align: right; }
+.detailVal { color: #fff; text-align: right; }
 
 /* Series-specific (unchanged pattern) */
 .progressWrap {

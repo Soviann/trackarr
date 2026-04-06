@@ -39,7 +39,7 @@
 
 .emptySubtext {
   font-size: var(--font-size-xs);
-  color: #333;
+  color: #fff;
   margin-top: var(--space-xs);
 }
 
