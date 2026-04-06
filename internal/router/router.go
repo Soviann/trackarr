@@ -145,6 +145,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 			r.Get("/admin/tasks", httputil.WrapHandler(admin.ListTasks))
 			r.Post("/admin/tasks/{id}/retry", httputil.WrapHandler(admin.RetryTask))
 			r.Delete("/admin/tasks/{id}", httputil.WrapHandler(admin.DeleteTask))
+			r.Post("/admin/tasks/batch-delete", httputil.WrapHandler(admin.DeleteTasksBatch))
 			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
