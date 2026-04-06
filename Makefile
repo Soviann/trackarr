@@ -13,10 +13,12 @@ EXEC = $(DC) exec app
 NAS_SSH = bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
 	sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST "$(1)"'
 
+.DEFAULT_GOAL := help
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '(^[a-zA-Z_-]+:.*?##.*$$)|(^##)' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-25s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
 up: ## Start dev environment
+
 	$(DC) up -d --build
 
 down: ## Stop dev environment
@@ -79,3 +81,21 @@ ssh-import-dry: ## Dry-run Simkl import sur le NAS (BACKUP_FILE=filename in /vol
 ssh-db-reset: ## Reset la BDD du NAS (supprime + restart pour re-migrer)
 	@$(call NAS_SSH,/usr/local/bin/docker exec plextracker rm /data/plextracker.db && \
 		/usr/local/bin/docker restart plextracker)
+
+ssh-db-pull: ## Pull la BDD du NAS vers le local (nettoie le local avant)
+	@echo "Arrêt de l'application locale..."
+	-$(DC) stop app
+	@echo "Nettoyage de la base de données locale..."
+	rm -f data/plextracker.db data/plextracker.db-wal data/plextracker.db-shm
+	@echo "Téléchargement de la base de données depuis le NAS..."
+	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db data/plextracker.db'
+	@echo "Démarrage de l'application locale..."
+	$(DC) start app
+	@echo "Database pulled from NAS and local app started"
+
+ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de prod)
+	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+		sshpass -p "$$NAS_PASSWORD" scp -P $$NAS_PORT data/plextracker.db $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db'
+	@$(call NAS_SSH,/usr/local/bin/docker restart plextracker)
+	@echo "Database pushed to NAS and container restarted"
