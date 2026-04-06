@@ -1,7 +1,6 @@
 package service_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -139,8 +138,6 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	_, err = taskRepo.GetByID(taskID)
 	assert.Error(t, err, "Task should be deleted upon completion")
 }
-
-func ctx() context.Context { return context.Background() }
 
 func mustJSON(s string) string {
 	b, _ := json.Marshal(s)
