@@ -228,13 +228,12 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	}
 
 	// ── Consolidation Logic (Merge) ──
-	// If we have an IMDB ID and it's an anime or series, check if another title has the same IMDB ID.
-	if result.IMDBID != "" && (result.TitleType == model.TitleTypeSeries || result.TitleType == model.TitleTypeAnime) {
+	// If we have an IMDB ID and it's an anime, check if another title has the same IMDB ID.
+	if result.IMDBID != "" && result.TitleType == model.TitleTypeAnime {
 		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil)
-		if err == nil && existing != nil && existing.ID != payload.TitleID {
+		if err == nil && existing != nil && existing.ID != payload.TitleID && existing.Type != model.TitleTypeMovie {
 			// CONFLICT! Same IMDB ID but different local titles.
-			// We should merge them.
-			log.Printf("enrichment: discovered IMDB conflict (%s). Merging title %d into %d", result.IMDBID, payload.TitleID, existing.ID)
+			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
 
 			// Determine season offset. For anime splits, the "duplicate" title is often a sequel.
 			// We can ask Gemini for the season number of the duplicate.
