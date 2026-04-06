@@ -413,6 +413,9 @@ const (
 // IsNotificationEnabled checks whether a notification type is enabled.
 // Default is enabled (when key is absent from settings).
 func IsNotificationEnabled(settings *repository.SettingRepository, notifType string) bool {
+	if settings == nil {
+		return true // default: enabled
+	}
 	val, err := settings.Get(notifType)
 	if err != nil {
 		return true // default: enabled

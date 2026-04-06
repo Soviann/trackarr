@@ -25,6 +25,7 @@ export interface Title {
   credits: string | null
   anilist_rating: number | null
   release_date: string | null
+  last_watched_at?: string
   created_at: string
   updated_at: string
   names: TitleName[]

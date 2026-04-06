@@ -6,7 +6,7 @@ const PAGE_SIZE = 48
 
 const SORT_STORAGE_KEY = 'title-sort'
 
-export type SortField = 'updated_at' | 'original_title' | 'release_date' | 'my_rating' | 'created_at'
+export type SortField = 'updated_at' | 'original_title' | 'release_date' | 'my_rating' | 'created_at' | 'last_watched_at'
 export type SortOrder = 'asc' | 'desc'
 
 export interface SortState {

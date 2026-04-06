@@ -25,3 +25,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.lastWatched {
+  font-size: 8px;
+  color: var(--color-accent-teal);
+  margin-top: 1px;
+}

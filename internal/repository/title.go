@@ -2,11 +2,11 @@ package repository
 
 import (
 	"database/sql"
-
 	"fmt"
-	"github.com/nicolasvasse/plextracker/internal/database"
 	"strings"
+	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
@@ -28,7 +28,7 @@ type TitleFilter struct {
 	WatchingBehind   bool // server-side "watching but behind" filter (watching + has unwatched episodes)
 	Limit            int
 	Offset           int
-	Sort             string  // column name: updated_at, original_title, year, my_rating, created_at, release_date
+	Sort             string  // column name: updated_at, original_title, year, my_rating, created_at, release_date, last_watched_at
 	Order            string  // asc or desc
 	Decade           *int    // e.g. 2020 → year BETWEEN 2020 AND 2029
 	ReleaseFrom      *string // YYYY-MM-DD, filters on release_date >=
@@ -119,14 +119,16 @@ func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
-	err := r.db.QueryRow(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, created_at, updated_at FROM titles WHERE id = ?`, id).
+	var lastWatchedAtStr *string
+	err := r.db.QueryRow(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Genres, &title.Runtime, &title.TMDBRating, &title.Credits, &title.AniListRating,
-			&title.ReleaseDate, &title.CreatedAt, &title.UpdatedAt)
+			&title.ReleaseDate, &lastWatchedAtStr, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
+	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 
 	// Load names
 	rows, err := r.db.Query(`SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id = ?`, id)
@@ -192,7 +194,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		return r.searchTitlesPaginated(searchTerm, filter)
 	}
 
-	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.created_at, t.updated_at`
+	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
 
 	var conditions []string
 	var args []interface{}
@@ -281,7 +283,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		col := "t." + filter.Sort
 		// NULLS LAST: for nullable columns, sort nulls to the end
 		switch filter.Sort {
-		case "my_rating", "year", "original_title", "release_date":
+		case "my_rating", "year", "original_title", "release_date", "last_watched_at":
 			orderBy = fmt.Sprintf("CASE WHEN %s IS NULL THEN 1 ELSE 0 END, %s %s", col, col, dir)
 		default:
 			orderBy = fmt.Sprintf("%s %s", col, dir)
@@ -301,13 +303,15 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
+		var lastWatchedAtStr *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
+		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 		titles = append(titles, t)
 	}
 	rows.Close()
@@ -391,7 +395,7 @@ func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -399,13 +403,15 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
+		var lastWatchedAtStr *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
+		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 		titles = append(titles, t)
 	}
 	rows.Close()
@@ -625,4 +631,21 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	}
 
 	return r.GetByID(id)
+}
+
+func parseSQLiteTime(s *string) *time.Time {
+	if s == nil {
+		return nil
+	}
+	// Try standard SQLite datetime format
+	t, err := time.Parse("2006-01-02 15:04:05", *s)
+	if err == nil {
+		return &t
+	}
+	// Try RFC3339 (ISO)
+	t, err = time.Parse(time.RFC3339, *s)
+	if err == nil {
+		return &t
+	}
+	return nil
 }

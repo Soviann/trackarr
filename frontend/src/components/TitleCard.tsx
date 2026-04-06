@@ -3,7 +3,8 @@ import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
-import { getName, getTypeLabel } from '../utils'
+import { getName, getTypeLabel, formatDate } from '../utils'
+import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import s from './TitleCard.module.css'
 
@@ -34,9 +35,12 @@ function getProgress(title: Title) {
 }
 
 export function TitleCard({ title, onUpdate }: TitleCardProps) {
+  const { sort } = useTitleStore()
   const [toggling, setToggling] = useState(false)
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
+
+  const isLastWatchedSort = sort.field === 'last_watched_at'
 
   const progress = title.type !== 'movie' ? getProgress(title) : null
   const season = progress?.season
@@ -71,7 +75,11 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
       <div className={s.info}>
         <div className={s.name}>{name}</div>
         <div className={s.meta}>
-          {typeLabel} · {title.year}
+          {isLastWatchedSort && title.last_watched_at ? (
+            <span className={s.lastWatched}>Vu le {formatDate(title.last_watched_at)}</span>
+          ) : (
+            <>{typeLabel} · {title.year}</>
+          )}
         </div>
         {season && (
           <>

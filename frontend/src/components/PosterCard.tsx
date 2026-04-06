@@ -1,6 +1,7 @@
 import { route } from 'preact-router'
 import type { Title } from '../types'
-import { getName } from '../utils'
+import { getName, formatDate } from '../utils'
+import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import s from './PosterCard.module.css'
 
@@ -9,7 +10,9 @@ interface PosterCardProps {
 }
 
 export function PosterCard({ title }: PosterCardProps) {
+  const { sort } = useTitleStore()
   const name = getName(title)
+  const isLastWatchedSort = sort.field === 'last_watched_at'
 
   return (
     <div onClick={() => route(`/title/${title.id}`)} className={s.card}>
@@ -20,6 +23,9 @@ export function PosterCard({ title }: PosterCardProps) {
         {!title.cover_url && <CoverPlaceholder type={title.type} />}
         <div className={s.labelOverlay}>
           <div className={s.label}>{name}</div>
+          {isLastWatchedSort && title.last_watched_at && (
+            <div className={s.lastWatched}>Vu le {formatDate(title.last_watched_at)}</div>
+          )}
         </div>
       </div>
     </div>

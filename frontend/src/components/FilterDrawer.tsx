@@ -54,6 +54,7 @@ const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[
   { field: 'release_date', label: 'Release date', defaultOrder: 'desc' },
   { field: 'my_rating', label: 'Rating', defaultOrder: 'desc' },
   { field: 'created_at', label: 'Date added', defaultOrder: 'desc' },
+  { field: 'last_watched_at', label: 'Last watched', defaultOrder: 'desc' },
 ]
 
 const seriesStatusFilters: { id: SeriesStatusFilter; label: string; color: string }[] = [

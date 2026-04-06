@@ -65,10 +65,9 @@
 
 .filterRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 4px var(--space-lg);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .filterLabel {

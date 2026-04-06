@@ -59,6 +59,7 @@ type Title struct {
 	Credits       *string       `json:"credits"`
 	AniListRating *int          `json:"anilist_rating"`
 	ReleaseDate   *string       `json:"release_date"`
+	LastWatchedAt *time.Time    `json:"last_watched_at,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 
