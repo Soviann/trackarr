@@ -12,7 +12,7 @@ export const colors = {
   accentAmber: '#E8A925',
   accentTeal: '#38BDB0',
   accentGreen: '#4CAF50',
-  accentLavender: '#9575CD',
+  accentLavender: '#00F2FF',
   accentCoral: '#EB5757',
   accentBlue: '#5B9CF6',
   accentImdb: '#F5C518',

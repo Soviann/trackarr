@@ -18,7 +18,7 @@
   --color-accent-amber: #E8A925;
   --color-accent-teal: #38BDB0;
   --color-accent-green: #4CAF50;
-  --color-accent-lavender: #9575CD;
+  --color-accent-lavender: #00F2FF;
   --color-accent-coral: #EB5757;
   --color-accent-blue: #5B9CF6;
   --color-accent-imdb: #F5C518;
@@ -30,7 +30,7 @@
   --wash-green: #4CAF501F;
   --wash-coral: #EB57571F;
   --wash-blue: #5B9CF61F;
-  --wash-lavender: #9575CD1F;
+  --wash-lavender: #00F2FF1F;
 
   /* Spacing */
   --space-xs: 4px;
