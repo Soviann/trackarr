@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
-import type { Title, TitleStatus, PaginatedResponse } from '../types'
-import { colors, accentWash } from '../theme'
+import type { Title, PaginatedResponse } from '../types'
+import { colors } from '../theme'
 import { apiFetch } from '../api'
 import { useTitleStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
@@ -12,17 +12,6 @@ import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholde
 import s from './Search.module.css'
 
 const PAGE_SIZE = 48
-
-type StatusFilterValue = TitleStatus | 'up_to_date' | null
-
-const statusFilters: { id: StatusFilterValue; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.accentTeal },
-  { id: 'watching', label: 'Watching', color: colors.accentAmber },
-  { id: 'plan_to_watch', label: 'Plan', color: colors.accentLavender },
-  { id: 'up_to_date', label: 'Caught up', color: colors.accentBlue },
-  { id: 'completed', label: 'Completed', color: colors.accentGreen },
-  { id: 'dropped', label: 'Dropped', color: colors.accentCoral },
-]
 
 export function Search({ path: _ }: { path?: string }) {
   const [query, setQuery] = useState('')
@@ -35,22 +24,6 @@ export function Search({ path: _ }: { path?: string }) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const { filter, setFilter } = useTitleStore()
-
-  // Derive status filter value from store
-  const statusFilter: StatusFilterValue = filter.status === 'watching_behind'
-    ? 'watching'
-    : filter.status === 'up_to_date'
-      ? 'up_to_date'
-      : (filter.status as TitleStatus | undefined) ?? null
-
-  const setStatusFilter = useCallback((sf: StatusFilterValue) => {
-    let storeStatus: string | undefined
-    if (sf === 'watching') storeStatus = 'watching_behind'
-    else if (sf === 'up_to_date') storeStatus = 'up_to_date'
-    else if (sf === null) storeStatus = undefined
-    else storeStatus = sf
-    setFilter({ status: storeStatus })
-  }, [setFilter])
 
   const buildUrl = useCallback((offset: number) => {
     const trimmed = query.trim()
@@ -167,23 +140,6 @@ export function Search({ path: _ }: { path?: string }) {
               </span>
             </div>
 
-            {/* Status filter chips */}
-            <div className={s.filterChips}>
-              {statusFilters.map((sf) => {
-                const isActive = statusFilter === sf.id
-                return (
-                  <button
-                    key={sf.id ?? 'all'}
-                    onClick={() => setStatusFilter(sf.id)}
-                    className={clsx(s.chip, isActive && s.chipActive)}
-                    style={isActive ? { background: accentWash(sf.color), color: sf.color } : undefined}
-                  >
-                    {sf.label}
-                  </button>
-                )
-              })}
-            </div>
-
             <div className={s.cardList}>
               {results.map((t) => (
                 <div key={t.id} onClick={() => route(`/title/${t.id}`)} className={s.card}>
@@ -257,7 +213,7 @@ export function Search({ path: _ }: { path?: string }) {
           />
           {query && (
             <svg
-              onClick={() => { setQuery(''); setStatusFilter(null) }}
+              onClick={() => { setQuery('') }}
               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               className={s.clearBtn}

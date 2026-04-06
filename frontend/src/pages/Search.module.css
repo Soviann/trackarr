@@ -52,30 +52,6 @@
   color: var(--color-text-muted);
 }
 
-.filterChips {
-  display: flex;
-  gap: 6px;
-  padding: 0 var(--space-lg) var(--space-md);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.chip {
-  font-size: 10px;
-  padding: var(--space-xs) 10px;
-  border-radius: 12px;
-  border: none;
-  white-space: nowrap;
-  cursor: pointer;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.chipActive {
-  font-weight: 600;
-}
-
 .cardList {
   padding: 0 var(--space-lg);
   display: flex;
