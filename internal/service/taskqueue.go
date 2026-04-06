@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -115,11 +116,11 @@ func (w *TaskQueueWorker) processDueTasks() {
 
 	for _, task := range tasks {
 		_ = w.limiter.Wait(context.Background())
-		w.processTask(task)
+		w.ProcessTask(task)
 	}
 }
 
-func (w *TaskQueueWorker) processTask(task model.Task) {
+func (w *TaskQueueWorker) ProcessTask(task model.Task) {
 	var err error
 
 	switch task.TaskType {
@@ -224,6 +225,38 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 
 	if err := w.titles.Update(payload.TitleID, update); err != nil {
 		return err
+	}
+
+	// ── Consolidation Logic (Merge) ──
+	// If we have an IMDB ID and it's an anime, check if another title has the same IMDB ID.
+	if result.IMDBID != "" && result.TitleType == model.TitleTypeAnime {
+		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil)
+		if err == nil && existing != nil && existing.ID != payload.TitleID && existing.Type != model.TitleTypeMovie {
+			// CONFLICT! Same IMDB ID but different local titles.
+			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
+
+			// Determine season offset. For anime splits, the "duplicate" title is often a sequel.
+			// We can ask Gemini for the season number of the duplicate.
+			seasonOffset := 0
+			if result.TitleType == model.TitleTypeAnime {
+				if ident, err := w.pipeline.IdentifyAnimeSeason(payload.TitleName, payload.Year); err == nil && ident.IsSeason {
+					log.Printf("enrichment: Gemini identified sequel season %d for %q", ident.SeasonNumber, payload.TitleName)
+					// If Gemini says this is Season 2, we want Season 1 of this title to become Season 2 of the master.
+					seasonOffset = ident.SeasonNumber - 1
+				} else if err != nil {
+					log.Printf("enrichment: Gemini season identification failed: %v", err)
+				}
+			}
+
+			if err := w.titles.Merge(existing.ID, payload.TitleID, seasonOffset); err != nil {
+				log.Printf("enrichment: merge failed: %v", err)
+			} else {
+				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)
+				return nil // Task finished (source title deleted)
+			}
+		} else if err != nil && err != sql.ErrNoRows {
+			log.Printf("enrichment: FindByExternalID error: %v", err)
+		}
 	}
 
 	if len(result.Names) > 0 {

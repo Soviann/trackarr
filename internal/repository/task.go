@@ -94,6 +94,16 @@ func (r *TaskRepository) FetchDue(limit int) ([]model.Task, error) {
 	return tasks, nil
 }
 
+func (r *TaskRepository) GetByID(id int64) (*model.Task, error) {
+	var t model.Task
+	err := r.db.QueryRow(`SELECT id, task_type, payload, status, attempts, max_attempts, day, last_error, run_at, created_at, updated_at, dedup_key
+		FROM task_queue WHERE id = ?`, id).Scan(&t.ID, &t.TaskType, &t.Payload, &t.Status, &t.Attempts, &t.MaxAttempts, &t.Day, &t.LastError, &t.RunAt, &t.CreatedAt, &t.UpdatedAt, &t.DedupKey)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
 // Complete removes a successfully processed task.
 func (r *TaskRepository) Complete(id int64) error {
 	_, err := r.db.Exec(`DELETE FROM task_queue WHERE id = ?`, id)

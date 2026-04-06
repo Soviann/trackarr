@@ -633,6 +633,90 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	return r.GetByID(id)
 }
 
+// Merge consolidates sourceID into destID.
+// It moves seasons (shifting their number by seasonOffset), names, and watch events.
+// The source title is deleted at the end.
+func (r *TitleRepository) Merge(destID, sourceID int64, seasonOffset int) error {
+	// If already inside a transaction, use the DBTX directly.
+	if db, ok := r.db.(*sql.DB); ok {
+		return database.WithTx(db, func(tx *sql.Tx) error {
+			return r.mergeInTx(tx, destID, sourceID, seasonOffset)
+		})
+	}
+	return r.mergeInTx(r.db, destID, sourceID, seasonOffset)
+}
+
+func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, seasonOffset int) error {
+	// 1. Move seasons. We must be careful about UNIQUE(title_id, season_number).
+	// We increment season numbers by seasonOffset.
+	rows, err := db.Query(`SELECT id, season_number FROM seasons WHERE title_id = ?`, sourceID)
+	if err != nil {
+		return fmt.Errorf("get source seasons: %w", err)
+	}
+	defer rows.Close()
+
+	type seasonMove struct {
+		id     int64
+		newNum int
+	}
+	var moves []seasonMove
+	for rows.Next() {
+		var sm seasonMove
+		var oldNum int
+		if err := rows.Scan(&sm.id, &oldNum); err != nil {
+			return err
+		}
+		sm.newNum = oldNum + seasonOffset
+		moves = append(moves, sm)
+	}
+	rows.Close()
+
+	for _, m := range moves {
+		// If a season with this number already exists in dest, we might want to merge episodes
+		// but for simplicity (and usually correct for anime splits), we just move it.
+		// If it crashes on unique constraint, it means we have overlapping seasons.
+		_, err := db.Exec(`UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id)
+		if err != nil {
+			return fmt.Errorf("move season %d: %w", m.id, err)
+		}
+	}
+
+	// 2. Move names (as aliases, set is_primary=0)
+	// We use INSERT OR IGNORE to avoid duplicates if the master already has this name.
+	nameRows, err := db.Query(`SELECT name, language FROM title_names WHERE title_id = ?`, sourceID)
+	if err == nil {
+		type nameMove struct {
+			name string
+			lang string
+		}
+		var names []nameMove
+		for nameRows.Next() {
+			var nm nameMove
+			if err := nameRows.Scan(&nm.name, &nm.lang); err == nil {
+				names = append(names, nm)
+			}
+		}
+		nameRows.Close()
+		for _, nm := range names {
+			_, _ = db.Exec(`INSERT OR IGNORE INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, 0)`, destID, nm.name, nm.lang)
+		}
+	}
+
+	// 3. Move watch events
+	_, err = db.Exec(`UPDATE watch_events SET title_id = ? WHERE title_id = ?`, destID, sourceID)
+	if err != nil {
+		return fmt.Errorf("move watch events: %w", err)
+	}
+
+	// 4. Delete source title (cascades should be handled by DB, but we already moved most things)
+	_, err = db.Exec(`DELETE FROM titles WHERE id = ?`, sourceID)
+	if err != nil {
+		return fmt.Errorf("delete source title: %w", err)
+	}
+
+	return nil
+}
+
 func parseSQLiteTime(s *string) *time.Time {
 	if s == nil {
 		return nil

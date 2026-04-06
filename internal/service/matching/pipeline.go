@@ -212,6 +212,13 @@ func (p *Pipeline) searchAniList(input MatchInput, result *MatchResult) bool {
 	return true
 }
 
+func (p *Pipeline) IdentifyAnimeSeason(title string, year int) (*AnimeSeasonIdentification, error) {
+	if p.gemini == nil {
+		return nil, fmt.Errorf("gemini not configured")
+	}
+	return p.gemini.IdentifyAnimeSeason(title, year)
+}
+
 func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*MatchResult, error) {
 	if p.gemini != nil {
 		// Build candidate info from TMDB
@@ -353,6 +360,15 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 			log.Printf("fetch movie details failed: %v", err)
 			return
 		}
+		if result.IMDBID == "" && details.IMDBID != "" {
+			result.IMDBID = details.IMDBID
+		}
+		if result.IMDBID == "" && details.ExternalIDs != nil && details.ExternalIDs.IMDBID != "" {
+			result.IMDBID = details.ExternalIDs.IMDBID
+		}
+		if result.TVDBID == 0 && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+			result.TVDBID = details.ExternalIDs.TVDBID
+		}
 		result.Overview = details.Overview
 		genres, credits, runtime, rating := ExtractMovieMetadata(details)
 		result.Genres = genres
@@ -368,6 +384,12 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 		if err != nil {
 			log.Printf("fetch tv details failed: %v", err)
 			return
+		}
+		if result.IMDBID == "" && details.ExternalIDs != nil && details.ExternalIDs.IMDBID != "" {
+			result.IMDBID = details.ExternalIDs.IMDBID
+		}
+		if result.TVDBID == 0 && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+			result.TVDBID = details.ExternalIDs.TVDBID
 		}
 		result.Overview = details.Overview
 		genres, credits, runtime, rating := ExtractTVMetadata(details)
