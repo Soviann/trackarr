@@ -5,9 +5,9 @@ export const colors = {
   borderSubtle: '#1A1A1A',
   borderCard: '#222222',
   textPrimary: '#F0F0F0',
-  textSecondary: '#666666',
-  textMuted: '#555555',
-  textDimmed: '#444444',
+  textSecondary: '#E0E0E0',
+  textMuted: '#D0D0D0',
+  textDimmed: '#C0C0C0',
 
   accentAmber: '#E8A925',
   accentTeal: '#38BDB0',
