@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { BottomSheet } from '../components/BottomSheet'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import s from './AdminTasks.module.css'
 
 interface Task {
@@ -289,19 +289,17 @@ export function AdminTasks({ path }: { path?: string }) {
         </div>
       )}
 
-      <BottomSheet open={modalOpen} onClose={() => setModalOpen(false)}>
-        <div className={s.modalContent}>
-          <div className={s.modalTitle}>
-            {modalMode === 'batch' 
-              ? `Are you sure you want to delete ${selectedIds.size} tasks?`
-              : 'Are you sure you want to delete this task?'}
-          </div>
-          <div className={s.modalActions}>
-            <button className={s.modalCancelBtn} onClick={() => setModalOpen(false)}>Cancel</button>
-            <button className={s.modalConfirmBtn} onClick={confirmDelete}>Confirm Delete</button>
-          </div>
-        </div>
-      </BottomSheet>
-    </>
-  )
-}
+      <ConfirmationDrawer
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={confirmDelete}
+        title={modalMode === 'batch' 
+          ? `Supprimer ${selectedIds.size} tâches ?`
+          : 'Supprimer cette tâche ?'}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        isDangerous
+      />
+      </>
+      )
+      }
