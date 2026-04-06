@@ -97,6 +97,11 @@ After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download 
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
 | DELETE | `/api/anilist/token` | Disconnect | Yes |
+| GET | `/api/admin/tasks` | ListTasks | Yes |
+| POST | `/api/admin/tasks/{id}/retry` | RetryTask | Yes |
+| DELETE | `/api/admin/tasks/{id}` | DeleteTask | Yes |
+| POST | `/api/admin/tasks/batch-delete` | DeleteTasksBatch | Yes | Body `{"ids": [1, 2]}` |
+| POST | `/api/admin/refresh-all` | RefreshAll | Yes |
 
 Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
 

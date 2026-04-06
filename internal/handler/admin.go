@@ -91,6 +91,23 @@ func (h *AdminHandler) DeleteTask(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
+// DeleteTasksBatch removes multiple tasks.
+func (h *AdminHandler) DeleteTasksBatch(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return httputil.BadRequest("Invalid JSON")
+	}
+
+	if err := h.tasks.DeleteBatch(req.IDs); err != nil {
+		return httputil.InternalError("delete batch tasks", err)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
 // GetNotificationPrefs returns all notification preferences.
 func (h *AdminHandler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) error {
 	prefs := map[string]bool{

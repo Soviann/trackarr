@@ -1,12 +1,18 @@
 .page {
-  padding: var(--space-lg) var(--space-lg) 36px;
+  padding: var(--space-lg) var(--space-lg) 80px;
 }
 
 .header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
   gap: var(--space-md);
-  margin-bottom: var(--space-xl);
 }
 
 .backBtn {
@@ -25,6 +31,65 @@
   margin: 0;
 }
 
+.filterBar {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.filterBtn {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  color: var(--color-text-secondary);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterBtn[data-active="true"] {
+  background: var(--color-accent-teal);
+  color: #000;
+  border-color: transparent;
+}
+
+.selectToggleBtn {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  color: var(--color-text-secondary);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selectToggleBtn[data-active="true"] {
+  background: var(--color-accent-amber);
+  color: #000;
+  border-color: transparent;
+}
+
+.selectionActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-xs);
+}
+
+.selectionBtn {
+  background: transparent;
+  border: 1px solid var(--color-border-card);
+  color: var(--color-text-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .loading, .empty {
   padding: var(--space-xl);
   color: var(--color-text-secondary);
@@ -34,24 +99,9 @@
 
 .section {
   margin-bottom: var(--space-xl);
-}
-
-.sectionLabel {
-  font-size: 10px;
-  color: var(--color-accent-amber);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: var(--space-sm);
-}
-
-.sectionLabelDead {
-  font-size: 10px;
-  color: var(--color-accent-coral);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .taskCard {
@@ -59,7 +109,50 @@
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-md);
   padding: var(--space-md);
-  margin-bottom: var(--space-sm);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.taskCardSelected {
+  border-color: var(--color-accent-teal);
+  background: rgba(56, 189, 176, 0.05);
+}
+
+.checkboxContainer {
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.customCheckbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-text-dimmed);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: var(--color-bg-surface);
+}
+
+.customCheckboxChecked {
+  background: var(--color-accent-teal);
+  border-color: var(--color-accent-teal);
+}
+
+.taskContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
 }
 
 .taskType {
@@ -70,11 +163,28 @@
   letter-spacing: 0.5px;
 }
 
+.badgePending {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badgeDead {
+  font-size: 10px;
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--color-accent-coral);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
 .taskTitle {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-top: 2px;
 }
 
 .taskMeta {
@@ -87,9 +197,7 @@
   font-size: 11px;
   color: var(--color-accent-coral);
   margin-top: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .taskActions {
@@ -121,4 +229,85 @@
   background: transparent;
   color: var(--color-text-secondary);
   border-color: var(--color-border-card);
+}
+
+.actionBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: #1E1E1E; /* Solid surface color fallback */
+  background-color: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border-card);
+  padding: 0 var(--space-lg);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 999;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.actionText {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.batchDeleteBtn {
+  background: var(--color-accent-coral);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.batchDeleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* BottomSheet Content */
+.modalContent {
+  padding: var(--space-xl) var(--space-lg) calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xl);
+  line-height: 1.4;
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.modalCancelBtn, .modalConfirmBtn {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.modalCancelBtn {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-card);
+}
+
+.modalConfirmBtn {
+  background: var(--color-accent-coral);
+  color: #fff;
 }

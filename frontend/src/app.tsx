@@ -95,7 +95,7 @@ export function App() {
     setFilter({ include_no_release: include ? undefined : 'false' })
   }, [setFilter])
 
-  const hideNavbar = currentPath === '/login'
+  const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/admin/tasks')
   const showDrawer = currentPath === '/' || currentPath === '/search'
 
   return (

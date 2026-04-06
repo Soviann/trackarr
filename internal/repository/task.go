@@ -224,6 +224,30 @@ func (r *TaskRepository) Delete(id int64) error {
 	return nil
 }
 
+// DeleteBatch removes multiple tasks from the queue.
+func (r *TaskRepository) DeleteBatch(ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	query := "DELETE FROM task_queue WHERE id IN ("
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		if i > 0 {
+			query += ", "
+		}
+		query += "?"
+		args[i] = id
+	}
+	query += ")"
+
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("delete batch tasks: %w", err)
+	}
+	return nil
+}
+
 // CountByStatus returns the count of tasks grouped by status.
 func (r *TaskRepository) CountByStatus() (map[model.TaskStatus]int, error) {
 	rows, err := r.db.Query(`SELECT status, COUNT(*) FROM task_queue GROUP BY status`)
