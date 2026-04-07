@@ -173,31 +173,30 @@ func (w *TaskQueueWorker) ProcessTask(task model.Task) {
 	}
 
 	if err != nil {
-		retryAfter := matching.ExtractRetryAfter(err)
+	retryAfter := matching.ExtractRetryAfter(err)
 
-		// Global backoff: if we hit a rate limit, pause the whole queue
-		if matching.IsRetryableError(err) && (matching.ExtractRetryAfter(err) > 0 || matching.IsRateLimitError(err)) {
-			pauseDuration := 5 * time.Minute
-			if retryAfter > pauseDuration {
-				pauseDuration = retryAfter
-			}
-			w.pausedUntil = time.Now().Add(pauseDuration)
-			log.Printf("task queue: rate limit hit, pausing worker until %s", w.pausedUntil.Format("15:04:05"))
+	// Global backoff: if we hit a rate limit, pause the whole queue
+	if matching.IsRetryableError(err) && (matching.ExtractRetryAfter(err) > 0 || matching.IsRateLimitError(err)) {
+		pauseDuration := 5 * time.Minute
+		if retryAfter > pauseDuration {
+			pauseDuration = retryAfter
 		}
-
-		nextRunAt := calculateNextRunAt(task.Attempts+1, retryAfter)
-		if failErr := w.tasks.Fail(task.ID, err.Error(), nextRunAt); failErr != nil {
-			log.Printf("task queue: fail task %d: %v", task.ID, failErr)
-		}
-
-		// Check if task just died (day 2 + last attempt)
-		if task.Day >= 2 && task.Attempts+1 >= task.MaxAttempts {
-			w.notifyDeadTask(task)
-		}
-
-		return
+		w.pausedUntil = time.Now().Add(pauseDuration)
+		log.Printf("task queue: rate limit hit, pausing worker until %s", w.pausedUntil.Format("15:04:05"))
 	}
 
+	nextRunAt := calculateNextRunAt(task.Attempts+1, retryAfter)
+	if failErr := w.tasks.Fail(task.ID, err.Error(), nextRunAt); failErr != nil {
+		log.Printf("task queue: fail task %d: %v", task.ID, failErr)
+	}
+
+	// Check if task just died (day 7 + last attempt)
+	if task.Day >= 7 && task.Attempts+1 >= task.MaxAttempts {
+		w.notifyDeadTask(task)
+	}
+
+	return
+	}
 	if err := w.tasks.Complete(task.ID); err != nil {
 		log.Printf("task queue: complete task %d: %v", task.ID, err)
 	}

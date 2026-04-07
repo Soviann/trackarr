@@ -138,14 +138,14 @@ func (r *TaskRepository) Fail(id int64, errMsg string, nextRunAt time.Time) erro
 	}
 
 	if attempts >= maxAttempts {
-		if day >= 2 {
-			// Day 2 exhausted → dead
+		if day >= 7 {
+			// Day 7 exhausted → dead
 			_, err = r.db.Exec(
 				`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`,
 				now, id,
 			)
 		} else {
-			// Day 1 exhausted → sleep until tomorrow, reset attempts
+			// Day N exhausted → sleep until tomorrow, reset attempts
 			_, err = r.db.Exec(
 				`UPDATE task_queue SET status = 'sleeping', day = day + 1, attempts = 0, run_at = ?, updated_at = ? WHERE id = ?`,
 				nextDayMorning(), now, id,
