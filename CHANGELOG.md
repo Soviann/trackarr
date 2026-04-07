@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.11.0] — 2026-04-07
+
+### Ajouté
+- Ajout par URL : support de l'ajout direct de titres via leurs URLs (TMDB, AniList)
+- PWA : support de la cible de partage (Share Target) pour ajouter des titres depuis d'autres applications
+
+### Corrigé
+- Add : correction des erreurs de lint dans la résolution d'URL
+
 ## [v0.10.0] — 2026-04-07
 
 ### Ajouté
