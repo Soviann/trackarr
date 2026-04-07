@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"embed"
 	"log"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,7 +17,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService) *chi.Mux {
+func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -31,28 +30,6 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
-
-	// Matching pipeline (optional — degrades gracefully if APIs not configured)
-	var pipeline *matching.Pipeline
-	if cfg.TMDBAPIKey != "" {
-		tmdbClient := matching.NewTMDBClient(cfg.TMDBAPIKey)
-		anilistClient := matching.NewAniListClient()
-
-		var geminiClient *matching.GeminiClient
-		if len(cfg.GeminiAPIKeys) > 0 {
-			geminiClient = matching.NewGeminiClient(cfg.GeminiAPIKeys)
-		}
-
-		var crossDB *matching.CrossRefDB
-		crossrefPath := filepath.Join(cfg.DataDir, "anime-offline-database.json")
-		if cdb, err := matching.LoadCrossRefDB(crossrefPath); err == nil {
-			crossDB = cdb
-		} else {
-			log.Printf("crossref DB not loaded (optional): %v", err)
-		}
-
-		pipeline = matching.NewPipeline(tmdbClient, anilistClient, geminiClient, crossDB, cfg.DataDir)
-	}
 
 	// Repositories (settings)
 	settingRepo := repository.NewSettingRepository(db)

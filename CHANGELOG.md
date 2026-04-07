@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [v0.9.1] — 2026-04-07
+
+### Corrigé
+- Worker : correction de l'initialisation du pipeline d'enrichissement (erreur « pipeline not configured »)
+
 ## [v0.9.0] — 2026-04-07
 
 ### Ajouté

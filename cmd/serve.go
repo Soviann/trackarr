@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/config"
@@ -42,10 +43,26 @@ func Serve(distFS embed.FS) error {
 
 	var tmdbClient *matching.TMDBClient
 	var pipeline *matching.Pipeline
+	anilistClient := matching.NewAniListClient()
+
 	if cfg.TMDBAPIKey != "" {
 		tmdbClient = matching.NewTMDBClient(cfg.TMDBAPIKey)
+
+		var geminiClient *matching.GeminiClient
+		if len(cfg.GeminiAPIKeys) > 0 {
+			geminiClient = matching.NewGeminiClient(cfg.GeminiAPIKeys)
+		}
+
+		var crossDB *matching.CrossRefDB
+		crossrefPath := filepath.Join(cfg.DataDir, "anime-offline-database.json")
+		if cdb, err := matching.LoadCrossRefDB(crossrefPath); err == nil {
+			crossDB = cdb
+		} else {
+			log.Printf("matching: crossref DB not loaded (optional): %v", err)
+		}
+
+		pipeline = matching.NewPipeline(tmdbClient, anilistClient, geminiClient, crossDB, cfg.DataDir)
 	}
-	anilistClient := matching.NewAniListClient()
 
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
@@ -55,7 +72,7 @@ func Serve(distFS embed.FS) error {
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	bgSvc.StartTicker(24 * time.Hour)
 
-	r := router.New(cfg, db, distFS, bgSvc)
+	r := router.New(cfg, db, distFS, bgSvc, pipeline)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir)
