@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.9.0] — 2026-04-07
+
+### Ajouté
+- Anime : nouveau flag `is_anime` sur les séries (remplace l'ancien type anime), cohabitant avec le type série
+- Anime : fusion automatique des saisons d'anime éclatées sur plusieurs titres
+- Drawers et bottom sheets : fermeture par glissement (drag-to-close) sur tous les tiroirs
+- Recherche : les filtres redondants sont remplacés par le FilterDrawer unifié
+- Tri par date de dernier visionnage
+- Admin : remplacement des `confirm` natifs par une modal drawer cohérente
+- Admin : filtrage et suppression en lot des tâches
+- Makefile : commandes `db-pull` / `db-push` pour synchroniser la base avec le NAS
+
+### Amélioré
+- Stats : nouvel effet néon cyan (#00F2FF) pour les barres (vibes Solo Leveling)
+- Lisibilité : libellés gris éclaircis sur l'ensemble de l'interface
+
 ## [v0.8.0] — 2026-04-06
 
 ### Ajouté
