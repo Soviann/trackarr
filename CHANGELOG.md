@@ -5,6 +5,7 @@
 ### Corrigé
 - File d'attente des tâches : reprise automatique des tâches bloquées en statut « running » après un redémarrage ou un crash
 - File d'attente des tâches : ajout de protections contre les panics pour éviter l'arrêt définitif du worker en cas d'erreur inattendue sur une tâche
+- File d'attente des tâches : réduction de la cadence (0.5 req/s) et ajout d'un backoff global de 5 minutes en cas de détection d'un dépassement de quota (429) sur les API externes
 
 
 ## [v0.11.0] — 2026-04-07

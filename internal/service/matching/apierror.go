@@ -71,6 +71,24 @@ func IsRetryableError(err error) bool {
 	return false
 }
 
+// IsRateLimitError returns true if the error is a 429 Too Many Requests.
+func IsRateLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusTooManyRequests
+	}
+
+	if strings.Contains(err.Error(), "rate-limited") {
+		return true
+	}
+
+	return false
+}
+
 // ExtractRetryAfter extracts the Retry-After duration from an error, if available.
 func ExtractRetryAfter(err error) time.Duration {
 	var apiErr *APIError
