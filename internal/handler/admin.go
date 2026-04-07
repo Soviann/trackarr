@@ -44,19 +44,27 @@ func (h *AdminHandler) Counts(w http.ResponseWriter, r *http.Request) error {
 
 // ListTasks returns all non-completed tasks (pending + dead).
 func (h *AdminHandler) ListTasks(w http.ResponseWriter, r *http.Request) error {
-	pending, err := h.tasks.ListPending()
-	if err != nil {
-		return httputil.InternalError("list pending tasks", err)
+	filter := r.URL.Query().Get("filter")
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	limit := 50
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+		limit = l
+	}
+	offset := 0
+	if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+		offset = o
 	}
 
-	dead, err := h.tasks.ListDead()
+	tasks, total, err := h.tasks.ListPaginated(filter, limit, offset)
 	if err != nil {
-		return httputil.InternalError("list dead tasks", err)
+		return httputil.InternalError("list tasks paginated", err)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{
-		"pending": pending,
-		"dead":    dead,
+		"tasks": tasks,
+		"total": total,
 	})
 	return nil
 }

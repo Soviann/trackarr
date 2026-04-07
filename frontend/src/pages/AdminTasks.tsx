@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useState, useMemo, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -19,8 +19,8 @@ interface Task {
 }
 
 interface TasksResponse {
-  pending: Task[] | null
-  dead: Task[] | null
+  tasks: Task[]
+  total: number
 }
 
 const typeLabels: Record<string, string> = {
@@ -59,12 +59,20 @@ function formatRelativeTime(dateStr: string): string {
 type FilterType = 'all' | 'pending' | 'errored'
 
 export function AdminTasks({ path }: { path?: string }) {
-  const { data, loading, mutate } = useApi<TasksResponse>('/admin/tasks')
   const [acting, setActing] = useState<number | null>(null)
-  
   const [filter, setFilter] = useState<FilterType>('all')
+  const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isSelectMode, setIsSelectMode] = useState(false)
+
+  useEffect(() => {
+    setPage(1)
+    setSelectedIds(new Set())
+    setIsSelectMode(false)
+  }, [filter])
+
+  const limit = page * 50
+  const { data, loading, mutate } = useApi<TasksResponse>(`/admin/tasks?filter=${filter}&limit=${limit}&offset=0`)
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -124,18 +132,9 @@ export function AdminTasks({ path }: { path?: string }) {
     setModalOpen(true)
   }
 
-  const allPending = data?.pending ?? []
-  const allDead = data?.dead ?? []
-  const allTasks = [...allPending, ...allDead]
-
-  const filteredTasks = useMemo(() => {
-    return allTasks.filter(t => {
-      if (filter === 'all') return true
-      if (filter === 'pending') return t.status !== 'dead' && t.last_error === null
-      if (filter === 'errored') return t.status === 'dead' || t.last_error !== null
-      return true
-    })
-  }, [allTasks, filter])
+  const filteredTasks = data?.tasks ?? []
+  const total = data?.total ?? 0
+  const hasMore = filteredTasks.length < total
 
   const toggleSelection = (id: number) => {
     setSelectedIds(prev => {
@@ -173,7 +172,9 @@ export function AdminTasks({ path }: { path?: string }) {
                 <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
               </svg>
             </div>
-            <h1 className={s.title}>Tasks</h1>
+            <h1 className={s.title}>
+              Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--color-text-secondary)', marginLeft: '8px'}}>({total})</span>
+            </h1>
           </div>
           <button 
             className={s.selectToggleBtn} 
@@ -192,11 +193,7 @@ export function AdminTasks({ path }: { path?: string }) {
 
         {loading && <div className={s.loading}>Loading...</div>}
 
-        {!loading && allTasks.length === 0 && (
-          <div className={s.empty}>No pending or errored tasks</div>
-        )}
-
-        {!loading && allTasks.length > 0 && filteredTasks.length === 0 && (
+        {!loading && total === 0 && (
           <div className={s.empty}>No tasks match this filter</div>
         )}
 
@@ -272,6 +269,19 @@ export function AdminTasks({ path }: { path?: string }) {
                 )
               })}
             </section>
+
+            {hasMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-md)' }}>
+                <button 
+                  className={s.filterBtn} 
+                  style={{ padding: '10px 24px', fontSize: '14px' }} 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Load More'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

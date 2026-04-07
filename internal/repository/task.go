@@ -212,6 +212,46 @@ func (r *TaskRepository) listByStatuses(statuses ...string) ([]model.Task, error
 	return tasks, nil
 }
 
+// ListPaginated returns paginated tasks based on filter.
+func (r *TaskRepository) ListPaginated(filter string, limit, offset int) ([]model.Task, int, error) {
+	var whereClause string
+	switch filter {
+	case "pending":
+		whereClause = "WHERE status != 'dead' AND last_error IS NULL"
+	case "errored":
+		whereClause = "WHERE status = 'dead' OR last_error IS NOT NULL"
+	default:
+		whereClause = "WHERE status != 'completed'"
+	}
+
+	countQuery := "SELECT COUNT(*) FROM task_queue " + whereClause
+	var total int
+	if err := r.db.QueryRow(countQuery).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count tasks: %w", err)
+	}
+
+	query := "SELECT id, task_type, payload, status, attempts, max_attempts, day, last_error, run_at, created_at, updated_at, dedup_key FROM task_queue " + whereClause + " ORDER BY run_at ASC LIMIT ? OFFSET ?"
+
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list paginated tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []model.Task
+	for rows.Next() {
+		var t model.Task
+		if err := rows.Scan(&t.ID, &t.TaskType, &t.Payload, &t.Status, &t.Attempts, &t.MaxAttempts, &t.Day, &t.LastError, &t.RunAt, &t.CreatedAt, &t.UpdatedAt, &t.DedupKey); err != nil {
+			return nil, 0, fmt.Errorf("scan task: %w", err)
+		}
+		tasks = append(tasks, t)
+	}
+	if tasks == nil {
+		tasks = []model.Task{}
+	}
+	return tasks, total, nil
+}
+
 // RetryDead resets a dead task to pending for a fresh retry cycle.
 func (r *TaskRepository) RetryDead(id int64) error {
 	now := time.Now()
