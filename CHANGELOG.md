@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Corrigé
+- File d'attente des tâches : reprise automatique des tâches bloquées en statut « running » après un redémarrage ou un crash
+- File d'attente des tâches : ajout de protections contre les panics pour éviter l'arrêt définitif du worker en cas d'erreur inattendue sur une tâche
+
+
 ## [v0.11.0] — 2026-04-07
 
 ### Ajouté

@@ -77,6 +77,11 @@ func NewTaskQueueWorker(
 
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
 func (w *TaskQueueWorker) Start(ctx context.Context) {
+	// Rescue stuck tasks from previous crashes
+	if err := w.tasks.ResetRunning(); err != nil {
+		log.Printf("task queue: reset running tasks: %v", err)
+	}
+
 	// Log queue state at startup
 	counts, err := w.tasks.CountByStatus()
 	if err == nil {
@@ -94,6 +99,15 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("task queue: panic in worker loop: %v", r)
+				// Small delay to prevent tight loop if panic happens early in loop
+				time.Sleep(30 * time.Second)
+				w.Start(ctx) // Restart worker
+			}
+		}()
+
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
@@ -109,6 +123,12 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 }
 
 func (w *TaskQueueWorker) processDueTasks() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("task queue: panic in processDueTasks: %v", r)
+		}
+	}()
+
 	tasks, err := w.tasks.FetchDue(10)
 	if err != nil {
 		log.Printf("task queue: fetch due: %v", err)
@@ -122,6 +142,13 @@ func (w *TaskQueueWorker) processDueTasks() {
 }
 
 func (w *TaskQueueWorker) ProcessTask(task model.Task) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("task queue: panic processing task %d: %v", task.ID, r)
+			_ = w.tasks.Fail(task.ID, fmt.Sprintf("panic: %v", r), time.Now().Add(time.Hour))
+		}
+	}()
+
 	var err error
 
 	switch task.TaskType {

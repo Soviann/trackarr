@@ -225,6 +225,20 @@ func (r *TaskRepository) RetryDead(id int64) error {
 	return nil
 }
 
+// ResetRunning resets all tasks in 'running' status back to 'pending'.
+// This is typically called at startup to rescue tasks that were interrupted by a crash.
+func (r *TaskRepository) ResetRunning() error {
+	now := time.Now()
+	_, err := r.db.Exec(
+		`UPDATE task_queue SET status = 'pending', updated_at = ? WHERE status = 'running'`,
+		now,
+	)
+	if err != nil {
+		return fmt.Errorf("reset running tasks: %w", err)
+	}
+	return nil
+}
+
 // Delete removes a task from the queue.
 func (r *TaskRepository) Delete(id int64) error {
 	_, err := r.db.Exec(`DELETE FROM task_queue WHERE id = ?`, id)
