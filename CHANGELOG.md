@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [v0.10.0] — 2026-04-07
+
+### Ajouté
+- Covers : nettoyage quotidien automatique des couvertures orphelines (segmenté par préfixe pour économiser les ressources)
+
 ## [v0.9.1] — 2026-04-07
 
 ### Corrigé
