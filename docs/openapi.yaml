@@ -17,7 +17,7 @@ components:
   schemas:
     TitleType:
       type: string
-      enum: [movie, series, anime]
+      enum: [movie, series]
 
     TitleStatus:
       type: string
@@ -80,6 +80,7 @@ components:
       properties:
         id: { type: integer }
         type: { $ref: "#/components/schemas/TitleType" }
+        is_anime: { type: boolean }
         year: { type: integer }
         cover_url: { type: string, nullable: true }
         imdb_id: { type: string, nullable: true }
@@ -292,6 +293,7 @@ paths:
         - { name: offset, in: query, schema: { type: integer, default: 0 } }
         - { name: status, in: query, schema: { type: string, enum: [watching, completed, dropped, plan_to_watch, up_to_date, watching_behind] } }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/TitleType" } }
+        - { name: is_anime, in: query, schema: { type: boolean } }
         - { name: search, in: query, schema: { type: string } }
         - { name: match_status, in: query, schema: { $ref: "#/components/schemas/MatchStatus" } }
       responses:
@@ -311,6 +313,7 @@ paths:
               type: object
               properties:
                 type: { $ref: "#/components/schemas/TitleType" }
+                is_anime: { type: boolean }
                 year: { type: integer }
                 status: { $ref: "#/components/schemas/TitleStatus" }
                 match_status: { $ref: "#/components/schemas/MatchStatus" }
@@ -361,6 +364,7 @@ paths:
                 match_status: { $ref: "#/components/schemas/MatchStatus" }
                 my_rating: { type: integer, minimum: 1, maximum: 10 }
                 type: { $ref: "#/components/schemas/TitleType" }
+                is_anime: { type: boolean }
       responses:
         "200":
           description: Updated

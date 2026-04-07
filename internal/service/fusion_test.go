@@ -33,7 +33,8 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	// 1. Create Master Title (Solo Leveling S1)
 	imdbID := "tt21209876"
 	masterID, err := titleRepo.Create(&model.Title{
-		Type:        model.TitleTypeAnime,
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
 		Year:        2024,
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
@@ -53,7 +54,8 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	// 2. Create Duplicate Title (Solo Leveling S2 - Arise from the Shadow)
 	// Initially no IMDB ID (simulating Simkl import)
 	dupID, err := titleRepo.Create(&model.Title{
-		Type:        model.TitleTypeAnime,
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
 		Year:        2025,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
@@ -100,7 +102,8 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 		TitleID:   dupID,
 		TitleName: "Ore dake Level Up na Ken: Arise from the Shadow",
 		Year:      2025,
-		TitleType: model.TitleTypeAnime,
+		TitleType: model.TitleTypeSeries,
+		IsAnime:   true,
 		TMDBID:    301796,
 	}
 	payloadJSON, _ := json.Marshal(payload)

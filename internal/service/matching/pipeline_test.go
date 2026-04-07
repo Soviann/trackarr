@@ -266,11 +266,12 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 	result, err := pipeline.Run(MatchInput{
 		Title: "One Punch Man",
 		Year:  2015,
-		Type:  model.TitleTypeAnime,
+		Type:  model.TitleTypeSeries,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, MatchSourceAniListSearch, result.MatchSource)
 	assert.Equal(t, int64(21), result.AniListID)
+	assert.True(t, result.IsAnime)
 }
 
 func TestPipeline_NoMatch(t *testing.T) {
@@ -366,7 +367,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 	assert.Equal(t, "tt0388629", result.IMDBID)
 	assert.Equal(t, int64(21), result.AniListID)
 	// Should be detected as anime due to AniList ID
-	assert.Equal(t, model.TitleTypeAnime, result.TitleType)
+	assert.True(t, result.IsAnime)
 }
 
 func TestPipeline_NilClients(t *testing.T) {

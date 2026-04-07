@@ -22,6 +22,7 @@ type EnrichmentPayload struct {
 	TitleName string          `json:"title_name"`
 	Year      int             `json:"year"`
 	TitleType model.TitleType `json:"title_type"`
+	IsAnime   bool            `json:"is_anime"`
 	IMDBID    string          `json:"imdb_id,omitempty"`
 	TMDBID    int64           `json:"tmdb_id,omitempty"`
 	TVDBID    int64           `json:"tvdb_id,omitempty"`
@@ -167,12 +168,12 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	}
 
 	result, err := w.pipeline.Run(matching.MatchInput{
-		Title:  payload.TitleName,
-		Year:   payload.Year,
-		Type:   payload.TitleType,
-		IMDBID: payload.IMDBID,
-		TMDBID: payload.TMDBID,
-		TVDBID: payload.TVDBID,
+		Title:   payload.TitleName,
+		Year:    payload.Year,
+		Type:    payload.TitleType,
+		IsAnime: payload.IsAnime,
+		TMDBID:  payload.TMDBID,
+		TVDBID:  payload.TVDBID,
 	})
 	if err != nil {
 		return err
@@ -219,6 +220,9 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	if result.AniListRating != nil {
 		update.AniListRating = result.AniListRating
 	}
+	if result.IsAnime {
+		update.IsAnime = &result.IsAnime
+	}
 	if result.ReleaseDate != "" {
 		update.ReleaseDate = &result.ReleaseDate
 	}
@@ -229,7 +233,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 
 	// ── Consolidation Logic (Merge) ──
 	// If we have an IMDB ID and it's an anime, check if another title has the same IMDB ID.
-	if result.IMDBID != "" && result.TitleType == model.TitleTypeAnime {
+	if result.IMDBID != "" && result.IsAnime {
 		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil)
 		if err == nil && existing != nil && existing.ID != payload.TitleID && existing.Type != model.TitleTypeMovie {
 			// CONFLICT! Same IMDB ID but different local titles.
@@ -238,7 +242,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 			// Determine season offset. For anime splits, the "duplicate" title is often a sequel.
 			// We can ask Gemini for the season number of the duplicate.
 			seasonOffset := 0
-			if result.TitleType == model.TitleTypeAnime {
+			if result.IsAnime {
 				if ident, err := w.pipeline.IdentifyAnimeSeason(payload.TitleName, payload.Year); err == nil && ident.IsSeason {
 					log.Printf("enrichment: Gemini identified sequel season %d for %q", ident.SeasonNumber, payload.TitleName)
 					// If Gemini says this is Season 2, we want Season 1 of this title to become Season 2 of the master.

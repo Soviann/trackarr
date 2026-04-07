@@ -3,7 +3,7 @@ import type { TitleType } from '../types'
 import { colors } from '../theme'
 import s from './CoverPlaceholder.module.css'
 
-const typeConfig: Record<TitleType, { color: string; icon: JSX.Element }> = {
+const typeConfig: Record<TitleType | 'anime', { color: string; icon: JSX.Element }> = {
   movie: {
     color: colors.accentBlue,
     icon: (
@@ -40,12 +40,13 @@ const typeConfig: Record<TitleType, { color: string; icon: JSX.Element }> = {
 
 interface CoverPlaceholderProps {
   type: TitleType
+  is_anime?: boolean
   /** Icon size in px (default: 40% of container) */
   iconSize?: string
 }
 
-export function CoverPlaceholder({ type, iconSize }: CoverPlaceholderProps) {
-  const { color, icon } = typeConfig[type]
+export function CoverPlaceholder({ type, is_anime, iconSize }: CoverPlaceholderProps) {
+  const { color, icon } = typeConfig[is_anime ? 'anime' : type]
   return (
     <div
       className={s.placeholder}
@@ -62,8 +63,8 @@ export function CoverPlaceholder({ type, iconSize }: CoverPlaceholderProps) {
 }
 
 /** CSS background string for cover or placeholder gradient */
-export function coverBackground(coverUrl: string | null, type: TitleType): string {
+export function coverBackground(coverUrl: string | null, type: TitleType, is_anime?: boolean): string {
   if (coverUrl) return `url(/api/covers/${coverUrl}) center/cover`
-  const { color } = typeConfig[type]
+  const { color } = typeConfig[is_anime ? 'anime' : type]
   return `linear-gradient(135deg, ${color}25, ${color}0A)`
 }

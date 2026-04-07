@@ -21,6 +21,7 @@ func NewTitleRepository(db database.DBTX) *TitleRepository {
 type TitleFilter struct {
 	Status           *model.TitleStatus
 	Type             *model.TitleType
+	IsAnime          *bool
 	Search           *string
 	MatchStatus      *model.MatchStatus
 	SeriesStatus     *model.SeriesStatus
@@ -66,6 +67,7 @@ type TitleUpdate struct {
 	MatchSource   *string
 	OriginalTitle *string
 	Type          *model.TitleType
+	IsAnime       *bool
 	Overview      *string
 	Genres        *string
 	Runtime       *int
@@ -92,9 +94,9 @@ func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (i
 
 func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names []model.TitleName) (int64, error) {
 	res, err := db.Exec(`
-		INSERT INTO titles (type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		title.Type, title.Year, title.CoverURL, title.IMDBID, title.AniListID, title.TMDBID, title.TVDBID,
+		INSERT INTO titles (type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		title.Type, title.IsAnime, title.Year, title.CoverURL, title.IMDBID, title.AniListID, title.TMDBID, title.TVDBID,
 		title.PlexRatingKey, title.MyRating, title.Status, title.SeriesStatus, title.MatchStatus,
 		title.OriginalTitle, title.MatchSource,
 		title.Overview, title.Genres, title.Runtime, title.TMDBRating, title.Credits, title.AniListRating,
@@ -120,8 +122,8 @@ func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var lastWatchedAtStr *string
-	err := r.db.QueryRow(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
-		Scan(&title.ID, &title.Type, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
+		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Genres, &title.Runtime, &title.TMDBRating, &title.Credits, &title.AniListRating,
 			&title.ReleaseDate, &lastWatchedAtStr, &title.CreatedAt, &title.UpdatedAt)
@@ -194,7 +196,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		return r.searchTitlesPaginated(searchTerm, filter)
 	}
 
-	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
+	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
 
 	var conditions []string
 	var args []interface{}
@@ -203,13 +205,13 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	case filter.UpToDate:
 		// "Up to date" = watching + every episode watched (no unwatched episodes)
 		conditions = append(conditions, `t.status = 'watching'`)
-		conditions = append(conditions, `t.type != 'movie'`)
+		conditions = append(conditions, `(t.type != 'movie' OR t.is_anime = 1)`)
 		conditions = append(conditions, `EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id)`)
 		conditions = append(conditions, `NOT EXISTS (SELECT 1 FROM seasons s3 JOIN episodes e3 ON e3.season_id = s3.id WHERE s3.title_id = t.id AND e3.watched = 0)`)
 	case filter.WatchingBehind:
 		// "Watching behind" = watching + has at least one unwatched episode (or is a movie, or has no episodes)
 		conditions = append(conditions, `t.status = 'watching'`)
-		conditions = append(conditions, `(t.type = 'movie' OR NOT EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id) OR EXISTS (SELECT 1 FROM seasons s4 JOIN episodes e4 ON e4.season_id = s4.id WHERE s4.title_id = t.id AND e4.watched = 0))`)
+		conditions = append(conditions, `((t.type = 'movie' AND t.is_anime = 0) OR NOT EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id) OR EXISTS (SELECT 1 FROM seasons s4 JOIN episodes e4 ON e4.season_id = s4.id WHERE s4.title_id = t.id AND e4.watched = 0))`)
 	default:
 		if filter.Status != nil {
 			conditions = append(conditions, `t.status = ?`)
@@ -250,6 +252,14 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	}
 	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
 		conditions = append(conditions, `t.release_date IS NOT NULL`)
+	}
+	if filter.IsAnime != nil {
+		conditions = append(conditions, `t.is_anime = ?`)
+		if *filter.IsAnime {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
 	}
 
 	whereClause := ""
@@ -304,7 +314,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	for rows.Next() {
 		var t model.Title
 		var lastWatchedAtStr *string
-		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
@@ -395,7 +405,7 @@ func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -404,7 +414,7 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	for rows.Next() {
 		var t model.Title
 		var lastWatchedAtStr *string
-		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
@@ -535,6 +545,10 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	if update.Type != nil {
 		sets = append(sets, `type = ?`)
 		args = append(args, *update.Type)
+	}
+	if update.IsAnime != nil {
+		sets = append(sets, `is_anime = ?`)
+		args = append(args, *update.IsAnime)
 	}
 	if update.Overview != nil {
 		sets = append(sets, `overview = ?`)

@@ -1,4 +1,4 @@
-export type TitleType = 'movie' | 'series' | 'anime'
+export type TitleType = 'movie' | 'series'
 export type TitleStatus = 'watching' | 'completed' | 'dropped' | 'plan_to_watch'
 export type SeriesStatus = 'returning' | 'ended' | 'cancelled' | 'in_production'
 export type MatchStatus = 'confirmed' | 'pending_review' | 'unconfirmed'
@@ -6,6 +6,7 @@ export type MatchStatus = 'confirmed' | 'pending_review' | 'unconfirmed'
 export interface Title {
   id: number
   type: TitleType
+  is_anime: boolean
   year: number
   cover_url: string | null
   imdb_id: string | null

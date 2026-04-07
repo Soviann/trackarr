@@ -57,7 +57,8 @@ type MatchResult struct {
 	MatchSource string            // which pipeline step produced the match
 	Names       []model.TitleName // multilingual names
 	CoverFile   string            // local filename in covers dir
-	TitleType   model.TitleType   // resolved type (may differ from input if anime detected)
+	TitleType   model.TitleType   // resolved type (movie or series)
+	IsAnime     bool
 	// TMDB metadata
 	Overview      string
 	Genres        string // JSON array
@@ -77,6 +78,8 @@ type MatchInput struct {
 	IMDBID string
 	TMDBID int64
 	TVDBID int64
+	// Force anime detection (e.g. from Simkl section)
+	IsAnime bool
 }
 
 // Run executes the full matching pipeline (steps 1-5).
@@ -91,6 +94,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 		TMDBID:    input.TMDBID,
 		TVDBID:    input.TVDBID,
 		TitleType: input.Type,
+		IsAnime:   input.IsAnime,
 	}
 
 	// Step 1: Check Plex metadata IDs — if we have TMDB or IMDB, we're confirmed
@@ -128,8 +132,8 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 		}
 	}
 
-	// Step 4: AniList search (anime and series — Plex sends anime as "show")
-	if p.anilist != nil && (input.Type == model.TitleTypeAnime || input.Type == model.TitleTypeSeries) {
+	// Step 4: AniList search
+	if p.anilist != nil {
 		found := p.searchAniList(input, result)
 		if found {
 			result.MatchSource = MatchSourceAniListSearch
@@ -292,8 +296,7 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 	}
 
 	// Try AniList search if AniListID still unknown (anime not in cross-ref DB)
-	if result.AniListID == 0 && p.anilist != nil &&
-		(result.TitleType == model.TitleTypeSeries || result.TitleType == model.TitleTypeAnime) {
+	if result.AniListID == 0 && p.anilist != nil {
 		searchResults, err := p.anilist.SearchAnime(input.Title)
 		if err != nil {
 			log.Printf("anilist enrichment search failed: %v", err)
@@ -303,8 +306,8 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 	}
 
 	// Detect anime from AniList ID
-	if result.AniListID != 0 && result.TitleType == model.TitleTypeSeries {
-		result.TitleType = model.TitleTypeAnime
+	if result.AniListID != 0 {
+		result.IsAnime = true
 	}
 
 	// Fetch multilingual names from TMDB

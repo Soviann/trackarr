@@ -124,25 +124,25 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 
 	// Process movies
 	for _, item := range backup.Movies {
-		if err := s.importItem(item, model.TitleTypeMovie, result); err != nil {
+		if err := s.importItem(item, model.TitleTypeMovie, false, result); err != nil {
 			result.Errors++
 		}
 	}
 
 	// Process shows
 	for _, item := range backup.Shows {
-		if err := s.importItem(item, model.TitleTypeSeries, result); err != nil {
+		if err := s.importItem(item, model.TitleTypeSeries, false, result); err != nil {
 			result.Errors++
 		}
 	}
 
 	// Process anime
 	for _, item := range backup.Anime {
-		titleType := model.TitleTypeAnime
+		titleType := model.TitleTypeSeries
 		if item.AnimeType == "movie" {
 			titleType = model.TitleTypeMovie
 		}
-		if err := s.importItem(item, titleType, result); err != nil {
+		if err := s.importItem(item, titleType, true, result); err != nil {
 			result.Errors++
 		}
 	}
@@ -150,7 +150,7 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 	return result, nil
 }
 
-func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, result *ImportResult) error {
+func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, isAnime bool, result *ImportResult) error {
 	media := item.Media()
 	if media == nil {
 		result.Errors++
@@ -180,6 +180,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 	// Build title
 	title := &model.Title{
 		Type:        titleType,
+		IsAnime:     isAnime,
 		Year:        media.Year,
 		Status:      status,
 		MatchStatus: model.MatchStatusConfirmed,
@@ -209,7 +210,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 		return fmt.Errorf("create title %q: %w", media.Title, err)
 	}
 
-	s.enqueueEnrichment(titleID, media.Title, media.Year, titleType, media.IDs)
+	s.enqueueEnrichment(titleID, media.Title, media.Year, titleType, isAnime, media.IDs)
 
 	// Import seasons/episodes
 	for _, simklSeason := range item.Seasons {
@@ -278,7 +279,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, re
 	return nil
 }
 
-func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, titleType model.TitleType, ids SimklIDs) {
+func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, titleType model.TitleType, isAnime bool, ids SimklIDs) {
 	if s.tasks == nil {
 		return
 	}
@@ -287,6 +288,7 @@ func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, 
 		TitleName: name,
 		Year:      year,
 		TitleType: titleType,
+		IsAnime:   isAnime,
 		IMDBID:    ids.IMDB,
 		TMDBID:    int64(ids.TMDB),
 		TVDBID:    int64(ids.TVDB),

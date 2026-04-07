@@ -49,8 +49,7 @@ dev-frontend: ## Start Vite dev server (inside container)
 	$(EXEC) bash -c "cd frontend && npx vite --host 0.0.0.0"
 
 build: ## Build production binary
-	$(EXEC) go build -tags sqlite_fts5 -o plextracker .
-
+	$(EXEC) go build -tags sqlite_fts5 -o ./tmp/plextracker .
 migrate: ## Run database migrations
 	$(EXEC) ./tmp/plextracker migrate
 

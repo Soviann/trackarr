@@ -43,6 +43,7 @@ interface TitleState {
   filter: {
     status?: string
     type?: string
+    is_anime?: string
     search?: string
     match_status?: string
     series_status?: string
@@ -87,6 +88,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       const f = get().filter
       if (f.status) params.set('status', f.status)
       if (f.type) params.set('type', f.type)
+      if (f.is_anime) params.set('is_anime', f.is_anime)
       if (f.search) params.set('search', f.search)
       if (f.match_status) params.set('match_status', f.match_status)
       if (f.series_status) params.set('series_status', f.series_status)
@@ -122,6 +124,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       const params = new URLSearchParams()
       if (filter.status) params.set('status', filter.status)
       if (filter.type) params.set('type', filter.type)
+      if (filter.is_anime) params.set('is_anime', filter.is_anime)
       if (filter.search) params.set('search', filter.search)
       if (filter.match_status) params.set('match_status', filter.match_status)
       if (filter.series_status) params.set('series_status', filter.series_status)

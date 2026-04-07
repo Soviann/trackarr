@@ -16,16 +16,16 @@ func TestStatsRepository_Overview(t *testing.T) {
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Create titles of different types and statuses
-	createTitle(t, titleRepo, "Dune", model.TitleTypeMovie, model.TitleStatusCompleted, ptr(8))
-	createTitle(t, titleRepo, "Breaking Bad", model.TitleTypeSeries, model.TitleStatusCompleted, ptr(9))
-	createTitle(t, titleRepo, "Naruto", model.TitleTypeAnime, model.TitleStatusWatching, nil)
+	createTitle(t, titleRepo, "Dune", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(8))
+	createTitle(t, titleRepo, "Breaking Bad", model.TitleTypeSeries, false, model.TitleStatusCompleted, ptr(9))
+	createTitle(t, titleRepo, "Naruto", model.TitleTypeSeries, true, model.TitleStatusWatching, nil)
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)
 
 	assert.Equal(t, 3, resp.Overview.TotalTitles)
 	assert.Equal(t, 1, resp.Overview.TotalMovies)
-	assert.Equal(t, 1, resp.Overview.TotalSeries)
+	assert.Equal(t, 2, resp.Overview.TotalSeries)
 	assert.Equal(t, 1, resp.Overview.TotalAnime)
 	assert.InDelta(t, 0.67, resp.Overview.CompletionRate, 0.01)
 	assert.InDelta(t, 8.5, resp.Overview.AverageRating, 0.1)
@@ -36,9 +36,9 @@ func TestStatsRepository_RatingDistribution(t *testing.T) {
 	titleRepo := repository.NewTitleRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
-	createTitle(t, titleRepo, "A", model.TitleTypeMovie, model.TitleStatusCompleted, ptr(7))
-	createTitle(t, titleRepo, "B", model.TitleTypeMovie, model.TitleStatusCompleted, ptr(7))
-	createTitle(t, titleRepo, "C", model.TitleTypeMovie, model.TitleStatusCompleted, ptr(5))
+	createTitle(t, titleRepo, "A", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(7))
+	createTitle(t, titleRepo, "B", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(7))
+	createTitle(t, titleRepo, "C", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(5))
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)
@@ -53,9 +53,9 @@ func TestStatsRepository_Breakdown(t *testing.T) {
 	titleRepo := repository.NewTitleRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
-	createTitle(t, titleRepo, "A", model.TitleTypeMovie, model.TitleStatusWatching, nil)
-	createTitle(t, titleRepo, "B", model.TitleTypeSeries, model.TitleStatusCompleted, nil)
-	createTitle(t, titleRepo, "C", model.TitleTypeAnime, model.TitleStatusCompleted, nil)
+	createTitle(t, titleRepo, "A", model.TitleTypeMovie, false, model.TitleStatusWatching, nil)
+	createTitle(t, titleRepo, "B", model.TitleTypeSeries, false, model.TitleStatusCompleted, nil)
+	createTitle(t, titleRepo, "C", model.TitleTypeSeries, true, model.TitleStatusCompleted, nil)
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)
@@ -63,8 +63,7 @@ func TestStatsRepository_Breakdown(t *testing.T) {
 	assert.Equal(t, 1, resp.Breakdown.ByStatus["watching"])
 	assert.Equal(t, 2, resp.Breakdown.ByStatus["completed"])
 	assert.Equal(t, 1, resp.Breakdown.ByType["movie"])
-	assert.Equal(t, 1, resp.Breakdown.ByType["series"])
-	assert.Equal(t, 1, resp.Breakdown.ByType["anime"])
+	assert.Equal(t, 2, resp.Breakdown.ByType["series"])
 }
 
 func TestStatsRepository_FunStats_Graveyard(t *testing.T) {
@@ -72,7 +71,7 @@ func TestStatsRepository_FunStats_Graveyard(t *testing.T) {
 	titleRepo := repository.NewTitleRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
-	createTitle(t, titleRepo, "Dropped Show", model.TitleTypeSeries, model.TitleStatusDropped, nil)
+	createTitle(t, titleRepo, "Dropped Show", model.TitleTypeSeries, false, model.TitleStatusDropped, nil)
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)
@@ -121,8 +120,8 @@ func TestStatsRepository_YearSummary(t *testing.T) {
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Titles created_at defaults to CURRENT_TIMESTAMP, so they count for the current year
-	createTitle(t, titleRepo, "A", model.TitleTypeMovie, model.TitleStatusCompleted, nil)
-	createTitle(t, titleRepo, "B", model.TitleTypeSeries, model.TitleStatusWatching, nil)
+	createTitle(t, titleRepo, "A", model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
+	createTitle(t, titleRepo, "B", model.TitleTypeSeries, false, model.TitleStatusWatching, nil)
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)
@@ -185,10 +184,11 @@ func TestStatsRepository_FunStats_LongestBinge(t *testing.T) {
 }
 
 // Helper to create a title with a rating
-func createTitle(t *testing.T, repo *repository.TitleRepository, name string, titleType model.TitleType, status model.TitleStatus, rating *int) int64 {
+func createTitle(t *testing.T, repo *repository.TitleRepository, name string, titleType model.TitleType, isAnime bool, status model.TitleStatus, rating *int) int64 {
 	t.Helper()
 	title := &model.Title{
 		Type:        titleType,
+		IsAnime:     isAnime,
 		Year:        2024,
 		Status:      status,
 		MatchStatus: model.MatchStatusConfirmed,

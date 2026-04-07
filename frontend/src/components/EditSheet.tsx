@@ -8,13 +8,12 @@ interface EditSheetProps {
   open: boolean
   onClose: () => void
   title: Title
-  onSave: (updates: { type?: TitleType; status?: TitleStatus }) => void
+  onSave: (updates: { type?: TitleType; status?: TitleStatus; is_anime?: boolean }) => void
 }
 
 const typeOptions: { value: TitleType; label: string }[] = [
   { value: 'movie', label: 'Movie' },
   { value: 'series', label: 'Series' },
-  { value: 'anime', label: 'Anime' },
 ]
 
 const statusOptions: { value: TitleStatus; label: string }[] = [
@@ -26,11 +25,13 @@ const statusOptions: { value: TitleStatus; label: string }[] = [
 
 export function EditSheet({ open, onClose, title, onSave }: EditSheetProps) {
   const [type, setType] = useState<TitleType>(title.type)
+  const [isAnime, setIsAnime] = useState<boolean>(title.is_anime)
   const [status, setStatus] = useState<TitleStatus>(title.status)
 
   const handleSave = () => {
-    const updates: { type?: TitleType; status?: TitleStatus } = {}
+    const updates: { type?: TitleType; status?: TitleStatus; is_anime?: boolean } = {}
     if (type !== title.type) updates.type = type
+    if (isAnime !== title.is_anime) updates.is_anime = isAnime
     if (status !== title.status) updates.status = status
     onSave(updates)
   }
@@ -42,6 +43,13 @@ export function EditSheet({ open, onClose, title, onSave }: EditSheetProps) {
         <div className={s.section}>
           <div className={s.sectionLabel}>Type</div>
           <div className={s.typeOptions}>
+            <button
+              onClick={() => setIsAnime(!isAnime)}
+              className={clsx(s.typeOption, isAnime && s.activeAnime)}
+            >
+              Anime
+            </button>
+            <div className={s.divider} />
             {typeOptions.map((opt) => (
               <button
                 key={opt.value}

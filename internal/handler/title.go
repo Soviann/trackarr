@@ -59,6 +59,10 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		titleType := model.TitleType(t)
 		filter.Type = &titleType
 	}
+	if ia := r.URL.Query().Get("is_anime"); ia != "" {
+		isAnime := ia == "true"
+		filter.IsAnime = &isAnime
+	}
 	if q := r.URL.Query().Get("search"); q != "" {
 		filter.Search = &q
 	}
@@ -125,6 +129,7 @@ func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Type        model.TitleType   `json:"type"`
+		IsAnime     bool              `json:"is_anime"`
 		Year        int               `json:"year"`
 		Status      model.TitleStatus `json:"status"`
 		MatchStatus model.MatchStatus `json:"match_status"`
@@ -143,6 +148,7 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	manualSource := "manual"
 	title := &model.Title{
 		Type:        body.Type,
+		IsAnime:     body.IsAnime,
 		Year:        body.Year,
 		Status:      body.Status,
 		MatchStatus: body.MatchStatus,
@@ -175,6 +181,7 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		MatchStatus *model.MatchStatus `json:"match_status"`
 		MyRating    *int               `json:"my_rating"`
 		Type        *model.TitleType   `json:"type"`
+		IsAnime     *bool              `json:"is_anime"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
@@ -185,6 +192,8 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		Status:      body.Status,
 		MatchStatus: body.MatchStatus,
 		MyRating:    body.MyRating,
+		Type:        body.Type,
+		IsAnime:     body.IsAnime,
 	}
 
 	if err := h.titles.Update(id, update); err != nil {
