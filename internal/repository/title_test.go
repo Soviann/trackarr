@@ -194,12 +194,14 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 
 	imdb := "tt1234567"
 	tmdb := int64(12345)
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+	anilist := int64(67890)
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	tests := []struct {
 		name      string
 		imdbID    *string
 		tmdbID    *int64
+		anilistID *int64
 		plexKey   *string
 		wantErr   bool
 		wantTitle string
@@ -215,6 +217,11 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 			wantTitle: "Test Movie",
 		},
 		{
+			name:      "find by AniList",
+			anilistID: &anilist,
+			wantTitle: "Test Movie",
+		},
+		{
 			name:    "not found",
 			imdbID:  ptr("tt9999999"),
 			wantErr: true,
@@ -227,7 +234,7 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey, nil, nil)
+			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey, tc.anilistID, nil)
 			if tc.wantErr {
 				assert.Error(t, err)
 				return
