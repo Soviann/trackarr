@@ -124,7 +124,7 @@ func TestBackgroundService_NilSafe(t *testing.T) {
 
 func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	dataDir := t.TempDir()
-	
+
 	db, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))

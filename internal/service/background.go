@@ -415,7 +415,7 @@ func (s *BackgroundService) StartTicker(interval time.Duration) {
 		for range ticker.C {
 			log.Println("background: starting scheduled refresh")
 			s.RefreshTitles()
-			
+
 			day := time.Now().Weekday()
 			log.Printf("background: starting unused covers cleanup for %s", day.String())
 			s.CleanupUnusedCovers(day)

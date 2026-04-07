@@ -33,12 +33,12 @@ var (
 )
 
 var allowedSorts = map[string]bool{
-	"updated_at":     true,
-	"original_title": true,
-	"year":           true,
-	"my_rating":      true,
-	"created_at":     true,
-	"release_date":   true,
+	"updated_at":      true,
+	"original_title":  true,
+	"year":            true,
+	"my_rating":       true,
+	"created_at":      true,
+	"release_date":    true,
 	"last_watched_at": true,
 }
 
