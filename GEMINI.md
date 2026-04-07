@@ -18,6 +18,7 @@
 - **Token Efficiency**: Use `activate_skill` for task-specific instructions (commit, release, etc.). Do not preload skills.
 - **Language**: French for commits/docs. English for code.
 - **Commit Titles**: Focus on **intent/impact** (e.g., `fix: résout le crash...`) rather than implementation (e.g., `fix: change la condition...`). Use 3rd-person imperative in French.
+- **Security Audit**: On-demand only (via `osv-scanner`). Always request/read summary first to save tokens.
 - **Tools**: Makefile (Docker) for all dev tasks.
 
 ## Workflow
