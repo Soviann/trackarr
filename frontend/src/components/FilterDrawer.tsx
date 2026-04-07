@@ -14,9 +14,11 @@ type SeriesStatusFilter = SeriesStatus | null
 interface FilterDrawerProps {
   status: StatusFilter
   type: TypeFilter
+  isAnime: boolean
   seriesStatus: SeriesStatusFilter
   onStatusChange: (status: StatusFilter) => void
   onTypeChange: (type: TypeFilter) => void
+  onIsAnimeChange: (isAnime: boolean) => void
   onSeriesStatusChange: (seriesStatus: SeriesStatusFilter) => void
   sort: SortState
   onSortChange: (sort: SortState) => void
@@ -43,7 +45,6 @@ const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
 
 const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
   { id: null, label: 'All', color: colors.accentTeal },
-  { id: 'anime', label: 'Anime', color: colors.accentAnilist },
   { id: 'movie', label: 'Movie', color: colors.accentAmber },
   { id: 'series', label: 'Series', color: colors.accentLavender },
 ]
@@ -89,8 +90,8 @@ function Chip<T>({ filter, active, onClick }: {
 }
 
 export function FilterDrawer({
-  status, type, seriesStatus,
-  onStatusChange, onTypeChange, onSeriesStatusChange,
+  status, type, isAnime, seriesStatus,
+  onStatusChange, onTypeChange, onIsAnimeChange, onSeriesStatusChange,
   sort, onSortChange, isSearchActive,
   defaultOpen = true,
   decade, releaseFrom, releaseTo, includeNoRelease,
@@ -135,7 +136,7 @@ export function FilterDrawer({
     if (defaultOpen) localStorage.setItem(STORAGE_KEY_HOME, String(open))
   }, [open, defaultOpen])
 
-  const showSeriesStatus = type === 'series' || type === 'anime'
+  const showSeriesStatus = type === 'series'
 
   const handleSortClick = (option: typeof sortOptions[number]) => {
     if (sort.field === option.field) {
@@ -153,6 +154,7 @@ export function FilterDrawer({
   }
   const activeStatus = statusFilters.find((f) => f.id === status)
   if (status !== null) activeTags.push({ label: activeStatus?.label ?? '', color: activeStatus?.color ?? '' })
+  if (isAnime) activeTags.push({ label: 'Anime', color: colors.accentAnilist })
   const activeType = typeFilters.find((f) => f.id === type)
   if (type !== null) activeTags.push({ label: activeType?.label ?? '', color: activeType?.color ?? '' })
   if (showSeriesStatus && seriesStatus !== null) {
@@ -233,6 +235,11 @@ export function FilterDrawer({
 
         <div className={s.filterLabel}>Type</div>
         <div className={s.filterRow}>
+          <Chip
+            filter={{ id: true, label: 'Anime', color: colors.accentAnilist }}
+            active={isAnime}
+            onClick={() => onIsAnimeChange(!isAnime)}
+          />
           {typeFilters.map((f) => (
             <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
           ))}

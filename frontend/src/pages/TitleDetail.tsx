@@ -297,7 +297,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         titleName={name}
         initialRating={title.my_rating}
         hasImdb={!!title.imdb_id}
-        hasAnilist={title.type === 'anime'}
+        hasAnilist={title.is_anime}
         onSave={handleSaveRating}
         onSaveAndImdb={(rating) => {
           handleSaveRating(rating)
@@ -312,7 +312,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onSave={handleSaveEdit}
       />
 
-      {title.type === 'anime' && (
+      {title.is_anime && (
         <AniListSheet
           open={showAniList}
           onClose={() => setShowAniList(false)}

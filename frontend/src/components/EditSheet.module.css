@@ -46,6 +46,21 @@
   font-weight: 600;
 }
 
+.activeAnime.typeOption {
+  border-color: var(--color-accent-anilist);
+  background: var(--wash-anilist);
+  color: var(--color-accent-anilist);
+  font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border-card);
+  align-self: center;
+  margin: 0 4px;
+}
+
 .statusOption {
   padding: 12px;
   border-radius: 10px;

@@ -60,7 +60,7 @@ func TestTitleRepository_List(t *testing.T) {
 	// Create test data
 	idA, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
 	idB, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
-	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeAnime, Year: 2022, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
+	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2022, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
 
 	// Create episodes for "up to date" and "watching behind" tests
 	// Naruto: 1 season, 2 episodes, all watched → "up to date"
@@ -246,10 +246,10 @@ func TestTitleRepository_FindByExternalID_TypeFilter(t *testing.T) {
 	tmdb := int64(1891)
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 1980, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "The Empire Strikes Back", Language: "en", IsPrimary: true}})
 	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2005, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "Rome", Language: "en", IsPrimary: true}})
+	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2002, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
 
 	movieType := model.TitleTypeMovie
 	seriesType := model.TitleTypeSeries
-	animeType := model.TitleTypeAnime
 
 	t.Run("without type filter returns first match", func(t *testing.T) {
 		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil)
@@ -269,9 +269,13 @@ func TestTitleRepository_FindByExternalID_TypeFilter(t *testing.T) {
 		assert.Equal(t, "Rome", got.PrimaryName())
 	})
 
-	t.Run("filter by non-existing type returns no match", func(t *testing.T) {
-		_, err := repo.FindByExternalID(nil, &tmdb, nil, &animeType)
-		assert.Error(t, err)
+	t.Run("filter by anime via is_anime", func(t *testing.T) {
+		// Naruto was created with IsAnime: true
+		isAnime := true
+		result, err := repo.List(repository.TitleFilter{IsAnime: &isAnime})
+		require.NoError(t, err)
+		assert.Len(t, result.Titles, 1)
+		assert.Equal(t, "Naruto", result.Titles[0].PrimaryName())
 	})
 }
 

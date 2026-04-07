@@ -45,7 +45,7 @@ export function ActionDrawer({
   }
 
   const hasImdb = !!title.imdb_id
-  const hasAnilist = title.type === 'anime'
+  const hasAnilist = title.is_anime
   const hasSeries = title.type !== 'movie'
 
   return (

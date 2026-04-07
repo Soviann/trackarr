@@ -61,7 +61,7 @@ func (r *StatsRepository) overview() (*model.StatsOverview, error) {
 			COUNT(*),
 			COALESCE(SUM(CASE WHEN type = 'movie' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'series' THEN 1 ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN type = 'anime' THEN 1 ELSE 0 END), 0)
+			COALESCE(SUM(CASE WHEN is_anime = 1 THEN 1 ELSE 0 END), 0)
 		FROM titles
 	`).Scan(&o.TotalTitles, &o.TotalMovies, &o.TotalSeries, &o.TotalAnime)
 	if err != nil {
@@ -347,7 +347,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		if len(avgs) >= 2 {
 			high, low := avgs[0], avgs[len(avgs)-1]
 			if high.avg-low.avg >= 0.5 {
-				typeLabel := map[string]string{"movie": "films", "series": "séries", "anime": "anime"}
+				typeLabel := map[string]string{"movie": "films", "series": "séries"}
 				stats = append(stats, model.FunStat{
 					ID:     "rating_gap",
 					Icon:   "bar-chart",

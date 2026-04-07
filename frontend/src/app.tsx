@@ -71,8 +71,12 @@ export function App() {
 
   const handleTypeChange = useCallback((t: TypeFilter) => {
     const updates: Record<string, string | undefined> = { type: t ?? undefined }
-    if (t !== 'series' && t !== 'anime') updates.series_status = undefined
+    if (t !== 'series') updates.series_status = undefined
     setFilter(updates)
+  }, [setFilter])
+
+  const handleIsAnimeChange = useCallback((ia: boolean) => {
+    setFilter({ is_anime: ia ? 'true' : undefined })
   }, [setFilter])
 
   const handleSeriesStatusChange = useCallback((ss: SeriesStatusFilter) => {
@@ -122,9 +126,11 @@ export function App() {
               <FilterDrawer
                 status={statusFilter}
                 type={typeFilter}
+                isAnime={filter.is_anime === 'true'}
                 seriesStatus={seriesStatusFilter}
                 onStatusChange={handleStatusChange}
                 onTypeChange={handleTypeChange}
+                onIsAnimeChange={handleIsAnimeChange}
                 onSeriesStatusChange={handleSeriesStatusChange}
                 sort={sort}
                 onSortChange={setSort}

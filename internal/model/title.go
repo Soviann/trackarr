@@ -7,7 +7,6 @@ type TitleType string
 const (
 	TitleTypeMovie  TitleType = "movie"
 	TitleTypeSeries TitleType = "series"
-	TitleTypeAnime  TitleType = "anime"
 )
 
 type TitleStatus string
@@ -39,6 +38,7 @@ const (
 type Title struct {
 	ID            int64         `json:"id"`
 	Type          TitleType     `json:"type"`
+	IsAnime       bool          `json:"is_anime"`
 	Year          int           `json:"year"`
 	CoverURL      *string       `json:"cover_url"`
 	IMDBID        *string       `json:"imdb_id"`

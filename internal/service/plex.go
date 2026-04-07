@@ -312,7 +312,7 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		if err != nil {
 			log.Printf("async enrichment failed for title %d: %v", titleID, err)
 			if matching.IsRetryableError(err) {
-				s.enqueueEnrichment(titleID, titleName, year, titleType, ids)
+				s.enqueueEnrichment(titleID, titleName, year, titleType, false, ids)
 			}
 			return
 		}
@@ -341,6 +341,9 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		if result.TitleType != titleType {
 			update.Type = &result.TitleType
 		}
+		if result.IsAnime {
+			update.IsAnime = &result.IsAnime
+		}
 
 		if err := s.titles.Update(titleID, update); err != nil {
 			log.Printf("async enrichment update failed for title %d: %v", titleID, err)
@@ -350,7 +353,7 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 	}()
 }
 
-func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
+func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, isAnime bool, ids PlexExternalIDs) {
 	if s.tasks == nil {
 		return
 	}
@@ -359,6 +362,7 @@ func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year in
 		TitleName: titleName,
 		Year:      year,
 		TitleType: titleType,
+		IsAnime:   isAnime,
 		IMDBID:    ids.IMDB,
 		TMDBID:    ids.TMDB,
 		TVDBID:    ids.TVDB,
@@ -391,6 +395,7 @@ func (s *PlexService) buildNewTitle(title string, year int, ids PlexExternalIDs,
 			t.MatchSource = &result.MatchSource
 			t.OriginalTitle = &title
 			t.Type = result.TitleType
+			t.IsAnime = result.IsAnime
 			if result.IMDBID != "" {
 				t.IMDBID = &result.IMDBID
 			}

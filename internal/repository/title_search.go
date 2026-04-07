@@ -65,7 +65,7 @@ func (r *TitleRepository) searchTitlesPaginated(searchTerm string, filter TitleF
 func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([]model.Title, error) {
 	useFTS := len(searchTerm) >= 2
 
-	baseCols := `t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
+	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
 
 	var query string
 	var conditions []string
@@ -94,6 +94,14 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		conditions = append(conditions, `t.match_status = ?`)
 		args = append(args, *filter.MatchStatus)
 	}
+	if filter.IsAnime != nil {
+		conditions = append(conditions, `t.is_anime = ?`)
+		if *filter.IsAnime {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
+	}
 
 	if len(conditions) > 0 {
 		query += ` WHERE ` + strings.Join(conditions, ` AND `)
@@ -111,7 +119,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		var t model.Title
 		var lastWatchedAtStr *string
 		var matchedName, matchedLang string
-		if err := rows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt,
