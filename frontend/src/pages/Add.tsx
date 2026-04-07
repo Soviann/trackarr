@@ -16,6 +16,14 @@ export function Add({ path }: { path?: string }) {
 
   useEffect(() => {
     inputRef.current?.focus()
+
+    // Handle PWA share target
+    const params = new URLSearchParams(window.location.search)
+    const shareUrl = params.get('url')
+    if (shareUrl) {
+      setQuery(shareUrl)
+      route(`/admin/validate?q=${encodeURIComponent(shareUrl)}`)
+    }
   }, [])
 
   const urlType = query.trim() ? detectUrlType(query.trim()) : null

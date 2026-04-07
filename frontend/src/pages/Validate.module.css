@@ -121,6 +121,74 @@
   margin-bottom: var(--space-md);
 }
 
+.resolvedPreview {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  background: var(--color-bg-surface);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-card);
+}
+
+.previewCover {
+  width: 50px;
+  height: 75px;
+  border-radius: var(--radius-sm);
+  background-size: cover !important;
+  background-position: center !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--color-bg-surface);
+}
+
+.previewInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.previewName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.previewMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.previewIds {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.idTag {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.idTag:nth-child(1) { background: #f5c518; color: #000; } /* IMDb */
+.idTag:nth-child(2) { background: #01b4e4; color: #fff; } /* TMDB */
+.idTag:nth-child(3) { background: #02a9ff; color: #fff; } /* AniList */
+
+.urlFallback {
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-amber);
+  margin-bottom: var(--space-lg);
+  line-height: 1.4;
+}
+
 /* Status picker */
 .statusPicker {
   display: flex;

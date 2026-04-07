@@ -54,7 +54,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Handlers
-	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
@@ -95,6 +95,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
 
 			r.Get("/titles", httputil.WrapHandler(titles.List))
+			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
 			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
 			r.Post("/titles", httputil.WrapHandler(titles.Create))
 			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))

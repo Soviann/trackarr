@@ -1,6 +1,6 @@
-import { useState } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
-import type { Title, TitleStatus } from '../types'
+import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../types'
 import { useApi } from '../hooks/useApi'
 import { getName } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
@@ -9,27 +9,62 @@ import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholde
 import clsx from 'clsx'
 import s from './Validate.module.css'
 
+function isUrl(str: string): boolean {
+  return /^(https?:\/\/)?([\w.-]+)+(\/[\w.-]*)*\/?/i.test(str)
+}
+
 export function Validate({ path }: { path?: string }) {
   const params = new URLSearchParams(window.location.search)
   const query = params.get('q') ?? ''
   const searchPath = query ? `/titles?search=${encodeURIComponent(query)}` : null
-  const { data: results, loading } = useApi<Title[]>(searchPath)
+  const { data: resultsData, loading: loadingSearch } = useApi<PaginatedResponse>(searchPath)
+  const results = resultsData?.titles ?? []
+  
   const [adding, setAdding] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TitleStatus>('plan_to_watch')
+  const [resolved, setResolved] = useState<MatchResult | null>(null)
+  const [loadingResolve, setLoadingResolve] = useState(false)
+
+  useEffect(() => {
+    if (isUrl(query)) {
+      setLoadingResolve(true)
+      apiFetch<MatchResult>(`/titles/resolve?q=${encodeURIComponent(query)}`)
+        .then(setResolved)
+        .catch(() => {})
+        .finally(() => setLoadingResolve(false))
+    }
+  }, [query])
+
+  const loading = loadingSearch || loadingResolve
 
   const handleAdd = async () => {
     if (adding) return
     setAdding(true)
     try {
+      const body: any = {
+        status: selectedStatus,
+        match_status: resolved?.match_status ?? 'unconfirmed',
+      }
+
+      if (resolved) {
+        body.type = resolved.type
+        body.is_anime = resolved.is_anime
+        body.year = resolved.release_date ? parseInt(resolved.release_date.slice(0, 4)) : new Date().getFullYear()
+        body.names = resolved.names
+        body.imdb_id = resolved.imdb_id
+        body.tmdb_id = resolved.tmdb_id
+        body.tvdb_id = resolved.tvdb_id
+        body.anilist_id = resolved.anilist_id
+        body.cover_url = resolved.cover_file ? `/covers/${resolved.cover_file}` : null
+      } else {
+        body.type = 'series'
+        body.year = new Date().getFullYear()
+        body.names = [{ name: query, language: 'en', is_primary: true }]
+      }
+
       const created = await apiFetch<Title>('/titles', {
         method: 'POST',
-        body: JSON.stringify({
-          type: 'series',
-          year: new Date().getFullYear(),
-          status: selectedStatus,
-          match_status: 'unconfirmed',
-          names: [{ name: query, language: 'en', is_primary: true }],
-        }),
+        body: JSON.stringify(body),
       })
       route(`/title/${created.id}`)
     } finally {
@@ -47,19 +82,19 @@ export function Validate({ path }: { path?: string }) {
           </svg>
         </div>
         <div className={s.headerTitle}>
-          Validating: {query}
+          {isUrl(query) ? 'Adding by URL' : `Validating: ${query}`}
         </div>
       </div>
 
       {loading && (
         <div className={s.loading}>
           <div className={s.spinner} />
-          Matching...
+          {loadingResolve ? 'Identifying...' : 'Matching...'}
         </div>
       )}
 
       {/* Existing results */}
-      {results && results.length > 0 && (
+      {results.length > 0 && (
         <div className={s.resultsSection}>
           <div className={s.sectionLabel}>
             Already in library
@@ -91,11 +126,40 @@ export function Validate({ path }: { path?: string }) {
       )}
 
       {/* Add new */}
-      {results && (
+      {!loading && (
         <div className={s.addCard}>
           <div className={s.addCardTitle}>
             Add as new title
           </div>
+
+          {/* Preview of resolved metadata */}
+          {resolved && (
+            <div className={s.resolvedPreview}>
+              <div 
+                className={s.previewCover}
+                style={{ background: coverBackground(resolved.cover_file ? `/covers/${resolved.cover_file}` : null, resolved.type) }}
+              >
+                {!resolved.cover_file && <CoverPlaceholder type={resolved.type} iconSize="18px" />}
+              </div>
+              <div className={s.previewInfo}>
+                <div className={s.previewName}>{resolved.names.find(n => n.is_primary)?.name || resolved.names[0]?.name}</div>
+                <div className={s.previewMeta}>
+                  {resolved.type} · {resolved.release_date?.slice(0, 4) || 'Unknown year'}
+                </div>
+                <div className={s.previewIds}>
+                  {resolved.imdb_id && <span className={s.idTag}>IMDb</span>}
+                  {resolved.tmdb_id && <span className={s.idTag}>TMDB</span>}
+                  {resolved.anilist_id && <span className={s.idTag}>AniList</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!resolved && isUrl(query) && !loading && (
+            <div className={s.urlFallback}>
+              Could not identify title from URL. It will be added with the URL as name.
+            </div>
+          )}
 
           {/* Status picker */}
           <div className={s.statusPicker}>

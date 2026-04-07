@@ -98,7 +98,7 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 	}
 
 	movieType := model.TitleTypeMovie
-	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, &movieType)
+	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, &movieType)
 	if err != nil {
 		newTitle, names := s.buildNewTitle(meta.Title, meta.Year, ids, model.TitleTypeMovie, ratingKey, meta.GUIDExternal)
 		newTitle.Status = model.TitleStatusCompleted
@@ -167,7 +167,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		tmdbID = &ids.TMDB
 	}
 
-	title, err := titles.FindByExternalID(imdbID, tmdbID, &grandparentKey, nil)
+	title, err := titles.FindByExternalID(imdbID, tmdbID, &grandparentKey, nil, nil)
 	if err != nil {
 		seriesName := meta.GrandparentTitle
 		if seriesName == "" {

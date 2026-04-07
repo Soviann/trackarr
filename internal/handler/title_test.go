@@ -31,7 +31,7 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
-	h := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+	h := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil)
 	return h, titleRepo
 }
 

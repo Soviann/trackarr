@@ -62,6 +62,26 @@ export interface Season {
   episodes: Episode[]
 }
 
+export interface MatchResult {
+  imdb_id: string | null
+  tmdb_id: number | null
+  tvdb_id: number | null
+  anilist_id: number | null
+  match_status: MatchStatus
+  match_source: string
+  names: TitleName[]
+  cover_file: string | null
+  type: TitleType
+  is_anime: boolean
+  overview: string | null
+  genres: string | null
+  runtime: number | null
+  tmdb_rating: number | null
+  credits: string | null
+  anilist_rating: number | null
+  release_date: string | null
+}
+
 export interface PaginatedResponse {
   titles: Title[]
   total: number

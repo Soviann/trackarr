@@ -49,24 +49,24 @@ func (p *Pipeline) TMDB() *TMDBClient { return p.tmdb }
 
 // MatchResult holds the outcome of running the matching pipeline.
 type MatchResult struct {
-	IMDBID      string
-	TMDBID      int64
-	TVDBID      int64
-	AniListID   int64
-	MatchStatus model.MatchStatus
-	MatchSource string            // which pipeline step produced the match
-	Names       []model.TitleName // multilingual names
-	CoverFile   string            // local filename in covers dir
-	TitleType   model.TitleType   // resolved type (movie or series)
-	IsAnime     bool
+	IMDBID      string            `json:"imdb_id"`
+	TMDBID      int64             `json:"tmdb_id"`
+	TVDBID      int64             `json:"tvdb_id"`
+	AniListID   int64             `json:"anilist_id"`
+	MatchStatus model.MatchStatus `json:"match_status"`
+	MatchSource string            `json:"match_source"` // which pipeline step produced the match
+	Names       []model.TitleName `json:"names"`        // multilingual names
+	CoverFile   string            `json:"cover_file"`   // local filename in covers dir
+	TitleType   model.TitleType   `json:"type"`         // resolved type (movie or series)
+	IsAnime     bool              `json:"is_anime"`
 	// TMDB metadata
-	Overview      string
-	Genres        string // JSON array
-	Runtime       *int
-	TMDBRating    *float64
-	Credits       string // JSON array
-	AniListRating *int
-	ReleaseDate   string
+	Overview      string   `json:"overview"`
+	Genres        string   `json:"genres"` // JSON array
+	Runtime       *int     `json:"runtime"`
+	TMDBRating    *float64 `json:"tmdb_rating"`
+	Credits       string   `json:"credits"` // JSON array
+	AniListRating *int     `json:"anilist_rating"`
+	ReleaseDate   string   `json:"release_date"`
 }
 
 // MatchInput holds the info needed to start the matching pipeline.
@@ -75,9 +75,10 @@ type MatchInput struct {
 	Year  int
 	Type  model.TitleType
 	// IDs already known from Plex metadata
-	IMDBID string
-	TMDBID int64
-	TVDBID int64
+	IMDBID    string
+	TMDBID    int64
+	TVDBID    int64
+	AniListID int64
 	// Force anime detection (e.g. from Simkl section)
 	IsAnime bool
 }
@@ -93,12 +94,13 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 		IMDBID:    input.IMDBID,
 		TMDBID:    input.TMDBID,
 		TVDBID:    input.TVDBID,
+		AniListID: input.AniListID,
 		TitleType: input.Type,
 		IsAnime:   input.IsAnime,
 	}
 
-	// Step 1: Check Plex metadata IDs — if we have TMDB or IMDB, we're confirmed
-	if result.TMDBID != 0 || result.IMDBID != "" {
+	// Step 1: Check Plex metadata IDs — if we have TMDB, IMDB or AniList, we're confirmed
+	if result.TMDBID != 0 || result.IMDBID != "" || result.AniListID != 0 {
 		result.MatchStatus = model.MatchStatusConfirmed
 		result.MatchSource = MatchSourcePlexIDs
 		p.enrichFromIDs(result, input)
@@ -124,7 +126,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	}
 
 	// Step 3: TMDB API search
-	if p.tmdb != nil {
+	if p.tmdb != nil && input.Title != "" {
 		found := p.searchTMDB(input, result)
 		if found {
 			result.MatchSource = MatchSourceTMDBSearch
@@ -133,7 +135,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	}
 
 	// Step 4: AniList search
-	if p.anilist != nil {
+	if p.anilist != nil && input.Title != "" {
 		found := p.searchAniList(input, result)
 		if found {
 			result.MatchSource = MatchSourceAniListSearch
@@ -142,7 +144,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	}
 
 	// Step 5 fallback: Gemini fuzzy resolution
-	if p.gemini != nil {
+	if p.gemini != nil && input.Title != "" {
 		resolution, err := p.gemini.FuzzyResolve(PlexInfo{
 			Title: input.Title,
 			Year:  input.Year,
@@ -171,8 +173,28 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	// No match found
 	result.MatchStatus = model.MatchStatusUnconfirmed
 	result.MatchSource = MatchSourceNone
-	result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
+	if input.Title != "" {
+		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
+	}
 	return result, nil
+}
+
+// ResolveURL attempts to identify a title directly from an external URL.
+func (p *Pipeline) ResolveURL(url string) (*MatchResult, error) {
+	ids := ParseURL(url)
+	if ids == nil {
+		return nil, fmt.Errorf("could not parse URL: %s", url)
+	}
+
+	input := MatchInput{
+		IMDBID:    ids.IMDB,
+		AniListID: ids.AniList,
+	}
+
+	// We don't know the type (movie/series) for IMDb, so try with both if needed
+	// But Pipeline.Run doesn't support searching by ID without type.
+	// Actually enrichFromIDs will fetch metadata once we have IDs.
+	return p.Run(input)
 }
 
 func (p *Pipeline) searchTMDB(input MatchInput, result *MatchResult) bool {
