@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { getName, getTypeLabel, getStatusLabel, formatDate, watchedCount, totalEpisodes } from './utils'
-import type { Title, TitleName, Season, Episode } from './types'
+import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
   return {
-    id: 1, type: 'movie', year: 2024, cover_url: null, imdb_id: null, anilist_id: null,
+    id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, imdb_id: null, anilist_id: null,
     tmdb_id: null, tvdb_id: null, my_rating: null, status: 'watching', series_status: null,
     match_status: 'confirmed', original_title: null, match_source: null, names: [], seasons: [],
     overview: null, genres: null, runtime: null, tmdb_rating: null, credits: null,
@@ -48,13 +48,12 @@ describe('getName', () => {
 })
 
 describe('getTypeLabel', () => {
-  const cases: [string, string][] = [
+  const cases: [TitleType, string][] = [
     ['movie', 'Film'],
     ['series', 'Series'],
-    ['anime', 'Anime'],
   ]
   it.each(cases)('%s → %s', (input, expected) => {
-    expect(getTypeLabel(input as any)).toBe(expected)
+    expect(getTypeLabel(input)).toBe(expected)
   })
 })
 

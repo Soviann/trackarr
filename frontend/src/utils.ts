@@ -15,7 +15,6 @@ export function getTypeLabel(type: TitleType): string {
   switch (type) {
     case 'movie': return 'Film'
     case 'series': return 'Series'
-    case 'anime': return 'Anime'
     default: return type
   }
 }
