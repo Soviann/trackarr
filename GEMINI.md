@@ -18,3 +18,10 @@
 - **Token Efficiency**: Use `activate_skill` for task-specific instructions (commit, release, etc.). Do not preload skills.
 - **Language**: French for commits/docs. English for code.
 - **Tools**: Makefile (Docker) for all dev tasks.
+
+## Workflow
+
+- **Robust Commit Protocol**: always use a temporary file for multi-line commit messages to avoid quoting errors with `run_shell_command`:
+  1. Write the message to `.gemini_commit_msg.txt` via `write_file`.
+  2. Execute `git commit -F .gemini_commit_msg.txt`.
+  3. Delete the temporary file.
