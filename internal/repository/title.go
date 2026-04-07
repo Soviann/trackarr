@@ -747,3 +747,35 @@ func parseSQLiteTime(s *string) *time.Time {
 	}
 	return nil
 }
+
+// GetUsedCoversInBatch returns a map containing the subset of filenames that are currently in use.
+func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]bool, error) {
+	if len(filenames) == 0 {
+		return make(map[string]bool), nil
+	}
+
+	placeholders := make([]string, len(filenames))
+	args := make([]interface{}, len(filenames))
+	for i, name := range filenames {
+		placeholders[i] = "?"
+		args[i] = name
+	}
+
+	query := fmt.Sprintf(`SELECT cover_url FROM titles WHERE cover_url IN (%s)`, strings.Join(placeholders, ","))
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get used covers in batch: %w", err)
+	}
+	defer rows.Close()
+
+	used := make(map[string]bool)
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, fmt.Errorf("scan used cover: %w", err)
+		}
+		used[url] = true
+	}
+
+	return used, nil
+}
