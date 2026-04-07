@@ -1,3 +1,8 @@
+---
+name: implement
+description: "Process for implementing a feature or fix from a GitHub issue or plan."
+---
+
 # Implement GitHub Issue
 
 **IMPORTANT:** Create a task (TaskCreate) for EACH step. Mark `in_progress` → `completed` sequentially.
