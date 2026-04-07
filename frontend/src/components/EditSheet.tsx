@@ -78,10 +78,15 @@ export function EditSheet({ open, onClose, title, onSave }: EditSheetProps) {
           </div>
         </div>
 
-        {/* Save */}
-        <button onClick={handleSave} className={s.saveButton}>
-          <span className={s.saveButtonLabel}>Save</span>
-        </button>
+        {/* Actions */}
+        <div className={s.actions}>
+          <button onClick={onClose} className={s.cancelButton}>
+            <span className={s.cancelButtonLabel}>Cancel</span>
+          </button>
+          <button onClick={handleSave} className={s.saveButton}>
+            <span className={s.saveButtonLabel}>Save</span>
+          </button>
+        </div>
       </div>
     </BottomSheet>
   )
