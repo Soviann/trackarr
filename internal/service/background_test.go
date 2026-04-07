@@ -1,6 +1,8 @@
 package service_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -118,4 +120,78 @@ func TestBackgroundService_NilSafe(t *testing.T) {
 	var svc *service.BackgroundService
 	results := svc.RefreshTitles()
 	assert.Nil(t, results)
+}
+
+func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
+	dataDir := t.TempDir()
+	
+	db, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	titleRepo := repository.NewTitleRepository(db)
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+
+	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
+	svc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, dataDir)
+
+	coversDir := filepath.Join(dataDir, "covers")
+	err = os.MkdirAll(coversDir, 0755)
+	require.NoError(t, err)
+
+	// Create some dummy files
+	files := []string{
+		"a123.jpg", // Sunday prefix 'a'
+		"b456.jpg", // Sunday prefix 'b'
+		"j789.jpg", // Monday prefix 'j'
+		"z012.jpg", // Tuesday prefix 'z'
+	}
+	for _, f := range files {
+		err := os.WriteFile(filepath.Join(coversDir, f), []byte("dummy"), 0644)
+		require.NoError(t, err)
+	}
+
+	// Reference a123.jpg and z012.jpg in the DB
+	coverA := "a123.jpg"
+	coverZ := "z012.jpg"
+	_, err = titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		CoverURL:    &coverA,
+	}, []model.TitleName{{Name: "Movie A", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	_, err = titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		CoverURL:    &coverZ,
+	}, []model.TitleName{{Name: "Movie Z", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	// Run cleanup for Sunday
+	svc.CleanupUnusedCovers(time.Sunday)
+
+	// After Sunday cleanup, 'b456.jpg' should be deleted (starts with 'b', unused)
+	// 'a123.jpg' remains (starts with 'a', used)
+	// 'j789.jpg' remains (starts with 'j', not checked on Sunday)
+	// 'z012.jpg' remains (starts with 'z', not checked on Sunday)
+
+	_, err = os.Stat(filepath.Join(coversDir, "b456.jpg"))
+	assert.True(t, os.IsNotExist(err), "b456.jpg should be deleted")
+
+	_, err = os.Stat(filepath.Join(coversDir, "a123.jpg"))
+	assert.NoError(t, err, "a123.jpg should remain")
+
+	_, err = os.Stat(filepath.Join(coversDir, "j789.jpg"))
+	assert.NoError(t, err, "j789.jpg should remain")
+
+	_, err = os.Stat(filepath.Join(coversDir, "z012.jpg"))
+	assert.NoError(t, err, "z012.jpg should remain")
 }

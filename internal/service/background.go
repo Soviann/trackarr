@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -414,8 +415,113 @@ func (s *BackgroundService) StartTicker(interval time.Duration) {
 		for range ticker.C {
 			log.Println("background: starting scheduled refresh")
 			s.RefreshTitles()
+			
+			day := time.Now().Weekday()
+			log.Printf("background: starting unused covers cleanup for %s", day.String())
+			s.CleanupUnusedCovers(day)
 		}
 	}()
+}
+
+func getDailyPrefixes(day time.Weekday) []rune {
+	switch day {
+	case time.Sunday:
+		return []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'}
+	case time.Monday:
+		return []rune{'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r'}
+	case time.Tuesday:
+		return []rune{'s', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A'}
+	case time.Wednesday:
+		return []rune{'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
+	case time.Thursday:
+		return []rune{'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S'}
+	case time.Friday:
+		return []rune{'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1'}
+	case time.Saturday:
+		return []rune{'2', '3', '4', '5', '6', '7', '8', '9', '_', '-'}
+	default:
+		return nil
+	}
+}
+
+// CleanupUnusedCovers deletes orphaned cover files sharded by the starting character of the filename.
+func (s *BackgroundService) CleanupUnusedCovers(day time.Weekday) {
+	if s == nil || s.titles == nil {
+		return
+	}
+
+	prefixes := getDailyPrefixes(day)
+	if len(prefixes) == 0 {
+		return
+	}
+
+	prefixMap := make(map[rune]bool)
+	for _, p := range prefixes {
+		prefixMap[p] = true
+	}
+
+	coversDir := s.coversDir()
+	entries, err := os.ReadDir(coversDir)
+	if err != nil {
+		log.Printf("background: read covers dir: %v", err)
+		return
+	}
+
+	var batch []string
+	deleted := 0
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if len(name) == 0 {
+			continue
+		}
+
+		firstChar := rune(name[0])
+		if !prefixMap[firstChar] {
+			continue
+		}
+
+		batch = append(batch, name)
+
+		if len(batch) >= 100 {
+			deleted += s.processCoverBatch(coversDir, batch)
+			batch = batch[:0]
+			_ = s.limiter.Wait(context.Background())
+		}
+	}
+
+	if len(batch) > 0 {
+		deleted += s.processCoverBatch(coversDir, batch)
+	}
+
+	if deleted > 0 {
+		log.Printf("background: deleted %d unused covers for %s", deleted, day.String())
+	}
+}
+
+func (s *BackgroundService) processCoverBatch(coversDir string, batch []string) int {
+	used, err := s.titles.GetUsedCoversInBatch(batch)
+	if err != nil {
+		log.Printf("background: get used covers batch: %v", err)
+		return 0
+	}
+
+	deleted := 0
+	for _, name := range batch {
+		if !used[name] {
+			path := filepath.Join(coversDir, name)
+			if err := os.Remove(path); err != nil {
+				log.Printf("background: delete unused cover %s: %v", name, err)
+			} else {
+				deleted++
+			}
+		}
+	}
+	return deleted
 }
 
 func (s *BackgroundService) enqueueRefreshOnRetryable(titleID int64, err error) {
