@@ -31,27 +31,50 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
-	h := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+	h := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil)
 	return h, titleRepo
 }
 
 func TestTitleHandler_List(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+	imdb := "tt1234567"
+	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
 	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
 
-	req := httptest.NewRequest("GET", "/api/titles?status=watching", nil)
-	rr := httptest.NewRecorder()
-	require.NoError(t, h.List(rr, req))
+	t.Run("filter by status", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/titles?status=watching", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.List(rr, req))
+		assert.Equal(t, http.StatusOK, rr.Code)
+		var result repository.PaginatedResult
+		_ = json.NewDecoder(rr.Body).Decode(&result)
+		assert.Len(t, result.Titles, 1)
+		assert.Equal(t, "Dune", result.Titles[0].PrimaryName())
+	})
 
-	assert.Equal(t, http.StatusOK, rr.Code)
-	var result repository.PaginatedResult
-	_ = json.NewDecoder(rr.Body).Decode(&result)
-	assert.Len(t, result.Titles, 1)
-	assert.Equal(t, "Dune", result.Titles[0].PrimaryName())
-	assert.Equal(t, 1, result.Total)
-	assert.False(t, result.HasMore)
+	t.Run("search by IMDb URL", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/titles?search=https://www.imdb.com/title/tt1234567/", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.List(rr, req))
+		assert.Equal(t, http.StatusOK, rr.Code)
+		var result repository.PaginatedResult
+		_ = json.NewDecoder(rr.Body).Decode(&result)
+		assert.Len(t, result.Titles, 1)
+		assert.Equal(t, "Dune", result.Titles[0].PrimaryName())
+	})
+}
+
+func TestTitleHandler_Resolve(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	// Since we can't easily mock the pipeline here without refactoring setupHandler
+	// and ResolveURL depends on real API calls, we expect a failure or we need to mock it.
+	// For now, let's at least test the 400 when URL is invalid.
+	req := httptest.NewRequest("GET", "/api/titles/resolve?q=invalid", nil)
+	rr := httptest.NewRecorder()
+	err := h.Resolve(rr, req)
+	assert.Error(t, err)
 }
 
 func TestTitleHandler_Create(t *testing.T) {

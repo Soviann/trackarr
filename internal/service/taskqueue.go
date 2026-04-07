@@ -234,7 +234,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 	// ── Consolidation Logic (Merge) ──
 	// If we have an IMDB ID and it's an anime, check if another title has the same IMDB ID.
 	if result.IMDBID != "" && result.IsAnime {
-		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil)
+		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
 		if err == nil && existing != nil && existing.ID != payload.TitleID && existing.Type != model.TitleTypeMovie {
 			// CONFLICT! Same IMDB ID but different local titles.
 			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)

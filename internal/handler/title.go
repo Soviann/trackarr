@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
 type TitleHandler struct {
@@ -17,11 +20,17 @@ type TitleHandler struct {
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	tasks    *repository.TaskRepository
+	pipeline *matching.Pipeline
 }
 
-func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository) *TitleHandler {
-	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events, tasks: tasks}
+func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline) *TitleHandler {
+	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events, tasks: tasks, pipeline: pipeline}
 }
+
+var (
+	reIMDB    = regexp.MustCompile(`imdb\.com/title/(tt\d+)`)
+	reAniList = regexp.MustCompile(`anilist\.co/anime/(\d+)`)
+)
 
 var allowedSorts = map[string]bool{
 	"updated_at":     true,
@@ -64,6 +73,29 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.IsAnime = &isAnime
 	}
 	if q := r.URL.Query().Get("search"); q != "" {
+		// If search looks like a URL, try to find by external ID first
+		if m := reIMDB.FindStringSubmatch(q); m != nil {
+			id := m[1]
+			if t, err := h.titles.FindByExternalID(&id, nil, nil, nil, nil); err == nil {
+				httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
+					Titles: []model.Title{*t},
+					Total:  1,
+				})
+				return nil
+			}
+		}
+		if m := reAniList.FindStringSubmatch(q); m != nil {
+			idStr := m[1]
+			if alID, err := strconv.ParseInt(idStr, 10, 64); err == nil {
+				if t, err := h.titles.FindByExternalID(nil, nil, nil, &alID, nil); err == nil {
+					httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
+						Titles: []model.Title{*t},
+						Total:  1,
+					})
+					return nil
+				}
+			}
+		}
 		filter.Search = &q
 	}
 	if m := r.URL.Query().Get("match_status"); m != "" {
@@ -123,6 +155,21 @@ func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
+}
+
+func (h *TitleHandler) Resolve(w http.ResponseWriter, r *http.Request) error {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		return httputil.BadRequest("Query is required")
+	}
+
+	result, err := h.pipeline.ResolveURL(q)
+	if err != nil {
+		return httputil.BadRequest(fmt.Sprintf("Failed to resolve URL: %v", err))
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 
