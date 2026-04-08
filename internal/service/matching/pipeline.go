@@ -173,6 +173,9 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	// No match found
 	result.MatchStatus = model.MatchStatusUnconfirmed
 	result.MatchSource = MatchSourceNone
+	if result.TitleType == "" {
+		result.TitleType = model.TitleTypeMovie
+	}
 	if input.Title != "" {
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
@@ -314,6 +317,21 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 		})
 		if crossIDs != nil {
 			mergeIDs(result, crossIDs)
+		}
+	}
+
+	// Try TMDB lookup by external ID if TMDBID still unknown (not in cross-ref DB)
+	if result.TMDBID == 0 && p.tmdb != nil && result.IMDBID != "" {
+		tmdbResult, mediaType, err := p.tmdb.FindByID(result.IMDBID, "imdb_id")
+		if err == nil && tmdbResult != nil {
+			result.TMDBID = tmdbResult.ID
+			if result.TitleType == "" {
+				if mediaType == "movie" {
+					result.TitleType = model.TitleTypeMovie
+				} else {
+					result.TitleType = model.TitleTypeSeries
+				}
+			}
 		}
 	}
 

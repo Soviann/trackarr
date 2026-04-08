@@ -1,6 +1,8 @@
 .page {
   padding: var(--space-lg);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
@@ -28,6 +30,39 @@
   color: var(--color-text-primary);
 }
 
+/* Search Bar */
+.searchBar {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.searchInput {
+  flex: 1;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--color-accent-amber);
+}
+
+.searchBtn {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* Loading */
 .loading {
   text-align: center;
@@ -47,6 +82,28 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Current Title Section */
+.currentSection {
+  margin-bottom: 24px;
+}
+
+.currentCard {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  background: var(--wash-amber);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-accent-amber);
+}
+
+.originalLabel {
+  font-size: 10px;
+  color: var(--color-accent-coral);
+  margin-top: 4px;
+  font-weight: 500;
 }
 
 /* Results section */
@@ -73,6 +130,11 @@
   border: 1px solid var(--color-border-card);
   cursor: pointer;
   margin-bottom: var(--space-sm);
+}
+
+.resultCardCurrent {
+  border-color: var(--color-accent-amber);
+  background: var(--wash-amber);
 }
 
 .resultCover {
@@ -112,6 +174,7 @@
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   border: 1px solid var(--color-border-card);
+  margin-top: auto;
 }
 
 .addCardTitle {
@@ -176,11 +239,9 @@
   padding: 2px 4px;
   border-radius: 3px;
   text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
 }
-
-.idTag:nth-child(1) { background: #f5c518; color: #000; } /* IMDb */
-.idTag:nth-child(2) { background: #01b4e4; color: #fff; } /* TMDB */
-.idTag:nth-child(3) { background: #02a9ff; color: #fff; } /* AniList */
 
 .urlFallback {
   font-size: var(--font-size-xs);
@@ -237,4 +298,12 @@
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: #fff;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: var(--space-md);
+  line-height: 1.4;
 }

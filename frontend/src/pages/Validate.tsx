@@ -10,63 +10,114 @@ import clsx from 'clsx'
 import s from './Validate.module.css'
 
 function isUrl(str: string): boolean {
-  return /^(https?:\/\/)?([\w.-]+)+(\/[\w.-]*)*\/?/i.test(str)
+  return /^(https?:\/\/)?([\w.-]+)+\.([a-z]{2,10})(\/[\w.-]*)*\/?$/i.test(str)
 }
 
 export function Validate({ path }: { path?: string }) {
   const params = new URLSearchParams(window.location.search)
   const query = params.get('q') ?? ''
-  const searchPath = query ? `/titles?search=${encodeURIComponent(query)}` : null
+  const id = params.get('id')
+  
+  const searchPath = query && !isUrl(query) ? `/titles?search=${encodeURIComponent(query)}` : null
   const { data: resultsData, loading: loadingSearch } = useApi<PaginatedResponse>(searchPath)
   const results = resultsData?.titles ?? []
+
+  const { data: currentTitle, loading: loadingCurrent } = useApi<Title>(id ? `/titles/${id}` : null)
   
+  const [inputValue, setInputValue] = useState(query)
   const [adding, setAdding] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TitleStatus>('plan_to_watch')
   const [resolved, setResolved] = useState<MatchResult | null>(null)
   const [loadingResolve, setLoadingResolve] = useState(false)
 
   useEffect(() => {
+    setSelectedStatus(currentTitle?.status ?? 'plan_to_watch')
+  }, [currentTitle])
+
+  useEffect(() => {
     if (isUrl(query)) {
       setLoadingResolve(true)
       apiFetch<MatchResult>(`/titles/resolve?q=${encodeURIComponent(query)}`)
         .then(setResolved)
-        .catch(() => {})
+        .catch(() => {
+          setResolved(null)
+        })
         .finally(() => setLoadingResolve(false))
+    } else {
+      setResolved(null)
     }
   }, [query])
 
-  const loading = loadingSearch || loadingResolve
+  const loading = loadingSearch || loadingResolve || loadingCurrent
 
-  const handleAdd = async () => {
+  const handleSearch = (e: any) => {
+    e.preventDefault()
+    if (!inputValue.trim()) return
+    const newParams = new URLSearchParams(window.location.search)
+    newParams.set('q', inputValue.trim())
+    route(`/admin/validate?${newParams.toString()}`, true)
+  }
+
+  const handleAction = async () => {
     if (adding) return
     setAdding(true)
     try {
-      const body: any = {
-        status: selectedStatus,
-        match_status: resolved?.match_status ?? 'unconfirmed',
-      }
-
-      if (resolved) {
-        body.type = resolved.type
-        body.is_anime = resolved.is_anime
-        body.year = resolved.release_date ? parseInt(resolved.release_date.slice(0, 4)) : new Date().getFullYear()
-        body.names = resolved.names
-        body.imdb_id = resolved.imdb_id
-        body.tmdb_id = resolved.tmdb_id
-        body.tvdb_id = resolved.tvdb_id
-        body.anilist_id = resolved.anilist_id
-        body.cover_url = resolved.cover_file ? `/covers/${resolved.cover_file}` : null
+      if (id) {
+        // Rematch existing title
+        const body: any = {}
+        if (resolved) {
+          body.tmdb_id = resolved.tmdb_id
+          body.imdb_id = resolved.imdb_id
+          body.anilist_id = resolved.anilist_id
+        }
+        
+        // If it was just a name search, maybe we have nothing to rematch with IDs
+        // but the backend Rematch requires at least one ID.
+        // For now, only support rematching if we have resolved metadata.
+        if (Object.keys(body).length > 0) {
+          await apiFetch(`/titles/${id}/rematch`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+          })
+        } else if (!isUrl(query)) {
+          // If not an URL and no resolution, maybe we just want to confirm it as is?
+          // No, rematch needs IDs. Let's just confirm if no IDs provided.
+          await apiFetch(`/titles/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ match_status: 'confirmed' }),
+          })
+        }
+        
+        history.back()
       } else {
-        body.type = 'series'
-        body.year = new Date().getFullYear()
-        body.names = [{ name: query, language: 'en', is_primary: true }]
-      }
+        // Add new title
+        const body: any = {
+          status: selectedStatus,
+          match_status: resolved?.match_status ?? 'unconfirmed',
+        }
 
-      const created = await apiFetch<Title>('/titles', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-      route(`/title/${created.id}`)
+        if (resolved) {
+          body.type = resolved.type
+          body.is_anime = resolved.is_anime
+          body.year = resolved.release_date ? parseInt(resolved.release_date.slice(0, 4)) : new Date().getFullYear()
+          body.names = resolved.names
+          body.imdb_id = resolved.imdb_id
+          body.tmdb_id = resolved.tmdb_id
+          body.tvdb_id = resolved.tvdb_id
+          body.anilist_id = resolved.anilist_id
+          body.cover_url = resolved.cover_file ? `/covers/${resolved.cover_file}` : null
+        } else {
+          body.type = 'series'
+          body.year = new Date().getFullYear()
+          body.names = [{ name: query, language: 'en', is_primary: true }]
+        }
+
+        const created = await apiFetch<Title>('/titles', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+        route(`/title/${created.id}`)
+      }
     } finally {
       setAdding(false)
     }
@@ -82,18 +133,59 @@ export function Validate({ path }: { path?: string }) {
           </svg>
         </div>
         <div className={s.headerTitle}>
-          {isUrl(query) ? 'Adding by URL' : `Validating: ${query}`}
+          {id ? 'Fix match' : isUrl(query) ? 'Adding by URL' : 'Validating title'}
         </div>
       </div>
 
-      {loading && (
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className={s.searchBar}>
+        <input
+          type="text"
+          value={inputValue}
+          onInput={(e) => setInputValue((e.target as HTMLInputElement).value)}
+          placeholder="Search name or paste TMDB/IMDb/AniList URL..."
+          className={s.searchInput}
+        />
+        <button type="submit" className={s.searchBtn}>
+          {loadingSearch || loadingResolve ? '...' : 'Go'}
+        </button>
+      </form>
+
+      {loading && !results.length && !resolved && !currentTitle && (
         <div className={s.loading}>
           <div className={s.spinner} />
           {loadingResolve ? 'Identifying...' : 'Matching...'}
         </div>
       )}
 
-      {/* Existing results */}
+      {/* Existing title being fixed */}
+      {currentTitle && (
+        <div className={s.currentSection}>
+          <div className={s.sectionLabel}>Title to fix</div>
+          <div className={s.currentCard}>
+            <div
+              className={s.resultCover}
+              style={{ background: coverBackground(currentTitle.cover_url, currentTitle.type) }}
+            >
+              {!currentTitle.cover_url && <CoverPlaceholder type={currentTitle.type} iconSize="18px" />}
+            </div>
+            <div className={s.resultInfo}>
+              <div className={s.resultNameRow}>
+                <span className={s.resultName}>{getName(currentTitle)}</span>
+                <StatusBadge status={currentTitle.status} />
+              </div>
+              <div className={s.resultMeta}>
+                {currentTitle.type} · {currentTitle.year}
+                {currentTitle.original_title && currentTitle.original_title !== getName(currentTitle) && (
+                  <div className={s.originalLabel}>Plex: {currentTitle.original_title}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Existing results (search) */}
       {results.length > 0 && (
         <div className={s.resultsSection}>
           <div className={s.sectionLabel}>
@@ -103,7 +195,7 @@ export function Validate({ path }: { path?: string }) {
             <div
               key={t.id}
               onClick={() => route(`/title/${t.id}`)}
-              className={s.resultCard}
+              className={clsx(s.resultCard, t.id === Number(id) && s.resultCardCurrent)}
             >
               <div
                 className={s.resultCover}
@@ -125,11 +217,11 @@ export function Validate({ path }: { path?: string }) {
         </div>
       )}
 
-      {/* Add new */}
+      {/* Action card */}
       {!loading && (
         <div className={s.addCard}>
           <div className={s.addCardTitle}>
-            Add as new title
+            {id ? 'New Match' : 'Add to library'}
           </div>
 
           {/* Preview of resolved metadata */}
@@ -161,28 +253,36 @@ export function Validate({ path }: { path?: string }) {
             </div>
           )}
 
-          {/* Status picker */}
-          <div className={s.statusPicker}>
-            {(['watching', 'plan_to_watch', 'completed'] as TitleStatus[]).map((status) => (
-              <button
-                key={status}
-                onClick={() => setSelectedStatus(status)}
-                className={clsx(s.statusOption, selectedStatus === status && s.statusOptionSelected)}
-              >
-                {status === 'plan_to_watch' ? 'Plan to watch' : status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
+          {/* Status picker (only for new titles) */}
+          {!id && (
+            <div className={s.statusPicker}>
+              {(['watching', 'plan_to_watch', 'completed'] as TitleStatus[]).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setSelectedStatus(status)}
+                  className={clsx(s.statusOption, selectedStatus === status && s.statusOptionSelected)}
+                >
+                  {status === 'plan_to_watch' ? 'Plan to watch' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
 
           <button
-            onClick={handleAdd}
-            disabled={adding}
+            onClick={handleAction}
+            disabled={adding || (id && !resolved && !isUrl(query))}
             className={s.addBtn}
           >
             <span className={s.addBtnText}>
-              {adding ? 'Adding...' : 'Add to library'}
+              {adding ? (id ? 'Updating...' : 'Adding...') : (id ? 'Update match' : 'Add to library')}
             </span>
           </button>
+          
+          {id && !resolved && !isUrl(query) && (
+            <div className={s.hint}>
+              Search above or paste an URL (TMDB/AniList) to fix the match for this title.
+            </div>
+          )}
         </div>
       )}
     </div>

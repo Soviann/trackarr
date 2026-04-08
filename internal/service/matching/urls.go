@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	reIMDB    = regexp.MustCompile(`imdb\.com/title/(tt\d+)`)
+	reIMDB    = regexp.MustCompile(`imdb\.com/(?:[a-z]{2}/)?title/(tt\d+)`)
 	reAniList = regexp.MustCompile(`anilist\.co/anime/(\d+)`)
 )
 

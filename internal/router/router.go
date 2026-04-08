@@ -95,12 +95,11 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
 
 			r.Get("/titles", httputil.WrapHandler(titles.List))
-			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
-			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
-			r.Post("/titles", httputil.WrapHandler(titles.Create))
-			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
-			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
-
+		r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
+		r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
+		r.Post("/titles", httputil.WrapHandler(titles.Create))
+		r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
+		r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))

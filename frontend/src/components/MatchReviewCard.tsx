@@ -115,7 +115,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           Confirm
         </button>
         <button
-          onClick={(e: Event) => { e.stopPropagation(); route(`/admin/validate?q=${encodeURIComponent(title.original_title ?? name)}`) }}
+          onClick={(e: Event) => { e.stopPropagation(); route(`/admin/validate?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`) }}
           className={s.btnFix}
         >
           Fix match

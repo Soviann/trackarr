@@ -3,7 +3,7 @@ import type { TitleType } from '../types'
 import { colors } from '../theme'
 import s from './CoverPlaceholder.module.css'
 
-const typeConfig: Record<TitleType | 'anime', { color: string; icon: JSX.Element }> = {
+const typeConfig: Record<TitleType | 'anime' | 'unknown', { color: string; icon: JSX.Element }> = {
   movie: {
     color: colors.accentBlue,
     icon: (
@@ -11,6 +11,7 @@ const typeConfig: Record<TitleType | 'anime', { color: string; icon: JSX.Element
         <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
         <line x1="7" y1="2" x2="7" y2="22" />
         <line x1="17" y1="2" x2="17" y2="22" />
+        <line x1="12" y1="2" x2="12" y2="22" />
         <line x1="2" y1="12" x2="22" y2="12" />
         <line x1="2" y1="7" x2="7" y2="7" />
         <line x1="2" y1="17" x2="7" y2="17" />
@@ -36,6 +37,16 @@ const typeConfig: Record<TitleType | 'anime', { color: string; icon: JSX.Element
       </svg>
     ),
   },
+  unknown: {
+    color: colors.accentTextMuted,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
 }
 
 interface CoverPlaceholderProps {
@@ -46,7 +57,8 @@ interface CoverPlaceholderProps {
 }
 
 export function CoverPlaceholder({ type, is_anime, iconSize }: CoverPlaceholderProps) {
-  const { color, icon } = typeConfig[is_anime ? 'anime' : type]
+  const config = typeConfig[is_anime ? 'anime' : type] || typeConfig.unknown
+  const { color, icon } = config
   return (
     <div
       className={s.placeholder}
@@ -65,6 +77,7 @@ export function CoverPlaceholder({ type, is_anime, iconSize }: CoverPlaceholderP
 /** CSS background string for cover or placeholder gradient */
 export function coverBackground(coverUrl: string | null, type: TitleType, is_anime?: boolean): string {
   if (coverUrl) return `url(/api/covers/${coverUrl}) center/cover`
-  const { color } = typeConfig[is_anime ? 'anime' : type]
+  const config = typeConfig[is_anime ? 'anime' : type] || typeConfig.unknown
+  const { color } = config
   return `linear-gradient(135deg, ${color}25, ${color}0A)`
 }
