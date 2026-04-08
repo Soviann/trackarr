@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Fusion de titres : support de la fusion manuelle de titres en doublon avec identification intelligente de la saison (via Gemini pour les anime)
+- Résolution par URL : support de l'ajout direct via URLs TMDB (movie/tv) et AniList
+- Résolution IMDb : support de la résolution d'URL IMDb via l'API TMDB Find
+- Configuration : ajout de `DISABLE_BACKGROUND_TASKS` pour désactiver les tâches de fond et le worker en environnement de développement ou de test
+
+### Modifié
+- Architecture Backend : refonte majeure centralisant la logique métier dans `TitleService`, `LibraryService` et `BackfillService` pour une meilleure maintenabilité
+- Performance & Stabilité : résolution des interblocages (deadlocks) SQLite par une orchestration optimisée des services et des transactions
+- Pipeline de Matching : amélioration de la détection des types et de la résolution croisée des IDs (TMDB Movie vs TV)
+- Interface de Recherche : le filtre de statut est désormais sur "All" par défaut et les types sont réordonnés (Anime en priorité)
+- UX de Recherche : préservation des résultats et de la position de défilement lors de la navigation arrière vers la page de recherche
+- UI Edition : ajout d'un bouton Annuler sur la modal d'édition pour une meilleure fluidité
+
+### Corrigé
+- Frontend : correction de typages TypeScript dans les utilitaires et amélioration de la gestion des placeholders pour les titres inconnus
+
 ## [v0.11.1] — 2026-04-07
 
 ### Corrigé

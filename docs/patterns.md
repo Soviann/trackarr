@@ -2,7 +2,7 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: T32 complete (Phase 8 — quality & documentation)
+## Status: T33 complete (Phase 9 — refactoring & UX)
 
 ## Backend (Go)
 
@@ -10,7 +10,7 @@ Update when adding routes, services, components, or commands.
 
 | Command | File | Purpose |
 |---|---|---|
-| `serve` | `cmd/serve.go` | HTTP server |
+| `serve` | `cmd/serve.go` | HTTP server (configurable with `DISABLE_BACKGROUND_TASKS`) |
 | `import` | `cmd/import.go` | Simkl backup import |
 
 ### Models
@@ -21,21 +21,25 @@ Update when adding routes, services, components, or commands.
 
 | Service | File | Purpose |
 |---|---|---|
-| PlexService | `internal/service/plex.go` | Webhook scrobble processing, delegates to pipeline |
+| PlexService | `internal/service/plex.go` | Webhook scrobble processing, delegates to `TitleService` and `LibraryService` |
+| TitleService | `internal/service/title.go` | Centralizes title logic (creation from Plex, rematching, URL resolution, manual merging) |
+| LibraryService | `internal/service/library.go` | User library logic (marking watched, auto-complete, rating, notifications). Orchestrates `BackfillService`. |
+| BackfillService | `internal/service/backfill.go` | Automates episode backfill (fetching metadata, marking previous episodes) |
 | PushNotifier | `internal/service/push.go` | Interface (PushService + noopNotifier). Web Push VAPID |
 | BackgroundService | `internal/service/background.go` | Daily title refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
-| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching |
-| TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers |
+| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching. Supports URL resolution (TMDB, IMDb, AniList). |
+| TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers, find-by-id |
 | AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync, covers |
 | CrossRefDB | `internal/service/matching/crossref.go` | anime-offline-database ID cross-referencing |
-| GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve, key rotation |
+| GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve + anime season identification, key rotation |
 
 ### Matching Pipeline Steps
 
 1. **Plex IDs** — use TMDB/IMDB from webhook metadata → `confirmed`
-2. **Cross-reference** — anime-offline-database lookup �� `confirmed`
+2. **Cross-reference** — anime-offline-database lookup → `confirmed` (now handles multiple TMDB IDs for movies vs TV)
 3. **TMDB search** — by title+year → proceed to Step 5
+
 4. **AniList search** — anime only → proceed to Step 5
 5. **Gemini verification** — high confidence → `pending_review`, low → `unconfirmed`
 
@@ -44,8 +48,6 @@ Confidence levels: `ConfidenceHigh`, `ConfidenceMedium`, `ConfidenceLow` (consta
 Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
 
 After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover (TMDB first, AniList `coverImage.extraLarge` fallback). AniList covers prefixed `al-` to avoid filename collisions.
-
-### External APIs
 
 ### External APIs
 
@@ -115,6 +117,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
 | `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, sort (localStorage-persisted), loadMore, cache |
+| `useSearchStore` | `store.ts` | Zustand store: search results persistence and scroll position |
 | `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
 
 ### Components
@@ -147,7 +150,10 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | `/stats` | Stats | `pages/Stats.tsx` |
 | `/login` | Login | `pages/Login.tsx` |
 | `/title/:id` | TitleDetail | `pages/TitleDetail.tsx` |
-| `/validate` | Validate | `pages/Validate.tsx` |
+| `/admin` | Admin | `pages/Admin.tsx` |
+| `/admin/validate` | Validate | `pages/Validate.tsx` |
+| `/admin/tasks` | AdminTasks | `pages/AdminTasks.tsx` |
+| `/admin/notifications` | AdminNotifications | `pages/AdminNotifications.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
 
 ## Quality

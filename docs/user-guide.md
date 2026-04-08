@@ -63,17 +63,28 @@ L'écran principal affiche tous les titres organisés par statut.
 
 Recherche globale dans toute la bibliothèque, quel que soit le filtre actif. Le champ de recherche est en bas (zone du pouce). Les résultats s'affichent au-dessus avec le statut actuel de chaque titre.
 
+**Persistance** : Les résultats de recherche et votre position de défilement sont conservés si vous quittez la page puis y revenez (bouton retour depuis une fiche titre). Les résultats sont vidés si vous changez d'onglet dans la barre de navigation.
+
 ### Ajouter un titre
 
-Deux méthodes :
+Trois méthodes :
 
-1. **Coller un lien** : URL IMDb, TVDB ou AniList → PlexTracker résout automatiquement les IDs et affiche le titre pour confirmation
+1. **Coller un lien** : URL IMDb, TMDB (movie/tv) ou AniList → PlexTracker résout automatiquement les IDs et affiche le titre pour confirmation
 2. **Rechercher par nom** : recherche dans TMDB/AniList
+3. **Partage Android** : PlexTracker s'enregistre comme cible de partage. Depuis l'app IMDb ou un navigateur, utiliser "Partager" → "PlexTracker" pour ajouter directement un titre.
 
 Après confirmation, choisir le statut : En cours, Déjà vu, À regarder.
 - "Déjà vu" marque tous les épisodes comme vus et propose de noter le titre.
 
-**Partage Android** : PlexTracker s'enregistre comme cible de partage. Depuis l'app IMDb ou un navigateur, utiliser "Partager" → "PlexTracker" pour ajouter directement un titre.
+### Fusion de titres
+
+Il arrive que Plex ou l'import Simkl crée des doublons (ex: une série d'anime éclatée en plusieurs titres).
+
+**Action "Merge into..."** : Depuis le détail d'un titre, dans le tiroir d'actions (ActionDrawer) → "Manage" → "Merge into...".
+1. Rechercher le titre de destination (celui à conserver)
+2. Confirmer la fusion
+
+**Identification intelligente (Anime)** : Pour les anime, PlexTracker utilise Gemini AI pour identifier si le titre source est une saison spécifique (ex: Saison 2). Si c'est le cas, les épisodes fusionnés sont automatiquement décalés vers la bonne saison dans le titre de destination.
 
 ### Revue des matchs
 
