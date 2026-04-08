@@ -63,7 +63,7 @@ func TestCrossRefLookupByAniList(t *testing.T) {
 	require.NotNil(t, ids)
 	assert.Equal(t, int64(21), ids.AniList)
 	assert.Equal(t, int64(21), ids.MAL)
-	assert.Equal(t, int64(46298), ids.TMDB)
+	assert.Equal(t, int64(46298), ids.TMDBTV)
 	assert.Equal(t, int64(85004), ids.TVDB)
 	assert.Equal(t, "tt0388629", ids.IMDB)
 }
@@ -79,7 +79,7 @@ func TestCrossRefLookupByIMDB(t *testing.T) {
 func TestCrossRefLookupByTMDB(t *testing.T) {
 	db := newTestCrossRefDB(t)
 
-	ids := db.Lookup(ExternalIDs{TMDB: 1429})
+	ids := db.Lookup(ExternalIDs{TMDBTV: 1429})
 	require.NotNil(t, ids)
 	assert.Equal(t, int64(16498), ids.AniList)
 	assert.Equal(t, int64(16498), ids.MAL)

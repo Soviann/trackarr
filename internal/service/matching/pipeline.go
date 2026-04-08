@@ -110,9 +110,10 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	// Step 2: Cross-reference database lookup
 	if p.crossDB != nil {
 		crossIDs := p.crossDB.Lookup(ExternalIDs{
-			IMDB: result.IMDBID,
-			TMDB: result.TMDBID,
-			TVDB: result.TVDBID,
+			IMDB:      result.IMDBID,
+			TMDBMovie: result.TMDBID,
+			TMDBTV:    result.TMDBID,
+			TVDB:      result.TVDBID,
 		})
 		if crossIDs != nil {
 			mergeIDs(result, crossIDs)
@@ -194,9 +195,14 @@ func (p *Pipeline) ResolveURL(url string) (*MatchResult, error) {
 		AniListID: ids.AniList,
 	}
 
-	// We don't know the type (movie/series) for IMDb, so try with both if needed
-	// But Pipeline.Run doesn't support searching by ID without type.
-	// Actually enrichFromIDs will fetch metadata once we have IDs.
+	if ids.TMDBMovie != 0 {
+		input.TMDBID = ids.TMDBMovie
+		input.Type = model.TitleTypeMovie
+	} else if ids.TMDBTV != 0 {
+		input.TMDBID = ids.TMDBTV
+		input.Type = model.TitleTypeSeries
+	}
+
 	return p.Run(input)
 }
 
@@ -310,10 +316,11 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 	// Cross-reference to fill missing IDs
 	if p.crossDB != nil {
 		crossIDs := p.crossDB.Lookup(ExternalIDs{
-			IMDB:    result.IMDBID,
-			TMDB:    result.TMDBID,
-			TVDB:    result.TVDBID,
-			AniList: result.AniListID,
+			IMDB:      result.IMDBID,
+			TMDBMovie: result.TMDBID, // Try as movie first if we don't know
+			TMDBTV:    result.TMDBID,
+			TVDB:      result.TVDBID,
+			AniList:   result.AniListID,
 		})
 		if crossIDs != nil {
 			mergeIDs(result, crossIDs)
@@ -484,8 +491,18 @@ func mergeIDs(result *MatchResult, ids *ExternalIDs) {
 	if result.IMDBID == "" && ids.IMDB != "" {
 		result.IMDBID = ids.IMDB
 	}
-	if result.TMDBID == 0 && ids.TMDB != 0 {
-		result.TMDBID = ids.TMDB
+	if result.TMDBID == 0 {
+		if ids.TMDBMovie != 0 {
+			result.TMDBID = ids.TMDBMovie
+			if result.TitleType == "" {
+				result.TitleType = model.TitleTypeMovie
+			}
+		} else if ids.TMDBTV != 0 {
+			result.TMDBID = ids.TMDBTV
+			if result.TitleType == "" {
+				result.TitleType = model.TitleTypeSeries
+			}
+		}
 	}
 	if result.TVDBID == 0 && ids.TVDB != 0 {
 		result.TVDBID = ids.TVDB

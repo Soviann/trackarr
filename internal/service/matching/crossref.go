@@ -10,21 +10,23 @@ import (
 
 // ExternalIDs holds all known external IDs for a title.
 type ExternalIDs struct {
-	IMDB    string
-	TMDB    int64
-	TVDB    int64
-	AniList int64
-	MAL     int64
+	IMDB      string
+	TMDBMovie int64
+	TMDBTV    int64
+	TVDB      int64
+	AniList   int64
+	MAL       int64
 }
 
 // CrossRefDB provides ID cross-referencing using anime-offline-database JSON.
 type CrossRefDB struct {
 	// Indexes for fast lookup by any single ID.
-	byAniList map[int64]*ExternalIDs
-	byMAL     map[int64]*ExternalIDs
-	byTMDB    map[int64]*ExternalIDs
-	byTVDB    map[int64]*ExternalIDs
-	byIMDB    map[string]*ExternalIDs
+	byAniList   map[int64]*ExternalIDs
+	byMAL       map[int64]*ExternalIDs
+	byTMDBMovie map[int64]*ExternalIDs
+	byTMDBTV    map[int64]*ExternalIDs
+	byTVDB      map[int64]*ExternalIDs
+	byIMDB      map[string]*ExternalIDs
 }
 
 type offlineDBFile struct {
@@ -52,11 +54,12 @@ func LoadCrossRefDB(path string) (*CrossRefDB, error) {
 	}
 
 	cdb := &CrossRefDB{
-		byAniList: make(map[int64]*ExternalIDs),
-		byMAL:     make(map[int64]*ExternalIDs),
-		byTMDB:    make(map[int64]*ExternalIDs),
-		byTVDB:    make(map[int64]*ExternalIDs),
-		byIMDB:    make(map[string]*ExternalIDs),
+		byAniList:   make(map[int64]*ExternalIDs),
+		byMAL:       make(map[int64]*ExternalIDs),
+		byTMDBMovie: make(map[int64]*ExternalIDs),
+		byTMDBTV:    make(map[int64]*ExternalIDs),
+		byTVDB:      make(map[int64]*ExternalIDs),
+		byIMDB:      make(map[string]*ExternalIDs),
 	}
 
 	for _, entry := range db.Data {
@@ -70,8 +73,11 @@ func LoadCrossRefDB(path string) (*CrossRefDB, error) {
 		if ids.MAL != 0 {
 			cdb.byMAL[ids.MAL] = ids
 		}
-		if ids.TMDB != 0 {
-			cdb.byTMDB[ids.TMDB] = ids
+		if ids.TMDBMovie != 0 {
+			cdb.byTMDBMovie[ids.TMDBMovie] = ids
+		}
+		if ids.TMDBTV != 0 {
+			cdb.byTMDBTV[ids.TMDBTV] = ids
 		}
 		if ids.TVDB != 0 {
 			cdb.byTVDB[ids.TVDB] = ids
@@ -87,6 +93,16 @@ func LoadCrossRefDB(path string) (*CrossRefDB, error) {
 // Lookup takes any known subset of IDs and returns all cross-referenced IDs.
 // Returns nil if no match is found.
 func (cdb *CrossRefDB) Lookup(ids ExternalIDs) *ExternalIDs {
+	if ids.TMDBMovie != 0 {
+		if found, ok := cdb.byTMDBMovie[ids.TMDBMovie]; ok {
+			return found
+		}
+	}
+	if ids.TMDBTV != 0 {
+		if found, ok := cdb.byTMDBTV[ids.TMDBTV]; ok {
+			return found
+		}
+	}
 	if ids.AniList != 0 {
 		if found, ok := cdb.byAniList[ids.AniList]; ok {
 			return found
@@ -99,11 +115,6 @@ func (cdb *CrossRefDB) Lookup(ids ExternalIDs) *ExternalIDs {
 	}
 	if ids.IMDB != "" {
 		if found, ok := cdb.byIMDB[ids.IMDB]; ok {
-			return found
-		}
-	}
-	if ids.TMDB != 0 {
-		if found, ok := cdb.byTMDB[ids.TMDB]; ok {
 			return found
 		}
 	}
@@ -133,7 +144,11 @@ func parseSourceURLs(sources []string) *ExternalIDs {
 			}
 		case strings.Contains(src, "themoviedb.org"):
 			if id := extractTrailingInt(src); id != 0 {
-				ids.TMDB = id
+				if strings.Contains(src, "/movie/") {
+					ids.TMDBMovie = id
+				} else if strings.Contains(src, "/tv/") {
+					ids.TMDBTV = id
+				}
 				found = true
 			}
 		case strings.Contains(src, "thetvdb.com"):
