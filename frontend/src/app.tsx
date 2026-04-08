@@ -41,7 +41,7 @@ export function App() {
     setCurrentPath(e.url)
   }
 
-  const defaultFilter = { status: 'plan_to_watch', type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
+  const defaultFilter = { status: undefined, type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
 
   const navigate = (path: string) => {
     if (path === '/' || path === '/search') {

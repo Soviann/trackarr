@@ -235,14 +235,14 @@ export function FilterDrawer({
 
         <div className={s.filterLabel}>Type</div>
         <div className={s.filterRow}>
+          {typeFilters.map((f) => (
+            <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
+          ))}
           <Chip
             filter={{ id: true, label: 'Anime', color: colors.accentAnilist }}
             active={isAnime}
             onClick={() => onIsAnimeChange(!isAnime)}
           />
-          {typeFilters.map((f) => (
-            <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
-          ))}
         </div>
 
         {showSeriesStatus && (
