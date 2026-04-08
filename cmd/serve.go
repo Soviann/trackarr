@@ -69,6 +69,8 @@ func Serve(distFS embed.FS) error {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
+
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	if !cfg.DisableBackgroundTasks {
 		bgSvc.StartTicker(24 * time.Hour)
@@ -77,7 +79,7 @@ func Serve(distFS embed.FS) error {
 	r := router.New(cfg, db, distFS, bgSvc, pipeline)
 
 	// Task queue worker
-	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir)
+	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc)
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(context.Background())
 	}

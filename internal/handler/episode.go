@@ -1,9 +1,8 @@
 package handler
 
 import (
-	"fmt"
+	"database/sql"
 	"net/http"
-	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -12,16 +11,27 @@ import (
 )
 
 type EpisodeHandler struct {
+	db       *sql.DB
 	titles   *repository.TitleRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	settings *repository.SettingRepository
 	push     service.PushNotifier
 	backfill *service.BackfillService
+	service  *service.LibraryService
 }
 
-func NewEpisodeHandler(titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, settings *repository.SettingRepository, push service.PushNotifier, backfill *service.BackfillService) *EpisodeHandler {
-	return &EpisodeHandler{titles: titles, episodes: episodes, events: events, settings: settings, push: push, backfill: backfill}
+func NewEpisodeHandler(db *sql.DB, titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, settings *repository.SettingRepository, push service.PushNotifier, backfill *service.BackfillService, svc *service.LibraryService) *EpisodeHandler {
+	return &EpisodeHandler{
+		db:       db,
+		titles:   titles,
+		episodes: episodes,
+		events:   events,
+		settings: settings,
+		push:     push,
+		backfill: backfill,
+		service:  svc,
+	}
 }
 
 func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) error {
@@ -35,31 +45,9 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 		return httputil.BadRequest("Invalid episode ID")
 	}
 
-	ep, err := h.episodes.ToggleWatched(episodeID)
+	title, err := h.service.ToggleEpisodeWatched(h.db, titleID, episodeID)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
-	}
-
-	// Log watch event if toggled on
-	if ep.Watched {
-		_, _ = h.events.Create(&model.WatchEvent{
-			TitleID:   titleID,
-			EpisodeID: &episodeID,
-			Source:    model.WatchEventSourceManual,
-		})
-
-		// Backfill previous episodes
-		if h.backfill != nil {
-			h.backfill.BackfillForEpisode(titleID, ep)
-		}
-	}
-
-	// Return updated title for status auto-update
-	title, _ := h.titles.GetByID(titleID)
-
-	// Push rating prompt if all episodes of a season are now watched
-	if ep.Watched && title != nil {
-		h.maybePromptRating(title)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, title)
@@ -79,58 +67,11 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		return httputil.BadRequest("Invalid request")
 	}
 
-	now := time.Now().UTC()
-	if err := h.episodes.BatchMarkWatched(body.EpisodeIDs, now); err != nil {
+	title, err := h.service.MarkEpisodesWatched(h.db, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
+	if err != nil {
 		return httputil.InternalError("Internal error", err)
-	}
-
-	// Log watch events
-	watchEvents := make([]model.WatchEvent, len(body.EpisodeIDs))
-	for i, epID := range body.EpisodeIDs {
-		id := epID
-		watchEvents[i] = model.WatchEvent{
-			TitleID:   titleID,
-			EpisodeID: &id,
-			Source:    model.WatchEventSourceManual,
-		}
-	}
-	_ = h.events.BatchCreate(watchEvents)
-
-	title, _ := h.titles.GetByID(titleID)
-
-	// Push rating prompt if all episodes of a season are now watched
-	if title != nil {
-		h.maybePromptRating(title)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil
-}
-
-// maybePromptRating sends a push notification if any season has all episodes watched
-// and the title has no rating yet.
-func (h *EpisodeHandler) maybePromptRating(title *model.Title) {
-	if title.MyRating != nil {
-		return
-	}
-	for _, season := range title.Seasons {
-		if len(season.Episodes) == 0 {
-			continue
-		}
-		allWatched := true
-		for _, ep := range season.Episodes {
-			if !ep.Watched {
-				allWatched = false
-				break
-			}
-		}
-		if allWatched && service.IsNotificationEnabled(h.settings, service.NotifRatingPrompt) {
-			_ = h.push.SendNotification(
-				"PlexTracker",
-				fmt.Sprintf("Rate %s? You finished season %d", title.PrimaryName(), season.SeasonNumber),
-				fmt.Sprintf("/title/%d", title.ID),
-			)
-			return // One notification per batch
-		}
-	}
 }

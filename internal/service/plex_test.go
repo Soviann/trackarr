@@ -30,9 +30,13 @@ func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepo
 	eventRepo := repository.NewWatchEventRepository(db)
 
 	settingRepo := repository.NewSettingRepository(db)
-	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, nil, settingRepo, nil, service.NewNoopNotifier())
+	taskRepo := repository.NewTaskRepository(db)
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+	backfillSvc := service.NewBackfillService(db, nil)
+	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, nil)
+	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, nil, service.NewNoopNotifier(), titleSvc, libSvc)
 	return svc, titleRepo
-}
+	}
 
 func mustParseURL(raw string) *url.URL {
 	u, _ := url.Parse(raw)
@@ -149,10 +153,14 @@ func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*s
 	eventRepo := repository.NewWatchEventRepository(db)
 
 	settingRepo := repository.NewSettingRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 	pipeline := matching.NewPipeline(tmdbClient, nil, nil, nil, t.TempDir())
-	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, nil, settingRepo, pipeline, service.NewNoopNotifier())
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
+	backfillSvc := service.NewBackfillService(db, tmdbClient)
+	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, pipeline)
+	svc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, service.NewNoopNotifier(), titleSvc, libSvc)
 	return svc, titleRepo
-}
+	}
 
 func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
 	tmdbSeasons := []struct {

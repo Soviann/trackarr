@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,16 +16,27 @@ import (
 )
 
 type TitleHandler struct {
+	db       *sql.DB
 	titles   *repository.TitleRepository
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	tasks    *repository.TaskRepository
 	pipeline *matching.Pipeline
+	service  *service.TitleService
 }
 
-func NewTitleHandler(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline) *TitleHandler {
-	return &TitleHandler{titles: titles, seasons: seasons, episodes: episodes, events: events, tasks: tasks, pipeline: pipeline}
+func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService) *TitleHandler {
+	return &TitleHandler{
+		db:       db,
+		titles:   titles,
+		seasons:  seasons,
+		episodes: episodes,
+		events:   events,
+		tasks:    tasks,
+		pipeline: pipeline,
+		service:  svc,
+	}
 }
 
 var (
@@ -164,7 +176,7 @@ func (h *TitleHandler) Resolve(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Query is required")
 	}
 
-	result, err := h.pipeline.ResolveURL(q)
+	result, err := h.service.ResolveURL(q)
 	if err != nil {
 		return httputil.BadRequest(fmt.Sprintf("Failed to resolve URL: %v", err))
 	}
@@ -258,11 +270,6 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Invalid ID")
 	}
 
-	title, err := h.titles.GetByID(id)
-	if err != nil {
-		return httputil.NotFound("Not found")
-	}
-
 	var body struct {
 		TMDBID    *int64  `json:"tmdb_id"`
 		IMDBID    *string `json:"imdb_id"`
@@ -277,52 +284,8 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("At least one ID is required")
 	}
 
-	// Update IDs + match status
-	matchStatus := model.MatchStatusConfirmed
-	matchSource := "manual"
-	update := repository.TitleUpdate{
-		MatchStatus: &matchStatus,
-		MatchSource: &matchSource,
-	}
-	if body.TMDBID != nil {
-		update.TMDBID = body.TMDBID
-	}
-	if body.IMDBID != nil {
-		update.IMDBID = body.IMDBID
-	}
-	if body.AniListID != nil {
-		update.AniListID = body.AniListID
-	}
-
-	if err := h.titles.Update(id, update); err != nil {
-		return httputil.InternalError("Internal error", err)
-	}
-
-	// Enqueue enrichment task with the new IDs
-	tmdbID := int64(0)
-	if body.TMDBID != nil {
-		tmdbID = *body.TMDBID
-	} else if title.TMDBID != nil {
-		tmdbID = *title.TMDBID
-	}
-	imdbID := ""
-	if body.IMDBID != nil {
-		imdbID = *body.IMDBID
-	} else if title.IMDBID != nil {
-		imdbID = *title.IMDBID
-	}
-
-	payload, _ := json.Marshal(service.EnrichmentPayload{
-		TitleID:   id,
-		TitleName: title.PrimaryName(),
-		Year:      title.Year,
-		TitleType: title.Type,
-		IMDBID:    imdbID,
-		TMDBID:    tmdbID,
-	})
-	dedupKey := fmt.Sprintf("enrichment:%d", id)
-	if _, err := h.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
-		return httputil.InternalError("Failed to enqueue enrichment", err)
+	if err := h.service.Rematch(h.db, id, body.IMDBID, body.TMDBID, body.AniListID); err != nil {
+		return httputil.InternalError("Failed to rematch", err)
 	}
 
 	updated, _ := h.titles.GetByID(id)
@@ -351,8 +314,7 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Cannot merge a title with itself")
 	}
 
-	// Use service.MergeTitles for unified logic
-	if err := service.MergeTitles(r.Context(), h.titles, h.pipeline, body.TargetID, id); err != nil {
+	if err := h.service.Merge(r.Context(), h.db, body.TargetID, id); err != nil {
 		return httputil.InternalError("Failed to merge titles", err)
 	}
 

@@ -14,6 +14,8 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service"
+
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +33,8 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
-	h := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil)
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+	h := handler.NewTitleHandler(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc)
 	return h, titleRepo
 }
 

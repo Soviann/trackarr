@@ -13,6 +13,7 @@ func TestLoad_Defaults(t *testing.T) {
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("DATA_DIR", "")
+	t.Setenv("DISABLE_BACKGROUND_TASKS", "false")
 
 	cfg, err := config.Load()
 	require.NoError(t, err)

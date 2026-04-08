@@ -34,14 +34,13 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 	// Repositories (settings)
 	settingRepo := repository.NewSettingRepository(db)
 
+	taskRepo := repository.NewTaskRepository(db)
+
 	// Services
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
-
-	taskRepo := repository.NewTaskRepository(db)
-	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc)
 
 	// Backfill service (optional — requires TMDB for full backfill)
 	var tmdbClient *matching.TMDBClient
@@ -50,15 +49,20 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 	}
 	backfillSvc := service.NewBackfillService(db, tmdbClient)
 
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
+	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
+
+	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc, titleSvc, libSvc)
+
 	// Stats repository
 	statsRepo := repository.NewStatsRepository(db)
 
 	// Handlers
-	titles := handler.NewTitleHandler(titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline)
+	titles := handler.NewTitleHandler(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
-	episodes := handler.NewEpisodeHandler(titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc)
+	episodes := handler.NewEpisodeHandler(db, titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, libSvc)
 	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)

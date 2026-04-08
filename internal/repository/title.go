@@ -18,6 +18,10 @@ func NewTitleRepository(db database.DBTX) *TitleRepository {
 	return &TitleRepository{db: db}
 }
 
+func (r *TitleRepository) DB() database.DBTX {
+	return r.db
+}
+
 type TitleFilter struct {
 	Status           *model.TitleStatus
 	Type             *model.TitleType
