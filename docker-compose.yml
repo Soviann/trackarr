@@ -13,3 +13,4 @@ services:
         required: false
     environment:
       - DATA_DIR=/data
+      - DISABLE_BACKGROUND_TASKS=false

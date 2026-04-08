@@ -70,13 +70,17 @@ func Serve(distFS embed.FS) error {
 	}
 
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
-	bgSvc.StartTicker(24 * time.Hour)
+	if !cfg.DisableBackgroundTasks {
+		bgSvc.StartTicker(24 * time.Hour)
+	}
 
 	r := router.New(cfg, db, distFS, bgSvc, pipeline)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir)
-	worker.Start(context.Background())
+	if !cfg.DisableBackgroundTasks {
+		worker.Start(context.Background())
+	}
 
 	log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
 	return http.ListenAndServe(cfg.ListenAddr, r)

@@ -24,6 +24,7 @@ type Config struct {
 	DebugLogin          bool
 	DebugLoginUser      string
 	DebugLoginPassword  string
+	DisableBackgroundTasks bool
 }
 
 func Load() (*Config, error) {
@@ -40,6 +41,7 @@ func Load() (*Config, error) {
 		VAPIDPrivateKey:     os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:        os.Getenv("VAPID_SUBJECT"),
 		PlexWebhookSecret:   os.Getenv("PLEX_WEBHOOK_SECRET"),
+		DisableBackgroundTasks: os.Getenv("DISABLE_BACKGROUND_TASKS") == "true",
 	}
 
 	if keys := os.Getenv("GEMINI_API_KEY"); keys != "" {

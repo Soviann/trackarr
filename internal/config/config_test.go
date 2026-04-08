@@ -21,6 +21,19 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, "test@example.com", cfg.GoogleAllowedEmail)
 	assert.Equal(t, ":8080", cfg.ListenAddr)
 	assert.Equal(t, "/data", cfg.DataDir)
+	assert.False(t, cfg.DisableBackgroundTasks)
+}
+
+func TestLoad_DisableBackgroundTasks(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("DISABLE_BACKGROUND_TASKS", "true")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+
+	assert.True(t, cfg.DisableBackgroundTasks)
 }
 
 func TestLoad_MissingRequired(t *testing.T) {

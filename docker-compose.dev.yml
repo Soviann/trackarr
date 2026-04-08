@@ -18,6 +18,7 @@ services:
         required: false
     environment:
       - DATA_DIR=/app/data
+      - DISABLE_BACKGROUND_TASKS=true
     working_dir: /app
 
 volumes:
