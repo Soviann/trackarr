@@ -102,7 +102,7 @@ export function Library(_props: { path?: string }) {
 
       {error && <ErrorBanner message={error} onRetry={invalidate} />}
 
-      {loading && (
+      {loading && titles.length === 0 && (
         <div className={s.centered}>Loading...</div>
       )}
 
@@ -112,7 +112,7 @@ export function Library(_props: { path?: string }) {
         </div>
       )}
 
-      {!loading && titles.length > 0 && (
+      {titles.length > 0 && (
         <>
           <MatchReviewBanner count={reviewCount} pendingCount={pendingCount} unconfirmedCount={unconfirmedCount} />
 

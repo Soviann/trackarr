@@ -1,98 +1,34 @@
-import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
+import { useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
-import type { Title, PaginatedResponse } from '../types'
+import type { Title } from '../types'
 import { colors } from '../theme'
-import { apiFetch } from '../api'
-import { useTitleStore } from '../store'
+import { useTitleStore, useSearchStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './Search.module.css'
 
-const PAGE_SIZE = 48
-
 export function Search({ path: _ }: { path?: string }) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Title[]>([])
-  const [total, setTotal] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { filter } = useTitleStore()
+  const {
+    query, setQuery, results, total, hasMore,
+    loading, loadingMore, error,
+    search, loadMore, clear
+  } = useSearchStore()
+  
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { filter, setFilter } = useTitleStore()
-
-  const buildUrl = useCallback((offset: number) => {
-    const trimmed = query.trim()
-    if (!trimmed) return null
-    const params = new URLSearchParams()
-    params.set('search', trimmed)
-    if (filter.status) params.set('status', filter.status)
-    if (filter.type) params.set('type', filter.type)
-    if (filter.series_status) params.set('series_status', filter.series_status)
-    params.set('limit', String(PAGE_SIZE))
-    params.set('offset', String(offset))
-    return `/titles?${params.toString()}`
-  }, [query, filter.status, filter.type, filter.series_status])
-
-  // Fetch first page
   useEffect(() => {
-    const url = buildUrl(0)
-    if (!url) {
-      setResults([])
-      setTotal(0)
-      setHasMore(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    apiFetch<PaginatedResponse>(url)
-      .then((r) => {
-        setResults(r.titles)
-        setTotal(r.total)
-        setHasMore(r.has_more)
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [buildUrl])
-
-  const handleLoadMore = async () => {
-    const url = buildUrl(results.length)
-    if (!url || loadingMore) return
-    setLoadingMore(true)
-    try {
-      const r = await apiFetch<PaginatedResponse>(url)
-      setResults((prev) => [...prev, ...r.titles])
-      setHasMore(r.has_more)
-      setTotal(r.total)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Load more failed')
-    } finally {
-      setLoadingMore(false)
-    }
-  }
-
-  const retry = () => {
-    const url = buildUrl(0)
-    if (!url) return
-    setLoading(true)
-    setError(null)
-    apiFetch<PaginatedResponse>(url)
-      .then((r) => {
-        setResults(r.titles)
-        setTotal(r.total)
-        setHasMore(r.has_more)
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }
+    search(filter)
+  }, [query, filter.status, filter.type, filter.series_status])
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  const retry = () => search(filter)
 
   const getMetadata = (t: Title) => {
     const parts = [getTypeLabel(t.type), String(t.year)]
@@ -132,7 +68,7 @@ export function Search({ path: _ }: { path?: string }) {
 
         {query.trim() && error && <ErrorBanner message={error} onRetry={retry} />}
 
-        {query.trim() && results.length > 0 && (
+        {results.length > 0 && (
           <>
             <div className={s.resultCount}>
               <span className={s.resultCountText}>
@@ -173,7 +109,7 @@ export function Search({ path: _ }: { path?: string }) {
 
             {hasMore && (
               <div className={s.loadMoreWrap}>
-                <button onClick={handleLoadMore} disabled={loadingMore} className={s.loadMoreBtn}>
+                <button onClick={() => loadMore(filter)} disabled={loadingMore} className={s.loadMoreBtn}>
                   {loadingMore ? 'Chargement...' : 'Charger plus'}
                 </button>
               </div>
@@ -187,7 +123,7 @@ export function Search({ path: _ }: { path?: string }) {
           </div>
         )}
 
-        {query.trim() && loading && (
+        {query.trim() && loading && results.length === 0 && (
           <div className={s.statusMessage}>
             Searching...
           </div>
@@ -213,7 +149,7 @@ export function Search({ path: _ }: { path?: string }) {
           />
           {query && (
             <svg
-              onClick={() => { setQuery('') }}
+              onClick={clear}
               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               className={s.clearBtn}

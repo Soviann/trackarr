@@ -16,7 +16,7 @@ import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
 import { usePush } from './hooks/usePush'
-import { useTitleStore } from './store'
+import { useTitleStore, useSearchStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import s from './app.module.css'
 import type { TitleStatus, TitleType, SeriesStatus } from './types'
@@ -46,6 +46,7 @@ export function App() {
   const navigate = (path: string) => {
     if (path === '/' || path === '/search') {
       setFilter(defaultFilter)
+      useSearchStore.getState().clear()
     }
     route(path)
   }

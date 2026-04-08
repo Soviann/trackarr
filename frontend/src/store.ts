@@ -71,18 +71,24 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   filter: {},
 
   setFilter: (filter) => {
-    set({ filter: { ...get().filter, ...filter } })
+    set({ filter: { ...get().filter, ...filter }, titles: [] })
     get().fetchTitles()
   },
 
   setSort: (sort) => {
-    set({ sort })
+    set({ sort, titles: [] })
     saveSort(sort)
     get().fetchTitles()
   },
 
   fetchTitles: async () => {
-    set({ loading: true, error: null })
+    const { titles } = get()
+    const isFirstLoad = titles.length === 0
+    if (isFirstLoad) {
+      set({ loading: true, error: null })
+    } else {
+      set({ error: null })
+    }
     try {
       const params = new URLSearchParams()
       const f = get().filter
@@ -100,7 +106,8 @@ export const useTitleStore = create<TitleState>((set, get) => ({
         params.set('sort', get().sort.field)
         params.set('order', get().sort.order)
       }
-      params.set('limit', String(PAGE_SIZE))
+      const limit = isFirstLoad ? PAGE_SIZE : Math.max(titles.length, PAGE_SIZE)
+      params.set('limit', String(limit))
       params.set('offset', '0')
       const qs = params.toString()
       const result = await apiFetch<PaginatedResponse>(`/titles?${qs}`)
@@ -154,4 +161,98 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   invalidate: async () => {
     await get().fetchTitles()
   },
+}))
+
+export interface SearchState {
+  query: string
+  results: Title[]
+  total: number
+  hasMore: boolean
+  loading: boolean
+  loadingMore: boolean
+  error: string | null
+  setQuery: (q: string) => void
+  search: (filter: TitleState['filter']) => Promise<void>
+  loadMore: (filter: TitleState['filter']) => Promise<void>
+  clear: () => void
+}
+
+export const useSearchStore = create<SearchState>((set, get) => ({
+  query: '',
+  results: [],
+  total: 0,
+  hasMore: false,
+  loading: false,
+  loadingMore: false,
+  error: null,
+
+  setQuery: (query) => set({ query }),
+
+  search: async (filter) => {
+    const { query, results } = get()
+    const trimmed = query.trim()
+    if (!trimmed) {
+      set({ results: [], total: 0, hasMore: false, error: null, loading: false })
+      return
+    }
+
+    const isFirstLoad = results.length === 0
+    if (isFirstLoad) {
+      set({ loading: true, error: null })
+    } else {
+      set({ error: null })
+    }
+
+    try {
+      const params = new URLSearchParams()
+      params.set('search', trimmed)
+      if (filter.status) params.set('status', filter.status)
+      if (filter.type) params.set('type', filter.type)
+      if (filter.series_status) params.set('series_status', filter.series_status)
+      
+      const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
+      params.set('limit', String(limit))
+      params.set('offset', '0')
+      
+      const result = await apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
+      set({
+        results: result.titles,
+        total: result.total,
+        hasMore: result.has_more,
+        loading: false,
+      })
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Search failed', loading: false })
+    }
+  },
+
+  loadMore: async (filter) => {
+    const { query, results, hasMore, loadingMore } = get()
+    const trimmed = query.trim()
+    if (!trimmed || !hasMore || loadingMore) return
+
+    set({ loadingMore: true })
+    try {
+      const params = new URLSearchParams()
+      params.set('search', trimmed)
+      if (filter.status) params.set('status', filter.status)
+      if (filter.type) params.set('type', filter.type)
+      if (filter.series_status) params.set('series_status', filter.series_status)
+      
+      params.set('limit', String(PAGE_SIZE))
+      params.set('offset', String(results.length))
+      
+      const result = await apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
+      set({
+        results: [...results, ...result.titles],
+        total: result.total,
+        hasMore: result.has_more,
+        loadingMore: false,
+      })
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
+    }
+  },
+
+  clear: () => set({ query: '', results: [], total: 0, hasMore: false, error: null }),
 }))
