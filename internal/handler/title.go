@@ -329,3 +329,33 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 	httputil.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
+
+func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		TargetID int64 `json:"target_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return httputil.BadRequest("Invalid JSON")
+	}
+
+	if body.TargetID == 0 {
+		return httputil.BadRequest("Missing target_id")
+	}
+
+	if id == body.TargetID {
+		return httputil.BadRequest("Cannot merge a title with itself")
+	}
+
+	// Use service.MergeTitles for unified logic
+	if err := service.MergeTitles(r.Context(), h.titles, h.pipeline, body.TargetID, id); err != nil {
+		return httputil.InternalError("Failed to merge titles", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	return nil
+}

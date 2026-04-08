@@ -284,20 +284,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 			// CONFLICT! Same IMDB ID but different local titles.
 			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
 
-			// Determine season offset. For anime splits, the "duplicate" title is often a sequel.
-			// We can ask Gemini for the season number of the duplicate.
-			seasonOffset := 0
-			if result.IsAnime {
-				if ident, err := w.pipeline.IdentifyAnimeSeason(payload.TitleName, payload.Year); err == nil && ident.IsSeason {
-					log.Printf("enrichment: Gemini identified sequel season %d for %q", ident.SeasonNumber, payload.TitleName)
-					// If Gemini says this is Season 2, we want Season 1 of this title to become Season 2 of the master.
-					seasonOffset = ident.SeasonNumber - 1
-				} else if err != nil {
-					log.Printf("enrichment: Gemini season identification failed: %v", err)
-				}
-			}
-
-			if err := w.titles.Merge(existing.ID, payload.TitleID, seasonOffset); err != nil {
+			if err := MergeTitles(context.Background(), w.titles, w.pipeline, existing.ID, payload.TitleID); err != nil {
 				log.Printf("enrichment: merge failed: %v", err)
 			} else {
 				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)

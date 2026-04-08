@@ -100,6 +100,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 		r.Post("/titles", httputil.WrapHandler(titles.Create))
 		r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
 		r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
+		r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))

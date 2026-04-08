@@ -6,6 +6,7 @@ import { getName } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../api'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import clsx from 'clsx'
 import s from './Validate.module.css'
 
@@ -29,6 +30,9 @@ export function Validate({ path }: { path?: string }) {
   const [selectedStatus, setSelectedStatus] = useState<TitleStatus>('plan_to_watch')
   const [resolved, setResolved] = useState<MatchResult | null>(null)
   const [loadingResolve, setLoadingResolve] = useState(false)
+
+  // Merge state
+  const [mergeTarget, setMergeTarget] = useState<Title | null>(null)
 
   useEffect(() => {
     setSelectedStatus(currentTitle?.status ?? 'plan_to_watch')
@@ -55,7 +59,22 @@ export function Validate({ path }: { path?: string }) {
     if (!inputValue.trim()) return
     const newParams = new URLSearchParams(window.location.search)
     newParams.set('q', inputValue.trim())
-    route(`/admin/validate?${newParams.toString()}`, true)
+    route(`/admin/validate?${new_params.toString()}`, true)
+  }
+
+  const handleMerge = async () => {
+    if (!id || !mergeTarget || adding) return
+    setAdding(true)
+    try {
+      await apiFetch(`/titles/${id}/merge`, {
+        method: 'POST',
+        body: JSON.stringify({ target_id: mergeTarget.id }),
+      })
+      route(`/title/${mergeTarget.id}`)
+    } catch (e) {
+      console.error('Merge failed:', e)
+      setAdding(false)
+    }
   }
 
   const handleAction = async () => {
@@ -212,6 +231,18 @@ export function Validate({ path }: { path?: string }) {
                   {t.type} · {t.year}
                 </div>
               </div>
+
+              {id && t.id !== Number(id) && (
+                <button
+                  className={s.mergeBtn}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setMergeTarget(t)
+                  }}
+                >
+                  Merge
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -285,6 +316,16 @@ export function Validate({ path }: { path?: string }) {
           )}
         </div>
       )}
+
+      <ConfirmationDrawer
+        open={!!mergeTarget}
+        onClose={() => setMergeTarget(null)}
+        onConfirm={handleMerge}
+        title="Merge titles?"
+        description={`This will merge "${currentTitle ? getName(currentTitle) : 'this title'}" into "${mergeTarget ? getName(mergeTarget) : ''}". Seasons, watch events and names will be moved. This action cannot be undone.`}
+        confirmText={adding ? 'Merging...' : 'Merge now'}
+        isDangerous
+      />
     </div>
   )
 }
