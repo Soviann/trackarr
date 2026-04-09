@@ -11,6 +11,7 @@ import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { RematchSheet } from '../components/RematchSheet'
 import { AniListSheet } from '../components/AniListSheet'
+import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './TitleDetail.module.css'
@@ -168,6 +169,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
               {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
             </div>
           )}
+          <div style={{ marginTop: '12px' }}>
+            <StatusBadge status={title.status} />
+          </div>
         </div>
       </div>
 
@@ -230,10 +234,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Details card */}
       <div className={s.card}>
         <div className={s.cardLabel}>Details</div>
-        <div className={s.detailRow}>
-          <span className={s.detailKey}>Status</span>
-          <span className={s.detailVal}>{getStatusLabel(title.status)}</span>
-        </div>
         <div className={s.detailRow}>
           <span className={s.detailKey}>Added</span>
           <span className={s.detailVal}>{formatDate(title.created_at)}</span>
