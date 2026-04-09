@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -89,7 +90,7 @@ type MatchInput struct {
 // may be nil. When a client is nil, its step is skipped and the pipeline falls
 // through to the next step. If all steps fail, the title is created with
 // MatchStatusUnconfirmed and MatchSourceNone, using the original Plex title.
-func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
+func (p *Pipeline) Run(ctx context.Context, input MatchInput) (*MatchResult, error) {
 	result := &MatchResult{
 		IMDBID:    input.IMDBID,
 		TMDBID:    input.TMDBID,
@@ -103,7 +104,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 	if result.TMDBID != 0 || result.IMDBID != "" || result.AniListID != 0 {
 		result.MatchStatus = model.MatchStatusConfirmed
 		result.MatchSource = MatchSourcePlexIDs
-		p.enrichFromIDs(result, input)
+		p.enrichFromIDs(ctx, result, input)
 		return result, nil
 	}
 
@@ -120,7 +121,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 			if result.TMDBID != 0 || result.IMDBID != "" {
 				result.MatchStatus = model.MatchStatusConfirmed
 				result.MatchSource = MatchSourceCrossRef
-				p.enrichFromIDs(result, input)
+				p.enrichFromIDs(ctx, result, input)
 				return result, nil
 			}
 		}
@@ -128,25 +129,25 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 
 	// Step 3: TMDB API search
 	if p.tmdb != nil && input.Title != "" {
-		found := p.searchTMDB(input, result)
+		found := p.searchTMDB(ctx, input, result)
 		if found {
 			result.MatchSource = MatchSourceTMDBSearch
-			return p.verifyAndEnrich(input, result)
+			return p.verifyAndEnrich(ctx, input, result)
 		}
 	}
 
 	// Step 4: AniList search
 	if p.anilist != nil && input.Title != "" {
-		found := p.searchAniList(input, result)
+		found := p.searchAniList(ctx, input, result)
 		if found {
 			result.MatchSource = MatchSourceAniListSearch
-			return p.verifyAndEnrich(input, result)
+			return p.verifyAndEnrich(ctx, input, result)
 		}
 	}
 
 	// Step 5 fallback: Gemini fuzzy resolution
 	if p.gemini != nil && input.Title != "" {
-		resolution, err := p.gemini.FuzzyResolve(PlexInfo{
+		resolution, err := p.gemini.FuzzyResolve(ctx, PlexInfo{
 			Title: input.Title,
 			Year:  input.Year,
 			Type:  string(input.Type),
@@ -161,10 +162,10 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 					Year:  resolution.CandidateYear,
 					Type:  input.Type,
 				}
-				if p.searchTMDB(resolvedInput, result) {
+				if p.searchTMDB(ctx, resolvedInput, result) {
 					result.MatchStatus = model.MatchStatusUnconfirmed
 					result.MatchSource = MatchSourceGeminiFuzzy
-					p.enrichFromIDs(result, input)
+					p.enrichFromIDs(ctx, result, input)
 					return result, nil
 				}
 			}
@@ -184,7 +185,7 @@ func (p *Pipeline) Run(input MatchInput) (*MatchResult, error) {
 }
 
 // ResolveURL attempts to identify a title directly from an external URL.
-func (p *Pipeline) ResolveURL(url string) (*MatchResult, error) {
+func (p *Pipeline) ResolveURL(ctx context.Context, url string) (*MatchResult, error) {
 	ids := ParseURL(url)
 	if ids == nil {
 		return nil, fmt.Errorf("could not parse URL: %s", url)
@@ -203,17 +204,17 @@ func (p *Pipeline) ResolveURL(url string) (*MatchResult, error) {
 		input.Type = model.TitleTypeSeries
 	}
 
-	return p.Run(input)
+	return p.Run(ctx, input)
 }
 
-func (p *Pipeline) searchTMDB(input MatchInput, result *MatchResult) bool {
+func (p *Pipeline) searchTMDB(ctx context.Context, input MatchInput, result *MatchResult) bool {
 	var searchResults []TMDBSearchResult
 	var err error
 
 	if input.Type == model.TitleTypeMovie {
-		searchResults, err = p.tmdb.SearchMovie(input.Title, input.Year)
+		searchResults, err = p.tmdb.SearchMovie(ctx, input.Title, input.Year)
 	} else {
-		searchResults, err = p.tmdb.SearchTV(input.Title, input.Year)
+		searchResults, err = p.tmdb.SearchTV(ctx, input.Title, input.Year)
 	}
 
 	if err != nil {
@@ -231,8 +232,8 @@ func (p *Pipeline) searchTMDB(input MatchInput, result *MatchResult) bool {
 	return true
 }
 
-func (p *Pipeline) searchAniList(input MatchInput, result *MatchResult) bool {
-	results, err := p.anilist.SearchAnime(input.Title)
+func (p *Pipeline) searchAniList(ctx context.Context, input MatchInput, result *MatchResult) bool {
+	results, err := p.anilist.SearchAnime(ctx, input.Title)
 	if err != nil {
 		log.Printf("AniList search failed: %v", err)
 		return false
@@ -247,14 +248,14 @@ func (p *Pipeline) searchAniList(input MatchInput, result *MatchResult) bool {
 	return true
 }
 
-func (p *Pipeline) IdentifyAnimeSeason(title string, year int) (*AnimeSeasonIdentification, error) {
+func (p *Pipeline) IdentifyAnimeSeason(ctx context.Context, title string, year int) (*AnimeSeasonIdentification, error) {
 	if p.gemini == nil {
 		return nil, fmt.Errorf("gemini not configured")
 	}
-	return p.gemini.IdentifyAnimeSeason(title, year)
+	return p.gemini.IdentifyAnimeSeason(ctx, title, year)
 }
 
-func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*MatchResult, error) {
+func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result *MatchResult) (*MatchResult, error) {
 	if p.gemini != nil {
 		// Build candidate info from TMDB
 		candidateTitle := input.Title
@@ -262,7 +263,7 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 
 		if p.tmdb != nil && result.TMDBID != 0 {
 			if input.Type == model.TitleTypeMovie {
-				if details, err := p.tmdb.GetMovieDetails(result.TMDBID); err == nil {
+				if details, err := p.tmdb.GetMovieDetails(ctx, result.TMDBID); err == nil {
 					candidateTitle = details.Title
 					if sr := details.ExternalIDs; sr != nil {
 						if sr.IMDBID != "" {
@@ -275,7 +276,7 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 					candidateYear = TMDBSearchResult{ReleaseDate: details.ReleaseDate}.Year()
 				}
 			} else {
-				if details, err := p.tmdb.GetTVDetails(result.TMDBID); err == nil {
+				if details, err := p.tmdb.GetTVDetails(ctx, result.TMDBID); err == nil {
 					candidateTitle = details.Name
 					if sr := details.ExternalIDs; sr != nil {
 						if sr.IMDBID != "" {
@@ -291,6 +292,7 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 		}
 
 		verification, err := p.gemini.VerifyMatch(
+			ctx,
 			PlexInfo{Title: input.Title, Year: input.Year, Type: string(input.Type)},
 			MatchCandidate{Title: candidateTitle, Year: candidateYear, TMDBID: result.TMDBID, IMDBID: result.IMDBID},
 		)
@@ -307,12 +309,12 @@ func (p *Pipeline) verifyAndEnrich(input MatchInput, result *MatchResult) (*Matc
 		result.MatchStatus = model.MatchStatusPendingReview
 	}
 
-	p.enrichFromIDs(result, input)
+	p.enrichFromIDs(ctx, result, input)
 	return result, nil
 }
 
 // enrichFromIDs fetches multilingual names, covers, and cross-references.
-func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
+func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input MatchInput) {
 	// Cross-reference to fill missing IDs
 	if p.crossDB != nil {
 		crossIDs := p.crossDB.Lookup(ExternalIDs{
@@ -329,7 +331,7 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 
 	// Try TMDB lookup by external ID if TMDBID still unknown (not in cross-ref DB)
 	if result.TMDBID == 0 && p.tmdb != nil && result.IMDBID != "" {
-		tmdbResult, mediaType, err := p.tmdb.FindByID(result.IMDBID, "imdb_id")
+		tmdbResult, mediaType, err := p.tmdb.FindByID(ctx, result.IMDBID, "imdb_id")
 		if err == nil && tmdbResult != nil {
 			result.TMDBID = tmdbResult.ID
 			if result.TitleType == "" {
@@ -344,7 +346,7 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 
 	// Try AniList search if AniListID still unknown (anime not in cross-ref DB)
 	if result.AniListID == 0 && p.anilist != nil {
-		searchResults, err := p.anilist.SearchAnime(input.Title)
+		searchResults, err := p.anilist.SearchAnime(ctx, input.Title)
 		if err != nil {
 			log.Printf("anilist enrichment search failed: %v", err)
 		} else if len(searchResults) > 0 {
@@ -364,7 +366,7 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 			mediaType = "tv"
 		}
 
-		names, err := p.tmdb.GetTitleNames(result.TMDBID, mediaType)
+		names, err := p.tmdb.GetTitleNames(ctx, result.TMDBID, mediaType)
 		if err == nil {
 			for lang, name := range names {
 				result.Names = append(result.Names, model.TitleName{
@@ -378,7 +380,7 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 
 	// Add AniList names (romaji)
 	if p.anilist != nil && result.AniListID != 0 {
-		alNames, err := p.anilist.GetNames(result.AniListID)
+		alNames, err := p.anilist.GetNames(ctx, result.AniListID)
 		if err == nil {
 			if alNames.Romaji != "" {
 				result.Names = append(result.Names, model.TitleName{
@@ -396,16 +398,16 @@ func (p *Pipeline) enrichFromIDs(result *MatchResult, input MatchInput) {
 
 	// Fetch TMDB details + metadata + cover
 	if p.tmdb != nil && result.TMDBID != 0 {
-		p.fetchTMDBDetailsAndCover(result)
+		p.fetchTMDBDetailsAndCover(ctx, result)
 	}
 	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
-		p.downloadAniListCover(result)
+		p.downloadAniListCover(ctx, result)
 	}
 }
 
-func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
+func (p *Pipeline) fetchTMDBDetailsAndCover(ctx context.Context, result *MatchResult) {
 	if result.TitleType == model.TitleTypeMovie {
-		details, err := p.tmdb.GetMovieDetails(result.TMDBID)
+		details, err := p.tmdb.GetMovieDetails(ctx, result.TMDBID)
 		if err != nil {
 			log.Printf("fetch movie details failed: %v", err)
 			return
@@ -430,7 +432,7 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(result *MatchResult) {
 			p.downloadPoster(*details.PosterPath, result)
 		}
 	} else {
-		details, err := p.tmdb.GetTVDetails(result.TMDBID)
+		details, err := p.tmdb.GetTVDetails(ctx, result.TMDBID)
 		if err != nil {
 			log.Printf("fetch tv details failed: %v", err)
 			return
@@ -464,8 +466,8 @@ func (p *Pipeline) downloadPoster(posterPath string, result *MatchResult) {
 	result.CoverFile = filename
 }
 
-func (p *Pipeline) downloadAniListCover(result *MatchResult) {
-	details, err := p.anilist.GetAnimeDetails(result.AniListID)
+func (p *Pipeline) downloadAniListCover(ctx context.Context, result *MatchResult) {
+	details, err := p.anilist.GetAnimeDetails(ctx, result.AniListID)
 	if err != nil {
 		return
 	}

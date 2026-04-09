@@ -38,7 +38,7 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 	var names []model.TitleName
 
 	if s.pipeline != nil {
-		result, err := s.pipeline.Run(matching.MatchInput{
+		result, err := s.pipeline.Run(context.Background(), matching.MatchInput{
 			Title:  title,
 			Year:   year,
 			Type:   titleType,
@@ -135,7 +135,7 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 		payloadIMDB = *title.IMDBID
 	}
 
-	payload, _ := json.Marshal(EnrichmentPayload{
+	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   id,
 		TitleName: title.PrimaryName(),
 		Year:      title.Year,
@@ -143,17 +143,20 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 		IMDBID:    payloadIMDB,
 		TMDBID:    payloadTMDB,
 	})
+	if err != nil {
+		return fmt.Errorf("marshal enrichment payload: %w", err)
+	}
 	dedupKey := fmt.Sprintf("enrichment:%d", id)
 	_, err = s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey)
 	return err
 }
 
 // ResolveURL identifies a title from an external URL.
-func (s *TitleService) ResolveURL(url string) (*matching.MatchResult, error) {
+func (s *TitleService) ResolveURL(ctx context.Context, url string) (*matching.MatchResult, error) {
 	if s.pipeline == nil {
 		return nil, fmt.Errorf("matching pipeline not available")
 	}
-	return s.pipeline.ResolveURL(url)
+	return s.pipeline.ResolveURL(ctx, url)
 }
 
 // Merge consolidates sourceID into destID.
@@ -169,7 +172,7 @@ func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sour
 		seasonOffset = *explicitOffset
 	} else if source.IsAnime && s.pipeline != nil {
 		name := source.PrimaryName()
-		if ident, err := s.pipeline.IdentifyAnimeSeason(name, source.Year); err == nil && ident.IsSeason {
+		if ident, err := s.pipeline.IdentifyAnimeSeason(context.Background(), name, source.Year); err == nil && ident.IsSeason {
 			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, name)
 			seasonOffset = ident.SeasonNumber - 1
 		} else if err != nil {

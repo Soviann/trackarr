@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -176,7 +175,7 @@ func (h *TitleHandler) Resolve(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Query is required")
 	}
 
-	result, err := h.service.ResolveURL(q)
+	result, err := h.service.ResolveURL(r.Context(), q)
 	if err != nil {
 		return httputil.BadRequest(fmt.Sprintf("Failed to resolve URL: %v", err))
 	}
@@ -303,7 +302,7 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 		TargetID     int64 `json:"target_id"`
 		SeasonOffset *int  `json:"season_offset"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
 		return httputil.BadRequest("Invalid JSON")
 	}
 

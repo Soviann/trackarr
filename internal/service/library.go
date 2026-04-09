@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -70,7 +72,10 @@ func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episode
 		}
 	}
 
-	title, _ := titles.GetByID(titleID)
+	title, err := titles.GetByID(titleID)
+	if err != nil {
+		return nil, err
+	}
 	if ep.Watched && title != nil {
 		s.maybePromptRating(db, title)
 	}
@@ -99,9 +104,14 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 			PlexPayload: rawPayload,
 		}
 	}
-	_ = events.BatchCreate(watchEvents)
+	if err := events.BatchCreate(watchEvents); err != nil {
+		log.Printf("library: batch create watch events for title %d: %v", titleID, err)
+	}
 
-	title, _ := titles.GetByID(titleID)
+	title, err := titles.GetByID(titleID)
+	if err != nil {
+		return nil, err
+	}
 	if title != nil {
 		s.maybePromptRating(db, title)
 	}
@@ -125,7 +135,10 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 		PlexPayload: rawPayload,
 	})
 
-	title, _ := titles.GetByID(titleID)
+	title, err := titles.GetByID(titleID)
+	if err != nil {
+		return err
+	}
 	if title != nil {
 		s.maybePromptRating(db, title)
 	}
@@ -176,7 +189,7 @@ func (s *LibraryService) maybePromptRating(db database.DBTX, title *model.Title)
 }
 
 // CheckAutoComplete checks if a series should be marked as completed based on last watched episode.
-func (s *LibraryService) CheckAutoComplete(db database.DBTX, titleID int64, tmdbID int64, seasonNum, episodeNum int) error {
+func (s *LibraryService) CheckAutoComplete(ctx context.Context, db database.DBTX, titleID int64, tmdbID int64, seasonNum, episodeNum int) error {
 	if s.pipeline == nil {
 		return nil
 	}
@@ -185,7 +198,7 @@ func (s *LibraryService) CheckAutoComplete(db database.DBTX, titleID int64, tmdb
 		return nil
 	}
 
-	if completed, seriesStatus := checkSeriesCompleted(tmdbClient, tmdbID, seasonNum, episodeNum); completed {
+	if completed, seriesStatus := checkSeriesCompleted(ctx, tmdbClient, tmdbID, seasonNum, episodeNum); completed {
 		titles := repository.NewTitleRepository(db)
 		completedStatus := model.TitleStatusCompleted
 		update := repository.TitleUpdate{Status: &completedStatus}

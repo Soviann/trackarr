@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,14 +34,18 @@ func NewTMDBClient(apiKey string) *TMDBClient {
 // SetBaseURL overrides the TMDB base URL (for tests).
 func (c *TMDBClient) SetBaseURL(u string) { c.baseURL = u }
 
-func (c *TMDBClient) get(path string, params url.Values, dest interface{}) error {
+func (c *TMDBClient) get(ctx context.Context, path string, params url.Values, dest interface{}) error {
 	if params == nil {
 		params = url.Values{}
 	}
 	params.Set("api_key", c.apiKey)
 
 	reqURL := fmt.Sprintf("%s%s?%s", c.baseURL, path, params.Encode())
-	resp, err := c.httpClient.Get(reqURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

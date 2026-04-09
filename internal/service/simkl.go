@@ -288,7 +288,7 @@ func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, 
 	if s.tasks == nil {
 		return
 	}
-	payload, _ := json.Marshal(EnrichmentPayload{
+	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   titleID,
 		TitleName: name,
 		Year:      year,
@@ -298,6 +298,10 @@ func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, 
 		TMDBID:    int64(ids.TMDB),
 		TVDBID:    int64(ids.TVDB),
 	})
+	if err != nil {
+		log.Printf("simkl import: enqueue enrichment for title %d: marshal payload: %v", titleID, err)
+		return
+	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
 	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
 		log.Printf("simkl import: enqueue enrichment for title %d: %v", titleID, err)

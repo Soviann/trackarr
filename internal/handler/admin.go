@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -158,7 +159,7 @@ func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error 
 		return httputil.InternalError("refresh all", fmt.Errorf("background service not available"))
 	}
 
-	go h.bgSvc.RefreshAllTitles()
+	go h.bgSvc.RefreshAllTitles(context.Background())
 
 	w.WriteHeader(http.StatusAccepted)
 	return nil

@@ -203,7 +203,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		backfillTMDBID = &ids.TMDB
 	}
 	if backfillTMDBID != nil && *backfillTMDBID != 0 {
-		if err := s.libSvc.CheckAutoComplete(tx, title.ID, *backfillTMDBID, meta.ParentIndex, meta.Index); err != nil {
+		if err := s.libSvc.CheckAutoComplete(context.Background(), tx, title.ID, *backfillTMDBID, meta.ParentIndex, meta.Index); err != nil {
 			log.Printf("auto-complete warning: %v", err)
 		}
 	}
@@ -213,8 +213,8 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 
 // checkSeriesCompleted checks if the given season/episode is the last episode
 // of the last season of an ended or cancelled series (via TMDB).
-func checkSeriesCompleted(tmdb *matching.TMDBClient, tmdbID int64, seasonNum, episodeNum int) (bool, *model.SeriesStatus) {
-	details, err := tmdb.GetTVDetails(tmdbID)
+func checkSeriesCompleted(ctx context.Context, tmdb *matching.TMDBClient, tmdbID int64, seasonNum, episodeNum int) (bool, *model.SeriesStatus) {
+	details, err := tmdb.GetTVDetails(ctx, tmdbID)
 	if err != nil {
 		return false, nil
 	}
@@ -266,7 +266,7 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		default:
 		}
 
-		result, err := s.pipeline.Run(matching.MatchInput{
+		result, err := s.pipeline.Run(s.ctx, matching.MatchInput{
 			Title:  titleName,
 			Year:   year,
 			Type:   titleType,
@@ -322,7 +322,7 @@ func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year in
 	if s.tasks == nil {
 		return
 	}
-	payload, _ := json.Marshal(EnrichmentPayload{
+	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   titleID,
 		TitleName: titleName,
 		Year:      year,
@@ -332,6 +332,10 @@ func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year in
 		TMDBID:    ids.TMDB,
 		TVDBID:    ids.TVDB,
 	})
+	if err != nil {
+		log.Printf("enqueue enrichment for title %d: marshal payload: %v", titleID, err)
+		return
+	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
 	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
 		log.Printf("enqueue enrichment for title %d: %v", titleID, err)

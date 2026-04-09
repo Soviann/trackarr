@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,7 +61,7 @@ func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
 	require.NoError(t, episodeRepo.MarkWatched(ep2.ID, now))
 
 	// Run refresh
-	results := svc.RefreshTitles()
+	results := svc.RefreshTitles(context.Background())
 
 	// Title should be auto-completed
 	title, _ := titleRepo.GetByID(titleID)
@@ -81,7 +82,7 @@ func TestBackgroundService_SkipCompletedTitles(t *testing.T) {
 	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
 	require.NoError(t, err)
 
-	results := svc.RefreshTitles()
+	results := svc.RefreshTitles(context.Background())
 	assert.Empty(t, results)
 }
 
@@ -108,7 +109,7 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, episodeRepo.MarkWatched(ep1.ID, time.Now().UTC()))
 
-	results := svc.RefreshTitles()
+	results := svc.RefreshTitles(context.Background())
 
 	title, _ := titleRepo.GetByID(titleID)
 	assert.Equal(t, model.TitleStatusWatching, title.Status)
@@ -118,7 +119,7 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 
 func TestBackgroundService_NilSafe(t *testing.T) {
 	var svc *service.BackgroundService
-	results := svc.RefreshTitles()
+	results := svc.RefreshTitles(context.Background())
 	assert.Nil(t, results)
 }
 
@@ -176,7 +177,7 @@ func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run cleanup for Sunday
-	svc.CleanupUnusedCovers(time.Sunday)
+	svc.CleanupUnusedCovers(context.Background(), time.Sunday)
 
 	// After Sunday cleanup, 'b456.jpg' should be deleted (starts with 'b', unused)
 	// 'a123.jpg' remains (starts with 'a', used)

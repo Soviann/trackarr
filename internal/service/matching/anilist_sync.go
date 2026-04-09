@@ -1,6 +1,9 @@
 package matching
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 const syncRatingMutation = `
 mutation ($mediaId: Int, $scoreRaw: Int) {
@@ -13,7 +16,7 @@ mutation ($mediaId: Int, $scoreRaw: Int) {
 
 // SyncRating sends a rating (1-100 scale) to AniList for the given media.
 // Requires a valid OAuth access token.
-func (c *AniListClient) SyncRating(anilistID int64, rating int, accessToken string) error {
+func (c *AniListClient) SyncRating(ctx context.Context, anilistID int64, rating int, accessToken string) error {
 	var resp struct {
 		SaveMediaListEntry struct {
 			ID    int64 `json:"id"`
@@ -21,7 +24,7 @@ func (c *AniListClient) SyncRating(anilistID int64, rating int, accessToken stri
 		} `json:"SaveMediaListEntry"`
 	}
 
-	err := c.query(syncRatingMutation, map[string]interface{}{
+	err := c.query(ctx, syncRatingMutation, map[string]interface{}{
 		"mediaId":  anilistID,
 		"scoreRaw": rating,
 	}, accessToken, &resp)

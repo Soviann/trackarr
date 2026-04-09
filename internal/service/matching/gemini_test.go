@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +45,7 @@ func TestGeminiVerifyMatch(t *testing.T) {
 	client.apiURL = server.URL
 
 	result, err := client.VerifyMatch(
+		context.Background(),
 		PlexInfo{Title: "Fight Club", Year: 1999, Type: "movie"},
 		MatchCandidate{Title: "Fight Club", Year: 1999, TMDBID: 550, IMDBID: "tt0137523"},
 	)
@@ -62,7 +64,7 @@ func TestGeminiFuzzyResolve(t *testing.T) {
 	client := NewGeminiClient([]string{"test-key-1"})
 	client.apiURL = server.URL
 
-	result, err := client.FuzzyResolve(PlexInfo{Title: "FightClub", Year: 1999, Type: "movie"})
+	result, err := client.FuzzyResolve(context.Background(), PlexInfo{Title: "FightClub", Year: 1999, Type: "movie"})
 	require.NoError(t, err)
 	assert.Equal(t, "Fight Club", result.CandidateTitle)
 	assert.Equal(t, 1999, result.CandidateYear)
@@ -89,6 +91,7 @@ func TestGeminiKeyRotationOn429(t *testing.T) {
 	client.apiURL = server.URL
 
 	result, err := client.VerifyMatch(
+		context.Background(),
 		PlexInfo{Title: "Test", Year: 2020, Type: "movie"},
 		MatchCandidate{Title: "Test", Year: 2020},
 	)
@@ -107,6 +110,7 @@ func TestGeminiAllKeysRateLimited(t *testing.T) {
 	client.apiURL = server.URL
 
 	_, err := client.VerifyMatch(
+		context.Background(),
 		PlexInfo{Title: "Test", Year: 2020, Type: "movie"},
 		MatchCandidate{Title: "Test", Year: 2020},
 	)
@@ -125,6 +129,7 @@ func TestGeminiResponseWithMarkdownFences(t *testing.T) {
 	client.apiURL = server.URL
 
 	result, err := client.VerifyMatch(
+		context.Background(),
 		PlexInfo{Title: "Test", Year: 2020, Type: "movie"},
 		MatchCandidate{Title: "Test", Year: 2020},
 	)

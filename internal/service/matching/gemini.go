@@ -2,6 +2,7 @@ package matching
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -65,7 +66,7 @@ type MatchCandidate struct {
 }
 
 // VerifyMatch asks Gemini to verify whether a candidate match is correct for the source.
-func (c *GeminiClient) VerifyMatch(source PlexInfo, candidate MatchCandidate) (*MatchVerification, error) {
+func (c *GeminiClient) VerifyMatch(ctx context.Context, source PlexInfo, candidate MatchCandidate) (*MatchVerification, error) {
 	prompt := fmt.Sprintf(`You are a media matching verification system. Determine if the candidate match is correct for the source title.
 
 Source (from Plex):
@@ -84,7 +85,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 		source.Title, source.Year, source.Type,
 		candidate.Title, candidate.Year, candidate.TMDBID, candidate.IMDBID)
 
-	body, err := c.generate(prompt)
+	body, err := c.generate(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("verify match: %w", err)
 	}
@@ -97,7 +98,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 }
 
 // FuzzyResolve asks Gemini to identify a title from partial/ambiguous info.
-func (c *GeminiClient) FuzzyResolve(source PlexInfo) (*FuzzyResolution, error) {
+func (c *GeminiClient) FuzzyResolve(ctx context.Context, source PlexInfo) (*FuzzyResolution, error) {
 	prompt := fmt.Sprintf(`You are a media identification system. Given the following partial information, identify the most likely title.
 
 Source (from Plex):
@@ -109,7 +110,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 {"candidate_title": "official title", "candidate_year": year, "confidence": "high"/"medium"/"low", "reason": "brief explanation"}`,
 		source.Title, source.Year, source.Type)
 
-	body, err := c.generate(prompt)
+	body, err := c.generate(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("fuzzy resolve: %w", err)
 	}
@@ -143,7 +144,7 @@ type geminiResponse struct {
 	} `json:"candidates"`
 }
 
-func (c *GeminiClient) generate(prompt string) (string, error) {
+func (c *GeminiClient) generate(ctx context.Context, prompt string) (string, error) {
 	reqBody := geminiRequest{
 		Contents: []geminiContent{
 			{Parts: []geminiPart{{Text: prompt}}},
@@ -162,7 +163,12 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 		apiKey := c.apiKeys[idx]
 
 		url := fmt.Sprintf("%s?key=%s", c.apiURL, apiKey)
-		resp, err := c.httpClient.Post(url, "application/json", bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return "", err
 		}
@@ -203,7 +209,7 @@ type AnimeSeasonIdentification struct {
 
 // IdentifyAnimeSeason asks Gemini if a title is actually a specific season of a series.
 // Useful for anime where sequels have different names (e.g. "Solo Leveling: Arise from the Shadow" -> Season 2).
-func (c *GeminiClient) IdentifyAnimeSeason(title string, year int) (*AnimeSeasonIdentification, error) {
+func (c *GeminiClient) IdentifyAnimeSeason(ctx context.Context, title string, year int) (*AnimeSeasonIdentification, error) {
 	prompt := fmt.Sprintf(`You are an anime metadata expert. Identify if the following title is a specific season of a parent series.
 Many anime sequels have distinct names instead of "Season 2".
 
@@ -220,7 +226,7 @@ Respond with ONLY a JSON object:
   "reason": "brief explanation"
 }`, title, year)
 
-	body, err := c.generate(prompt)
+	body, err := c.generate(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("identify anime season: %w", err)
 	}

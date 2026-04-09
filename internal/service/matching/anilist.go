@@ -2,6 +2,7 @@ package matching
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +36,7 @@ type graphqlResponse struct {
 	} `json:"errors"`
 }
 
-func (c *AniListClient) query(gql string, variables map[string]interface{}, accessToken string, dest interface{}) error {
+func (c *AniListClient) query(ctx context.Context, gql string, variables map[string]interface{}, accessToken string, dest interface{}) error {
 	body, err := json.Marshal(graphqlRequest{
 		Query:     gql,
 		Variables: variables,
@@ -44,7 +45,7 @@ func (c *AniListClient) query(gql string, variables map[string]interface{}, acce
 		return fmt.Errorf("marshal query: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.apiURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}

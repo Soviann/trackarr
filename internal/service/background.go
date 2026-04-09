@@ -69,17 +69,17 @@ type RefreshResult struct {
 
 // RefreshTitles processes all non-completed titles.
 // Returns a result per processed title.
-func (s *BackgroundService) RefreshTitles() []RefreshResult {
-	return s.refreshTitles(false)
+func (s *BackgroundService) RefreshTitles(ctx context.Context) []RefreshResult {
+	return s.refreshTitles(ctx, false)
 }
 
 // RefreshAllTitles processes all titles regardless of status.
 // Used to backfill metadata on existing titles.
-func (s *BackgroundService) RefreshAllTitles() []RefreshResult {
-	return s.refreshTitles(true)
+func (s *BackgroundService) RefreshAllTitles(ctx context.Context) []RefreshResult {
+	return s.refreshTitles(ctx, true)
 }
 
-func (s *BackgroundService) refreshTitles(includeAll bool) []RefreshResult {
+func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) []RefreshResult {
 	if s == nil {
 		return nil
 	}
@@ -97,16 +97,16 @@ func (s *BackgroundService) refreshTitles(includeAll bool) []RefreshResult {
 			continue
 		}
 
-		result := s.refreshTitle(&title)
+		result := s.refreshTitle(ctx, &title)
 		results = append(results, result)
 
-		_ = s.limiter.Wait(context.Background())
+		_ = s.limiter.Wait(ctx)
 	}
 
 	return results
 }
 
-func (s *BackgroundService) refreshTitle(title *model.Title) RefreshResult {
+func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title) RefreshResult {
 	result := RefreshResult{
 		TitleID:   title.ID,
 		TitleName: title.PrimaryName(),
@@ -114,7 +114,7 @@ func (s *BackgroundService) refreshTitle(title *model.Title) RefreshResult {
 
 	// Step 1: Refresh from TMDB if available
 	if s.tmdb != nil && title.TMDBID != nil {
-		s.refreshFromTMDB(title, &result)
+		s.refreshFromTMDB(ctx, title, &result)
 	}
 
 	// Step 1b: AniList cover fallback for titles without TMDB ID
@@ -140,16 +140,16 @@ func (s *BackgroundService) refreshTitle(title *model.Title) RefreshResult {
 	return result
 }
 
-func (s *BackgroundService) refreshFromTMDB(title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
 	if title.Type == model.TitleTypeMovie {
-		s.refreshMovieFromTMDB(title, result)
+		s.refreshMovieFromTMDB(ctx, title, result)
 	} else {
-		s.refreshSeriesFromTMDB(title, result)
+		s.refreshSeriesFromTMDB(ctx, title, result)
 	}
 }
 
-func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *RefreshResult) {
-	details, err := s.tmdb.GetMovieDetails(*title.TMDBID)
+func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+	details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
 		s.enqueueRefreshOnRetryable(title.ID, err)
@@ -187,8 +187,8 @@ func (s *BackgroundService) refreshMovieFromTMDB(title *model.Title, result *Ref
 	}
 }
 
-func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *RefreshResult) {
-	details, err := s.tmdb.GetTVDetails(*title.TMDBID)
+func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+	details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
 		s.enqueueRefreshOnRetryable(title.ID, err)
@@ -257,7 +257,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		}
 
 		// Fetch individual episodes
-		tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(*title.TMDBID, tmdbSeason.SeasonNumber)
+		tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
 		if err != nil {
 			continue
 		}
@@ -272,7 +272,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 		}
 		_ = s.episodes.UpsertBatch(season.ID, entries)
 
-		_ = s.limiter.Wait(context.Background())
+		_ = s.limiter.Wait(ctx)
 	}
 }
 
@@ -309,7 +309,7 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 
 // FetchMissingCovers downloads covers for all titles without a cover.
 // Tries TMDB first (if TMDB ID available), then falls back to AniList.
-func (s *BackgroundService) FetchMissingCovers() int {
+func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 	if s == nil {
 		return 0
 	}
@@ -330,14 +330,14 @@ func (s *BackgroundService) FetchMissingCovers() int {
 		if title.TMDBID != nil {
 			var posterPath *string
 			if title.Type == model.TitleTypeMovie {
-				details, err := s.tmdb.GetMovieDetails(*title.TMDBID)
+				details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 				if err != nil {
 					s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.AniListID, title.Type, err)
 				} else {
 					posterPath = details.PosterPath
 				}
 			} else {
-				details, err := s.tmdb.GetTVDetails(*title.TMDBID)
+				details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 				if err != nil {
 					s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.AniListID, title.Type, err)
 				} else {
@@ -350,7 +350,7 @@ func (s *BackgroundService) FetchMissingCovers() int {
 				if err == nil {
 					_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 					fetched++
-					_ = s.limiter.Wait(context.Background())
+					_ = s.limiter.Wait(ctx)
 					continue
 				}
 			}
@@ -361,7 +361,7 @@ func (s *BackgroundService) FetchMissingCovers() int {
 			fetched++
 		}
 
-		_ = s.limiter.Wait(context.Background())
+		_ = s.limiter.Wait(ctx)
 	}
 
 	return fetched
@@ -374,7 +374,7 @@ func (s *BackgroundService) downloadAniListCover(title *model.Title) bool {
 		return false
 	}
 
-	details, err := s.anilist.GetAnimeDetails(*title.AniListID)
+	details, err := s.anilist.GetAnimeDetails(context.Background(), *title.AniListID)
 	if err != nil || details.CoverURL == "" {
 		return false
 	}
@@ -403,11 +403,11 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 		}
 
 		log.Println("background: fetching missing covers")
-		if n := s.FetchMissingCovers(); n > 0 {
+		if n := s.FetchMissingCovers(ctx); n > 0 {
 			log.Printf("background: fetched %d missing covers", n)
 		}
 		log.Println("background: starting initial refresh")
-		s.RefreshTitles()
+		s.RefreshTitles(ctx)
 
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -418,11 +418,11 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 				return
 			case <-ticker.C:
 				log.Println("background: starting scheduled refresh")
-				s.RefreshTitles()
+				s.RefreshTitles(ctx)
 
 				day := time.Now().Weekday()
 				log.Printf("background: starting unused covers cleanup for %s", day.String())
-				s.CleanupUnusedCovers(day)
+				s.CleanupUnusedCovers(ctx, day)
 			}
 		}
 	}()
@@ -450,7 +450,7 @@ func getDailyPrefixes(day time.Weekday) []rune {
 }
 
 // CleanupUnusedCovers deletes orphaned cover files sharded by the starting character of the filename.
-func (s *BackgroundService) CleanupUnusedCovers(day time.Weekday) {
+func (s *BackgroundService) CleanupUnusedCovers(ctx context.Context, day time.Weekday) {
 	if s == nil || s.titles == nil {
 		return
 	}
@@ -495,7 +495,7 @@ func (s *BackgroundService) CleanupUnusedCovers(day time.Weekday) {
 		if len(batch) >= 100 {
 			deleted += s.processCoverBatch(coversDir, batch)
 			batch = batch[:0]
-			_ = s.limiter.Wait(context.Background())
+			_ = s.limiter.Wait(ctx)
 		}
 	}
 
@@ -533,7 +533,11 @@ func (s *BackgroundService) enqueueRefreshOnRetryable(titleID int64, err error) 
 	if s.tasks == nil || !matching.IsRetryableError(err) {
 		return
 	}
-	payload, _ := json.Marshal(RefreshPayload{TitleID: titleID})
+	payload, marshalErr := json.Marshal(RefreshPayload{TitleID: titleID})
+	if marshalErr != nil {
+		log.Printf("enqueue refresh for title %d: marshal payload: %v", titleID, marshalErr)
+		return
+	}
 	dedupKey := fmt.Sprintf("refresh:%d", titleID)
 	if _, enqErr := s.tasks.Enqueue(model.TaskTypeRefresh, string(payload), &dedupKey); enqErr != nil {
 		log.Printf("enqueue refresh for title %d: %v", titleID, enqErr)
@@ -548,7 +552,11 @@ func (s *BackgroundService) enqueueCoverOnRetryable(titleID, tmdbID int64, anili
 	if anilistID != nil {
 		p.AniListID = *anilistID
 	}
-	payload, _ := json.Marshal(p)
+	payload, marshalErr := json.Marshal(p)
+	if marshalErr != nil {
+		log.Printf("enqueue cover fetch for title %d: marshal payload: %v", titleID, marshalErr)
+		return
+	}
 	dedupKey := fmt.Sprintf("cover_fetch:%d", titleID)
 	if _, enqErr := s.tasks.Enqueue(model.TaskTypeCoverFetch, string(payload), &dedupKey); enqErr != nil {
 		log.Printf("enqueue cover fetch for title %d: %v", titleID, enqErr)

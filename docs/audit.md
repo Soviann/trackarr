@@ -19,7 +19,7 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-2: Goroutine lifecycle & graceful shutdown
 *Goroutines that cannot be stopped on SIGTERM. Fix as a unit — all require threading a cancellable context from serve.go.*
 
-- ~~[GO-1] HIGH | `service/plex.go:259`~~ — **fixed**: service-level context stored on `PlexService`, goroutine selects on `ctx.Done()` before running pipeline. Note: goroutines already in-flight at SIGTERM run to completion because `Pipeline.Run` is not context-aware; complete cancellation of in-flight HTTP calls requires SESSION-8 GO-7 work
+- ~~[GO-1] HIGH | `service/plex.go:259`~~ — **fixed**: service-level context stored on `PlexService`, goroutine selects on `ctx.Done()` before running pipeline. Note: goroutines already in-flight at SIGTERM run to completion because `Pipeline.Run` is not context-aware; complete cancellation of in-flight HTTP calls addressed by SESSION-8 GO-7
 - ~~[GO-2] HIGH | `service/background.go:402`~~ — **fixed**: `StartTicker` accepts `ctx context.Context`, initial delay and ticker loop both select on `ctx.Done()`
 - ~~[GO-3] HIGH | `service/taskqueue.go:111`~~ — **fixed**: panic recovery replaced with `for` loop + inner func; checks `ctx.Err()` after recovery instead of recursing
 - ~~[GO-15] LOW | `cmd/serve.go:84`~~ — **fixed**: `signal.NotifyContext` with SIGINT/SIGTERM threaded to worker, bgSvc, and PlexService via router
@@ -86,13 +86,13 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-8: Go error handling & context propagation
 *Silent failures and missing cancellation throughout backend.*
 
-- [GO-9] MEDIUM | `service/plex.go:316`, `background.go:531,545`, `taskqueue.go:286`, `simkl.go:286` — `payload, _ := json.Marshal(...)` swallows errors; check error before calling Enqueue
-- [GO-10] MEDIUM | `service/library.go:102` — `_ = events.BatchCreate(watchEvents)` drops error silently; log or propagate
-- [GO-11] MEDIUM | `service/library.go:73,104,128` — `title, _ := titles.GetByID(...)` post-transaction; check error and return it
-- [GO-18] LOW | `handler/title.go:306` — `Merge` uses bare `json.NewDecoder(r.Body)` without `LimitReader`; use `httputil.ReadJSON`
-- [GO-5] MEDIUM | `service/background.go:103,275,493` — `limiter.Wait(context.Background())` ignores cancellation; thread context through `refreshTitles`, `refreshSeriesFromTMDB`, `CleanupUnusedCovers`
-- [GO-6] MEDIUM | `service/taskqueue.go:150` — same pattern; pass `ctx` through to `processDueTasks`
-- [GO-7] MEDIUM | `service/matching/tmdb.go:37`, `anilist.go:38`, `gemini.go:158` — HTTP calls use `http.NewRequest` not `http.NewRequestWithContext`; context cancellation (shutdown, abort) does not interrupt in-flight calls. Accept `ctx` in `get`/`query`/`generate` and use `http.NewRequestWithContext`
+- ~~[GO-9] MEDIUM | `service/plex.go:316`, `background.go:531,545`, `taskqueue.go:286`, `simkl.go:286`~~ — **fixed**: `payload, err := json.Marshal(...)` now checked; logs and returns on error
+- ~~[GO-10] MEDIUM | `service/library.go:102`~~ — **fixed**: `BatchCreate` error is now logged
+- ~~[GO-11] MEDIUM | `service/library.go:73,104,128`~~ — **fixed**: `GetByID` errors checked and returned
+- ~~[GO-18] LOW | `handler/title.go:306`~~ — **fixed**: `Merge` now uses `httputil.ReadJSON` with size limit
+- ~~[GO-5] MEDIUM | `service/background.go:103,275,493`~~ — **fixed**: `ctx` threaded through `RefreshTitles`, `refreshSeriesFromTMDB`, `CleanupUnusedCovers`; all `limiter.Wait` calls use passed ctx
+- ~~[GO-6] MEDIUM | `service/taskqueue.go:150`~~ — **already fixed in SESSION-3**: `processDueTasks` already accepted `ctx` and used `limiter.Wait(ctx)`
+- ~~[GO-7] MEDIUM | `service/matching/tmdb.go:37`, `anilist.go:38`, `gemini.go:158`~~ — **fixed**: `get`/`query`/`generate` accept `ctx` and use `http.NewRequestWithContext`; all callers (pipeline, taskqueue, background, handlers) thread request/service context through
 
 ---
 

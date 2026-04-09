@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -149,7 +150,7 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 func TestPipeline_Step1_PlexIDsConfirmed(t *testing.T) {
 	pipeline, dataDir := setupPipelineTest(t)
 
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title:  "Fight Club",
 		Year:   1999,
 		Type:   model.TitleTypeMovie,
@@ -173,7 +174,7 @@ func TestPipeline_Step3_TMDBSearch(t *testing.T) {
 	pipeline, _ := setupPipelineTest(t)
 
 	// No Plex IDs — forces TMDB search (Step 3) then Gemini verification (Step 5)
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title: "Fight Club",
 		Year:  1999,
 		Type:  model.TitleTypeMovie,
@@ -189,7 +190,7 @@ func TestPipeline_Step3_TMDBSearch(t *testing.T) {
 func TestPipeline_Step3_TVSearch(t *testing.T) {
 	pipeline, _ := setupPipelineTest(t)
 
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title: "Breaking Bad",
 		Year:  2008,
 		Type:  model.TitleTypeSeries,
@@ -263,7 +264,7 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 
 	pipeline := NewPipeline(tmdbClient, anilistClient, geminiClient, nil, dataDir)
 
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title: "One Punch Man",
 		Year:  2015,
 		Type:  model.TitleTypeSeries,
@@ -297,7 +298,7 @@ func TestPipeline_NoMatch(t *testing.T) {
 
 	pipeline := NewPipeline(tmdbClient, nil, geminiClient, nil, dataDir)
 
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title: "Some Obscure Title",
 		Year:  2020,
 		Type:  model.TitleTypeMovie,
@@ -354,7 +355,7 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 	pipeline := NewPipeline(tmdbClient, nil, nil, crossDB, dataDir)
 
 	// Input: only TVDB ID known → crossref should resolve TMDB + IMDB + AniList
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title:  "One Piece",
 		Year:   1999,
 		Type:   model.TitleTypeSeries,
@@ -374,7 +375,7 @@ func TestPipeline_NilClients(t *testing.T) {
 	// Pipeline should work gracefully with nil optional clients
 	pipeline := NewPipeline(nil, nil, nil, nil, t.TempDir())
 
-	result, err := pipeline.Run(MatchInput{
+	result, err := pipeline.Run(context.Background(), MatchInput{
 		Title: "Test",
 		Year:  2020,
 		Type:  model.TitleTypeMovie,

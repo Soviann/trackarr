@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"time"
@@ -77,7 +78,7 @@ func BackfillPreviousEpisodes(
 	var tmdbSeasons []seasonInfo
 
 	if tmdb != nil && tmdbID != nil {
-		details, err := tmdb.GetTVDetails(*tmdbID)
+		details, err := tmdb.GetTVDetails(context.Background(), *tmdbID)
 		if err != nil {
 			log.Printf("backfill: TMDB fetch failed for title %d: %v", titleID, err)
 		} else {

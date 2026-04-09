@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -107,7 +108,7 @@ func searchString(s, substr string) bool {
 func TestAniListSearchAnime(t *testing.T) {
 	_, client := newTestAniListServer(t)
 
-	results, err := client.SearchAnime("One Punch Man")
+	results, err := client.SearchAnime(context.Background(), "One Punch Man")
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
 	assert.Equal(t, int64(21), results[0].ID)
@@ -120,7 +121,7 @@ func TestAniListSearchAnime(t *testing.T) {
 func TestAniListGetAnimeDetails(t *testing.T) {
 	_, client := newTestAniListServer(t)
 
-	details, err := client.GetAnimeDetails(21)
+	details, err := client.GetAnimeDetails(context.Background(), 21)
 	require.NoError(t, err)
 	assert.Equal(t, int64(21), details.ID)
 	assert.Equal(t, "TV", details.Format)
@@ -132,14 +133,14 @@ func TestAniListGetAnimeDetails(t *testing.T) {
 func TestAniListSyncRating(t *testing.T) {
 	_, client := newTestAniListServer(t)
 
-	err := client.SyncRating(21, 85, "test-token")
+	err := client.SyncRating(context.Background(), 21, 85, "test-token")
 	require.NoError(t, err)
 }
 
 func TestAniListGetNames(t *testing.T) {
 	_, client := newTestAniListServer(t)
 
-	names, err := client.GetNames(21)
+	names, err := client.GetNames(context.Background(), 21)
 	require.NoError(t, err)
 	assert.Equal(t, "One Punch Man", names.Romaji)
 	assert.Equal(t, "One Punch Man", names.English)

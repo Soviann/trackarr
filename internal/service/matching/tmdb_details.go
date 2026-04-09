@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -90,27 +91,27 @@ type tmdbTranslationsResponse struct {
 	Translations []TMDBTranslation `json:"translations"`
 }
 
-func (c *TMDBClient) GetMovieDetails(tmdbID int64) (*TMDBMovieDetails, error) {
+func (c *TMDBClient) GetMovieDetails(ctx context.Context, tmdbID int64) (*TMDBMovieDetails, error) {
 	var details TMDBMovieDetails
 	params := url.Values{"append_to_response": {"external_ids,credits"}}
-	if err := c.get(fmt.Sprintf("/movie/%d", tmdbID), params, &details); err != nil {
+	if err := c.get(ctx, fmt.Sprintf("/movie/%d", tmdbID), params, &details); err != nil {
 		return nil, fmt.Errorf("get movie details: %w", err)
 	}
 	return &details, nil
 }
 
-func (c *TMDBClient) GetTVDetails(tmdbID int64) (*TMDBTVDetails, error) {
+func (c *TMDBClient) GetTVDetails(ctx context.Context, tmdbID int64) (*TMDBTVDetails, error) {
 	var details TMDBTVDetails
 	params := url.Values{"append_to_response": {"external_ids,credits"}}
-	if err := c.get(fmt.Sprintf("/tv/%d", tmdbID), params, &details); err != nil {
+	if err := c.get(ctx, fmt.Sprintf("/tv/%d", tmdbID), params, &details); err != nil {
 		return nil, fmt.Errorf("get tv details: %w", err)
 	}
 	return &details, nil
 }
 
-func (c *TMDBClient) GetTVSeasonEpisodes(tmdbID int64, seasonNumber int) ([]TMDBEpisode, error) {
+func (c *TMDBClient) GetTVSeasonEpisodes(ctx context.Context, tmdbID int64, seasonNumber int) ([]TMDBEpisode, error) {
 	var resp tmdbSeasonResponse
-	if err := c.get(fmt.Sprintf("/tv/%d/season/%d", tmdbID, seasonNumber), nil, &resp); err != nil {
+	if err := c.get(ctx, fmt.Sprintf("/tv/%d/season/%d", tmdbID, seasonNumber), nil, &resp); err != nil {
 		return nil, fmt.Errorf("get season episodes: %w", err)
 	}
 	return resp.Episodes, nil
@@ -118,9 +119,9 @@ func (c *TMDBClient) GetTVSeasonEpisodes(tmdbID int64, seasonNumber int) ([]TMDB
 
 // GetTitleNames returns multilingual names for a title (en, fr).
 // mediaType should be "movie" or "tv".
-func (c *TMDBClient) GetTitleNames(tmdbID int64, mediaType string) (map[string]string, error) {
+func (c *TMDBClient) GetTitleNames(ctx context.Context, tmdbID int64, mediaType string) (map[string]string, error) {
 	var resp tmdbTranslationsResponse
-	if err := c.get(fmt.Sprintf("/%s/%d/translations", mediaType, tmdbID), nil, &resp); err != nil {
+	if err := c.get(ctx, fmt.Sprintf("/%s/%d/translations", mediaType, tmdbID), nil, &resp); err != nil {
 		return nil, fmt.Errorf("get translations: %w", err)
 	}
 

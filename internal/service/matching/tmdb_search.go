@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -41,7 +42,7 @@ type tmdbSearchResponse struct {
 	TotalPages int                `json:"total_pages"`
 }
 
-func (c *TMDBClient) SearchMovie(title string, year int) ([]TMDBSearchResult, error) {
+func (c *TMDBClient) SearchMovie(ctx context.Context, title string, year int) ([]TMDBSearchResult, error) {
 	params := url.Values{
 		"query": {title},
 	}
@@ -50,13 +51,13 @@ func (c *TMDBClient) SearchMovie(title string, year int) ([]TMDBSearchResult, er
 	}
 
 	var resp tmdbSearchResponse
-	if err := c.get("/search/movie", params, &resp); err != nil {
+	if err := c.get(ctx, "/search/movie", params, &resp); err != nil {
 		return nil, fmt.Errorf("search movie: %w", err)
 	}
 	return resp.Results, nil
 }
 
-func (c *TMDBClient) SearchTV(title string, year int) ([]TMDBSearchResult, error) {
+func (c *TMDBClient) SearchTV(ctx context.Context, title string, year int) ([]TMDBSearchResult, error) {
 	params := url.Values{
 		"query": {title},
 	}
@@ -65,7 +66,7 @@ func (c *TMDBClient) SearchTV(title string, year int) ([]TMDBSearchResult, error
 	}
 
 	var resp tmdbSearchResponse
-	if err := c.get("/search/tv", params, &resp); err != nil {
+	if err := c.get(ctx, "/search/tv", params, &resp); err != nil {
 		return nil, fmt.Errorf("search tv: %w", err)
 	}
 	return resp.Results, nil

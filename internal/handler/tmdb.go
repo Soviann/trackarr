@@ -44,9 +44,9 @@ func (h *TMDBHandler) Search(w http.ResponseWriter, r *http.Request) error {
 
 	switch mediaType {
 	case "movie":
-		results, err = h.tmdb.SearchMovie(query, 0)
+		results, err = h.tmdb.SearchMovie(r.Context(), query, 0)
 	case "tv":
-		results, err = h.tmdb.SearchTV(query, 0)
+		results, err = h.tmdb.SearchTV(r.Context(), query, 0)
 	default:
 		return httputil.BadRequest("type must be movie or tv")
 	}

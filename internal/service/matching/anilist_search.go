@@ -1,6 +1,9 @@
 package matching
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type AniListSearchResult struct {
 	ID           int64  `json:"id"`
@@ -66,7 +69,7 @@ query ($id: Int) {
 }
 `
 
-func (c *AniListClient) SearchAnime(title string) ([]AniListSearchResult, error) {
+func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniListSearchResult, error) {
 	var resp struct {
 		Page struct {
 			Media []struct {
@@ -83,7 +86,7 @@ func (c *AniListClient) SearchAnime(title string) ([]AniListSearchResult, error)
 		} `json:"Page"`
 	}
 
-	err := c.query(searchAnimeQuery, map[string]interface{}{"search": title}, "", &resp)
+	err := c.query(ctx, searchAnimeQuery, map[string]interface{}{"search": title}, "", &resp)
 	if err != nil {
 		return nil, fmt.Errorf("search anime: %w", err)
 	}
@@ -103,7 +106,7 @@ func (c *AniListClient) SearchAnime(title string) ([]AniListSearchResult, error)
 	return results, nil
 }
 
-func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error) {
+func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*AniListDetails, error) {
 	var resp struct {
 		Media struct {
 			ID    int64  `json:"id"`
@@ -123,7 +126,7 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 		} `json:"Media"`
 	}
 
-	err := c.query(getAnimeDetailsQuery, map[string]interface{}{"id": anilistID}, "", &resp)
+	err := c.query(ctx, getAnimeDetailsQuery, map[string]interface{}{"id": anilistID}, "", &resp)
 	if err != nil {
 		return nil, fmt.Errorf("get anime details: %w", err)
 	}
@@ -147,8 +150,8 @@ func (c *AniListClient) GetAnimeDetails(anilistID int64) (*AniListDetails, error
 }
 
 // GetNames returns romaji and English names for an anime.
-func (c *AniListClient) GetNames(anilistID int64) (*AniListNames, error) {
-	details, err := c.GetAnimeDetails(anilistID)
+func (c *AniListClient) GetNames(ctx context.Context, anilistID int64) (*AniListNames, error) {
+	details, err := c.GetAnimeDetails(ctx, anilistID)
 	if err != nil {
 		return nil, err
 	}

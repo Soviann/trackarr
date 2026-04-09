@@ -174,9 +174,9 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 	case model.TaskTypeEnrichment:
 		err = w.handleEnrichment(ctx, task)
 	case model.TaskTypeRefresh:
-		err = w.handleRefresh(task)
+		err = w.handleRefresh(ctx, task)
 	case model.TaskTypeCoverFetch:
-		err = w.handleCoverFetch(task)
+		err = w.handleCoverFetch(ctx, task)
 	default:
 		log.Printf("task queue: unknown task type %q for task %d", task.TaskType, task.ID)
 		_ = w.tasks.Delete(task.ID)
@@ -223,7 +223,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 		return fmt.Errorf("pipeline not configured")
 	}
 
-	result, err := w.pipeline.Run(matching.MatchInput{
+	result, err := w.pipeline.Run(ctx, matching.MatchInput{
 		Title:   payload.TitleName,
 		Year:    payload.Year,
 		Type:    payload.TitleType,
@@ -315,7 +315,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	return nil
 }
 
-func (w *TaskQueueWorker) handleRefresh(task model.Task) error {
+func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) error {
 	var payload RefreshPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode refresh payload: %w", err)
@@ -333,7 +333,7 @@ func (w *TaskQueueWorker) handleRefresh(task model.Task) error {
 	// Try TMDB cover
 	if title.TMDBID != nil && title.CoverURL == nil {
 		if title.Type == model.TitleTypeMovie {
-			details, err := w.tmdb.GetMovieDetails(*title.TMDBID)
+			details, err := w.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 			if err != nil {
 				return err
 			}
@@ -345,7 +345,7 @@ func (w *TaskQueueWorker) handleRefresh(task model.Task) error {
 				}
 			}
 		} else {
-			details, err := w.tmdb.GetTVDetails(*title.TMDBID)
+			details, err := w.tmdb.GetTVDetails(ctx, *title.TMDBID)
 			if err != nil {
 				return err
 			}
@@ -361,13 +361,13 @@ func (w *TaskQueueWorker) handleRefresh(task model.Task) error {
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		w.downloadAniListCover(title)
+		w.downloadAniListCover(ctx, title)
 	}
 
 	return nil
 }
 
-func (w *TaskQueueWorker) handleCoverFetch(task model.Task) error {
+func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task) error {
 	var payload CoverFetchPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode cover_fetch payload: %w", err)
@@ -379,13 +379,13 @@ func (w *TaskQueueWorker) handleCoverFetch(task model.Task) error {
 	if w.tmdb != nil && payload.TMDBID != 0 {
 		var posterPath *string
 		if payload.TitleType == model.TitleTypeMovie {
-			details, err := w.tmdb.GetMovieDetails(payload.TMDBID)
+			details, err := w.tmdb.GetMovieDetails(ctx, payload.TMDBID)
 			if err != nil {
 				return err
 			}
 			posterPath = details.PosterPath
 		} else {
-			details, err := w.tmdb.GetTVDetails(payload.TMDBID)
+			details, err := w.tmdb.GetTVDetails(ctx, payload.TMDBID)
 			if err != nil {
 				return err
 			}
@@ -404,7 +404,7 @@ func (w *TaskQueueWorker) handleCoverFetch(task model.Task) error {
 
 	// Fallback: AniList
 	if w.anilist != nil && payload.AniListID != 0 {
-		details, err := w.anilist.GetAnimeDetails(payload.AniListID)
+		details, err := w.anilist.GetAnimeDetails(ctx, payload.AniListID)
 		if err != nil {
 			return fmt.Errorf("anilist cover fetch: %w", err)
 		}
@@ -420,13 +420,12 @@ func (w *TaskQueueWorker) handleCoverFetch(task model.Task) error {
 	return nil
 }
 
-// notifyDeadTask sends a push notification when a task dies (if enabled).
-func (w *TaskQueueWorker) downloadAniListCover(title *model.Title) {
+func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model.Title) {
 	if w.anilist == nil || title.AniListID == nil {
 		return
 	}
 
-	details, err := w.anilist.GetAnimeDetails(*title.AniListID)
+	details, err := w.anilist.GetAnimeDetails(ctx, *title.AniListID)
 	if err != nil || details.CoverURL == "" {
 		return
 	}

@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -111,7 +112,7 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 func TestTMDBSearchMovie(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	results, err := client.SearchMovie("Fight Club", 1999)
+	results, err := client.SearchMovie(context.Background(), "Fight Club", 1999)
 	require.NoError(t, err)
 	assert.Len(t, results, 2)
 	assert.Equal(t, int64(550), results[0].ID)
@@ -122,7 +123,7 @@ func TestTMDBSearchMovie(t *testing.T) {
 func TestTMDBSearchTV(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	results, err := client.SearchTV("Breaking Bad", 2008)
+	results, err := client.SearchTV(context.Background(), "Breaking Bad", 2008)
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
 	assert.Equal(t, "Breaking Bad", results[0].DisplayTitle())
@@ -132,7 +133,7 @@ func TestTMDBSearchTV(t *testing.T) {
 func TestTMDBGetMovieDetails(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	details, err := client.GetMovieDetails(550)
+	details, err := client.GetMovieDetails(context.Background(), 550)
 	require.NoError(t, err)
 	assert.Equal(t, "Fight Club", details.Title)
 	assert.Equal(t, "tt0137523", details.IMDBID)
@@ -142,7 +143,7 @@ func TestTMDBGetMovieDetails(t *testing.T) {
 func TestTMDBGetTVDetails(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	details, err := client.GetTVDetails(1399)
+	details, err := client.GetTVDetails(context.Background(), 1399)
 	require.NoError(t, err)
 	assert.Equal(t, "Breaking Bad", details.Name)
 	assert.Equal(t, "tt0903747", details.ExternalIDs.IMDBID)
@@ -153,7 +154,7 @@ func TestTMDBGetTVDetails(t *testing.T) {
 func TestTMDBGetTVSeasonEpisodes(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	episodes, err := client.GetTVSeasonEpisodes(1399, 1)
+	episodes, err := client.GetTVSeasonEpisodes(context.Background(), 1399, 1)
 	require.NoError(t, err)
 	assert.Len(t, episodes, 2)
 	assert.Equal(t, "Pilot", episodes[0].Name)
@@ -163,7 +164,7 @@ func TestTMDBGetTVSeasonEpisodes(t *testing.T) {
 func TestTMDBGetTitleNames(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	names, err := client.GetTitleNames(550, "movie")
+	names, err := client.GetTitleNames(context.Background(), 550, "movie")
 	require.NoError(t, err)
 	assert.Equal(t, "Fight Club", names["en"])
 	assert.Equal(t, "Fight Club", names["fr"])
