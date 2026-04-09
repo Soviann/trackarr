@@ -62,10 +62,10 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-6: Database transaction & round-trip correctness
 *Multi-step writes without transactions; avoidable round-trips.*
 
-- [DB-6] MEDIUM | `repository/title.go:674` — `ReplaceNames` DELETEs then INSERTs in a loop without a wrapping transaction; failure mid-loop leaves title nameless. Wrap in `database.WithTx` + batch INSERTs
-- [DB-7] MEDIUM | `repository/task.go:83` — `FetchDue` fires individual `UPDATE … SET status='running' WHERE id=?` per task after one SELECT; replace with single `UPDATE … WHERE id IN (?)`
-- [DB-8] MEDIUM | `repository/task.go:121` — `Fail` does UPDATE then SELECT to read new attempts count; use `UPDATE … RETURNING attempts, max_attempts` (SQLite 3.35+) to collapse to one round-trip
-- [DB-15] LOW | `repository/episode.go:43` — `ToggleWatched` does SELECT → UPDATE → SELECT (3 round-trips); use `UPDATE … SET … WHERE id=? RETURNING *`
+- ~~[DB-6] MEDIUM | `repository/title.go:674`~~ — **fixed**: `ReplaceNames` wrapped in `database.WithTx`; loop of INSERTs replaced with single batch INSERT
+- ~~[DB-7] MEDIUM | `repository/task.go:83`~~ — **fixed**: `FetchDue` uses single `UPDATE … WHERE id IN (?)` instead of one UPDATE per task
+- ~~[DB-8] MEDIUM | `repository/task.go:121`~~ — **fixed**: `Fail` uses `UPDATE … RETURNING attempts, max_attempts, day` to collapse UPDATE + SELECT to one round-trip
+- ~~[DB-15] LOW | `repository/episode.go:43`~~ — **fixed**: `ToggleWatched` uses `UPDATE … RETURNING *` to collapse SELECT → UPDATE → SELECT to one round-trip
 
 ---
 

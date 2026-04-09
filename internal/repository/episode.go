@@ -40,25 +40,19 @@ func (r *EpisodeRepository) GetOrCreate(seasonID int64, episodeNumber int) (*mod
 }
 
 func (r *EpisodeRepository) ToggleWatched(id int64) (*model.Episode, error) {
-	var watched bool
-	err := r.db.QueryRow(`SELECT watched FROM episodes WHERE id = ?`, id).Scan(&watched)
-	if err != nil {
-		return nil, fmt.Errorf("get episode: %w", err)
-	}
-
-	if watched {
-		_, err = r.db.Exec(`UPDATE episodes SET watched = 0, watched_at = NULL WHERE id = ?`, id)
-	} else {
-		_, err = r.db.Exec(`UPDATE episodes SET watched = 1, watched_at = ? WHERE id = ?`, time.Now().UTC(), id)
-	}
+	var e model.Episode
+	err := r.db.QueryRow(
+		`UPDATE episodes
+		 SET watched = CASE WHEN watched = 1 THEN 0 ELSE 1 END,
+		     watched_at = CASE WHEN watched = 1 THEN NULL ELSE ? END
+		 WHERE id = ?
+		 RETURNING id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key`,
+		time.Now().UTC(), id,
+	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey)
 	if err != nil {
 		return nil, fmt.Errorf("toggle episode: %w", err)
 	}
-
-	var e model.Episode
-	err = r.db.QueryRow(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE id = ?`, id).
-		Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey)
-	return &e, err
+	return &e, nil
 }
 
 func (r *EpisodeRepository) BatchMarkWatched(ids []int64, watchedAt time.Time) error {

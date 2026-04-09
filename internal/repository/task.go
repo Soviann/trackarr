@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -79,16 +80,22 @@ func (r *TaskRepository) FetchDue(limit int) ([]model.Task, error) {
 	}
 	rows.Close()
 
-	// Mark fetched tasks as running
-	for i := range tasks {
-		_, err := r.db.Exec(
-			`UPDATE task_queue SET status = 'running', updated_at = ? WHERE id = ?`,
-			now, tasks[i].ID,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("mark task %d running: %w", tasks[i].ID, err)
+	// Mark all fetched tasks as running in a single statement
+	if len(tasks) > 0 {
+		placeholders := make([]string, len(tasks))
+		args := make([]interface{}, 0, len(tasks)+1)
+		args = append(args, now)
+		for i, t := range tasks {
+			placeholders[i] = "?"
+			args = append(args, t.ID)
 		}
-		tasks[i].Status = model.TaskStatusRunning
+		query := fmt.Sprintf(`UPDATE task_queue SET status = 'running', updated_at = ? WHERE id IN (%s)`, strings.Join(placeholders, ","))
+		if _, err := r.db.Exec(query, args...); err != nil {
+			return nil, fmt.Errorf("mark tasks running: %w", err)
+		}
+		for i := range tasks {
+			tasks[i].Status = model.TaskStatusRunning
+		}
 	}
 
 	return tasks, nil
@@ -117,24 +124,19 @@ func (r *TaskRepository) Complete(id int64) error {
 func (r *TaskRepository) Fail(id int64, errMsg string, nextRunAt time.Time) error {
 	now := time.Now()
 
-	// Increment attempts, then check if we need to advance day or mark dead
-	_, err := r.db.Exec(
+	// Increment attempts and read the new state in one round-trip (SQLite 3.35+ RETURNING)
+	var attempts, maxAttempts, day int
+	err := r.db.QueryRow(
 		`UPDATE task_queue SET
 			attempts = attempts + 1,
 			last_error = ?,
 			updated_at = ?
-		 WHERE id = ?`,
+		 WHERE id = ?
+		 RETURNING attempts, max_attempts, day`,
 		errMsg, now, id,
-	)
+	).Scan(&attempts, &maxAttempts, &day)
 	if err != nil {
 		return fmt.Errorf("fail task %d: %w", id, err)
-	}
-
-	// Re-read the task to check state
-	var attempts, maxAttempts, day int
-	err = r.db.QueryRow(`SELECT attempts, max_attempts, day FROM task_queue WHERE id = ?`, id).Scan(&attempts, &maxAttempts, &day)
-	if err != nil {
-		return fmt.Errorf("read task %d after fail: %w", id, err)
 	}
 
 	if attempts >= maxAttempts {

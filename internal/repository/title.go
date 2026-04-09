@@ -669,18 +669,34 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	return nil
 }
 
-// ReplaceNames deletes all existing names for a title and inserts new ones.
+// ReplaceNames deletes all existing names for a title and inserts new ones atomically.
 func (r *TitleRepository) ReplaceNames(titleID int64, names []model.TitleName) error {
-	if _, err := r.db.Exec(`DELETE FROM title_names WHERE title_id = ?`, titleID); err != nil {
-		return fmt.Errorf("delete title names: %w", err)
-	}
-	for _, name := range names {
-		if _, err := r.db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, ?)`,
-			titleID, name.Name, name.Language, name.IsPrimary); err != nil {
-			return fmt.Errorf("insert title name: %w", err)
+	doReplace := func(db database.DBTX) error {
+		if _, err := db.Exec(`DELETE FROM title_names WHERE title_id = ?`, titleID); err != nil {
+			return fmt.Errorf("delete title names: %w", err)
 		}
+		if len(names) == 0 {
+			return nil
+		}
+		placeholders := make([]string, len(names))
+		args := make([]interface{}, 0, len(names)*4)
+		for i, n := range names {
+			placeholders[i] = "(?, ?, ?, ?)"
+			args = append(args, titleID, n.Name, n.Language, n.IsPrimary)
+		}
+		query := fmt.Sprintf(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES %s`, strings.Join(placeholders, ","))
+		if _, err := db.Exec(query, args...); err != nil {
+			return fmt.Errorf("insert title names: %w", err)
+		}
+		return nil
 	}
-	return nil
+
+	if db, ok := r.db.(*sql.DB); ok {
+		return database.WithTx(db, func(tx *sql.Tx) error {
+			return doReplace(tx)
+		})
+	}
+	return doReplace(r.db)
 }
 
 // FindByExternalID looks up a title by external IDs (IMDB, TMDB, AniList, Plex rating key).
