@@ -120,7 +120,7 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 					case <-ctx.Done():
 						return
 					case <-ticker.C:
-						w.processDueTasks()
+						w.processDueTasks(ctx)
 					}
 				}
 			}()
@@ -132,7 +132,7 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 	}()
 }
 
-func (w *TaskQueueWorker) processDueTasks() {
+func (w *TaskQueueWorker) processDueTasks(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("task queue: panic in processDueTasks: %v", r)
@@ -153,12 +153,14 @@ func (w *TaskQueueWorker) processDueTasks() {
 		if time.Now().Before(w.pausedUntil) {
 			break
 		}
-		_ = w.limiter.Wait(context.Background())
-		w.ProcessTask(task)
+		_ = w.limiter.Wait(ctx)
+		taskCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		w.ProcessTask(taskCtx, task)
+		cancel()
 	}
 }
 
-func (w *TaskQueueWorker) ProcessTask(task model.Task) {
+func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("task queue: panic processing task %d: %v", task.ID, r)
@@ -170,7 +172,7 @@ func (w *TaskQueueWorker) ProcessTask(task model.Task) {
 
 	switch task.TaskType {
 	case model.TaskTypeEnrichment:
-		err = w.handleEnrichment(task)
+		err = w.handleEnrichment(ctx, task)
 	case model.TaskTypeRefresh:
 		err = w.handleRefresh(task)
 	case model.TaskTypeCoverFetch:
@@ -211,7 +213,7 @@ func (w *TaskQueueWorker) ProcessTask(task model.Task) {
 	}
 }
 
-func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
+func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task) error {
 	var payload EnrichmentPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode enrichment payload: %w", err)
@@ -293,7 +295,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 			// CONFLICT! Same IMDB ID but different local titles.
 			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
 
-			if err := w.titleSvc.Merge(context.Background(), w.titles.DB(), existing.ID, payload.TitleID, nil); err != nil {
+			if err := w.titleSvc.Merge(ctx, w.titles.DB(), existing.ID, payload.TitleID, nil); err != nil {
 				log.Printf("enrichment: merge failed: %v", err)
 			} else {
 				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)

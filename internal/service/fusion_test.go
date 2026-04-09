@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -113,7 +114,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	// 5. Run Worker
 	tasks, _ := taskRepo.ListPending()
 	require.Len(t, tasks, 1)
-	worker.ProcessTask(tasks[0])
+	worker.ProcessTask(context.Background(), tasks[0])
 
 	// Check task status after processing
 	tAfter, err := taskRepo.GetByID(taskID)

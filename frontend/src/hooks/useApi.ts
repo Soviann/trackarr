@@ -15,15 +15,20 @@ export function useApi<T>(path: string | null): UseApiResult<T> {
 
   const load = useCallback(() => {
     if (!path) return
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
-    apiFetch<T>(path)
+    apiFetch<T>(path, { signal: controller.signal })
       .then(setData)
-      .catch((e) => setError(e.message))
+      .catch((e) => { if (e.name !== 'AbortError') setError(e.message) })
       .finally(() => setLoading(false))
+    return controller
   }, [path])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const controller = load()
+    return () => controller?.abort()
+  }, [load])
 
   return { data, error, loading, mutate: load }
 }

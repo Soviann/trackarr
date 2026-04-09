@@ -147,12 +147,12 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       params.set('offset', String(titles.length))
       const qs = params.toString()
       const result = await apiFetch<PaginatedResponse>(`/titles?${qs}`)
-      set({
-        titles: [...titles, ...result.titles],
+      set((state) => ({
+        titles: [...state.titles, ...result.titles],
         total: result.total,
         hasMore: result.has_more,
         loadingMore: false,
-      })
+      }))
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
     }
@@ -171,6 +171,7 @@ export interface SearchState {
   loading: boolean
   loadingMore: boolean
   error: string | null
+  _searchGen: number
   setQuery: (q: string) => void
   search: (filter: TitleState['filter']) => Promise<void>
   loadMore: (filter: TitleState['filter']) => Promise<void>
@@ -185,6 +186,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   loading: false,
   loadingMore: false,
   error: null,
+  _searchGen: 0,
 
   setQuery: (query) => set({ query }),
 
@@ -197,10 +199,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
 
     const isFirstLoad = results.length === 0
+    const gen = get()._searchGen + 1
     if (isFirstLoad) {
-      set({ loading: true, error: null })
+      set({ loading: true, error: null, _searchGen: gen })
     } else {
-      set({ error: null })
+      set({ error: null, _searchGen: gen })
     }
 
     try {
@@ -214,12 +217,14 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       if (filter.release_from) params.set('release_from', filter.release_from)
       if (filter.release_to) params.set('release_to', filter.release_to)
       if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
-      
+
       const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
       params.set('limit', String(limit))
       params.set('offset', '0')
-      
+
       const result = await apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
+      // Discard stale response if a newer search was fired while awaiting
+      if (get()._searchGen !== gen) return
       set({
         results: result.titles,
         total: result.total,
@@ -227,6 +232,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         loading: false,
       })
     } catch (e) {
+      if (get()._searchGen !== gen) return
       set({ error: e instanceof Error ? e.message : 'Search failed', loading: false })
     }
   },

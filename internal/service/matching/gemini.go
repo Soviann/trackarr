@@ -21,13 +21,18 @@ type GeminiClient struct {
 }
 
 func NewGeminiClient(apiKeys []string) *GeminiClient {
-	return &GeminiClient{
+	c := &GeminiClient{
 		apiKeys: apiKeys,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		apiURL: geminiAPIURL,
 	}
+	// Start at len-1 so the first Add(1) in generate() yields index 0.
+	if len(apiKeys) > 0 {
+		c.keyIndex.Store(int64(len(apiKeys) - 1))
+	}
+	return c
 }
 
 // SetBaseURL overrides the Gemini base URL (for tests).
@@ -150,9 +155,10 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 		return "", err
 	}
 
-	// Try each API key on 429
+	// Try each API key on 429. keyIndex.Add(1) is atomic so concurrent 429s
+	// each claim a distinct slot rather than both landing on the same next key.
 	for attempts := 0; attempts < len(c.apiKeys); attempts++ {
-		idx := c.keyIndex.Load() % int64(len(c.apiKeys))
+		idx := c.keyIndex.Add(1) % int64(len(c.apiKeys))
 		apiKey := c.apiKeys[idx]
 
 		url := fmt.Sprintf("%s?key=%s", c.apiURL, apiKey)
@@ -165,8 +171,6 @@ func (c *GeminiClient) generate(prompt string) (string, error) {
 		resp.Body.Close()
 
 		if resp.StatusCode == http.StatusTooManyRequests {
-			// Rotate to next key
-			c.keyIndex.Add(1)
 			continue
 		}
 
