@@ -33,8 +33,8 @@ shell: ## Shell into container
 test: ## Run all Go tests
 	$(EXEC) go test -tags sqlite_fts5 ./... -v -count=1
 
-test-front: ## Run frontend tests
-	$(EXEC) bash -c "cd frontend && npx vitest run"
+test-front: ## Run frontend tests (unit + production build)
+	$(EXEC) bash -c "cd frontend && npx vitest run && npx vite build"
 
 lint: ## Run Go linter
 	$(EXEC) golangci-lint run ./...
