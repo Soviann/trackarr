@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -41,6 +42,7 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 }
 
 type PlexService struct {
+	ctx      context.Context
 	db       *sql.DB
 	titles   *repository.TitleRepository
 	seasons  *repository.SeasonRepository
@@ -54,8 +56,9 @@ type PlexService struct {
 	libSvc   *LibraryService
 }
 
-func NewPlexService(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, settings *repository.SettingRepository, pipeline *matching.Pipeline, push PushNotifier, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
+func NewPlexService(ctx context.Context, db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, settings *repository.SettingRepository, pipeline *matching.Pipeline, push PushNotifier, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
 	return &PlexService{
+		ctx:      ctx,
 		db:       db,
 		titles:   titles,
 		seasons:  seasons,
@@ -257,6 +260,12 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 	}
 
 	go func() {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+		}
+
 		result, err := s.pipeline.Run(matching.MatchInput{
 			Title:  titleName,
 			Year:   year,

@@ -16,7 +16,6 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

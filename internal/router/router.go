@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"log"
@@ -17,7 +18,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
+func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -52,7 +53,7 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
 	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
-	plexSvc := service.NewPlexService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc, titleSvc, libSvc)
+	plexSvc := service.NewPlexService(ctx, db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc, titleSvc, libSvc)
 
 	// Stats repository
 	statsRepo := repository.NewStatsRepository(db)
@@ -99,12 +100,12 @@ func New(cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.Backgro
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
 
 			r.Get("/titles", httputil.WrapHandler(titles.List))
-		r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
-		r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
-		r.Post("/titles", httputil.WrapHandler(titles.Create))
-		r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
-		r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
-		r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
+			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
+			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
+			r.Post("/titles", httputil.WrapHandler(titles.Create))
+			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
+			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
+			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))

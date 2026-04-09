@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/config"
@@ -18,6 +21,9 @@ import (
 )
 
 func Serve(distFS embed.FS) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
@@ -73,15 +79,15 @@ func Serve(distFS embed.FS) error {
 
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	if !cfg.DisableBackgroundTasks {
-		bgSvc.StartTicker(24 * time.Hour)
+		bgSvc.StartTicker(ctx, 24*time.Hour)
 	}
 
-	r := router.New(cfg, db, distFS, bgSvc, pipeline)
+	r := router.New(ctx, cfg, db, distFS, bgSvc, pipeline)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc)
 	if !cfg.DisableBackgroundTasks {
-		worker.Start(context.Background())
+		worker.Start(ctx)
 	}
 
 	log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
