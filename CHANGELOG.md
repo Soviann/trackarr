@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.12.3] — 2026-04-09
+
+### Corrigé
+- Frontend : build de production cassé avec Vite 8 / rolldown (`manualChunks` doit être une fonction)
+
+### Amélioré
+- CI : `make test-front` inclut désormais le build de production pour détecter les erreurs de bundling en local
+
 ## [v0.12.2] — 2026-04-09
 
 ### Amélioré
