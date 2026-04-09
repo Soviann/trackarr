@@ -106,6 +106,39 @@ func (r *EpisodeRepository) UpdateMetadata(id int64, name, airDate string) error
 	return nil
 }
 
+// EpisodeUpsert holds episode data for a batch upsert operation.
+type EpisodeUpsert struct {
+	EpisodeNumber int
+	Name          string
+	AirDate       string
+}
+
+// UpsertBatch creates or updates episodes for a season in a single query.
+// Collapses the per-episode GetOrCreate + UpdateMetadata pattern into one round-trip.
+func (r *EpisodeRepository) UpsertBatch(seasonID int64, entries []EpisodeUpsert) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(entries))
+	args := make([]interface{}, 0, len(entries)*4)
+	for i, e := range entries {
+		placeholders[i] = "(?, ?, ?, ?)"
+		args = append(args, seasonID, e.EpisodeNumber, e.Name, e.AirDate)
+	}
+	query := fmt.Sprintf(
+		`INSERT INTO episodes (season_id, episode, name, air_date) VALUES %s
+		 ON CONFLICT(season_id, episode) DO UPDATE SET
+		   name    = CASE WHEN excluded.name    != '' THEN excluded.name    ELSE name    END,
+		   air_date = CASE WHEN excluded.air_date != '' THEN excluded.air_date ELSE air_date END`,
+		strings.Join(placeholders, ", "),
+	)
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("upsert episodes: %w", err)
+	}
+	return nil
+}
+
 func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, error) {
 	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
 	if err != nil {

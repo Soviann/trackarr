@@ -40,11 +40,11 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-4: Database query performance
 *Bottlenecks that scale poorly with library size.*
 
-- [DB-1] HIGH | `repository/title_search.go:269` — `SELECT id, title_id, name, language FROM title_names` with no WHERE; loads every name row into memory for Levenshtein scoring. Add `JOIN titles ON title_id = titles.id` to filter by type/anime, and/or `WHERE LENGTH(name) BETWEEN ? AND ?` bounds
-- [DB-2] HIGH | `service/background.go:254` — `refreshSeriesFromTMDB` loops O(seasons × episodes) individual DB writes: `GetOrCreate` + `UpdateTotalEpisodes` per season, `GetOrCreate` + `UpdateMetadata` per episode. Batch with `INSERT OR IGNORE … ON CONFLICT DO UPDATE` per season
-- [DB-3] HIGH | `service/background.go:280` — `allEpisodesWatched` calls `episodes.GetBySeasonID(season.ID)` per season in a loop (N+1). Pass `title.Seasons[i].Episodes` directly (already loaded from `GetByID`) or load all episodes in one query keyed by season IDs
+- ~~[DB-1] HIGH | `repository/title_search.go:269`~~ — **fixed**: `fuzzySearch` now JOINs `titles` and applies status/type/isAnime/matchStatus filters before scanning rows, eliminating full table scan when filters are active
+- ~~[DB-2] HIGH | `service/background.go:254`~~ — **fixed**: `SeasonRepository.Upsert` and `EpisodeRepository.UpsertBatch` collapse GetOrCreate + Update into single `INSERT … ON CONFLICT DO UPDATE` per season/episode batch; `refreshSeriesFromTMDB` uses them
+- ~~[DB-3] HIGH | `service/background.go:280`~~ — **fixed**: `allEpisodesWatched` now uses `season.Episodes` (already loaded by `GetByID`) instead of calling `GetBySeasonID` per season
 - [DB-5] MEDIUM | `repository/title.go:449` — `ListAll` unbounded SELECT loads entire library into memory; acceptable for personal use today, note for growth (streaming cursor or paginated batch)
-- [DB-12] MEDIUM | `repository/watch_event.go:51` — `ListByTitle` no LIMIT; a heavily-watched title returns unbounded rows. Add default LIMIT (e.g. 500) or accept a limit param
+- ~~[DB-12] MEDIUM | `repository/watch_event.go:51`~~ — **fixed**: `ListByTitle` now has `LIMIT 500`
 
 ---
 

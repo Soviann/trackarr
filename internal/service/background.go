@@ -251,26 +251,26 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 			continue // Skip specials
 		}
 
-		season, err := s.seasons.GetOrCreate(title.ID, tmdbSeason.SeasonNumber)
+		season, err := s.seasons.Upsert(title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
 		if err != nil {
 			continue
 		}
-		_ = s.seasons.UpdateTotalEpisodes(season.ID, tmdbSeason.EpisodeCount)
 
 		// Fetch individual episodes
-		episodes, err := s.tmdb.GetTVSeasonEpisodes(*title.TMDBID, tmdbSeason.SeasonNumber)
+		tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(*title.TMDBID, tmdbSeason.SeasonNumber)
 		if err != nil {
 			continue
 		}
 
-		for _, tmdbEp := range episodes {
-			ep, err := s.episodes.GetOrCreate(season.ID, tmdbEp.EpisodeNumber)
-			if err != nil {
-				continue
+		entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
+		for i, ep := range tmdbEpisodes {
+			entries[i] = repository.EpisodeUpsert{
+				EpisodeNumber: ep.EpisodeNumber,
+				Name:          ep.Name,
+				AirDate:       ep.AirDate,
 			}
-			// Enrich metadata — only update if TMDB has non-empty values
-			_ = s.episodes.UpdateMetadata(ep.ID, tmdbEp.Name, tmdbEp.AirDate)
 		}
+		_ = s.episodes.UpsertBatch(season.ID, entries)
 
 		_ = s.limiter.Wait(context.Background())
 	}
@@ -278,18 +278,13 @@ func (s *BackgroundService) refreshSeriesFromTMDB(title *model.Title, result *Re
 
 func (s *BackgroundService) allEpisodesWatched(title *model.Title) bool {
 	for _, season := range title.Seasons {
-		episodes, err := s.episodes.GetBySeasonID(season.ID)
-		if err != nil {
+		if len(season.Episodes) == 0 {
 			return false
 		}
-		for _, ep := range episodes {
+		for _, ep := range season.Episodes {
 			if !ep.Watched {
 				return false
 			}
-		}
-		// No episodes = can't confirm all watched
-		if len(episodes) == 0 {
-			return false
 		}
 	}
 	return len(title.Seasons) > 0

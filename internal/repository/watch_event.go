@@ -48,7 +48,7 @@ func (r *WatchEventRepository) BatchCreate(events []model.WatchEvent) error {
 }
 
 func (r *WatchEventRepository) ListByTitle(titleID int64) ([]model.WatchEvent, error) {
-	rows, err := r.db.Query(`SELECT id, title_id, episode_id, source, plex_payload, created_at FROM watch_events WHERE title_id = ? ORDER BY created_at DESC`, titleID)
+	rows, err := r.db.Query(`SELECT id, title_id, episode_id, source, plex_payload, created_at FROM watch_events WHERE title_id = ? ORDER BY created_at DESC LIMIT 500`, titleID)
 	if err != nil {
 		return nil, fmt.Errorf("list watch events: %w", err)
 	}

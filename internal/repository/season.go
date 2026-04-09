@@ -62,3 +62,20 @@ func (r *SeasonRepository) UpdateTotalEpisodes(id int64, total int) error {
 	}
 	return nil
 }
+
+// Upsert creates or updates a season, returning the season with its ID.
+// Collapses the GetOrCreate + UpdateTotalEpisodes pattern into one round-trip.
+func (r *SeasonRepository) Upsert(titleID int64, seasonNumber, totalEpisodes int) (*model.Season, error) {
+	var s model.Season
+	err := r.db.QueryRow(
+		`INSERT INTO seasons (title_id, season_number, total_episodes)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(title_id, season_number) DO UPDATE SET total_episodes = excluded.total_episodes
+		 RETURNING id, title_id, season_number, total_episodes, my_rating`,
+		titleID, seasonNumber, totalEpisodes,
+	).Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating)
+	if err != nil {
+		return nil, fmt.Errorf("upsert season: %w", err)
+	}
+	return &s, nil
+}

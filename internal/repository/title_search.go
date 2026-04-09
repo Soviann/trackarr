@@ -265,7 +265,29 @@ func levenshtein(a, b string) int {
 
 // fuzzySearch finds titles by Levenshtein distance when FTS5 returns few results.
 func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter TitleFilter) ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, title_id, name, language FROM title_names`)
+	query := `SELECT tn.id, tn.title_id, tn.name, tn.language FROM title_names tn JOIN titles t ON tn.title_id = t.id WHERE 1=1`
+	var qargs []interface{}
+	if filter.Status != nil {
+		query += ` AND t.status = ?`
+		qargs = append(qargs, *filter.Status)
+	}
+	if filter.Type != nil {
+		query += ` AND t.type = ?`
+		qargs = append(qargs, *filter.Type)
+	}
+	if filter.IsAnime != nil {
+		query += ` AND t.is_anime = ?`
+		if *filter.IsAnime {
+			qargs = append(qargs, 1)
+		} else {
+			qargs = append(qargs, 0)
+		}
+	}
+	if filter.MatchStatus != nil {
+		query += ` AND t.match_status = ?`
+		qargs = append(qargs, *filter.MatchStatus)
+	}
+	rows, err := r.db.Query(query, qargs...)
 	if err != nil {
 		return nil, fmt.Errorf("fuzzy search names: %w", err)
 	}
@@ -328,7 +350,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	placeholders = placeholders[:len(placeholders)-1]
 
 	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
-	query := `SELECT ` + baseCols + ` FROM titles t WHERE t.id IN (` + placeholders + `)`
+	query = `SELECT ` + baseCols + ` FROM titles t WHERE t.id IN (` + placeholders + `)`
 	var args []interface{}
 	args = append(args, ids...)
 
