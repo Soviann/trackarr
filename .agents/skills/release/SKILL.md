@@ -11,7 +11,7 @@ Create a new PlexTracker release.
 ## Steps
 
 1. **Read `CHANGELOG.md`** — check `[Unreleased]` section
-2. **If [Unreleased] is empty**, check `git log` since last tag for unreleased commits. If commits exist, build the changelog entries from them before proceeding. If truly nothing: tell user and stop.
+2. **Always** run `git log <last-tag>..HEAD --oneline` to check for commits not yet reflected in `[Unreleased]`. Add any missing entries before proceeding. If `[Unreleased]` is empty **and** no commits exist: tell user and stop.
 3. **Get current version** from remote: `git fetch --tags && git tag --sort=-v:refname | head -1`
 4. **Choose version bump** based on [Unreleased] content:
    - `major`: breaking changes, major rewrites
