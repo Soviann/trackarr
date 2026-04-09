@@ -51,11 +51,11 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-5: Missing database indexes
 *Single migration. Fix all at once.*
 
-- [DB-9] MEDIUM | `migrations/` — no index on `title_names(title_id, is_primary)`; several queries filter `tn.is_primary = 1`. Add `CREATE INDEX idx_title_names_title_id_primary ON title_names(title_id, is_primary)`
-- [DB-10] MEDIUM | `migrations/` — no `(watched, watched_at)` index on `episodes`; stats COUNT queries filter both cols without `season_id`. Existing `(season_id, watched)` index from 011 doesn't cover global counts. Add standalone index
-- [DB-11] MEDIUM | `migrations/` — `watch_events.episode_id` FK has no index; `ON DELETE SET NULL` scans the entire table per episode delete. Add `CREATE INDEX idx_watch_events_episode_id ON watch_events(episode_id)`
-- [DB-13] MEDIUM | `repository/stats.go:469,474,479` — `WHERE strftime('%Y', created_at) = ?` not sargable; replace with `WHERE created_at >= 'YYYY-01-01' AND created_at < 'YYYY+1-01-01'` range on raw column
-- [DB-14] LOW | `migrations/` — `idx_titles_last_watched_at` (migration 008) is redundant once `idx_titles_last_watched_at_desc` (011) exists. Drop 008 version in a migration
+- ~~[DB-9] MEDIUM | `migrations/`~~ — **fixed**: `idx_title_names_title_id_primary ON title_names(title_id, is_primary)` added in migration 012
+- ~~[DB-10] MEDIUM | `migrations/`~~ — **fixed**: `idx_episodes_watched_at ON episodes(watched, watched_at)` added in migration 012
+- ~~[DB-11] MEDIUM | `migrations/`~~ — **fixed**: `idx_watch_events_episode_id ON watch_events(episode_id)` added in migration 012
+- ~~[DB-13] MEDIUM | `repository/stats.go:469,474,479`~~ — **fixed**: `strftime` replaced with `>= yearStart AND < yearEnd` range bounds; sargable on `created_at`/`watched_at`/`updated_at`
+- ~~[DB-14] LOW | `migrations/`~~ — **fixed**: `idx_titles_last_watched_at` dropped in migration 012 (superseded by `idx_titles_last_watched_at_desc` from 011)
 
 ---
 

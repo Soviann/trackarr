@@ -464,19 +464,20 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 
 func (r *StatsRepository) yearSummary(year int) (*model.StatsYear, error) {
 	y := &model.StatsYear{}
-	yearStr := fmt.Sprintf("%d", year)
+	yearStart := fmt.Sprintf("%d-01-01", year)
+	yearEnd := fmt.Sprintf("%d-01-01", year+1)
 
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE strftime('%Y', created_at) = ?`, yearStr).Scan(&y.TitlesAdded)
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE created_at >= ? AND created_at < ?`, yearStart, yearEnd).Scan(&y.TitlesAdded)
 	if err != nil {
 		return nil, fmt.Errorf("titles added: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1 AND watched_at IS NOT NULL AND strftime('%Y', watched_at) = ?`, yearStr).Scan(&y.EpisodesWatched)
+	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1 AND watched_at >= ? AND watched_at < ?`, yearStart, yearEnd).Scan(&y.EpisodesWatched)
 	if err != nil {
 		return nil, fmt.Errorf("eps watched year: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'completed' AND strftime('%Y', updated_at) = ?`, yearStr).Scan(&y.Completions)
+	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'completed' AND updated_at >= ? AND updated_at < ?`, yearStart, yearEnd).Scan(&y.Completions)
 	if err != nil {
 		return nil, fmt.Errorf("completions year: %w", err)
 	}
