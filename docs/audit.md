@@ -29,11 +29,11 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-3: Race conditions
 *Non-deterministic behavior under concurrent use.*
 
-- [GO-13] MEDIUM | `service/matching/gemini.go:154` — key rotation `Load()+Add(1)` not atomic; concurrent 429s skip a key. Use `Add(1)` before use (fetch key at new index) or a mutex-protected round-robin
-- [GO-4] HIGH | `service/taskqueue.go:140` — `ProcessTask` has no timeout; hung external API holds task in `running` state indefinitely. Wrap with a per-task deadline context (e.g. 5 min via `context.WithTimeout`)
-- [FE-1] HIGH | `store.ts:150` — `loadMore` stale closure captures `titles` at call time; a concurrent `fetchTitles` completing mid-append produces duplicates. Read `get().titles` inside `set()` callback
-- [FE-2] HIGH | `store.ts:191` — `useSearchStore.search` fires concurrent requests on rapid input; last-to-resolve wins regardless of order. Add abort token or generation counter; discard stale responses
-- [FE-4] HIGH | `hooks/useApi.ts:16` — fetch not cancelled on unmount; `setData/setError/setLoading` called on unmounted component. Use `AbortController` and abort in `useEffect` cleanup
+- ~~[GO-13] MEDIUM | `service/matching/gemini.go:154`~~ — **fixed** (a3bc22a): `keyIndex.Add(1)` before use; constructor initialises to `len-1` so first call lands on index 0
+- ~~[GO-4] HIGH | `service/taskqueue.go:140`~~ — **fixed** (a3bc22a): `processDueTasks` creates `context.WithTimeout(ctx, 5*time.Minute)` per task; ctx threaded into `ProcessTask` and `handleEnrichment`
+- ~~[FE-1] HIGH | `store.ts:150`~~ — **fixed** (a3bc22a): `set(state => ...)` callback reads `state.titles` instead of stale closure variable
+- ~~[FE-2] HIGH | `store.ts:191`~~ — **fixed** (a3bc22a): `_searchGen` counter incremented before each fetch; stale responses discarded on resolve/reject
+- ~~[FE-4] HIGH | `hooks/useApi.ts:16`~~ — **fixed** (a3bc22a): `AbortController` created per load call; aborted in `useEffect` cleanup
 
 ---
 
