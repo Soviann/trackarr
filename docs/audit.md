@@ -9,10 +9,10 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-1: Correctness bugs
 *Bugs that silently produce wrong output. Fix before anything else.*
 
-- [GO-14] HIGH | `service/matching/gemini.go:159` — `bytes.NewReader(body)` is exhausted after first retry attempt; move `bytes.NewReader(body)` inside the retry loop so each attempt gets a fresh reader
-- [GO-20] LOW | `service/simkl.go:122` — `dryRun bool` param accepted but never checked; thread flag through `importItem` and skip DB writes when true
-- [DB-16] LOW | `repository/title_search.go:127` — manual `rows.Close()` on error path but not via `defer`; add `defer rows.Close()` immediately after `Query()` and remove manual calls to match codebase pattern
-- [DB-17] LOW | `repository/title.go:750` — `defer rows.Close()` inside `mergeInTx` keeps cursor open across subsequent queries on same DBTX (MaxOpenConns=1 → deadlock risk); call `rows.Close()` explicitly after the loop instead of deferring
+- ~~[GO-14] HIGH | `service/matching/gemini.go:159`~~ — **already fixed** (`bytes.NewReader` was already inside the loop)
+- ~~[GO-20] LOW | `service/simkl.go:122`~~ — **fixed** (04dcfda): `dryRun` threaded through `importItem`, DB writes skipped when true
+- ~~[DB-16] LOW | `repository/title_search.go:127`~~ — **fixed** (04dcfda): `defer rows.Close()` added after `Query()`, manual calls removed
+- ~~[DB-17] LOW | `repository/title.go:750`~~ — **fixed** (04dcfda): `defer` removed from `mergeInTx`, explicit close after loop + on scan error
 
 ---
 
