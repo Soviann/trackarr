@@ -72,14 +72,14 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-7: Security hardening
 *Fix high/medium items as a batch; low items optional.*
 
-- [SEC-3] MEDIUM | `router/router.go:92`, `handler/webhook.go:28` — webhook secret is a URL path segment logged verbatim by chi Logger; move auth to `X-Plex-Token` header or redact path before logging
-- [SEC-4] MEDIUM | `router/router.go:92` — webhook endpoint outside all rate-limit groups; add a basic rate limiter
-- [SEC-5] MEDIUM | `middleware/ratelimit.go:28` — `r.RemoteAddr` is always the proxy IP behind reverse proxy; use `chi/middleware.RealIP` before rate limiter to extract `X-Real-IP`/`X-Forwarded-For`
-- [SEC-1] MEDIUM | `middleware/security.go:6` — missing `Strict-Transport-Security` header; add `max-age=63072000; includeSubDomains`
-- [SEC-2] MEDIUM | `middleware/security.go:17` — `img-src 'self' data:` too broad (data URI exfil via CSS injection); restrict to `img-src 'self'` unless data URIs strictly needed
-- [SEC-11] LOW | `handler/cover.go` — verify `filepath.Join` + base-dir validation in `Serve` prevents `../../` traversal; reject filenames containing `/` or `..`
-- [SEC-6] LOW | `middleware/ratelimit.go:9` — `attempts` map unbounded under distributed attack; cap map size or use fixed-capacity LRU
-- [SEC-10] LOW | `config/config.go:54` — `CookieSecure = !DebugLogin` couples TLS flag to debug flag; add explicit `COOKIE_SECURE` env var
+- ~~[SEC-3] MEDIUM | `router/router.go:92`, `handler/webhook.go:28`~~ — **fixed**: `RedactingLogger` middleware replaces chi Logger; webhook path `/api/webhook/plex/` prefix is redacted to `[redacted]` in all log output
+- ~~[SEC-4] MEDIUM | `router/router.go:92`~~ — **fixed**: webhook endpoint wrapped with `RateLimit(60, time.Minute)`
+- ~~[SEC-5] MEDIUM | `middleware/ratelimit.go:28`~~ — **fixed**: `middleware.RealIP` added as first global middleware; rate limiter now sees real client IP via `r.RemoteAddr`
+- ~~[SEC-1] MEDIUM | `middleware/security.go:6`~~ — **fixed**: `Strict-Transport-Security: max-age=63072000; includeSubDomains` added
+- ~~[SEC-2] MEDIUM | `middleware/security.go:17`~~ — **fixed**: `img-src` restricted to `'self'` (no data URIs used in frontend)
+- ~~[SEC-11] LOW | `handler/cover.go`~~ — **already done**: `Serve` rejects filenames containing `..`, `/`, or `\` before `filepath.Join`
+- ~~[SEC-6] LOW | `middleware/ratelimit.go:9`~~ — **fixed**: map capped at 10 000 IPs; new IPs beyond cap are denied (fail closed)
+- ~~[SEC-10] LOW | `config/config.go:54`~~ — **fixed**: `COOKIE_SECURE` env var added; falls back to `!DebugLogin` when unset
 
 ---
 

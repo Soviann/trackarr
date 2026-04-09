@@ -21,7 +21,8 @@ import (
 func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	r.Use(middleware.RealIP)
+	r.Use(mw.RedactingLogger("/api/webhook/plex/"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(mw.SecurityHeaders)
@@ -89,8 +90,9 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, b
 		r.With(authRateLimit).Post("/auth/google", httputil.WrapHandler(auth.GoogleCallback))
 		r.Post("/auth/logout", httputil.WrapHandler(auth.Logout))
 
-		// Plex webhook (secured by secret token in URL)
-		r.Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
+		// Plex webhook (secured by secret token in URL, rate-limited)
+		webhookRateLimit := mw.RateLimit(60, time.Minute)
+		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)

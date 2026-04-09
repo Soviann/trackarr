@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const maxTrackedIPs = 10_000
+
 type rateLimiter struct {
 	mu       sync.Mutex
 	attempts map[string][]time.Time
@@ -51,6 +53,11 @@ func (rl *rateLimiter) allow(ip string) bool {
 
 	if len(valid) >= rl.max {
 		rl.attempts[ip] = valid
+		return false
+	}
+
+	// Cap map size to prevent unbounded memory growth under distributed attack.
+	if _, tracked := rl.attempts[ip]; !tracked && len(rl.attempts) >= maxTrackedIPs {
 		return false
 	}
 

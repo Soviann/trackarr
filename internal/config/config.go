@@ -51,7 +51,11 @@ func Load() (*Config, error) {
 	cfg.DebugLogin = os.Getenv("DEBUG_LOGIN") == "true"
 	cfg.DebugLoginUser = envOr("DEBUG_LOGIN_USER", "")
 	cfg.DebugLoginPassword = envOr("DEBUG_LOGIN_PASSWORD", "")
-	cfg.CookieSecure = !cfg.DebugLogin
+	if v := os.Getenv("COOKIE_SECURE"); v != "" {
+		cfg.CookieSecure = v == "true"
+	} else {
+		cfg.CookieSecure = !cfg.DebugLogin
+	}
 
 	if cfg.GoogleClientID == "" || cfg.GoogleAllowedEmail == "" || cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("required env vars: GOOGLE_CLIENT_ID, GOOGLE_ALLOWED_EMAIL, JWT_SECRET")
