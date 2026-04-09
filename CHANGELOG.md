@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Modifié
+- UI : mise à jour du logo de l'application (branding PlexTracker)
+
+
 ## [v0.12.0] — 2026-04-09
 
 ### Ajouté

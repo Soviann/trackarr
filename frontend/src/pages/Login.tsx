@@ -67,7 +67,7 @@ export function Login({ path }: { path?: string }) {
     <div className={s.page}>
       {/* Logo / Title */}
       <div className={s.header}>
-        <img src="/icon.png" alt="PlexTracker" className={s.logo} />
+        <img src="/plextracker-logo.png" alt="PlexTracker" className={s.logo} />
         <div className={s.title}>PlexTracker</div>
         <div className={s.subtitle}>
           Suivez votre bibliothèque multimédia
