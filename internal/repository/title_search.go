@@ -328,7 +328,8 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	placeholders := strings.Repeat("?,", len(ids))
 	placeholders = placeholders[:len(placeholders)-1]
 
-	query := `SELECT t.id, t.type, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at FROM titles t WHERE t.id IN (` + placeholders + `)`
+	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
+	query := `SELECT ` + baseCols + ` FROM titles t WHERE t.id IN (` + placeholders + `)`
 	var args []interface{}
 	args = append(args, ids...)
 
@@ -340,6 +341,45 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 		query += ` AND t.type = ?`
 		args = append(args, *filter.Type)
 	}
+	if filter.MatchStatus != nil {
+		query += ` AND t.match_status = ?`
+		args = append(args, *filter.MatchStatus)
+	}
+	if filter.IsAnime != nil {
+		query += ` AND t.is_anime = ?`
+		if *filter.IsAnime {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
+	}
+	if filter.SeriesStatus != nil {
+		query += ` AND t.series_status = ?`
+		args = append(args, *filter.SeriesStatus)
+	}
+	if filter.Decade != nil {
+		query += ` AND t.year BETWEEN ? AND ?`
+		args = append(args, *filter.Decade, *filter.Decade+9)
+	}
+	if filter.ReleaseFrom != nil {
+		if filter.IncludeNoRelease {
+			query += ` AND (t.release_date >= ? OR t.release_date IS NULL)`
+		} else {
+			query += ` AND t.release_date >= ?`
+		}
+		args = append(args, *filter.ReleaseFrom)
+	}
+	if filter.ReleaseTo != nil {
+		if filter.IncludeNoRelease {
+			query += ` AND (t.release_date <= ? OR t.release_date IS NULL)`
+		} else {
+			query += ` AND t.release_date <= ?`
+		}
+		args = append(args, *filter.ReleaseTo)
+	}
+	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
+		query += ` AND t.release_date IS NOT NULL`
+	}
 
 	tRows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -350,7 +390,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	for tRows.Next() {
 		var t model.Title
 		var lastWatchedAtStr *string
-		if err := tRows.Scan(&t.ID, &t.Type, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+		if err := tRows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
