@@ -16,8 +16,8 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          admin: ['./src/pages/Admin.tsx', './src/pages/AdminNotifications.tsx', './src/pages/AdminTasks.tsx'],
+        manualChunks: (id) => {
+          if (id.includes('/pages/Admin')) return 'admin'
         },
       },
     },
