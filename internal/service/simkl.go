@@ -124,14 +124,14 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 
 	// Process movies
 	for _, item := range backup.Movies {
-		if err := s.importItem(item, model.TitleTypeMovie, false, result); err != nil {
+		if err := s.importItem(item, model.TitleTypeMovie, false, dryRun, result); err != nil {
 			result.Errors++
 		}
 	}
 
 	// Process shows
 	for _, item := range backup.Shows {
-		if err := s.importItem(item, model.TitleTypeSeries, false, result); err != nil {
+		if err := s.importItem(item, model.TitleTypeSeries, false, dryRun, result); err != nil {
 			result.Errors++
 		}
 	}
@@ -142,7 +142,7 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 		if item.AnimeType == "movie" {
 			titleType = model.TitleTypeMovie
 		}
-		if err := s.importItem(item, titleType, true, result); err != nil {
+		if err := s.importItem(item, titleType, true, dryRun, result); err != nil {
 			result.Errors++
 		}
 	}
@@ -150,7 +150,7 @@ func (s *SimklImporter) Import(backup *SimklBackup, dryRun bool) (*ImportResult,
 	return result, nil
 }
 
-func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, isAnime bool, result *ImportResult) error {
+func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, isAnime bool, dryRun bool, result *ImportResult) error {
 	media := item.Media()
 	if media == nil {
 		result.Errors++
@@ -171,6 +171,11 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil, nil, &titleType); err == nil && existing != nil {
 		log.Printf("simkl import: skipped %q (%s) — already exists as %q (id=%d)", media.Title, titleType, existing.PrimaryName(), existing.ID)
 		result.Skipped++
+		return nil
+	}
+
+	if dryRun {
+		result.Created++
 		return nil
 	}
 

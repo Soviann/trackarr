@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Import Simkl : le mode dry-run ne sautait pas les écritures en base — corrigé, seuls les doublons sont maintenant comptés
+- Dépôt : curseurs SQL fermés explicitement dans `mergeInTx` et `Search` pour éviter les blocages (SQLite MaxOpenConns=1)
+- Arrêt gracieux : les goroutines de tâches, de rafraîchissement et d'enrichissement s'arrêtent correctement sur SIGTERM/SIGINT
+
 ## [v0.12.1] — 2026-04-09
 
 ### Amélioré

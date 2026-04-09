@@ -111,6 +111,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 	if err != nil {
 		return nil, fmt.Errorf("search titles: %w", err)
 	}
+	defer rows.Close()
 
 	searchLower := strings.ToLower(searchTerm)
 	bestByTitle := map[int64]*searchResult{}
@@ -124,7 +125,6 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt,
 			&matchedName, &matchedLang); err != nil {
-			rows.Close()
 			return nil, fmt.Errorf("scan search title: %w", err)
 		}
 		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
@@ -137,7 +137,6 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 			bestByTitle[t.ID] = &searchResult{title: t, relevance: rel}
 		}
 	}
-	rows.Close()
 
 	// Fuzzy fallback if few FTS results
 	seen := make(map[int64]bool, len(bestByTitle))

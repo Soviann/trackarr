@@ -103,24 +103,30 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 	}
 
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("task queue: panic in worker loop: %v", r)
-				// Small delay to prevent tight loop if panic happens early in loop
-				time.Sleep(30 * time.Second)
-				w.Start(ctx) // Restart worker
-			}
-		}()
-
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-
 		for {
-			select {
-			case <-ctx.Done():
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("task queue: panic in worker loop: %v", r)
+						time.Sleep(30 * time.Second)
+					}
+				}()
+
+				ticker := time.NewTicker(30 * time.Second)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						w.processDueTasks()
+					}
+				}
+			}()
+
+			if ctx.Err() != nil {
 				return
-			case <-ticker.C:
-				w.processDueTasks()
 			}
 		}
 	}()

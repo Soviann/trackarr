@@ -394,14 +394,19 @@ func (s *BackgroundService) downloadAniListCover(title *model.Title) bool {
 }
 
 // StartTicker launches the background refresh on a daily interval.
-func (s *BackgroundService) StartTicker(interval time.Duration) {
+func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Duration) {
 	if s == nil {
 		return
 	}
 
 	go func() {
 		// Run once at startup after a short delay
-		time.Sleep(30 * time.Second)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(30 * time.Second):
+		}
+
 		log.Println("background: fetching missing covers")
 		if n := s.FetchMissingCovers(); n > 0 {
 			log.Printf("background: fetched %d missing covers", n)
@@ -412,13 +417,18 @@ func (s *BackgroundService) StartTicker(interval time.Duration) {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			log.Println("background: starting scheduled refresh")
-			s.RefreshTitles()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				log.Println("background: starting scheduled refresh")
+				s.RefreshTitles()
 
-			day := time.Now().Weekday()
-			log.Printf("background: starting unused covers cleanup for %s", day.String())
-			s.CleanupUnusedCovers(day)
+				day := time.Now().Weekday()
+				log.Printf("background: starting unused covers cleanup for %s", day.String())
+				s.CleanupUnusedCovers(day)
+			}
 		}
 	}()
 }
