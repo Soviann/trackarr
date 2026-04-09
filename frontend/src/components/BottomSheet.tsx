@@ -14,11 +14,11 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
 
   if (!open) return null
 
-  const handleTouchStart = (e: any) => {
+  const handleTouchStart = (e: TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
   }
 
-  const handleTouchMove = (e: any) => {
+  const handleTouchMove = (e: TouchEvent) => {
     if (touchStartY.current === null) return
     const deltaY = e.touches[0].clientY - touchStartY.current
     if (deltaY > 0) {

@@ -23,12 +23,12 @@ export function ActionDrawer({
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
 
-  const handleTouchStart = (e: any) => {
+  const handleTouchStart = (e: TouchEvent) => {
     if (!open) return
     touchStartY.current = e.touches[0].clientY
   }
 
-  const handleTouchMove = (e: any) => {
+  const handleTouchMove = (e: TouchEvent) => {
     if (!open || touchStartY.current === null) return
     const deltaY = e.touches[0].clientY - touchStartY.current
     if (deltaY > 0) {

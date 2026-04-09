@@ -32,6 +32,8 @@ export function App() {
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(cfg => {
       if (cfg.vapid_public_key) setVapidKey(cfg.vapid_public_key)
+    }).catch((err) => {
+      console.error('Failed to load config:', err)
     })
   }, [])
 

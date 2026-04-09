@@ -252,6 +252,12 @@
   border-color: var(--color-accent-teal);
 }
 
+.mergeError {
+  color: var(--color-error, #e05252);
+  font-size: 13px;
+  margin-bottom: var(--space-sm);
+}
+
 .mergeActions {
   display: flex;
   gap: var(--space-md);

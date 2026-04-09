@@ -14,6 +14,26 @@ function isUrl(str: string): boolean {
   return /^(https?:\/\/)?([\w.-]+)+\.([a-z]{2,10})(\/[\w.-]*)*\/?$/i.test(str)
 }
 
+interface RematchPayload {
+  tmdb_id?: number
+  imdb_id?: string
+  anilist_id?: number
+}
+
+interface AddTitlePayload {
+  status: TitleStatus
+  match_status: string
+  type?: string
+  is_anime?: boolean
+  year?: number
+  names?: { name: string; language: string; is_primary: boolean }[]
+  imdb_id?: string
+  tmdb_id?: number
+  tvdb_id?: number
+  anilist_id?: number
+  cover_url?: string | null
+}
+
 export function Validate({ path }: { path?: string }) {
   const params = new URLSearchParams(window.location.search)
   const query = params.get('q') ?? ''
@@ -54,7 +74,7 @@ export function Validate({ path }: { path?: string }) {
 
   const loading = loadingSearch || loadingResolve || loadingCurrent
 
-  const handleSearch = (e: any) => {
+  const handleSearch = (e: SubmitEvent) => {
     e.preventDefault()
     if (!inputValue.trim()) return
     const newParams = new URLSearchParams(window.location.search)
@@ -83,7 +103,7 @@ export function Validate({ path }: { path?: string }) {
     try {
       if (id) {
         // Rematch existing title
-        const body: any = {}
+        const body: RematchPayload = {}
         if (resolved) {
           body.tmdb_id = resolved.tmdb_id
           body.imdb_id = resolved.imdb_id
@@ -110,7 +130,7 @@ export function Validate({ path }: { path?: string }) {
         history.back()
       } else {
         // Add new title
-        const body: any = {
+        const body: AddTitlePayload = {
           status: selectedStatus,
           match_status: resolved?.match_status ?? 'unconfirmed',
         }

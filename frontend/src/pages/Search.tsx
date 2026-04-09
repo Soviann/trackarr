@@ -27,6 +27,7 @@ export function Search({ path: _ }: { path?: string }) {
   const [mergeTarget, setMergeTarget] = useState<Title | null>(null)
   const [targetSeason, setTargetSeason] = useState(1)
   const [merging, setMerging] = useState(false)
+  const [mergeError, setMergeError] = useState<string | null>(null)
   
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -53,6 +54,7 @@ export function Search({ path: _ }: { path?: string }) {
   const handleMerge = async () => {
     if (!mergeSourceId || !mergeTarget || merging) return
     setMerging(true)
+    setMergeError(null)
     try {
       await apiFetch(`/titles/${mergeSourceId}/merge`, {
         method: 'POST',
@@ -63,7 +65,7 @@ export function Search({ path: _ }: { path?: string }) {
       })
       route(`/title/${mergeTarget.id}`)
     } catch (e) {
-      console.error('Merge failed:', e)
+      setMergeError('Merge failed. Please try again.')
       setMerging(false)
     }
   }
@@ -206,6 +208,8 @@ export function Search({ path: _ }: { path?: string }) {
               />
             </div>
           )}
+
+          {mergeError && <div className={s.mergeError}>{mergeError}</div>}
 
           <div className={s.mergeActions}>
             <button className={s.cancelBtn} onClick={() => setMergeTarget(null)}>Cancel</button>

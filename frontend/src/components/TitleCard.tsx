@@ -56,6 +56,8 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
     try {
       await apiFetch(`/titles/${title.id}/episodes/${ne.id}`, { method: 'PATCH' })
       onUpdate?.()
+    } catch (err) {
+      console.error('Failed to mark episode:', err)
     } finally {
       setToggling(false)
     }

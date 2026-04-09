@@ -53,6 +53,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showAniList, setShowAniList] = useState(false)
   const [showRematch, setShowRematch] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   if (loading || !title) {
     return (
@@ -80,28 +81,40 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
   const handleMarkNext = async () => {
     if (!next) return
-    await apiFetch(`/titles/${title.id}/episodes/${next.episode.id}`, { method: 'PATCH' })
-    mutate()
+    try {
+      await apiFetch(`/titles/${title.id}/episodes/${next.episode.id}`, { method: 'PATCH' })
+      mutate()
+    } catch (e) {
+      setActionError('Failed to mark episode as watched')
+    }
   }
 
   const handleSaveRating = async (rating: number) => {
-    await apiFetch(`/titles/${title.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ my_rating: rating }),
-    })
-    setShowRating(false)
-    mutate()
+    try {
+      await apiFetch(`/titles/${title.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ my_rating: rating }),
+      })
+      setShowRating(false)
+      mutate()
+    } catch (e) {
+      setActionError('Failed to save rating')
+    }
   }
 
   const handleSaveEdit = async (updates: { type?: string; status?: string }) => {
-    if (Object.keys(updates).length > 0) {
-      await apiFetch(`/titles/${title.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates),
-      })
-      mutate()
+    try {
+      if (Object.keys(updates).length > 0) {
+        await apiFetch(`/titles/${title.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(updates),
+        })
+        mutate()
+      }
+      setShowEdit(false)
+    } catch (e) {
+      setActionError('Failed to save changes')
     }
-    setShowEdit(false)
   }
 
   const handleConfirmAniList = async () => {
@@ -120,6 +133,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
   return (
     <div className={s.page}>
+      {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
       {/* Hero — pure visual */}
       <div
         className={s.hero}

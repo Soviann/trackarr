@@ -99,14 +99,14 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-9: Frontend error handling & TypeScript correctness
 *Silent failures and unsafe types in frontend.*
 
-- [FE-3] HIGH | `hooks/usePush.ts:20` — SW registration `.then(...)` has no `.catch()`; add error handler (console.error minimum, ideally surface in UI)
-- [FE-17] MEDIUM | `pages/TitleDetail.tsx:81` — `handleMarkNext`, `handleSaveRating`, `handleSaveEdit` have no catch; add try/catch and local error state
-- [FE-18] MEDIUM | `components/TitleCard.tsx:52` — `handleQuickMark` try/finally no catch; add catch + user feedback (e.g. revert optimistic update)
-- [FE-19] MEDIUM | `pages/Search.tsx:65` — merge failure only `console.error`; surface error in merge BottomSheet
-- [FE-20] MEDIUM | `app.tsx:33` — `/api/config` fetched with raw `fetch`, no error handling; use `apiFetch('/config')` or add `.catch()`
-- [FE-7] MEDIUM | `components/BottomSheet.tsx:17,21`, `FilterDrawer.tsx:108,113`, `ActionDrawer.tsx:26,31` — touch handlers typed `(e: any)`; type as `(e: TouchEvent)`
-- [FE-8] MEDIUM | `pages/Validate.tsx:86,113` — `const body: any = {}`; define typed interface for add/rematch payloads
-- [FE-9] MEDIUM | `pages/Validate.tsx:57` — `handleSearch: (e: any)`; type as `(e: SubmitEvent)`
+- ~~[FE-3] HIGH | `hooks/usePush.ts:20`~~ — **fixed**: `.catch()` added to SW registration; logs to console.error
+- ~~[FE-17] MEDIUM | `pages/TitleDetail.tsx:81`~~ — **fixed**: `handleMarkNext`, `handleSaveRating`, `handleSaveEdit` wrapped in try/catch; `actionError` state surfaced via `ErrorBanner`
+- ~~[FE-18] MEDIUM | `components/TitleCard.tsx:52`~~ — **fixed**: catch added to `handleQuickMark`; logs error to console
+- ~~[FE-19] MEDIUM | `pages/Search.tsx:65`~~ — **fixed**: `mergeError` state set on failure, displayed in merge BottomSheet
+- ~~[FE-20] MEDIUM | `app.tsx:33`~~ — **fixed**: `.catch()` added to `/api/config` fetch; logs to console.error
+- ~~[FE-7] MEDIUM | `components/BottomSheet.tsx:17,21`, `FilterDrawer.tsx:108,113`, `ActionDrawer.tsx:26,31`~~ — **fixed**: touch handlers typed `(e: TouchEvent)`
+- ~~[FE-8] MEDIUM | `pages/Validate.tsx:86,113`~~ — **fixed**: `RematchPayload` and `AddTitlePayload` interfaces defined; `any` replaced
+- ~~[FE-9] MEDIUM | `pages/Validate.tsx:57`~~ — **fixed**: `handleSearch` typed as `(e: SubmitEvent)`
 
 ---
 

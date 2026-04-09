@@ -39,6 +39,8 @@ export function usePush(vapidPublicKey: string | undefined) {
         body: JSON.stringify(sub.toJSON()),
       })
       setSubscribed(true)
+    }).catch((err) => {
+      console.error('Service worker registration failed:', err)
     })
   }, [vapidPublicKey])
 
