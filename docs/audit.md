@@ -19,7 +19,7 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-2: Goroutine lifecycle & graceful shutdown
 *Goroutines that cannot be stopped on SIGTERM. Fix as a unit — all require threading a cancellable context from serve.go.*
 
-- ~~[GO-1] HIGH | `service/plex.go:259`~~ — **fixed**: service-level context stored on `PlexService`, goroutine selects on `ctx.Done()` before running pipeline
+- ~~[GO-1] HIGH | `service/plex.go:259`~~ — **fixed**: service-level context stored on `PlexService`, goroutine selects on `ctx.Done()` before running pipeline. Note: goroutines already in-flight at SIGTERM run to completion because `Pipeline.Run` is not context-aware; complete cancellation of in-flight HTTP calls requires SESSION-8 GO-7 work
 - ~~[GO-2] HIGH | `service/background.go:402`~~ — **fixed**: `StartTicker` accepts `ctx context.Context`, initial delay and ticker loop both select on `ctx.Done()`
 - ~~[GO-3] HIGH | `service/taskqueue.go:111`~~ — **fixed**: panic recovery replaced with `for` loop + inner func; checks `ctx.Err()` after recovery instead of recursing
 - ~~[GO-15] LOW | `cmd/serve.go:84`~~ — **fixed**: `signal.NotifyContext` with SIGINT/SIGTERM threaded to worker, bgSvc, and PlexService via router
