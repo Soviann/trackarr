@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.12.0] — 2026-04-09
+
 ### Ajouté
 - Fusion de titres : support de la fusion manuelle de titres en doublon avec identification intelligente de la saison (via Gemini pour les anime)
 - Résolution par URL : support de l'ajout direct via URLs TMDB (movie/tv) et AniList
