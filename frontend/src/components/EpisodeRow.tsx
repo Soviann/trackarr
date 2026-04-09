@@ -38,7 +38,7 @@ export function EpisodeRow({ titleId, episode, onToggle }: EpisodeRowProps) {
         )}
       </div>
 
-      <div onClick={handleToggle} className={s.toggle}>
+      <button type="button" onClick={handleToggle} className={s.toggle}>
         {episode.watched ? (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={colors.accentAmber} stroke="none">
             <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
@@ -46,7 +46,7 @@ export function EpisodeRow({ titleId, episode, onToggle }: EpisodeRowProps) {
         ) : (
           <div className={s.checkbox} />
         )}
-      </div>
+      </button>
     </div>
   )
 }

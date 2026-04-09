@@ -129,10 +129,10 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-11: Accessibility
 *Interactive elements not keyboard-reachable.*
 
-- [FE-13] MEDIUM | `components/EpisodeRow.tsx:41` — `<div onClick={handleToggle}>` not keyboard-accessible; change to `<button>` (or add `role="checkbox"`, `tabIndex={0}`, `onKeyDown` for Enter/Space)
-- [FE-14] MEDIUM | `components/TitleCard.tsx:99` — quick-mark `<div onClick={handleQuickMark}>`; change to `<button>`
-- [FE-15] MEDIUM | `pages/Search.tsx:241` — SVG clear button no role/label; wrap in `<button aria-label="Clear search">`
-- [FE-16] MEDIUM | `pages/Library.tsx:39` — match-review banner `<div onClick>` not a button/link; use `<button>` or add `role="button"`, `tabIndex={0}`, `onKeyDown`
+- ~~[FE-13] MEDIUM | `components/EpisodeRow.tsx:41`~~ — **fixed**: `<div onClick={handleToggle}>` changed to `<button type="button">`; CSS reset added to `.toggle`
+- ~~[FE-14] MEDIUM | `components/TitleCard.tsx:99`~~ — **fixed**: quick-mark `<div>` changed to `<button type="button" aria-label="Mark E{n} as watched">`; CSS reset added to `.badge`
+- ~~[FE-15] MEDIUM | `pages/Search.tsx:241`~~ — **fixed**: SVG wrapped in `<button type="button" aria-label="Clear search">`; CSS reset added to `.clearBtn`
+- ~~[FE-16] MEDIUM | `pages/Library.tsx:39`~~ — **fixed**: banner `<div onClick>` changed to `<button type="button">`; CSS reset + `width:100%; text-align:left` added to `.bannerWrapper`
 
 ---
 

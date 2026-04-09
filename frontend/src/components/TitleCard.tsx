@@ -95,14 +95,16 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
 
       {/* Quick mark badge */}
       {ne && (
-        <div
+        <button
+          type="button"
           onClick={handleQuickMark}
+          aria-label={`Mark E${ne.episode} as watched`}
           className={clsx(s.badge, toggling ? s.badgeToggling : s.badgeDefault)}
         >
           <span className={clsx(s.badgeLabel, ne.episode >= 10 ? s.badgeLabelSmall : s.badgeLabelLarge)}>
             E{ne.episode}
           </span>
-        </div>
+        </button>
       )}
     </div>
   )

@@ -243,14 +243,14 @@ export function Search({ path: _ }: { path?: string }) {
             className={s.searchInput}
           />
           {query && (
-            <svg
-              onClick={clear}
-              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              className={s.clearBtn}
-            >
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <button type="button" onClick={clear} aria-label="Clear search" className={s.clearBtn}>
+              <svg
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           )}
         </div>
       </div>

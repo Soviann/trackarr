@@ -60,6 +60,10 @@
 .bannerWrapper {
   padding: 0 var(--space-lg) var(--space-md);
   cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
 }
 
 .banner {

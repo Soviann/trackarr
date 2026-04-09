@@ -36,7 +36,7 @@ interface MatchReviewBannerProps {
 function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchReviewBannerProps) {
   if (count === 0) return null
   return (
-    <div onClick={() => route('/match-review')} className={s.bannerWrapper}>
+    <button type="button" onClick={() => route('/match-review')} className={s.bannerWrapper}>
       <div className={s.banner}>
         <div className={s.bannerBadge}>
           <span className={s.bannerBadgeText}>{count}</span>
@@ -53,7 +53,7 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </div>
-    </div>
+    </button>
   )
 }
 
