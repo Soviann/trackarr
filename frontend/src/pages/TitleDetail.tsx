@@ -1,8 +1,8 @@
-import { useState } from 'preact/hooks'
+import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { getName, getTypeLabel, getStatusLabel } from '../utils'
+import { getName, getTypeLabel, getStatusLabel, formatDate } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeRow } from '../components/EpisodeRow'
@@ -40,11 +40,6 @@ function parseJSON<T>(json: string | null): T | null {
   try { return JSON.parse(json) } catch { return null }
 }
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
@@ -54,6 +49,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showRematch, setShowRematch] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  const sortedSeasons = useMemo(
+    () => [...(title?.seasons ?? [])].sort((a, b) => a.season_number - b.season_number),
+    [title?.id, title?.seasons]
+  )
+  const next = useMemo(
+    () => title ? getNextUnwatched(title) : null,
+    [title?.id, title?.seasons]
+  )
 
   if (loading || !title) {
     return (
@@ -65,7 +69,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
-  const sortedSeasons = [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)
   const current = sortedSeasons.find((ss) => ss.season_number === activeSeason)
     ?? sortedSeasons.find((ss) => (ss.episodes ?? []).some((e) => !e.watched))
     ?? sortedSeasons[sortedSeasons.length - 1]
@@ -74,7 +77,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const watched = currentEps.filter((e) => e.watched).length
   const total = current?.total_episodes ?? currentEps.length
   const pct = total > 0 ? (watched / total) * 100 : 0
-  const next = getNextUnwatched(title)
 
   const genres = parseJSON<string[]>(title.genres)
   const credits = parseJSON<{ name: string; role: string }[]>(title.credits)

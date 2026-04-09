@@ -68,14 +68,20 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
 }
 
 export function Library(_props: { path?: string }) {
-  const {
-    titles, total, hasMore, counts, filter,
-    loading, loadingMore, error,
-    fetchTitles, loadMore, invalidate,
-  } = useTitleStore()
+  const titles = useTitleStore(s => s.titles)
+  const total = useTitleStore(s => s.total)
+  const hasMore = useTitleStore(s => s.hasMore)
+  const counts = useTitleStore(s => s.counts)
+  const filter = useTitleStore(s => s.filter)
+  const loading = useTitleStore(s => s.loading)
+  const loadingMore = useTitleStore(s => s.loadingMore)
+  const error = useTitleStore(s => s.error)
+  const fetchTitles = useTitleStore(s => s.fetchTitles)
+  const loadMore = useTitleStore(s => s.loadMore)
+  const invalidate = useTitleStore(s => s.invalidate)
 
   // Initial fetch on mount
-  useEffect(() => { fetchTitles() }, [])
+  useEffect(() => { fetchTitles() }, [fetchTitles])
 
   const pendingCount = counts?.pending_review ?? 0
   const unconfirmedCount = counts?.unconfirmed ?? 0

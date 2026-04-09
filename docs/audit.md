@@ -113,16 +113,16 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-10: Frontend performance & re-renders
 *Unnecessary renders and missing memoization.*
 
-- [FE-10] MEDIUM | `components/TitleCard.tsx:38` — `useTitleStore()` subscribes to full store; re-renders on any store change. Use selector: `useTitleStore(s => s.sort.field)`
-- [FE-11] MEDIUM | `pages/Library.tsx:72` — full store destructure causes render on every intermediate loading toggle; use granular selectors per field
-- [FE-12] MEDIUM | `pages/TitleDetail.tsx:19,67` — `getNextUnwatched(title)` + 3 `.sort()` calls run on every render; wrap in `useMemo` keyed on `title.id` / `title.seasons`
-- [FE-5] MEDIUM | `pages/Library.tsx:78` — `useEffect(() => { fetchTitles() }, [])` missing `fetchTitles` dep; add it (stable Zustand ref, no extra fetch)
-- [FE-6] MEDIUM | `pages/Search.tsx:33` — `useEffect` uses `search` without listing it as dep; add `search` to array
-- [FE-21] MEDIUM | `store.ts:93,132` — 10-line URLSearchParams block duplicated in `fetchTitles` and `loadMore`; extract `buildFilterParams(filter, sort?)` helper
-- [FE-22] LOW | `utils.ts:34`, `pages/TitleDetail.tsx:43` — `formatDate` duplicated with different locale (`en-US` vs `en-GB`); delete local copy, import from utils, align locale
-- [FE-23] LOW | `components/EditSheet.tsx:27` — local state not reset when `title` prop changes; add `useEffect(() => { ... }, [title.id])` to sync
-- [FE-24] LOW | `app.tsx:46` — `navigate` recreated each render, passed to Navbar as prop; wrap in `useCallback([setFilter])`
-- [FE-25] LOW | `pages/Search.tsx:71` — `getMetadata` closes over nothing but is redeclared each render; move outside component
+- ~~[FE-10] MEDIUM | `components/TitleCard.tsx:38`~~ — **fixed**: `useTitleStore(s => s.sort.field === 'last_watched_at')` selector
+- ~~[FE-11] MEDIUM | `pages/Library.tsx:72`~~ — **fixed**: granular selectors per field
+- ~~[FE-12] MEDIUM | `pages/TitleDetail.tsx:19,67`~~ — **fixed**: `sortedSeasons` and `next` wrapped in `useMemo` keyed on `title?.id` / `title?.seasons`; memos placed before early return
+- ~~[FE-5] MEDIUM | `pages/Library.tsx:78`~~ — **fixed**: `fetchTitles` added to `useEffect` deps
+- ~~[FE-6] MEDIUM | `pages/Search.tsx:33`~~ — **fixed**: `search` added to `useEffect` deps
+- ~~[FE-21] MEDIUM | `store.ts:93,132`~~ — **fixed**: `buildFilterParams(filter, sort?)` extracted; `TitleFilter` type extracted
+- ~~[FE-22] LOW | `utils.ts:34`, `pages/TitleDetail.tsx:43`~~ — **fixed**: local `formatDate` removed from `TitleDetail`; `utils.ts` locale aligned to `en-GB`
+- ~~[FE-23] LOW | `components/EditSheet.tsx:27`~~ — **fixed**: `useEffect(() => { ... }, [title.id])` resets local state on title change
+- ~~[FE-24] LOW | `app.tsx:46`~~ — **fixed**: `navigate` wrapped in `useCallback([setFilter])`; `defaultFilter` moved to module scope
+- ~~[FE-25] LOW | `pages/Search.tsx:71`~~ — **fixed**: `getMetadata` moved to module scope
 
 ---
 

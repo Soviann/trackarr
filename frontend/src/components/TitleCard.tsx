@@ -35,12 +35,10 @@ function getProgress(title: Title) {
 }
 
 export function TitleCard({ title, onUpdate }: TitleCardProps) {
-  const { sort } = useTitleStore()
+  const isLastWatchedSort = useTitleStore(s => s.sort.field === 'last_watched_at')
   const [toggling, setToggling] = useState(false)
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
-
-  const isLastWatchedSort = sort.field === 'last_watched_at'
 
   const progress = title.type !== 'movie' ? getProgress(title) : null
   const season = progress?.season

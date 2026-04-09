@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
 import type { Title, TitleType, TitleStatus } from '../types'
 import { BottomSheet } from './BottomSheet'
@@ -27,6 +27,12 @@ export function EditSheet({ open, onClose, title, onSave }: EditSheetProps) {
   const [type, setType] = useState<TitleType>(title.type)
   const [isAnime, setIsAnime] = useState<boolean>(title.is_anime)
   const [status, setStatus] = useState<TitleStatus>(title.status)
+
+  useEffect(() => {
+    setType(title.type)
+    setIsAnime(title.is_anime)
+    setStatus(title.status)
+  }, [title.id])
 
   const handleSave = () => {
     const updates: { type?: TitleType; status?: TitleStatus; is_anime?: boolean } = {}

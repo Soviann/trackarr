@@ -12,6 +12,19 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './Search.module.css'
 
+function getMetadata(t: Title) {
+  const parts = [getTypeLabel(t.type), String(t.year)]
+  const seasons = t.seasons ?? []
+  if (t.type !== 'movie' && seasons.length > 0) {
+    const ss = seasons[seasons.length - 1]
+    const w = ss.watched_count ?? (ss.episodes ?? []).filter((e) => e.watched).length
+    const totalEp = ss.total_episodes ?? ss.episode_count ?? (ss.episodes ?? []).length
+    parts.push(`S${ss.season_number} ${w}/${totalEp}`)
+  }
+  if (t.my_rating) parts.push(`\u2605 ${t.my_rating}`)
+  return parts.join(' \u00b7 ')
+}
+
 export function Search({ path: _ }: { path?: string }) {
   const { filter } = useTitleStore()
   const {
@@ -34,6 +47,7 @@ export function Search({ path: _ }: { path?: string }) {
   useEffect(() => {
     search(filter)
   }, [
+    search,
     query,
     filter.status,
     filter.type,
@@ -68,19 +82,6 @@ export function Search({ path: _ }: { path?: string }) {
       setMergeError('Merge failed. Please try again.')
       setMerging(false)
     }
-  }
-
-  const getMetadata = (t: Title) => {
-    const parts = [getTypeLabel(t.type), String(t.year)]
-    const seasons = t.seasons ?? []
-    if (t.type !== 'movie' && seasons.length > 0) {
-      const ss = seasons[seasons.length - 1]
-      const w = ss.watched_count ?? (ss.episodes ?? []).filter((e) => e.watched).length
-      const totalEp = ss.total_episodes ?? ss.episode_count ?? (ss.episodes ?? []).length
-      parts.push(`S${ss.season_number} ${w}/${totalEp}`)
-    }
-    if (t.my_rating) parts.push(`\u2605 ${t.my_rating}`)
-    return parts.join(' \u00b7 ')
   }
 
   const hasMatchedAlt = (t: Title) =>

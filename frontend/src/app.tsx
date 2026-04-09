@@ -25,6 +25,8 @@ type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
 type SeriesStatusFilter = SeriesStatus | null
 
+const defaultFilter = { status: undefined, type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
+
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const [vapidKey, setVapidKey] = useState<string>()
@@ -43,17 +45,15 @@ export function App() {
     setCurrentPath(e.url)
   }
 
-  const defaultFilter = { status: undefined, type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
+  const { filter, setFilter, sort, setSort } = useTitleStore()
 
-  const navigate = (path: string) => {
+  const navigate = useCallback((path: string) => {
     if (path === '/' || path === '/search') {
       setFilter(defaultFilter)
       useSearchStore.getState().clear()
     }
     route(path)
-  }
-
-  const { filter, setFilter, sort, setSort } = useTitleStore()
+  }, [setFilter])
 
   const statusFilter: StatusFilter = filter.status === 'watching_behind'
     ? 'watching'
