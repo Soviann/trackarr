@@ -16,12 +16,14 @@ export interface SortState {
 
 const DEFAULT_SORT: SortState = { field: 'release_date', order: 'desc' }
 
+const SORT_FIELDS: SortField[] = ['updated_at', 'original_title', 'release_date', 'my_rating', 'created_at', 'last_watched_at']
+
 function loadSort(): SortState {
   try {
     const raw = localStorage.getItem(SORT_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed.field && parsed.order) return parsed
+      if (SORT_FIELDS.includes(parsed.field) && (parsed.order === 'asc' || parsed.order === 'desc')) return parsed
     }
   } catch { /* ignore */ }
   return DEFAULT_SORT

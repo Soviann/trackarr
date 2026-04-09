@@ -6,31 +6,18 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
-	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
 type EpisodeHandler struct {
-	db       *sql.DB
-	titles   *repository.TitleRepository
-	episodes *repository.EpisodeRepository
-	events   *repository.WatchEventRepository
-	settings *repository.SettingRepository
-	push     service.PushNotifier
-	backfill *service.BackfillService
-	service  *service.LibraryService
+	db      *sql.DB
+	service *service.LibraryService
 }
 
-func NewEpisodeHandler(db *sql.DB, titles *repository.TitleRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, settings *repository.SettingRepository, push service.PushNotifier, backfill *service.BackfillService, svc *service.LibraryService) *EpisodeHandler {
+func NewEpisodeHandler(db *sql.DB, svc *service.LibraryService) *EpisodeHandler {
 	return &EpisodeHandler{
-		db:       db,
-		titles:   titles,
-		episodes: episodes,
-		events:   events,
-		settings: settings,
-		push:     push,
-		backfill: backfill,
-		service:  svc,
+		db:      db,
+		service: svc,
 	}
 }
 

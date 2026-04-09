@@ -64,7 +64,7 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, b
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
-	episodes := handler.NewEpisodeHandler(db, titleRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, libSvc)
+	episodes := handler.NewEpisodeHandler(db, libSvc)
 	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)

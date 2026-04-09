@@ -1,4 +1,4 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import s from './BottomSheet.module.css'
 
@@ -11,6 +11,10 @@ interface BottomSheetProps {
 export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!open) touchStartY.current = null
+  }, [open])
 
   if (!open) return null
 

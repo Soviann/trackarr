@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"math/rand/v2"
+	"path/filepath"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -373,7 +374,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 		return fmt.Errorf("decode cover_fetch payload: %w", err)
 	}
 
-	coversDir := fmt.Sprintf("%s/covers", w.dataDir)
+	coversDir := filepath.Join(w.dataDir, "covers")
 
 	// Try TMDB
 	if w.tmdb != nil && payload.TMDBID != 0 {

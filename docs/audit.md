@@ -139,12 +139,12 @@ Sessions ordered by priority (highest first). Work top-to-bottom across sessions
 ## SESSION-12: Low-priority cleanup
 *No functional impact. Batch or opportunistic.*
 
-- [GO-16] LOW | `service/taskqueue.go:368`, `matching/pipeline.go:458` — `fmt.Sprintf("%s/covers", dir)` for paths; use `filepath.Join`
-- [GO-17] LOW | `handler/episode.go:14` — unused injected fields (titles, episodes, events, settings, push, backfill); handler delegates to service. Remove unused fields and simplify constructor
-- [GO-19] LOW | `service/matching/pipeline.go:346` — AniList search runs for every title without a known AniListID, including confirmed non-anime movies; gate on `input.IsAnime || result.TitleType == TitleTypeSeries`
-- [FE-26] LOW | `vite.config.ts` — no code-splitting; add `manualChunks` for admin routes to reduce initial bundle
-- [FE-27] LOW | `store.ts:24` — `loadSort` accepts any string for `field`; validate against known `SortField` union values
-- [FE-28] LOW | `components/BottomSheet.tsx:15` — drag state not reset when `open` goes false; add `useEffect(() => { touchStartY.current = null }, [open])`
+- ~~[GO-16] LOW | `service/taskqueue.go:368`, `matching/pipeline.go:458`~~ — **fixed**: `fmt.Sprintf("%s/covers", dir)` replaced with `filepath.Join(dir, "covers")` in both files
+- ~~[GO-17] LOW | `handler/episode.go:14`~~ — **fixed**: unused fields (titles, episodes, events, settings, push, backfill) removed; constructor simplified to `(db, svc)`
+- ~~[GO-19] LOW | `service/matching/pipeline.go:346`~~ — **fixed**: AniList search gated on `input.IsAnime || result.TitleType == TitleTypeSeries`
+- ~~[FE-26] LOW | `vite.config.ts`~~ — **fixed**: `manualChunks` added for admin routes (Admin, AdminNotifications, AdminTasks)
+- ~~[FE-27] LOW | `store.ts:24`~~ — **fixed**: `loadSort` validates `field` against `SORT_FIELDS` array and `order` against `'asc'|'desc'`
+- ~~[FE-28] LOW | `components/BottomSheet.tsx:15`~~ — **fixed**: `useEffect(() => { if (!open) touchStartY.current = null }, [open])` added before early return
 - [DB-18] INFO | `migrations/` — `idx_titles_cover_url` stores full file path; current usage correct, informational only
 - [SEC-7] LOW | `handler/auth.go:49` — Google ID token sent to `tokeninfo` without local pre-validation; mitigated by rate limiter (10 req/min), no action required
 - [SEC-8] LOW | `router/router.go:83` — dev backdoor in prod binary gated by env var; acceptable for single-developer, build tag would be stronger

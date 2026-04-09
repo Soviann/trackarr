@@ -14,5 +14,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          admin: ['./src/pages/Admin.tsx', './src/pages/AdminNotifications.tsx', './src/pages/AdminTasks.tsx'],
+        },
+      },
+    },
   },
 })

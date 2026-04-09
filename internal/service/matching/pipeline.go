@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
@@ -344,8 +345,8 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		}
 	}
 
-	// Try AniList search if AniListID still unknown (anime not in cross-ref DB)
-	if result.AniListID == 0 && p.anilist != nil {
+	// Try AniList search only for anime or series (movies don't appear on AniList)
+	if result.AniListID == 0 && p.anilist != nil && (input.IsAnime || result.TitleType == model.TitleTypeSeries) {
 		searchResults, err := p.anilist.SearchAnime(ctx, input.Title)
 		if err != nil {
 			log.Printf("anilist enrichment search failed: %v", err)
@@ -457,7 +458,7 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(ctx context.Context, result *MatchRe
 }
 
 func (p *Pipeline) downloadPoster(posterPath string, result *MatchResult) {
-	coversDir := fmt.Sprintf("%s/covers", p.dataDir)
+	coversDir := filepath.Join(p.dataDir, "covers")
 	filename, err := p.tmdb.DownloadCover(posterPath, coversDir)
 	if err != nil {
 		log.Printf("download cover failed: %v", err)
@@ -480,7 +481,7 @@ func (p *Pipeline) downloadAniListCover(ctx context.Context, result *MatchResult
 		return
 	}
 
-	coversDir := fmt.Sprintf("%s/covers", p.dataDir)
+	coversDir := filepath.Join(p.dataDir, "covers")
 	filename, err := p.anilist.DownloadCover(details.CoverURL, coversDir)
 	if err != nil {
 		log.Printf("download anilist cover failed: %v", err)
