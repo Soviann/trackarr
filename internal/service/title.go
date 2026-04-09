@@ -157,7 +157,7 @@ func (s *TitleService) ResolveURL(url string) (*matching.MatchResult, error) {
 }
 
 // Merge consolidates sourceID into destID.
-func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sourceID int64) error {
+func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sourceID int64, explicitOffset *int) error {
 	titles := repository.NewTitleRepository(db)
 	source, err := titles.GetByID(sourceID)
 	if err != nil {
@@ -165,7 +165,9 @@ func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sour
 	}
 
 	seasonOffset := 0
-	if source.IsAnime && s.pipeline != nil {
+	if explicitOffset != nil {
+		seasonOffset = *explicitOffset
+	} else if source.IsAnime && s.pipeline != nil {
 		name := source.PrimaryName()
 		if ident, err := s.pipeline.IdentifyAnimeSeason(name, source.Year); err == nil && ident.IsSeason {
 			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, name)

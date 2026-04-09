@@ -99,9 +99,9 @@ export function App() {
   const handleIncludeNoReleaseChange = useCallback((include: boolean) => {
     setFilter({ include_no_release: include ? undefined : 'false' })
   }, [setFilter])
-
   const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/admin/tasks')
-  const showDrawer = currentPath === '/' || currentPath === '/search'
+  const pathname = currentPath.split('?')[0]
+  const showDrawer = pathname === '/' || pathname === '/search'
 
   return (
     <ErrorBoundary>
@@ -135,8 +135,8 @@ export function App() {
                 onSeriesStatusChange={handleSeriesStatusChange}
                 sort={sort}
                 onSortChange={setSort}
-                isSearchActive={currentPath === '/search'}
-                defaultOpen={currentPath === '/'}
+                isSearchActive={pathname === '/search'}
+                defaultOpen={true}
                 decade={filter.decade ?? null}
                 releaseFrom={filter.release_from ?? ''}
                 releaseTo={filter.release_to ?? ''}

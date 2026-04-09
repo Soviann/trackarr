@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks'
+import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
 import { getName, getTypeLabel, getStatusLabel } from '../utils'
@@ -287,6 +288,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onRate={() => setShowRating(true)}
         onEdit={() => setShowEdit(true)}
         onRematch={() => setShowRematch(true)}
+        onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
         onAniList={() => setShowAniList(true)}
       />
 

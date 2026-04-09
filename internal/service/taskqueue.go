@@ -287,7 +287,7 @@ func (w *TaskQueueWorker) handleEnrichment(task model.Task) error {
 			// CONFLICT! Same IMDB ID but different local titles.
 			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
 
-			if err := w.titleSvc.Merge(context.Background(), w.titles.DB(), existing.ID, payload.TitleID); err != nil {
+			if err := w.titleSvc.Merge(context.Background(), w.titles.DB(), existing.ID, payload.TitleID, nil); err != nil {
 				log.Printf("enrichment: merge failed: %v", err)
 			} else {
 				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)

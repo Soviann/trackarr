@@ -38,7 +38,7 @@ const typeConfig: Record<TitleType | 'anime' | 'unknown', { color: string; icon:
     ),
   },
   unknown: {
-    color: colors.accentTextMuted,
+    color: colors.textMuted,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10" />

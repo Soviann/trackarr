@@ -1,12 +1,14 @@
-import { useRef, useEffect } from 'preact/hooks'
+import { useRef, useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { colors } from '../theme'
 import { useTitleStore, useSearchStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
+import { apiFetch } from '../api'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './Search.module.css'
 
@@ -17,18 +19,54 @@ export function Search({ path: _ }: { path?: string }) {
     loading, loadingMore, error,
     search, loadMore, clear
   } = useSearchStore()
+
+  const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  const mergeSourceId = params.get('mergeSourceId')
+  const mergeSourceName = params.get('mergeSourceName')
+
+  const [mergeTarget, setMergeTarget] = useState<Title | null>(null)
+  const [targetSeason, setTargetSeason] = useState(1)
+  const [merging, setMerging] = useState(false)
   
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     search(filter)
-  }, [query, filter.status, filter.type, filter.series_status])
+  }, [
+    query,
+    filter.status,
+    filter.type,
+    filter.is_anime,
+    filter.series_status,
+    filter.decade,
+    filter.release_from,
+    filter.release_to,
+    filter.include_no_release,
+  ])
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
   const retry = () => search(filter)
+
+  const handleMerge = async () => {
+    if (!mergeSourceId || !mergeTarget || merging) return
+    setMerging(true)
+    try {
+      await apiFetch(`/titles/${mergeSourceId}/merge`, {
+        method: 'POST',
+        body: JSON.stringify({
+          target_id: mergeTarget.id,
+          season_offset: mergeTarget.type === 'series' ? targetSeason - 1 : 0,
+        }),
+      })
+      route(`/title/${mergeTarget.id}`)
+    } catch (e) {
+      console.error('Merge failed:', e)
+      setMerging(false)
+    }
+  }
 
   const getMetadata = (t: Title) => {
     const parts = [getTypeLabel(t.type), String(t.year)]
@@ -59,9 +97,11 @@ export function Search({ path: _ }: { path?: string }) {
                 </svg>
               </div>
               <div className={s.emptyText}>
-                Search across your entire library
+                {mergeSourceId ? 'Search for a title to merge into' : 'Search across your entire library'}
               </div>
-              <div className={s.emptySubtext}>All statuses, all types</div>
+              <div className={s.emptySubtext}>
+                {mergeSourceId ? `Merging "${mergeSourceName}"` : 'All statuses, all types'}
+              </div>
             </div>
           </div>
         )}
@@ -77,8 +117,19 @@ export function Search({ path: _ }: { path?: string }) {
             </div>
 
             <div className={s.cardList}>
-              {results.map((t) => (
-                <div key={t.id} onClick={() => route(`/title/${t.id}`)} className={s.card}>
+              {results.filter(t => t.id !== Number(mergeSourceId)).map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => {
+                    if (mergeSourceId) {
+                      setMergeTarget(t)
+                      setTargetSeason(1)
+                    } else {
+                      route(`/title/${t.id}`)
+                    }
+                  }}
+                  className={s.card}
+                >
                   <div
                     className={s.cardCover}
                     style={{ background: coverBackground(t.cover_url, t.type) }}
@@ -101,7 +152,11 @@ export function Search({ path: _ }: { path?: string }) {
                     <div className={s.cardMeta}>{getMetadata(t)}</div>
                   </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
+                    {mergeSourceId ? (
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke={colors.accentTeal} />
+                    ) : (
+                      <polyline points="9 18 15 12 9 6" />
+                    )}
                   </svg>
                 </div>
               ))}
@@ -129,6 +184,41 @@ export function Search({ path: _ }: { path?: string }) {
           </div>
         )}
       </div>
+
+      <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)}>
+        <div className={s.mergeDrawer}>
+          <div className={s.mergeTitle}>Merge titles?</div>
+          <div className={s.mergeDesc}>
+            This will merge "{mergeSourceName}" into "{mergeTarget ? getName(mergeTarget) : ''}".
+            Seasons, watch events and names will be moved. This action cannot be undone.
+          </div>
+
+          {mergeTarget?.type === 'series' && (
+            <div className={s.seasonInputGroup}>
+              <label htmlFor="target-season" className={s.seasonLabel}>Integrate as season number:</label>
+              <input
+                id="target-season"
+                type="number"
+                min="1"
+                value={targetSeason}
+                onInput={(e) => setTargetSeason(Number((e.target as HTMLInputElement).value))}
+                className={s.seasonInput}
+              />
+            </div>
+          )}
+
+          <div className={s.mergeActions}>
+            <button className={s.cancelBtn} onClick={() => setMergeTarget(null)}>Cancel</button>
+            <button
+              className={s.confirmBtn}
+              onClick={handleMerge}
+              disabled={merging}
+            >
+              {merging ? 'Merging...' : 'Merge now'}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* Search input */}
       <div className={s.searchBar}>

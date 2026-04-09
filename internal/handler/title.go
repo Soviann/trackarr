@@ -300,7 +300,8 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		TargetID int64 `json:"target_id"`
+		TargetID     int64 `json:"target_id"`
+		SeasonOffset *int  `json:"season_offset"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return httputil.BadRequest("Invalid JSON")
@@ -314,7 +315,7 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Cannot merge a title with itself")
 	}
 
-	if err := h.service.Merge(r.Context(), h.db, body.TargetID, id); err != nil {
+	if err := h.service.Merge(r.Context(), h.db, body.TargetID, id, body.SeasonOffset); err != nil {
 		return httputil.InternalError("Failed to merge titles", err)
 	}
 

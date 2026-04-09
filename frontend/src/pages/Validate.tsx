@@ -59,7 +59,7 @@ export function Validate({ path }: { path?: string }) {
     if (!inputValue.trim()) return
     const newParams = new URLSearchParams(window.location.search)
     newParams.set('q', inputValue.trim())
-    route(`/admin/validate?${new_params.toString()}`, true)
+    route(`/admin/validate?${newParams.toString()}`, true)
   }
 
   const handleMerge = async () => {
@@ -301,7 +301,7 @@ export function Validate({ path }: { path?: string }) {
 
           <button
             onClick={handleAction}
-            disabled={adding || (id && !resolved && !isUrl(query))}
+            disabled={adding || (!!id && !resolved && !isUrl(query))}
             className={s.addBtn}
           >
             <span className={s.addBtnText}>
