@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
-### Modifié
+## [v0.12.1] — 2026-04-09
+
+### Amélioré
+- Performance : résolution des erreurs 504 par l'optimisation des requêtes SQL (remplacement du pattern N+1 par des chargements en vrac et ajout d'index critiques)
 - UI : mise à jour du logo de l'application (branding PlexTracker)
+- Fusion : permet de fusionner des titres directement depuis leur fiche
+
+### Corrigé
+- Recherche : application correcte du filtre anime dans la recherche floue
 
 
 ## [v0.12.0] — 2026-04-09
