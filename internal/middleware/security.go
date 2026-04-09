@@ -13,10 +13,10 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self' https://accounts.google.com; "+
-				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
+				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; "+
 				"font-src 'self' https://fonts.gstatic.com; "+
-				"img-src 'self'; "+
-				"connect-src 'self'; "+
+				"img-src 'self' https://lh3.googleusercontent.com; "+
+				"connect-src 'self' https://accounts.google.com; "+
 				"frame-src https://accounts.google.com; "+
 				"worker-src 'self'; "+
 				"manifest-src 'self'")
