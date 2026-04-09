@@ -23,6 +23,10 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - **Force cheap models on mechanical subagents.** When dispatching a subagent for file search, simple refactor, or mechanical lookup, pass `model: "haiku"` or `"sonnet"` in the Agent call.
 - **Prefer `gh --json field1,field2`** over MCP GitHub tools for simple queries.
 
+## Audits
+
+`docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session. No implement skill overhead.
+
 ## Plans & Specs
 
 Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder.
