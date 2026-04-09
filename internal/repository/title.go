@@ -565,7 +565,6 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 	return titles, nil
 }
 
-
 func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	var sets []string
 	var args []interface{}
@@ -747,7 +746,6 @@ func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, se
 	if err != nil {
 		return fmt.Errorf("get source seasons: %w", err)
 	}
-	defer rows.Close()
 
 	type seasonMove struct {
 		id     int64
@@ -758,6 +756,7 @@ func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, se
 		var sm seasonMove
 		var oldNum int
 		if err := rows.Scan(&sm.id, &oldNum); err != nil {
+			rows.Close()
 			return err
 		}
 		sm.newNum = oldNum + seasonOffset
