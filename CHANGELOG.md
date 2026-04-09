@@ -2,9 +2,24 @@
 
 ## [Unreleased]
 
+## [v0.12.2] — 2026-04-09
+
+### Amélioré
+- Sécurité : durcissement des en-têtes HTTP, limiteurs de débit et journalisation
+- Performance : réduction des re-rendus inutiles dans le frontend et factorisation du store
+- Performance : réduction des aller-retours en base dans les dépôts et sécurisation de `ReplaceNames`
+- Performance : ajout des index manquants et optimisation des requêtes de stats
+- Performance : élimination des requêtes N+1 dans les dépôts
+
 ### Corrigé
 - Import Simkl : le mode dry-run ne sautait pas les écritures en base — corrigé, seuls les doublons sont maintenant comptés
 - Dépôt : curseurs SQL fermés explicitement dans `mergeInTx` et `Search` pour éviter les blocages (SQLite MaxOpenConns=1)
+- Accessibilité : éléments interactifs rendus accessibles au clavier
+- Frontend : erreurs silencieuses éliminées et types renforcés
+- Service : propagation du contexte HTTP corrigée et erreurs silencieuses supprimées
+- Service : cinq race conditions éliminées
+- Service : arrêt propre des goroutines sur SIGTERM
+- Dépôt : trois bugs de correctness corrigés
 
 ## [v0.12.1] — 2026-04-09
 
