@@ -88,6 +88,12 @@
   cursor: pointer;
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.actionBtn:active {
+  opacity: 0.6;
+  transform: scale(0.95);
 }
 
 .rate {
@@ -118,6 +124,18 @@
   composes: actionBtn;
   background: var(--color-bg-surface);
   color: var(--color-text-muted);
+}
+
+.manageSuccess {
+  composes: actionBtn;
+  background: #16a34a22;
+  color: #22c55e;
+}
+
+.manageError {
+  composes: actionBtn;
+  background: #dc262622;
+  color: #f87171;
 }
 
 .bottomPad {

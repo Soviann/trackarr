@@ -12,7 +12,7 @@ interface ActionDrawerProps {
   onEdit: () => void
   onRematch: () => void
   onMerge: () => void
-  onRefresh: () => void
+  onRefresh: () => Promise<void>
 }
 
 export function ActionDrawer({
@@ -22,6 +22,20 @@ export function ActionDrawer({
   const [open, setOpen] = useState(false)
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
+  const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+
+  const handleRefreshClick = async () => {
+    if (refreshState !== 'idle') return
+    setRefreshState('loading')
+    try {
+      await onRefresh()
+      setRefreshState('success')
+    } catch {
+      setRefreshState('error')
+    } finally {
+      setTimeout(() => setRefreshState('idle'), 2000)
+    }
+  }
 
   const handleTouchStart = (e: TouchEvent) => {
     if (!open) return
@@ -110,8 +124,12 @@ export function ActionDrawer({
           <button onClick={onMerge} className={s.manage}>
             Merge
           </button>
-          <button onClick={onRefresh} className={s.manage}>
-            Refresh
+          <button
+            onClick={handleRefreshClick}
+            disabled={refreshState !== 'idle'}
+            className={refreshState === 'success' ? s.manageSuccess : refreshState === 'error' ? s.manageError : s.manage}
+          >
+            {refreshState === 'loading' ? '...' : refreshState === 'success' ? '✓ Done' : refreshState === 'error' ? '✗ Failed' : 'Refresh'}
           </button>
         </div>
 
