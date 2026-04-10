@@ -133,7 +133,11 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Hero — pure visual */}
       <div
         className={s.hero}
-        style={{ background: coverBackground(title.cover_url, title.type) }}
+        style={{
+          background: title.cover_url
+            ? `url(/api/covers/${title.cover_url}) center top/cover`
+            : coverBackground(null, title.type),
+        }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
         <div className={s.heroFade} />
