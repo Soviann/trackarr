@@ -110,7 +110,7 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 }
 
 // Rematch updates a title's external IDs and enqueues an enrichment task.
-func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbID *int64, anilistID *int64) error {
+func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64) error {
 	titles := repository.NewTitleRepository(db)
 	title, err := titles.GetByID(id)
 	if err != nil {
@@ -132,6 +132,9 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 	if anilistID != nil {
 		update.AniListID = anilistID
 	}
+	if tvdbID != nil {
+		update.TVDBID = tvdbID
+	}
 
 	if err := titles.Update(id, update); err != nil {
 		return err
@@ -150,6 +153,12 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 	} else if title.IMDBID != nil {
 		payloadIMDB = *title.IMDBID
 	}
+	payloadTVDB := int64(0)
+	if tvdbID != nil {
+		payloadTVDB = *tvdbID
+	} else if title.TVDBID != nil {
+		payloadTVDB = *title.TVDBID
+	}
 
 	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   id,
@@ -158,6 +167,7 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 		TitleType: title.Type,
 		IMDBID:    payloadIMDB,
 		TMDBID:    payloadTMDB,
+		TVDBID:    payloadTVDB,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal enrichment payload: %w", err)

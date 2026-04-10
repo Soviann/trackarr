@@ -8,11 +8,12 @@ import (
 )
 
 type SettingsHandler struct {
-	settings *repository.SettingRepository
+	settings  *repository.SettingRepository
+	tvdbReady bool
 }
 
-func NewSettingsHandler(settings *repository.SettingRepository) *SettingsHandler {
-	return &SettingsHandler{settings: settings}
+func NewSettingsHandler(settings *repository.SettingRepository, tvdbReady bool) *SettingsHandler {
+	return &SettingsHandler{settings: settings, tvdbReady: tvdbReady}
 }
 
 func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
@@ -22,6 +23,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	httputil.WriteJSON(w, http.StatusOK, map[string]bool{
 		"anilist_connected": anilistErr == nil,
 		"push_subscribed":   pushErr == nil,
+		"tvdb_connected":    h.tvdbReady,
 	})
 	return nil
 }

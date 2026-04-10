@@ -33,9 +33,14 @@ func TestParseURL(t *testing.T) {
 			expected: &ExternalIDs{AniList: 12345},
 		},
 		{
-			name:     "TVDB series URL (detect but no ID)",
+			name:     "TVDB series URL",
 			url:      "https://thetvdb.com/series/shogun-2024",
-			expected: nil, // Currently we don't extract IDs from TVDB slugs
+			expected: &ExternalIDs{}, // TVDB slug parsed; numeric IDs require API resolution
+		},
+		{
+			name:     "TVDB movie URL",
+			url:      "https://thetvdb.com/movies/fight-club-1999",
+			expected: &ExternalIDs{}, // TVDB slug parsed; numeric IDs require API resolution
 		},
 		{
 			name:     "Invalid URL",
@@ -55,4 +60,21 @@ func TestParseURL(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestParseURLFull_TVDBSlugs(t *testing.T) {
+	got := ParseURLFull("https://thetvdb.com/series/frieren-beyond-journeys-end")
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "frieren-beyond-journeys-end", got.TVDBSeriesSlug)
+		assert.Empty(t, got.TVDBMovieSlug)
+	}
+
+	got = ParseURLFull("https://thetvdb.com/movies/fight-club-1999")
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "fight-club-1999", got.TVDBMovieSlug)
+		assert.Empty(t, got.TVDBSeriesSlug)
+	}
+
+	got = ParseURLFull("https://google.com")
+	assert.Nil(t, got)
 }

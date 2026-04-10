@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Ajouté
+- Intégration TheTVDB : enrichissement parallèle TMDB+TVDB à chaque import/refresh — note TVDB affichée en badge sur la fiche titre, lien externe TVDB dans l'ActionDrawer, champ TVDB ID dans Fix match → Manual IDs, et prise en charge des URLs `thetvdb.com/series/<slug>` et `thetvdb.com/movies/<slug>` dans le champ Add (et partage PWA)
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Amélioré

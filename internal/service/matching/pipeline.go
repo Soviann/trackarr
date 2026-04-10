@@ -2,9 +2,12 @@ package matching
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
@@ -30,6 +33,7 @@ const (
 // Pipeline orchestrates the media matching process through Steps 1-5.
 type Pipeline struct {
 	tmdb    *TMDBClient
+	tvdb    *TVDBClient
 	anilist *AniListClient
 	gemini  *GeminiClient
 	crossDB *CrossRefDB // may be nil if not loaded
@@ -46,8 +50,14 @@ func NewPipeline(tmdb *TMDBClient, anilist *AniListClient, gemini *GeminiClient,
 	}
 }
 
+// SetTVDB injects the TVDB client into the pipeline.
+func (p *Pipeline) SetTVDB(tvdb *TVDBClient) { p.tvdb = tvdb }
+
 // TMDB returns the underlying TMDB client.
 func (p *Pipeline) TMDB() *TMDBClient { return p.tmdb }
+
+// TVDB returns the underlying TVDB client.
+func (p *Pipeline) TVDB() *TVDBClient { return p.tvdb }
 
 // MatchResult holds the outcome of running the matching pipeline.
 type MatchResult struct {
@@ -61,11 +71,12 @@ type MatchResult struct {
 	CoverFile   string            `json:"cover_file"`   // local filename in covers dir
 	TitleType   model.TitleType   `json:"type"`         // resolved type (movie or series)
 	IsAnime     bool              `json:"is_anime"`
-	// TMDB metadata
+	// TMDB/TVDB metadata
 	Overview      string   `json:"overview"`
 	Genres        string   `json:"genres"` // JSON array
 	Runtime       *int     `json:"runtime"`
 	TMDBRating    *float64 `json:"tmdb_rating"`
+	TVDBRating    *int     `json:"tvdb_rating"`
 	Credits       string   `json:"credits"` // JSON array
 	AniListRating *int     `json:"anilist_rating"`
 	ReleaseDate   string   `json:"release_date"`
@@ -186,22 +197,51 @@ func (p *Pipeline) Run(ctx context.Context, input MatchInput) (*MatchResult, err
 }
 
 // ResolveURL attempts to identify a title directly from an external URL.
-func (p *Pipeline) ResolveURL(ctx context.Context, url string) (*MatchResult, error) {
-	ids := ParseURL(url)
-	if ids == nil {
-		return nil, fmt.Errorf("could not parse URL: %s", url)
+func (p *Pipeline) ResolveURL(ctx context.Context, rawURL string) (*MatchResult, error) {
+	parsed := ParseURLFull(rawURL)
+	if parsed == nil {
+		return nil, fmt.Errorf("could not parse URL: %s", rawURL)
+	}
+
+	// Resolve TVDB slugs to numeric IDs
+	if parsed.TVDBSeriesSlug != "" {
+		if p.tvdb == nil {
+			return nil, fmt.Errorf("TVDB URL not resolvable: TVDB client not configured")
+		}
+		details, err := p.tvdb.GetSeriesBySlug(ctx, parsed.TVDBSeriesSlug)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve TVDB series slug %q: %w", parsed.TVDBSeriesSlug, err)
+		}
+		return p.Run(ctx, MatchInput{
+			TVDBID: details.ID,
+			Type:   model.TitleTypeSeries,
+		})
+	}
+
+	if parsed.TVDBMovieSlug != "" {
+		if p.tvdb == nil {
+			return nil, fmt.Errorf("TVDB URL not resolvable: TVDB client not configured")
+		}
+		details, err := p.tvdb.GetMovieBySlug(ctx, parsed.TVDBMovieSlug)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve TVDB movie slug %q: %w", parsed.TVDBMovieSlug, err)
+		}
+		return p.Run(ctx, MatchInput{
+			TVDBID: details.ID,
+			Type:   model.TitleTypeMovie,
+		})
 	}
 
 	input := MatchInput{
-		IMDBID:    ids.IMDB,
-		AniListID: ids.AniList,
+		IMDBID:    parsed.IMDB,
+		AniListID: parsed.AniList,
 	}
 
-	if ids.TMDBMovie != 0 {
-		input.TMDBID = ids.TMDBMovie
+	if parsed.TMDBMovie != 0 {
+		input.TMDBID = parsed.TMDBMovie
 		input.Type = model.TitleTypeMovie
-	} else if ids.TMDBTV != 0 {
-		input.TMDBID = ids.TMDBTV
+	} else if parsed.TMDBTV != 0 {
+		input.TMDBID = parsed.TMDBTV
 		input.Type = model.TitleTypeSeries
 	}
 
@@ -360,25 +400,6 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		result.IsAnime = true
 	}
 
-	// Fetch multilingual names from TMDB
-	if p.tmdb != nil && result.TMDBID != 0 {
-		mediaType := "movie"
-		if result.TitleType != model.TitleTypeMovie {
-			mediaType = "tv"
-		}
-
-		names, err := p.tmdb.GetTitleNames(ctx, result.TMDBID, mediaType)
-		if err == nil {
-			for lang, name := range names {
-				result.Names = append(result.Names, model.TitleName{
-					Name:      name,
-					Language:  lang,
-					IsPrimary: lang == "en",
-				})
-			}
-		}
-	}
-
 	// Add AniList names (romaji)
 	if p.anilist != nil && result.AniListID != 0 {
 		alNames, err := p.anilist.GetNames(ctx, result.AniListID)
@@ -397,40 +418,214 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
 
-	// Fetch TMDB details + metadata + cover
+	// Parallel fetch: TMDB details + TVDB details (when IDs are known)
+	var (
+		tmdbRes tmdbFetchResult
+		tvdbRes tvdbFetchResult
+		wg      sync.WaitGroup
+	)
+
 	if p.tmdb != nil && result.TMDBID != 0 {
-		p.fetchTMDBDetailsAndCover(ctx, result)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p.fetchTMDBData(ctx, result, &tmdbRes)
+		}()
 	}
+
+	if p.tvdb != nil && result.TVDBID != 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p.fetchTVDBData(ctx, result, &tvdbRes)
+		}()
+	}
+
+	wg.Wait()
+
+	// ── Fusion rules ──
+	// Overview: longest wins (TMDB on tie)
+	if tmdbRes.overview != "" || tvdbRes.overview != "" {
+		if len(tvdbRes.overview) > len(tmdbRes.overview) {
+			result.Overview = tvdbRes.overview
+		} else if tmdbRes.overview != "" {
+			result.Overview = tmdbRes.overview
+		}
+	}
+
+	// Genres: union, deduplicated (case-insensitive)
+	result.Genres = mergeGenres(tmdbRes.genres, tvdbRes.genres)
+
+	// Runtime: TMDB first, TVDB fallback
+	if tmdbRes.runtime != nil {
+		result.Runtime = tmdbRes.runtime
+	} else if tvdbRes.runtime != nil {
+		result.Runtime = tvdbRes.runtime
+	}
+
+	// Ratings
+	if tmdbRes.tmdbRating != nil {
+		result.TMDBRating = tmdbRes.tmdbRating
+	}
+	if tvdbRes.tvdbRating != nil {
+		result.TVDBRating = tvdbRes.tvdbRating
+	}
+
+	// Credits (TMDB only)
+	if tmdbRes.credits != "" {
+		result.Credits = tmdbRes.credits
+	}
+
+	// Release date: TMDB first
+	if tmdbRes.releaseDate != "" {
+		result.ReleaseDate = tmdbRes.releaseDate
+	}
+
+	// IMDB ID: fill from any source
+	if result.IMDBID == "" && tmdbRes.imdbID != "" {
+		result.IMDBID = tmdbRes.imdbID
+	}
+	if result.IMDBID == "" && tvdbRes.imdbID != "" {
+		result.IMDBID = tvdbRes.imdbID
+	}
+
+	// TVDB ID: fill if TMDB provided it
+	if result.TVDBID == 0 && tmdbRes.tvdbID != 0 {
+		result.TVDBID = tmdbRes.tvdbID
+	}
+
+	// Anime detection from TVDB genres
+	if !result.IsAnime && tvdbRes.isAnime {
+		result.IsAnime = true
+	}
+
+	// Names: union from TMDB and TVDB (TMDB wins on duplicate language)
+	if len(tmdbRes.names) > 0 || len(tvdbRes.names) > 0 {
+		mergedNames := mergeNames(tmdbRes.names, tvdbRes.names)
+		for lang, name := range mergedNames {
+			result.Names = append(result.Names, model.TitleName{
+				Name:      name,
+				Language:  lang,
+				IsPrimary: lang == "en",
+			})
+		}
+	}
+
+	// Cover: TMDB first, TVDB fallback
+	if tmdbRes.coverFile != "" {
+		result.CoverFile = tmdbRes.coverFile
+	} else if tvdbRes.coverFile != "" {
+		result.CoverFile = tvdbRes.coverFile
+	}
+
+	// AniList cover as last resort
 	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
 		p.downloadAniListCover(ctx, result)
 	}
 }
 
-func (p *Pipeline) fetchTMDBDetailsAndCover(ctx context.Context, result *MatchResult) {
+// tmdbFetchResult holds data fetched from TMDB in a goroutine.
+type tmdbFetchResult struct {
+	overview    string
+	genres      string
+	credits     string
+	runtime     *int
+	tmdbRating  *float64
+	releaseDate string
+	coverFile   string
+	imdbID      string
+	tvdbID      int64
+	names       map[string]string
+}
+
+// tvdbFetchResult holds data fetched from TVDB in a goroutine.
+type tvdbFetchResult struct {
+	overview   string
+	genres     []string
+	runtime    *int
+	tvdbRating *int
+	imdbID     string
+	names      map[string]string
+	coverFile  string
+	isAnime    bool
+}
+
+// mergeGenres unions TMDB genre JSON array and TVDB genre string list, deduplicating case-insensitively.
+// TMDB genres take priority on case conflicts.
+func mergeGenres(tmdbGenresJSON string, tvdbGenres []string) string {
+	var tmdb []string
+	if tmdbGenresJSON != "" {
+		_ = json.Unmarshal([]byte(tmdbGenresJSON), &tmdb)
+	}
+	seen := make(map[string]bool, len(tmdb)+len(tvdbGenres))
+	merged := make([]string, 0, len(tmdb)+len(tvdbGenres))
+	for _, g := range tmdb {
+		lower := strings.ToLower(g)
+		if !seen[lower] {
+			seen[lower] = true
+			merged = append(merged, g)
+		}
+	}
+	for _, g := range tvdbGenres {
+		lower := strings.ToLower(g)
+		if !seen[lower] {
+			seen[lower] = true
+			merged = append(merged, g)
+		}
+	}
+	b, _ := json.Marshal(merged)
+	return string(b)
+}
+
+// mergeNames unions name maps from two sources; primary wins on duplicate key.
+func mergeNames(primary, secondary map[string]string) map[string]string {
+	result := make(map[string]string, len(primary)+len(secondary))
+	for k, v := range secondary {
+		result[k] = v
+	}
+	// Primary overwrites secondary
+	for k, v := range primary {
+		result[k] = v
+	}
+	return result
+}
+
+// fetchTMDBData fetches TMDB details and cover into a local struct (goroutine-safe).
+func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *tmdbFetchResult) {
+	coversDir := filepath.Join(p.dataDir, "covers")
 	if result.TitleType == model.TitleTypeMovie {
 		details, err := p.tmdb.GetMovieDetails(ctx, result.TMDBID)
 		if err != nil {
 			log.Printf("fetch movie details failed: %v", err)
 			return
 		}
-		if result.IMDBID == "" && details.IMDBID != "" {
-			result.IMDBID = details.IMDBID
+		if details.IMDBID != "" {
+			out.imdbID = details.IMDBID
+		} else if details.ExternalIDs != nil && details.ExternalIDs.IMDBID != "" {
+			out.imdbID = details.ExternalIDs.IMDBID
 		}
-		if result.IMDBID == "" && details.ExternalIDs != nil && details.ExternalIDs.IMDBID != "" {
-			result.IMDBID = details.ExternalIDs.IMDBID
+		if details.ExternalIDs != nil {
+			out.tvdbID = details.ExternalIDs.TVDBID
 		}
-		if result.TVDBID == 0 && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-			result.TVDBID = details.ExternalIDs.TVDBID
-		}
-		result.Overview = details.Overview
+		out.overview = details.Overview
 		genres, credits, runtime, rating := ExtractMovieMetadata(details)
-		result.Genres = genres
-		result.Credits = credits
-		result.Runtime = runtime
-		result.TMDBRating = rating
-		result.ReleaseDate = details.ReleaseDate
+		out.genres = genres
+		out.credits = credits
+		out.runtime = runtime
+		out.tmdbRating = rating
+		out.releaseDate = details.ReleaseDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
-			p.downloadPoster(*details.PosterPath, result)
+			filename, err := p.tmdb.DownloadCover(*details.PosterPath, coversDir)
+			if err != nil {
+				log.Printf("download tmdb movie cover failed: %v", err)
+			} else {
+				out.coverFile = filename
+			}
+		}
+		// Translations (en/fr names)
+		names, err := p.tmdb.GetTitleNames(ctx, result.TMDBID, "movie")
+		if err == nil {
+			out.names = names
 		}
 	} else {
 		details, err := p.tmdb.GetTVDetails(ctx, result.TMDBID)
@@ -438,33 +633,100 @@ func (p *Pipeline) fetchTMDBDetailsAndCover(ctx context.Context, result *MatchRe
 			log.Printf("fetch tv details failed: %v", err)
 			return
 		}
-		if result.IMDBID == "" && details.ExternalIDs != nil && details.ExternalIDs.IMDBID != "" {
-			result.IMDBID = details.ExternalIDs.IMDBID
+		if details.ExternalIDs != nil {
+			out.imdbID = details.ExternalIDs.IMDBID
+			out.tvdbID = details.ExternalIDs.TVDBID
 		}
-		if result.TVDBID == 0 && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-			result.TVDBID = details.ExternalIDs.TVDBID
-		}
-		result.Overview = details.Overview
+		out.overview = details.Overview
 		genres, credits, runtime, rating := ExtractTVMetadata(details)
-		result.Genres = genres
-		result.Credits = credits
-		result.Runtime = runtime
-		result.TMDBRating = rating
-		result.ReleaseDate = details.FirstAirDate
+		out.genres = genres
+		out.credits = credits
+		out.runtime = runtime
+		out.tmdbRating = rating
+		out.releaseDate = details.FirstAirDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
-			p.downloadPoster(*details.PosterPath, result)
+			filename, err := p.tmdb.DownloadCover(*details.PosterPath, coversDir)
+			if err != nil {
+				log.Printf("download tmdb tv cover failed: %v", err)
+			} else {
+				out.coverFile = filename
+			}
+		}
+		names, err := p.tmdb.GetTitleNames(ctx, result.TMDBID, "tv")
+		if err == nil {
+			out.names = names
 		}
 	}
 }
 
-func (p *Pipeline) downloadPoster(posterPath string, result *MatchResult) {
+// fetchTVDBData fetches TVDB details and cover into a local struct (goroutine-safe).
+func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *tvdbFetchResult) {
 	coversDir := filepath.Join(p.dataDir, "covers")
-	filename, err := p.tmdb.DownloadCover(posterPath, coversDir)
-	if err != nil {
-		log.Printf("download cover failed: %v", err)
-		return
+	if result.TitleType == model.TitleTypeMovie {
+		details, err := p.tvdb.GetMovieDetails(ctx, result.TVDBID)
+		if err != nil {
+			log.Printf("fetch tvdb movie details failed: %v", err)
+			return
+		}
+		out.overview = extractMovieOverview(details)
+		out.genres = extractMovieGenres(details)
+		out.imdbID = extractMovieIMDB(details)
+		out.names = extractMovieNames(details)
+		if details.Runtime != nil {
+			out.runtime = details.Runtime
+		}
+		if details.Score > 0 {
+			r := int(details.Score * 10)
+			out.tvdbRating = &r
+		}
+		for _, g := range out.genres {
+			lower := strings.ToLower(g)
+			if lower == "anime" || lower == "animation" {
+				out.isAnime = true
+				break
+			}
+		}
+		if details.Image != "" {
+			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)
+			if err != nil {
+				log.Printf("download tvdb movie cover failed: %v", err)
+			} else {
+				out.coverFile = filename
+			}
+		}
+	} else {
+		details, err := p.tvdb.GetSeriesDetails(ctx, result.TVDBID)
+		if err != nil {
+			log.Printf("fetch tvdb series details failed: %v", err)
+			return
+		}
+		out.overview = extractSeriesOverview(details)
+		out.genres = extractSeriesGenres(details)
+		out.imdbID = extractSeriesIMDB(details)
+		out.names = extractSeriesNames(details)
+		if details.Runtime != nil {
+			out.runtime = details.Runtime
+		}
+		if details.Score > 0 {
+			r := int(details.Score * 10)
+			out.tvdbRating = &r
+		}
+		for _, g := range out.genres {
+			lower := strings.ToLower(g)
+			if lower == "anime" || lower == "animation" {
+				out.isAnime = true
+				break
+			}
+		}
+		if details.Image != "" {
+			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)
+			if err != nil {
+				log.Printf("download tvdb series cover failed: %v", err)
+			} else {
+				out.coverFile = filename
+			}
+		}
 	}
-	result.CoverFile = filename
 }
 
 func (p *Pipeline) downloadAniListCover(ctx context.Context, result *MatchResult) {

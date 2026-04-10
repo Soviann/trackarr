@@ -7,7 +7,7 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
     id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, imdb_id: null, anilist_id: null,
     tmdb_id: null, tvdb_id: null, my_rating: null, status: 'watching', series_status: null,
     match_status: 'confirmed', original_title: null, match_source: null, names: [], seasons: [],
-    overview: null, genres: null, runtime: null, tmdb_rating: null, credits: null,
+    overview: null, genres: null, runtime: null, tmdb_rating: null, tvdb_rating: null, credits: null,
     anilist_rating: null, release_date: null, created_at: '', updated_at: '',
     ...overrides,
   }

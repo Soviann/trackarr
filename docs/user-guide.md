@@ -50,12 +50,14 @@ L'écran principal affiche tous les titres organisés par statut.
 ### Détail d'un titre
 
 - **Couverture** en haut avec dégradé, bouton retour et bouton édition
+- **Notes externes** : badges TMDB (bleu-vert), TVDB (bleu) et AniList (%) affichés côte à côte quand disponibles
 - **Barre de progression** : "S2 · 7 of 10 episodes watched"
 - **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée
 - **Liste d'épisodes** : tap sur un épisode pour le marquer vu/non vu
 - **Barre d'actions** (au-dessus de la navbar) :
   - **S02E06** : prochain épisode à regarder, tap pour marquer vu
   - **IMDb** : ouvre la page IMDb
+  - **TVDB** : ouvre la page TheTVDB (quand un `tvdb_id` est connu)
   - **AniList** : synchronise la note (anime uniquement)
   - **Rate** : ouvre le prompt de notation
 
@@ -69,9 +71,9 @@ Recherche globale dans toute la bibliothèque, quel que soit le filtre actif. Le
 
 Trois méthodes :
 
-1. **Coller un lien** : URL IMDb, TMDB (movie/tv) ou AniList → PlexTracker résout automatiquement les IDs et affiche le titre pour confirmation
+1. **Coller un lien** : URL IMDb, TMDB (movie/tv), AniList ou **TheTVDB** (`thetvdb.com/series/<slug>` ou `thetvdb.com/movies/<slug>`) → PlexTracker résout automatiquement les IDs et affiche le titre pour confirmation
 2. **Rechercher par nom** : recherche dans TMDB/AniList
-3. **Partage Android** : PlexTracker s'enregistre comme cible de partage. Depuis l'app IMDb ou un navigateur, utiliser "Partager" → "PlexTracker" pour ajouter directement un titre.
+3. **Partage Android/iOS** : PlexTracker s'enregistre comme cible de partage. Depuis l'app IMDb, TVDB ou un navigateur, utiliser "Partager" → "PlexTracker" pour ajouter directement un titre.
 
 Après confirmation, choisir le statut : En cours, Déjà vu, À regarder.
 - "Déjà vu" marque tous les épisodes comme vus et propose de noter le titre.

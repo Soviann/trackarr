@@ -60,6 +60,7 @@ export function ActionDrawer({
   }
 
   const hasImdb = !!title.imdb_id
+  const hasTvdb = !!title.tvdb_id
   const hasAnilist = title.is_anime
   const hasSeries = title.type !== 'movie'
 
@@ -99,6 +100,16 @@ export function ActionDrawer({
               className={s.imdb}
             >
               IMDb
+            </a>
+          )}
+          {hasTvdb && (
+            <a
+              href={`https://thetvdb.com/${title.type === 'movie' ? 'movies' : 'series'}/id-${title.tvdb_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={s.tvdb}
+            >
+              TVDB
             </a>
           )}
           {hasAnilist && title.anilist_id && (

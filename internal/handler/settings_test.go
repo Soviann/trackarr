@@ -21,7 +21,7 @@ func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *repository.S
 	t.Cleanup(func() { db.Close() })
 
 	settings := repository.NewSettingRepository(db)
-	h := handler.NewSettingsHandler(settings)
+	h := handler.NewSettingsHandler(settings, false)
 	return h, settings
 }
 

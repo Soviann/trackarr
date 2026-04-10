@@ -190,6 +190,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 <div className={s.extSource}>TMDB</div>
               </div>
             )}
+            {title.tvdb_rating != null && (
+              <div className={s.extItem}>
+                <div className={`${s.extScore} ${s.tvdbColor}`}>{title.tvdb_rating}</div>
+                <div className={s.extSource}>TVDB</div>
+              </div>
+            )}
             {title.anilist_rating != null && (
               <div className={s.extItem}>
                 <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>

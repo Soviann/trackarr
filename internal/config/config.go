@@ -16,6 +16,7 @@ type Config struct {
 	TMDBAPIKey             string
 	AniListClientID        string
 	AniListClientSecret    string
+	TVDBAPIKey             string
 	GeminiAPIKeys          []string // Rotation pool
 	VAPIDPublicKey         string
 	VAPIDPrivateKey        string
@@ -35,6 +36,7 @@ func Load() (*Config, error) {
 		GoogleAllowedEmail:     os.Getenv("GOOGLE_ALLOWED_EMAIL"),
 		JWTSecret:              os.Getenv("JWT_SECRET"),
 		TMDBAPIKey:             os.Getenv("TMDB_API_KEY"),
+		TVDBAPIKey:             os.Getenv("TVDB_API_KEY"),
 		AniListClientID:        os.Getenv("ANILIST_CLIENT_ID"),
 		AniListClientSecret:    os.Getenv("ANILIST_CLIENT_SECRET"),
 		VAPIDPublicKey:         os.Getenv("VAPID_PUBLIC_KEY"),

@@ -30,6 +30,7 @@ export function RematchSheet({ open, onClose, title, onDone }: RematchSheetProps
   const [manualTmdb, setManualTmdb] = useState('')
   const [manualImdb, setManualImdb] = useState('')
   const [manualAnilist, setManualAnilist] = useState('')
+  const [manualTvdb, setManualTvdb] = useState('')
   const doSearch = async (q: string, type: 'movie' | 'tv') => {
     if (!q.trim()) {
       setResults([])
@@ -80,6 +81,7 @@ export function RematchSheet({ open, onClose, title, onDone }: RematchSheetProps
     if (manualTmdb) body.tmdb_id = parseInt(manualTmdb, 10)
     if (manualImdb) body.imdb_id = manualImdb
     if (manualAnilist) body.anilist_id = parseInt(manualAnilist, 10)
+    if (manualTvdb) body.tvdb_id = parseInt(manualTvdb, 10)
     if (Object.keys(body).length === 0) return
 
     setSaving(true)
@@ -176,6 +178,10 @@ export function RematchSheet({ open, onClose, title, onDone }: RematchSheetProps
             <label className={s.fieldLabel}>
               AniList ID
               <input type="text" value={manualAnilist} onInput={(e) => setManualAnilist((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 21" />
+            </label>
+            <label className={s.fieldLabel}>
+              TVDB ID
+              <input type="text" value={manualTvdb} onInput={(e) => setManualTvdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 81189" />
             </label>
             <button onClick={handleManualSave} disabled={saving} className={s.saveButton}>
               <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save & re-enrich'}</span>

@@ -71,7 +71,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
-	settings := handler.NewSettingsHandler(settingRepo)
+	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
+	settings := handler.NewSettingsHandler(settingRepo, tvdbReady)
 	stats := handler.NewStatsHandler(statsRepo)
 
 	// API routes

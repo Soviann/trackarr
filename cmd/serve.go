@@ -71,6 +71,20 @@ func Serve(distFS embed.FS) error {
 		pipeline = matching.NewPipeline(tmdbClient, anilistClient, geminiClient, crossDB, cfg.DataDir)
 	}
 
+	if cfg.TVDBAPIKey != "" {
+		tvdbClient := matching.NewTVDBClient(cfg.TVDBAPIKey)
+		if err := tvdbClient.Login(context.Background()); err != nil {
+			log.Printf("warning: TVDB login failed, TVDB enrichment disabled: %v", err)
+		} else {
+			log.Printf("TVDB client ready")
+			if pipeline != nil {
+				pipeline.SetTVDB(tvdbClient)
+			}
+		}
+	} else {
+		log.Printf("warning: TVDB_API_KEY not set, TVDB enrichment disabled")
+	}
+
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)

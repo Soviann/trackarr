@@ -279,17 +279,18 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		TMDBID    *int64  `json:"tmdb_id"`
 		IMDBID    *string `json:"imdb_id"`
 		AniListID *int64  `json:"anilist_id"`
+		TVDBID    *int64  `json:"tvdb_id"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
 		return httputil.BadRequest("Invalid request")
 	}
 
-	if body.TMDBID == nil && body.IMDBID == nil && body.AniListID == nil {
+	if body.TMDBID == nil && body.IMDBID == nil && body.AniListID == nil && body.TVDBID == nil {
 		return httputil.BadRequest("At least one ID is required")
 	}
 
-	if err := h.service.Rematch(h.db, id, body.IMDBID, body.TMDBID, body.AniListID); err != nil {
+	if err := h.service.Rematch(h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
 		return httputil.InternalError("Failed to rematch", err)
 	}
 

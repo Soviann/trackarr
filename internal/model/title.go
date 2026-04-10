@@ -56,6 +56,7 @@ type Title struct {
 	Genres        *string       `json:"genres"`
 	Runtime       *int          `json:"runtime"`
 	TMDBRating    *float64      `json:"tmdb_rating"`
+	TVDBRating    *int          `json:"tvdb_rating"`
 	Credits       *string       `json:"credits"`
 	AniListRating *int          `json:"anilist_rating"`
 	ReleaseDate   *string       `json:"release_date"`

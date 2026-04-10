@@ -108,6 +108,12 @@
   color: var(--color-accent-imdb);
 }
 
+.tvdb {
+  composes: actionBtn;
+  background: #4a90d91f;
+  color: #4a90d9;
+}
+
 .anilist {
   composes: actionBtn;
   background: #02A9FF1F;

@@ -28,8 +28,9 @@ Update when adding routes, services, components, or commands.
 | PushNotifier | `internal/service/push.go` | Interface (PushService + noopNotifier). Web Push VAPID |
 | BackgroundService | `internal/service/background.go` | Daily title refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
-| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching. Supports URL resolution (TMDB, IMDb, AniList). |
+| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching. Supports URL resolution (TMDB, IMDb, AniList, TVDB slugs). Parallel TMDB+TVDB fetch with fusion rules in `enrichFromIDs`. |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers, find-by-id |
+| TVDBClient | `internal/service/matching/tvdb*.go` | TheTVDB v4 API: client (tvdb.go, JWT auth with auto-relogin), details, covers, search, slug resolution. Injected via `Pipeline.SetTVDB()`. |
 | AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync, covers |
 | CrossRefDB | `internal/service/matching/crossref.go` | anime-offline-database ID cross-referencing |
 | GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve + anime season identification, key rotation |
@@ -47,13 +48,18 @@ Confidence levels: `ConfidenceHigh`, `ConfidenceMedium`, `ConfidenceLow` (consta
 
 Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
 
-After matching: fetch multilingual names (TMDB en/fr, AniList romaji), download cover (TMDB first, AniList `coverImage.extraLarge` fallback). AniList covers prefixed `al-` to avoid filename collisions.
+After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → fusion rules (overview: longest wins; genres: union; cover: TMDB first, TVDB fallback, AniList last). Names merged from both sources (TMDB wins on duplicate lang). TVDB covers stored as `tvdb_<id>.jpg`. AniList covers prefixed `al-`.
+
+**TVDB fusion fields**: `tvdb_rating` (score×10, stored as INTEGER), `tvdb_id` already existed. No divergence UI in v1 (TMDB wins on release date conflicts >1 year; server logs the diff).
+
+**TVDB URL resolution**: `ParseURLFull()` returns `TVDBSeriesSlug`/`TVDBMovieSlug` from `thetvdb.com/series/<slug>` or `/movies/<slug>`. `Pipeline.ResolveURL` calls `GetSeriesBySlug`/`GetMovieBySlug` → numeric ID → `Run()`. Graceful: if TVDB client nil, returns user-visible error.
 
 ### External APIs
 
 | API | File | Purpose |
 |---|---|---|
 | TMDB | `internal/service/matching/tmdb.go` | Metadata, episodes, covers, names |
+| TVDB | `internal/service/matching/tvdb.go` | Metadata, covers, slug resolution, JWT auth |
 | AniList | `internal/service/matching/anilist.go` | Anime search, episodes, rating sync |
 | Gemini | `internal/service/matching/gemini.go` | Match verification/fallback |
 | anime-offline-database | `internal/service/matching/crossref.go` | Cross-reference ID mapping |
