@@ -5,26 +5,93 @@
   },
   "permissions": {
     "allow": [
-      "Bash(make:*)",
       "Bash(docker compose:*)",
+      "Bash(echo:*)",
       "Bash(gh:*)",
       "Bash(git:*)",
-      "Edit",
-      "Write",
-      "mcp__plugin_context7_context7__query-docs",
-      "mcp__plugin_context7_context7__resolve-library-id",
       "Bash(ls:*)",
-      "Bash(echo:*)",
-      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__*"
+      "Bash(make:*)",
+      "Edit",
+      "WebFetch",
+      "WebSearch",
+      "Write",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__*",
+      "mcp__plugin_context7_context7__query-docs",
+      "mcp__plugin_context7_context7__resolve-library-id"
+    ],
+    "ask": [
+      "Bash(gh issue close:*)",
+      "Bash(gh issue delete:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git -C * branch -D:*)",
+      "Bash(git -C * checkout .:*)",
+      "Bash(git -C * clean -f:*)",
+      "Bash(git -C * commit:*)",
+      "Bash(git -C * push --force:*)",
+      "Bash(git -C * push -f:*)",
+      "Bash(git -C * reset --hard:*)",
+      "Bash(git -C * restore .:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git checkout .:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git commit:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git restore .:*)"
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); if [ \"$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // empty')\" = \"Explore\" ]; then SID=$(echo \"$INPUT\" | jq -r '.session_id // empty'); PROJ=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$PROJ/docs/patterns.md\" ]; then if [ ! -f \"/tmp/claude-patterns-$SID\" ]; then echo 'BLOCKED — Read docs/patterns.md first (it documents the codebase map and conventions). Only launch Explore if patterns.md does not cover your need; this block clears once patterns.md has been read this session.' >&2; exit 2; fi; else echo 'No docs/patterns.md found. After exploration, create one with the codebase map.'; fi; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); FP=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); case \"$FP\" in */docs/patterns.md) SID=$(echo \"$INPUT\" | jq -r '.session_id // empty'); touch \"/tmp/claude-patterns-$SID\" ;; esac"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/preserve-context.sh"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "if [ -f .claude/session-handoff.md ]; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"A session handoff file exists at .claude/session-handoff.md from a previous session. Invoke the session-resume skill to read it and present it to the user.\"}}'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/commit-checkpoint.sh\""
           }
         ]
       }
