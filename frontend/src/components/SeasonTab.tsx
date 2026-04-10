@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useEffect, useRef } from 'preact/hooks'
 import type { Season } from '../types'
 import { colors } from '../theme'
 import s from './SeasonTab.module.css'
@@ -14,10 +15,17 @@ export function SeasonTab({ season, active, onClick }: SeasonTabProps) {
   const watched = eps.filter((e) => e.watched).length
   const total = season.total_episodes ?? eps.length
   const allWatched = total > 0 && watched >= total
+  const ref = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (active) {
+      ref.current?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' })
+    }
+  }, [active])
 
   if (active) {
     return (
-      <button onClick={onClick} className={clsx(s.tab, s.tabActive)}>
+      <button ref={ref} onClick={onClick} className={clsx(s.tab, s.tabActive)}>
         <span className={s.labelActive}>S{season.season_number}</span>
         <span className={s.countActive}>{watched}/{total}</span>
       </button>

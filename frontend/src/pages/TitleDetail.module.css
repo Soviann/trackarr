@@ -250,6 +250,11 @@
   display: flex;
   gap: var(--space-sm);
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.seasonTabs::-webkit-scrollbar {
+  display: none;
 }
 
 .episodeList {
