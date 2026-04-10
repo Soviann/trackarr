@@ -21,7 +21,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - **No exploratory search when the target is known.** User named a file/symbol → Read/Grep it directly. Skip verifying existence of items already known from plan/memory.
 - **Direct tools > subagents for simple lookups.** A subagent = a full Opus conversation billed on top. Use Grep/Glob/Read for: known targets, single-file reads, specific symbol lookups, <3 expected queries. Use subagents (Explore, general-purpose) only for: open-ended research spanning many files, tasks whose raw output would pollute main context, genuinely parallel independent investigations.
 - **Force cheap models on mechanical subagents.** When dispatching a subagent for file search, simple refactor, or mechanical lookup, pass `model: "haiku"` or `"sonnet"` in the Agent call.
-- **Prefer `gh --json field1,field2`** over MCP GitHub tools for simple queries.
+- **Prefer `gh --json field1,field2`** over MCP GitHub tools for simple queries. `minimal_output: true` on MCP list/search calls.
 
 ## Audits
 
@@ -30,6 +30,8 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 ## Plans & Specs
 
 Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder.
+Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
+After saving a plan, offer 3 options: (1) Subagent-Driven, (2) Inline Execution, (3) Save only — stop so I can run it in another session/model.
 Audience = PO (non-technical). Structure around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in collapsed section if essential for scope estimation.
 Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
 
@@ -62,6 +64,7 @@ Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security) 
 
 - `gofmt` + `golangci-lint`. TypeScript strict. Preact functional components.
 - Linters/formatters: run before committing (not after each file edit), only on modified files.
+- Prefer native/library solutions over custom code.
 - DRY: extract at 3+ occurrences (or 2 if complex). Exception: when abstraction obscures intent or coupling > duplication cost.
 - No magic strings — constants/enums. DB queries in `repository/` only.
 - Handlers: struct with repos (DI), methods = HTTP handlers.
@@ -78,14 +81,17 @@ After UI/UX changes, verify in-browser via Chrome DevTools MCP:
 
 ## Git
 
-- Format: `<type>(scope): description` — types: `feat|fix|chore|refactor|docs`, French 3rd-person imperative
+- Format: `<type>(scope|branch-name): description` — types: `feat|fix|chore|refactor|docs`, French 3rd-person imperative
 - Commit title = visible impact, not implementation detail. Technical details in body.
   - `fix`: the problem solved. BAD: `utilise LEFT JOIN au lieu de subquery`. GOOD: `corrige l'absence de médias dans la liste`
   - `feat`: the capability added. BAD: `ajoute MergeService`. GOOD: `permet de fusionner des titres en double`
   - `refactor`/`chore`: the improvement. BAD: `extrait buildQuery`. GOOD: `simplifie la construction des requêtes de liste`
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
-- Skip `git diff` when you made the edits. Merges: `--no-ff`.
+- Skip `git diff` when you made the edits — diff only to discover changes you didn't make. Merges: `--no-ff`.
 
 ## Language
 
 Commits/docs: French. Code: English. CLAUDE.md: English.
+
+## Recommended Plugins
+`context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`, `chrome-devtools-mcp`, `cc-skills-golang`.
