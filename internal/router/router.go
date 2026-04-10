@@ -60,7 +60,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	statsRepo := repository.NewStatsRepository(readDB)
 
 	// Handlers
-	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
+	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
@@ -108,6 +108,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
 			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
 			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
+			r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))

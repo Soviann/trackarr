@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -24,9 +26,10 @@ type TitleHandler struct {
 	tasks      *repository.TaskRepository
 	pipeline   *matching.Pipeline
 	service    *service.TitleService
+	bgSvc      *service.BackgroundService
 }
 
-func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService) *TitleHandler {
+func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
 	return &TitleHandler{
 		db:         db,
 		titles:     titles,
@@ -37,6 +40,7 @@ func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, titlesRead 
 		tasks:      tasks,
 		pipeline:   pipeline,
 		service:    svc,
+		bgSvc:      bgSvc,
 	}
 }
 
@@ -321,5 +325,26 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	return nil
+}
+
+// RefreshOne triggers a metadata refresh for a single title.
+func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("invalid title id")
+	}
+
+	if h.bgSvc == nil {
+		return httputil.InternalError("refresh title", fmt.Errorf("background service not available"))
+	}
+
+	go func() {
+		if err := h.bgSvc.RefreshByID(context.Background(), id); err != nil {
+			log.Printf("refresh title %d: %v", id, err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusAccepted)
 	return nil
 }
