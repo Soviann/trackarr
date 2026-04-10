@@ -79,6 +79,16 @@ func (s *BackgroundService) RefreshAllTitles(ctx context.Context) []RefreshResul
 	return s.refreshTitles(ctx, true)
 }
 
+// RefreshByID refreshes metadata for a single title.
+func (s *BackgroundService) RefreshByID(ctx context.Context, titleID int64) error {
+	title, err := s.titles.GetByID(titleID)
+	if err != nil {
+		return fmt.Errorf("background: get title %d: %w", titleID, err)
+	}
+	s.refreshTitle(ctx, title)
+	return nil
+}
+
 func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) []RefreshResult {
 	if s == nil {
 		return nil
