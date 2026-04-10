@@ -23,7 +23,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     throw new ApiError(res.status, text)
   }
 
-  if (res.status === 204) return undefined as T
+  if (res.status === 204 || res.status === 202) return undefined as T
 
   return res.json()
 }
