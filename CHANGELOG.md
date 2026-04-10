@@ -4,6 +4,8 @@
 
 ### Corrigé
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
+- Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion
+- Bibliothèque : détection des doublons lors de la création d'un titre via Plex si celui-ci existe déjà via ses identifiants externes (ex: import Simkl)
 
 ## [v0.12.4] — 2026-04-10
 

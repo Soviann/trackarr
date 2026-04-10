@@ -115,6 +115,40 @@ func TestPlexService_EpisodeScrobble(t *testing.T) {
 	assert.True(t, title.Seasons[0].Episodes[0].Watched)
 }
 
+func TestPlexService_EpisodeScrobble_NoIDLeak(t *testing.T) {
+	svc, titleRepo := setupPlexService(t)
+
+	// Episode scrobble with episode-level GUIDs
+	payload := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypeScrobble,
+		Metadata: plexwebhooks.Metadata{
+			Title:                "Episode 7",
+			GrandparentTitle:     "In the Land of Leadale",
+			Year:                 2022,
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                7,
+			RatingKey:            "ep7",
+			GrandparentRatingKey: "series1",
+			GUIDExternal: []*url.URL{
+				mustParseURL("tmdb://3415481"), // Episode ID
+			},
+		},
+	}
+
+	err := svc.ProcessScrobble(payload, `{}`)
+	require.NoError(t, err)
+
+	result, _ := titleRepo.List(repository.TitleFilter{})
+	require.Len(t, result.Titles, 1)
+
+	title := result.Titles[0]
+	// The series should NOT have the episode's TMDB ID
+	if title.TMDBID != nil {
+		assert.NotEqual(t, int64(3415481), *title.TMDBID)
+	}
+}
+
 func newTMDBMock(t *testing.T, status string, seasons []struct {
 	SeasonNumber int `json:"season_number"`
 	EpisodeCount int `json:"episode_count"`

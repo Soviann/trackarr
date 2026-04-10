@@ -80,7 +80,10 @@ func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload 
 	}
 
 	meta := payload.Metadata
-	ids := ParseGUIDs(meta.GUIDExternal)
+	var ids PlexExternalIDs
+	if meta.Type == plexwebhooks.MediaTypeMovie {
+		ids = ParseGUIDs(meta.GUIDExternal)
+	}
 
 	switch meta.Type {
 	case plexwebhooks.MediaTypeMovie:

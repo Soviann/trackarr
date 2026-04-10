@@ -69,6 +69,22 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 				t.CoverURL = &coverURL
 			}
 			names = result.Names
+
+			// Check if title already exists by resolved IDs
+			existing, err := titles.FindByExternalID(t.IMDBID, t.TMDBID, nil, t.AniListID, &t.Type)
+			if err == nil && existing != nil {
+				// Title already exists, update its Plex rating key and return its ID.
+				// Also update type/is_anime if they were refined by the pipeline.
+				update := repository.TitleUpdate{
+					PlexRatingKey: t.PlexRatingKey,
+					Type:          &t.Type,
+					IsAnime:       &t.IsAnime,
+				}
+				if err := titles.Update(existing.ID, update); err != nil {
+					return 0, fmt.Errorf("update existing title with plex key: %w", err)
+				}
+				return existing.ID, nil
+			}
 		}
 	}
 
