@@ -791,12 +791,29 @@ func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, se
 	rows.Close()
 
 	for _, m := range moves {
-		// If a season with this number already exists in dest, we might want to merge episodes
-		// but for simplicity (and usually correct for anime splits), we just move it.
-		// If it crashes on unique constraint, it means we have overlapping seasons.
-		_, err := db.Exec(`UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id)
-		if err != nil {
-			return fmt.Errorf("move season %d: %w", m.id, err)
+		var targetSeasonID int64
+		err := db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, destID, m.newNum).Scan(&targetSeasonID)
+		if err == sql.ErrNoRows {
+			// No collision: re-parent the season directly.
+			if _, err := db.Exec(`UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id); err != nil {
+				return fmt.Errorf("move season %d: %w", m.id, err)
+			}
+		} else if err != nil {
+			return fmt.Errorf("check season collision %d: %w", m.id, err)
+		} else {
+			// Collision: merge episodes into the existing target season.
+			// UPDATE OR IGNORE skips episodes whose number already exists in the target season.
+			if _, err := db.Exec(`UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
+				return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+			}
+			// Delete any remaining source episodes that could not be moved (duplicate episode numbers).
+			// Their watch_events will have episode_id set to NULL via ON DELETE SET NULL.
+			if _, err := db.Exec(`DELETE FROM episodes WHERE season_id = ?`, m.id); err != nil {
+				return fmt.Errorf("delete duplicate episodes from season %d: %w", m.id, err)
+			}
+			if _, err := db.Exec(`DELETE FROM seasons WHERE id = ?`, m.id); err != nil {
+				return fmt.Errorf("delete merged season %d: %w", m.id, err)
+			}
 		}
 	}
 
