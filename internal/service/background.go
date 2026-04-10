@@ -18,6 +18,7 @@ type BackgroundService struct {
 	titles   *repository.TitleRepository
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
+	tvdb     *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
 	tasks    *repository.TaskRepository
 	settings *repository.SettingRepository
 	tmdb     *matching.TMDBClient
@@ -55,6 +56,9 @@ func NewBackgroundService(
 func (s *BackgroundService) coversDir() string {
 	return filepath.Join(s.dataDir, "covers")
 }
+
+// SetTVDB injects the TVDB client (optional — called after construction if TVDB is configured).
+func (s *BackgroundService) SetTVDB(tvdb *matching.TVDBClient) { s.tvdb = tvdb }
 
 // RefreshResult captures what happened for a single title during refresh.
 type RefreshResult struct {
@@ -132,6 +136,11 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 		s.downloadAniListCover(title)
 	}
 
+	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
+	if s.tvdb != nil {
+		s.refreshFromTVDB(ctx, title)
+	}
+
 	// Step 2: Auto-complete if series ended and all episodes watched
 	// Need full title with seasons/episodes for this check
 	if title.Type != model.TitleTypeMovie && title.SeriesStatus != nil {
@@ -155,6 +164,73 @@ func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Ti
 		s.refreshMovieFromTMDB(ctx, title, result)
 	} else {
 		s.refreshSeriesFromTMDB(ctx, title, result)
+	}
+}
+
+// refreshFromTVDB fetches TVDB rating and cover for titles that have (or can resolve) a TVDB ID.
+// It also writes tvdb_id to the DB when TMDB cross-references one that wasn't stored yet.
+func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title) {
+	// Resolve TVDB ID: use stored value or cross-reference from TMDB external IDs
+	tvdbID := int64(0)
+	if title.TVDBID != nil {
+		tvdbID = *title.TVDBID
+	} else if title.TMDBID != nil {
+		// Try to get TVDB ID from TMDB external_ids
+		if title.Type == model.TitleTypeMovie {
+			if details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID); err == nil {
+				if details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+					tvdbID = details.ExternalIDs.TVDBID
+					_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+				}
+			}
+		} else {
+			if details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID); err == nil {
+				if details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+					tvdbID = details.ExternalIDs.TVDBID
+					_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+				}
+			}
+		}
+	}
+	if tvdbID == 0 {
+		return
+	}
+
+	// Fetch TVDB details
+	update := repository.TitleUpdate{}
+	if title.Type == model.TitleTypeMovie {
+		details, err := s.tvdb.GetMovieDetails(ctx, tvdbID)
+		if err != nil {
+			log.Printf("background tvdb movie refresh %d: %v", title.ID, err)
+			return
+		}
+		if details.Score > 0 {
+			r := int(details.Score * 10)
+			update.TVDBRating = &r
+		}
+		if title.CoverURL == nil && details.Image != "" {
+			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
+				update.CoverURL = &filename
+			}
+		}
+	} else {
+		details, err := s.tvdb.GetSeriesDetails(ctx, tvdbID)
+		if err != nil {
+			log.Printf("background tvdb series refresh %d: %v", title.ID, err)
+			return
+		}
+		if details.Score > 0 {
+			r := int(details.Score * 10)
+			update.TVDBRating = &r
+		}
+		if title.CoverURL == nil && details.Image != "" {
+			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
+				update.CoverURL = &filename
+			}
+		}
+	}
+	if update.TVDBRating != nil || update.CoverURL != nil {
+		_ = s.titles.Update(title.ID, update)
 	}
 }
 

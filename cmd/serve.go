@@ -71,10 +71,12 @@ func Serve(distFS embed.FS) error {
 		pipeline = matching.NewPipeline(tmdbClient, anilistClient, geminiClient, crossDB, cfg.DataDir)
 	}
 
+	var tvdbClient *matching.TVDBClient
 	if cfg.TVDBAPIKey != "" {
-		tvdbClient := matching.NewTVDBClient(cfg.TVDBAPIKey)
+		tvdbClient = matching.NewTVDBClient(cfg.TVDBAPIKey)
 		if err := tvdbClient.Login(context.Background()); err != nil {
 			log.Printf("warning: TVDB login failed, TVDB enrichment disabled: %v", err)
+			tvdbClient = nil
 		} else {
 			log.Printf("TVDB client ready")
 			if pipeline != nil {
@@ -93,6 +95,9 @@ func Serve(distFS embed.FS) error {
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
+	if tvdbClient != nil {
+		bgSvc.SetTVDB(tvdbClient)
+	}
 	if !cfg.DisableBackgroundTasks {
 		bgSvc.StartTicker(ctx, 24*time.Hour)
 	}

@@ -476,9 +476,11 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		result.Credits = tmdbRes.credits
 	}
 
-	// Release date: TMDB first
+	// Release date: TMDB first, TVDB year as fallback
 	if tmdbRes.releaseDate != "" {
 		result.ReleaseDate = tmdbRes.releaseDate
+	} else if tvdbRes.releaseDate != "" {
+		result.ReleaseDate = tvdbRes.releaseDate
 	}
 
 	// IMDB ID: fill from any source
@@ -540,14 +542,15 @@ type tmdbFetchResult struct {
 
 // tvdbFetchResult holds data fetched from TVDB in a goroutine.
 type tvdbFetchResult struct {
-	overview   string
-	genres     []string
-	runtime    *int
-	tvdbRating *int
-	imdbID     string
-	names      map[string]string
-	coverFile  string
-	isAnime    bool
+	overview    string
+	genres      []string
+	runtime     *int
+	tvdbRating  *int
+	imdbID      string
+	names       map[string]string
+	coverFile   string
+	isAnime     bool
+	releaseDate string // year only (e.g. "2008"), used as fallback when TMDB has no date
 }
 
 // mergeGenres unions TMDB genre JSON array and TVDB genre string list, deduplicating case-insensitively.
@@ -686,6 +689,9 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 				break
 			}
 		}
+		if details.Year > 0 {
+			out.releaseDate = fmt.Sprintf("%d", details.Year)
+		}
 		if details.Image != "" {
 			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)
 			if err != nil {
@@ -717,6 +723,9 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 				out.isAnime = true
 				break
 			}
+		}
+		if details.Year != "" {
+			out.releaseDate = details.Year
 		}
 		if details.Image != "" {
 			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)

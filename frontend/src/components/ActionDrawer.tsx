@@ -104,7 +104,7 @@ export function ActionDrawer({
           )}
           {hasTvdb && (
             <a
-              href={`https://thetvdb.com/${title.type === 'movie' ? 'movies' : 'series'}/id-${title.tvdb_id}`}
+              href={`https://thetvdb.com/dereferrer/${title.type === 'movie' ? 'movie' : 'series'}/${title.tvdb_id}`}
               target="_blank"
               rel="noopener noreferrer"
               className={s.tvdb}

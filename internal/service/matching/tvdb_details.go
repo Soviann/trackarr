@@ -53,11 +53,12 @@ type tvdbSeriesDetail struct {
 }
 
 type tvdbMovieDetail struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	Year   int    `json:"year"`
-	Image  string `json:"image"`
-	Genres []struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Overview string `json:"overview"`
+	Year     int    `json:"year"`
+	Image    string `json:"image"`
+	Genres   []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
 	Score        float64           `json:"score"`
@@ -224,15 +225,15 @@ func extractSeriesOverview(d *tvdbSeriesDetail) string {
 	return d.Overview
 }
 
-// extractMovieOverview returns the English overview from TVDB movie translations.
+// extractMovieOverview returns the English overview from TVDB movie translations,
+// falling back to the top-level overview field.
 func extractMovieOverview(d *tvdbMovieDetail) string {
-	if d.Translations == nil {
-		return ""
-	}
-	for _, t := range d.Translations.OverviewTranslations {
-		if t.Language == "eng" && t.Overview != "" {
-			return t.Overview
+	if d.Translations != nil {
+		for _, t := range d.Translations.OverviewTranslations {
+			if t.Language == "eng" && t.Overview != "" {
+				return t.Overview
+			}
 		}
 	}
-	return ""
+	return d.Overview
 }
