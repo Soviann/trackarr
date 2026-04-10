@@ -3,6 +3,7 @@ import type { Title } from '../types'
 import { getName, formatDate } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import { StatusBadge } from './StatusBadge'
 import s from './PosterCard.module.css'
 
 interface PosterCardProps {
@@ -21,6 +22,9 @@ export function PosterCard({ title }: PosterCardProps) {
         style={{ background: coverBackground(title.cover_url, title.type) }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} />}
+        <div className={s.statusBadge}>
+          <StatusBadge status={title.status} />
+        </div>
         <div className={s.labelOverlay}>
           <div className={s.label}>{name}</div>
           {isLastWatchedSort && title.last_watched_at && (

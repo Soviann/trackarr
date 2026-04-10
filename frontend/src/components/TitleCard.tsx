@@ -6,6 +6,7 @@ import { apiFetch } from '../api'
 import { getName, getTypeLabel, formatDate } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import { StatusBadge } from './StatusBadge'
 import s from './TitleCard.module.css'
 
 interface TitleCardProps {
@@ -80,6 +81,9 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
           ) : (
             <>{typeLabel} · {title.year}</>
           )}
+          <span className={s.statusBadge}>
+            <StatusBadge status={title.status} />
+          </span>
         </div>
         {season && (
           <>

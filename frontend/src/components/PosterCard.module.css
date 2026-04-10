@@ -11,6 +11,12 @@
   position: relative;
 }
 
+.statusBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
 .labelOverlay {
   width: 100%;
   padding: 6px;
