@@ -29,7 +29,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 
 ## Plans & Specs
 
-Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder.
+Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` once implementation is committed.
 Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
 After saving a plan, offer 3 options: (1) Subagent-Driven, (2) Inline Execution, (3) Save only — stop so I can run it in another session/model.
 Audience = PO (non-technical). Structure around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in collapsed section if essential for scope estimation.
