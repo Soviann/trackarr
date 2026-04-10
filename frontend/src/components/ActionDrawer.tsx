@@ -102,16 +102,16 @@ export function ActionDrawer({
         <div className={s.sectionLabel}>Manage</div>
         <div className={s.actionRow}>
           <button onClick={onEdit} className={s.manage}>
-            ✎ Edit
+            Edit
           </button>
           <button onClick={onRematch} className={s.manage}>
-            🔍 Fix match
+            Fix match
           </button>
           <button onClick={onMerge} className={s.manage}>
-            🔗 Merge into...
+            Merge
           </button>
           <button onClick={onRefresh} className={s.manage}>
-            ↻ Refresh
+            Refresh
           </button>
         </div>
 
