@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.12.4] — 2026-04-10
+
+### Corrigé
+- Performance : erreurs 504 sur les pages de liste causées par le blocage de la connexion SQLite unique par le refresh background — séparation en connexions lecture/écriture distinctes (SQLite WAL)
+- Sécurité : autorisation du chargement de Google Identity Service dans la politique CSP
+
+### Amélioré
+- UI : mise en évidence du statut du titre dans la fiche détail
+
 ## [v0.12.3] — 2026-04-09
 
 ### Corrigé
