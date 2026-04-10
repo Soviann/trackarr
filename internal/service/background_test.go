@@ -17,7 +17,7 @@ import (
 
 func setupBackgroundService(t *testing.T) (*service.BackgroundService, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
@@ -126,7 +126,7 @@ func TestBackgroundService_NilSafe(t *testing.T) {
 func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	dataDir := t.TempDir()
 
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })

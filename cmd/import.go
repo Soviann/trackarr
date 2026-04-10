@@ -36,7 +36,7 @@ func Import(args []string) error {
 	}
 
 	dbPath := dataDir + "/plextracker.db"
-	db, err := database.Open(dbPath)
+	db, _, err := database.Open(dbPath)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}

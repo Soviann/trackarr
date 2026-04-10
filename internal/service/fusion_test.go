@@ -17,7 +17,7 @@ import (
 )
 
 func TestAnimeFusion_SoloLeveling(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	defer db.Close()

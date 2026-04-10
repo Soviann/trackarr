@@ -18,7 +18,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
+func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
@@ -27,16 +27,16 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, b
 	r.Use(middleware.Compress(5))
 	r.Use(mw.SecurityHeaders)
 
-	// Repositories
-	titleRepo := repository.NewTitleRepository(db)
-	seasonRepo := repository.NewSeasonRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-	eventRepo := repository.NewWatchEventRepository(db)
+	// Repositories (writes)
+	titleRepo := repository.NewTitleRepository(writeDB)
+	seasonRepo := repository.NewSeasonRepository(writeDB)
+	episodeRepo := repository.NewEpisodeRepository(writeDB)
+	eventRepo := repository.NewWatchEventRepository(writeDB)
+	settingRepo := repository.NewSettingRepository(writeDB)
+	taskRepo := repository.NewTaskRepository(writeDB)
 
-	// Repositories (settings)
-	settingRepo := repository.NewSettingRepository(db)
-
-	taskRepo := repository.NewTaskRepository(db)
+	// Repositories (reads — use readDB so list queries don't block on background writes)
+	titleReadRepo := repository.NewTitleRepository(readDB)
 
 	// Services
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
@@ -49,22 +49,22 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, distFS embed.FS, b
 	if pipeline != nil {
 		tmdbClient = pipeline.TMDB()
 	}
-	backfillSvc := service.NewBackfillService(db, tmdbClient)
+	backfillSvc := service.NewBackfillService(writeDB, tmdbClient)
 
-	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
-	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
+	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
+	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
-	plexSvc := service.NewPlexService(ctx, db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc, titleSvc, libSvc)
+	plexSvc := service.NewPlexService(ctx, writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, pushSvc, titleSvc, libSvc)
 
-	// Stats repository
-	statsRepo := repository.NewStatsRepository(db)
+	// Stats repository (read-only)
+	statsRepo := repository.NewStatsRepository(readDB)
 
 	// Handlers
-	titles := handler.NewTitleHandler(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
+	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
-	episodes := handler.NewEpisodeHandler(db, libSvc)
+	episodes := handler.NewEpisodeHandler(writeDB, libSvc)
 	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
 	seasons := handler.NewSeasonHandler(seasonRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)

@@ -15,26 +15,28 @@ import (
 )
 
 type TitleHandler struct {
-	db       *sql.DB
-	titles   *repository.TitleRepository
-	seasons  *repository.SeasonRepository
-	episodes *repository.EpisodeRepository
-	events   *repository.WatchEventRepository
-	tasks    *repository.TaskRepository
-	pipeline *matching.Pipeline
-	service  *service.TitleService
+	db         *sql.DB
+	titles     *repository.TitleRepository // writeDB — Create, Update, Merge, Rematch
+	titlesRead *repository.TitleRepository // readDB — List, GetByID (non-blocking reads)
+	seasons    *repository.SeasonRepository
+	episodes   *repository.EpisodeRepository
+	events     *repository.WatchEventRepository
+	tasks      *repository.TaskRepository
+	pipeline   *matching.Pipeline
+	service    *service.TitleService
 }
 
-func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService) *TitleHandler {
+func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService) *TitleHandler {
 	return &TitleHandler{
-		db:       db,
-		titles:   titles,
-		seasons:  seasons,
-		episodes: episodes,
-		events:   events,
-		tasks:    tasks,
-		pipeline: pipeline,
-		service:  svc,
+		db:         db,
+		titles:     titles,
+		titlesRead: titlesRead,
+		seasons:    seasons,
+		episodes:   episodes,
+		events:     events,
+		tasks:      tasks,
+		pipeline:   pipeline,
+		service:    svc,
 	}
 }
 
@@ -87,7 +89,7 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		// If search looks like a URL, try to find by external ID first
 		if m := reIMDB.FindStringSubmatch(q); m != nil {
 			id := m[1]
-			if t, err := h.titles.FindByExternalID(&id, nil, nil, nil, nil); err == nil {
+			if t, err := h.titlesRead.FindByExternalID(&id, nil, nil, nil, nil); err == nil {
 				httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
 					Titles: []model.Title{*t},
 					Total:  1,
@@ -98,7 +100,7 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		if m := reAniList.FindStringSubmatch(q); m != nil {
 			idStr := m[1]
 			if alID, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-				if t, err := h.titles.FindByExternalID(nil, nil, nil, &alID, nil); err == nil {
+				if t, err := h.titlesRead.FindByExternalID(nil, nil, nil, &alID, nil); err == nil {
 					httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
 						Titles: []model.Title{*t},
 						Total:  1,
@@ -133,7 +135,7 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.IncludeNoRelease = false
 	}
 
-	result, err := h.titles.List(filter)
+	result, err := h.titlesRead.List(filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
@@ -144,7 +146,7 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 
 	// Include global counts on first page (for match review banner)
 	if filter.Offset == 0 && filter.Search == nil {
-		counts, err := h.titles.GetStatusCounts()
+		counts, err := h.titlesRead.GetStatusCounts()
 		if err == nil {
 			result.Counts = counts
 		}
@@ -160,7 +162,7 @@ func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Invalid ID")
 	}
 
-	title, err := h.titles.GetByID(id)
+	title, err := h.titlesRead.GetByID(id)
 	if err != nil {
 		return httputil.NotFound("Not found")
 	}

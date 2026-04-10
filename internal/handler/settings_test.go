@@ -15,7 +15,7 @@ import (
 
 func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *repository.SettingRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })

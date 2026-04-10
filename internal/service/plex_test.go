@@ -20,7 +20,7 @@ import (
 
 func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
@@ -143,7 +143,7 @@ func newTMDBMock(t *testing.T, status string, seasons []struct {
 
 func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*service.PlexService, *repository.TitleRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })

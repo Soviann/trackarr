@@ -12,7 +12,7 @@ import (
 )
 
 func TestTaskRepository_ResetRunning(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	repo := repository.NewTaskRepository(db)
@@ -53,7 +53,7 @@ func TestTaskRepository_ResetRunning(t *testing.T) {
 }
 
 func TestTaskRepository_FetchDue_WakeSleeping(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	repo := repository.NewTaskRepository(db)

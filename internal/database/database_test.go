@@ -11,14 +11,14 @@ import (
 )
 
 func TestOpen_CreatesDatabase(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	defer db.Close()
 	assert.NotNil(t, db)
 }
 
 func TestMigrate_CreatesAllTables(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -35,7 +35,7 @@ func TestMigrate_CreatesAllTables(t *testing.T) {
 }
 
 func TestWithTx_Commit(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	defer db.Close()
 	require.NoError(t, database.Migrate(db))
@@ -53,7 +53,7 @@ func TestWithTx_Commit(t *testing.T) {
 }
 
 func TestWithTx_Rollback(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	defer db.Close()
 	require.NoError(t, database.Migrate(db))

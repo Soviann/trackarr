@@ -30,22 +30,23 @@ func Serve(distFS embed.FS) error {
 	}
 
 	dbPath := cfg.DataDir + "/plextracker.db"
-	db, err := database.Open(dbPath)
+	writeDB, readDB, err := database.Open(dbPath)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
-	defer db.Close()
+	defer writeDB.Close()
+	defer readDB.Close()
 
-	if err := database.Migrate(db); err != nil {
+	if err := database.Migrate(writeDB); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
-	// Background refresh job
-	titleRepo := repository.NewTitleRepository(db)
-	seasonRepo := repository.NewSeasonRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-	settingRepo := repository.NewSettingRepository(db)
-	taskRepo := repository.NewTaskRepository(db)
+	// Background refresh job (all writes — use writeDB)
+	titleRepo := repository.NewTitleRepository(writeDB)
+	seasonRepo := repository.NewSeasonRepository(writeDB)
+	episodeRepo := repository.NewEpisodeRepository(writeDB)
+	settingRepo := repository.NewSettingRepository(writeDB)
+	taskRepo := repository.NewTaskRepository(writeDB)
 
 	var tmdbClient *matching.TMDBClient
 	var pipeline *matching.Pipeline
@@ -75,14 +76,14 @@ func Serve(distFS embed.FS) error {
 		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
-	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
+	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
 	bgSvc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	if !cfg.DisableBackgroundTasks {
 		bgSvc.StartTicker(ctx, 24*time.Hour)
 	}
 
-	r := router.New(ctx, cfg, db, distFS, bgSvc, pipeline)
+	r := router.New(ctx, cfg, writeDB, readDB, distFS, bgSvc, pipeline)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc)

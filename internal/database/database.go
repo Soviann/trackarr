@@ -22,21 +22,36 @@ type DBTX interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-// Open creates a new SQLite connection with WAL mode and foreign keys enabled.
-func Open(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dsn+"?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000")
+// Open creates two SQLite connections: one for writes (MaxOpenConns=1) and one
+// for reads (MaxOpenConns=4, read-only). SQLite WAL mode supports concurrent
+// readers alongside a single writer, so separating connections prevents the
+// background refresh from blocking HTTP list queries.
+func Open(dsn string) (writeDB, readDB *sql.DB, err error) {
+	base := dsn + "?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000"
+
+	writeDB, err = sql.Open("sqlite3", base)
 	if err != nil {
-		return nil, fmt.Errorf("open database: %w", err)
+		return nil, nil, fmt.Errorf("open write database: %w", err)
+	}
+	writeDB.SetMaxOpenConns(1)
+	if err = writeDB.Ping(); err != nil {
+		writeDB.Close()
+		return nil, nil, fmt.Errorf("ping write database: %w", err)
 	}
 
-	db.SetMaxOpenConns(1) // SQLite single-writer
-
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
+	readDB, err = sql.Open("sqlite3", base+"&mode=ro")
+	if err != nil {
+		writeDB.Close()
+		return nil, nil, fmt.Errorf("open read database: %w", err)
+	}
+	readDB.SetMaxOpenConns(4)
+	if err = readDB.Ping(); err != nil {
+		writeDB.Close()
+		readDB.Close()
+		return nil, nil, fmt.Errorf("ping read database: %w", err)
 	}
 
-	return db, nil
+	return writeDB, readDB, nil
 }
 
 // WithTx executes fn within a transaction. If fn returns an error, the

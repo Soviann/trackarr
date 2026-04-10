@@ -22,7 +22,7 @@ import (
 
 func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
@@ -33,7 +33,7 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 	eventRepo := repository.NewWatchEventRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
-	h := handler.NewTitleHandler(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc)
+	h := handler.NewTitleHandler(db, titleRepo, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc)
 	return h, titleRepo
 }
 

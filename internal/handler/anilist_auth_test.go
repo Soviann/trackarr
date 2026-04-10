@@ -16,7 +16,7 @@ import (
 
 func setupAniListHandler(t *testing.T) (*handler.AniListAuthHandler, *repository.SettingRepository) {
 	t.Helper()
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
@@ -80,7 +80,7 @@ func TestAniListAuth_Disconnect(t *testing.T) {
 }
 
 func TestAniListAuth_AuthorizeNotConfigured(t *testing.T) {
-	db, err := database.Open(":memory:")
+	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
