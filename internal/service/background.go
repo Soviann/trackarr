@@ -204,10 +204,6 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			log.Printf("background tvdb movie refresh %d: %v", title.ID, err)
 			return
 		}
-		if details.Score > 0 {
-			r := int(details.Score * 10)
-			update.TVDBRating = &r
-		}
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
 				update.CoverURL = &filename
@@ -219,17 +215,13 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			log.Printf("background tvdb series refresh %d: %v", title.ID, err)
 			return
 		}
-		if details.Score > 0 {
-			r := int(details.Score * 10)
-			update.TVDBRating = &r
-		}
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
 				update.CoverURL = &filename
 			}
 		}
 	}
-	if update.TVDBRating != nil || update.CoverURL != nil {
+	if update.CoverURL != nil {
 		_ = s.titles.Update(title.ID, update)
 	}
 }

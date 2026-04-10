@@ -25,7 +25,6 @@ const mockTitle: Title = {
   genres: null,
   runtime: null,
   tmdb_rating: null,
-  tvdb_rating: null,
   credits: null,
   anilist_rating: null,
   release_date: null,

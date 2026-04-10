@@ -58,7 +58,7 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 			"data": map[string]interface{}{
 				"id":    999,
 				"name":  "Fight Club",
-				"year":  1999,
+				"year":  "1999",
 				"score": 8.8,
 				"genres": []map[string]string{
 					{"name": "Drama"},

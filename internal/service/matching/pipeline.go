@@ -76,7 +76,6 @@ type MatchResult struct {
 	Genres        string   `json:"genres"` // JSON array
 	Runtime       *int     `json:"runtime"`
 	TMDBRating    *float64 `json:"tmdb_rating"`
-	TVDBRating    *int     `json:"tvdb_rating"`
 	Credits       string   `json:"credits"` // JSON array
 	AniListRating *int     `json:"anilist_rating"`
 	ReleaseDate   string   `json:"release_date"`
@@ -467,9 +466,6 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 	if tmdbRes.tmdbRating != nil {
 		result.TMDBRating = tmdbRes.tmdbRating
 	}
-	if tvdbRes.tvdbRating != nil {
-		result.TVDBRating = tvdbRes.tvdbRating
-	}
 
 	// Credits (TMDB only)
 	if tmdbRes.credits != "" {
@@ -545,7 +541,6 @@ type tvdbFetchResult struct {
 	overview    string
 	genres      []string
 	runtime     *int
-	tvdbRating  *int
 	imdbID      string
 	names       map[string]string
 	coverFile   string
@@ -678,10 +673,6 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		if details.Runtime != nil {
 			out.runtime = details.Runtime
 		}
-		if details.Score > 0 {
-			r := int(details.Score * 10)
-			out.tvdbRating = &r
-		}
 		for _, g := range out.genres {
 			lower := strings.ToLower(g)
 			if lower == "anime" || lower == "animation" {
@@ -712,10 +703,6 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		out.names = extractSeriesNames(details)
 		if details.Runtime != nil {
 			out.runtime = details.Runtime
-		}
-		if details.Score > 0 {
-			r := int(details.Score * 10)
-			out.tvdbRating = &r
 		}
 		for _, g := range out.genres {
 			lower := strings.ToLower(g)

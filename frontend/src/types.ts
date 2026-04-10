@@ -23,7 +23,6 @@ export interface Title {
   genres: string | null
   runtime: number | null
   tmdb_rating: number | null
-  tvdb_rating: number | null
   credits: string | null
   anilist_rating: number | null
   release_date: string | null
@@ -78,7 +77,6 @@ export interface MatchResult {
   genres: string | null
   runtime: number | null
   tmdb_rating: number | null
-  tvdb_rating: number | null
   credits: string | null
   anilist_rating: number | null
   release_date: string | null

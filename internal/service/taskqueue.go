@@ -270,9 +270,6 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	if result.TMDBRating != nil {
 		update.TMDBRating = result.TMDBRating
 	}
-	if result.TVDBRating != nil {
-		update.TVDBRating = result.TVDBRating
-	}
 	if result.Credits != "" {
 		update.Credits = &result.Credits
 	}
