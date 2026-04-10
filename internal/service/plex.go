@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -121,7 +122,10 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 		}
 
 		// Use LibraryService to mark as watched + notify
-		return s.libSvc.MarkMovieWatched(tx, titleID, model.WatchEventSourcePlex, &rawPayload)
+		if err := s.libSvc.MarkMovieWatched(tx, titleID, model.WatchEventSourcePlex, &rawPayload); err != nil {
+			return err
+		}
+		return titles.UpdateLastWatchedAt(titleID, time.Now().UTC())
 	}
 
 	if needsEnrichment(title) {
@@ -129,7 +133,10 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 	}
 
 	// Use LibraryService to mark as watched + notify
-	return s.libSvc.MarkMovieWatched(tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
+	if err := s.libSvc.MarkMovieWatched(tx, title.ID, model.WatchEventSourcePlex, &rawPayload); err != nil {
+		return err
+	}
+	return titles.UpdateLastWatchedAt(title.ID, time.Now().UTC())
 }
 
 func (s *PlexService) processEpisode(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
@@ -195,6 +202,10 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 	// Use LibraryService to mark as watched + notify
 	if _, err := s.libSvc.MarkEpisodesWatched(tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload); err != nil {
 		return err
+	}
+
+	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
+		log.Printf("plex: update last watched at for title %d: %v", title.ID, err)
 	}
 
 	// Auto-complete check

@@ -272,7 +272,14 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 		}
 	}
 
-	// For movies, also log watch event with last_watched_at
+	// Update last_watched_at if available
+	if item.LastWatchedAt != "" {
+		if parsedAt, err := time.Parse(time.RFC3339, item.LastWatchedAt); err == nil {
+			_ = s.titles.UpdateLastWatchedAt(titleID, parsedAt)
+		}
+	}
+
+	// For movies, also log watch event for stats (now decoupled from last_watched_at trigger)
 	if titleType == model.TitleTypeMovie && item.LastWatchedAt != "" {
 		_, _ = s.events.Create(&model.WatchEvent{
 			TitleID: titleID,

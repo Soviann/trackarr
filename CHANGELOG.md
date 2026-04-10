@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
+
 ## [v0.12.4] — 2026-04-10
 
 ### Corrigé

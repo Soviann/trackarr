@@ -669,6 +669,16 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	return nil
 }
 
+// UpdateLastWatchedAt sets the last_watched_at date for a title only if it is NULL
+// or if the new date is more recent than the current one.
+func (r *TitleRepository) UpdateLastWatchedAt(id int64, at time.Time) error {
+	_, err := r.db.Exec(`UPDATE titles SET last_watched_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (last_watched_at IS NULL OR ? > last_watched_at)`, at, id, at)
+	if err != nil {
+		return fmt.Errorf("update last watched at: %w", err)
+	}
+	return nil
+}
+
 // ReplaceNames deletes all existing names for a title and inserts new ones atomically.
 func (r *TitleRepository) ReplaceNames(titleID int64, names []model.TitleName) error {
 	doReplace := func(db database.DBTX) error {

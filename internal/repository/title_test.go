@@ -3,6 +3,7 @@ package repository_test
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -526,9 +527,11 @@ func TestTitleRepository_List_SortByLastWatched(t *testing.T) {
 	idB, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
 	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
 
-	// Create events in specific order: C watched first (older), then A (newer), then B (not watched)
-	_, _ = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', '2024-01-01 10:00:00')`, idC)
-	_, _ = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', '2024-01-02 10:00:00')`, idA)
+	// Set last_watched_at in specific order: C (older), then A (newer), then B (not watched)
+	dateC, _ := time.Parse(time.RFC3339, "2024-01-01T10:00:00Z")
+	dateA, _ := time.Parse(time.RFC3339, "2024-01-02T10:00:00Z")
+	_ = repo.UpdateLastWatchedAt(idC, dateC)
+	_ = repo.UpdateLastWatchedAt(idA, dateA)
 	_ = idB // explicitly ignore idB as it has no events
 
 	// Sort DESC: A (newest), then C (older), then B (null)
