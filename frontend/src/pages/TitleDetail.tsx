@@ -10,7 +10,6 @@ import { ActionDrawer } from '../components/ActionDrawer'
 import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { RematchSheet } from '../components/RematchSheet'
-import { AniListSheet } from '../components/AniListSheet'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -46,7 +45,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
-  const [showAniList, setShowAniList] = useState(false)
   const [showRematch, setShowRematch] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -118,15 +116,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     } catch (e) {
       setActionError('Failed to save changes')
     }
-  }
-
-  const handleConfirmAniList = async () => {
-    await apiFetch(`/titles/${title.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ match_status: 'confirmed' }),
-    })
-    setShowAniList(false)
-    mutate()
   }
 
   // Build meta line
@@ -305,7 +294,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onEdit={() => setShowEdit(true)}
         onRematch={() => setShowRematch(true)}
         onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
-        onAniList={() => setShowAniList(true)}
       />
 
       {/* Bottom sheets */}
@@ -330,14 +318,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onSave={handleSaveEdit}
       />
 
-      {title.is_anime && (
-        <AniListSheet
-          open={showAniList}
-          onClose={() => setShowAniList(false)}
-          title={title}
-          onConfirm={handleConfirmAniList}
-        />
-      )}
 
       <RematchSheet
         open={showRematch}

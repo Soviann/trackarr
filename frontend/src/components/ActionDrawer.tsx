@@ -12,12 +12,11 @@ interface ActionDrawerProps {
   onEdit: () => void
   onRematch: () => void
   onMerge: () => void
-  onAniList?: () => void
 }
 
 export function ActionDrawer({
   title, nextEpisode, nextSeasonNumber,
-  onMarkNext, onRate, onEdit, onRematch, onMerge, onAniList,
+  onMarkNext, onRate, onEdit, onRematch, onMerge,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [dragY, setDragY] = useState(0)
@@ -87,10 +86,15 @@ export function ActionDrawer({
               IMDb
             </a>
           )}
-          {hasAnilist && (
-            <button onClick={onAniList} className={s.anilist}>
+          {hasAnilist && title.anilist_id && (
+            <a
+              href={`https://anilist.co/anime/${title.anilist_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={s.anilist}
+            >
               AniList
-            </button>
+            </a>
           )}
         </div>
 
