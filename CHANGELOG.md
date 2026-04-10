@@ -6,6 +6,7 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Corrigé
+- Détail titre : le champ « Titre original » affiche désormais le nom Plex d'importation après un fix match, et non plus l'ancien titre matché
 - Fusion de titres : les fusions impliquant un `season_offset` ne bloquent plus quand la saison cible existe déjà — les épisodes non-conflictuels sont migrés et les doublons supprimés proprement
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
 - Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion

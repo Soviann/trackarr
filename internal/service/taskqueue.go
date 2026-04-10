@@ -237,9 +237,8 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	}
 
 	update := repository.TitleUpdate{
-		MatchStatus:   &result.MatchStatus,
-		MatchSource:   &result.MatchSource,
-		OriginalTitle: &payload.TitleName,
+		MatchStatus: &result.MatchStatus,
+		MatchSource: &result.MatchSource,
 	}
 	if result.IMDBID != "" {
 		update.IMDBID = &result.IMDBID
