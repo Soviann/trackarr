@@ -689,8 +689,8 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 				break
 			}
 		}
-		if details.Year > 0 {
-			out.releaseDate = fmt.Sprintf("%d", details.Year)
+		if details.Year != "" {
+			out.releaseDate = details.Year
 		}
 		if details.Image != "" {
 			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)

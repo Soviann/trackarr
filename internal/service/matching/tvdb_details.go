@@ -22,7 +22,7 @@ type TVDBMovieData struct {
 	ID           int64    `json:"id"`
 	Name         string   `json:"name"`
 	Overview     string   `json:"overview"`
-	Year         int      `json:"year"`
+	Year         string   `json:"year"`
 	Image        string   `json:"image"`
 	Genres       []string `json:"genres"`
 	AverageScore float64  `json:"score"`
@@ -56,7 +56,7 @@ type tvdbMovieDetail struct {
 	ID       int64  `json:"id"`
 	Name     string `json:"name"`
 	Overview string `json:"overview"`
-	Year     int    `json:"year"`
+	Year     string `json:"year"`
 	Image    string `json:"image"`
 	Genres   []struct {
 		Name string `json:"name"`
