@@ -12,11 +12,12 @@ interface ActionDrawerProps {
   onEdit: () => void
   onRematch: () => void
   onMerge: () => void
+  onRefresh: () => void
 }
 
 export function ActionDrawer({
   title, nextEpisode, nextSeasonNumber,
-  onMarkNext, onRate, onEdit, onRematch, onMerge,
+  onMarkNext, onRate, onEdit, onRematch, onMerge, onRefresh,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [dragY, setDragY] = useState(0)
@@ -108,6 +109,9 @@ export function ActionDrawer({
           </button>
           <button onClick={onMerge} className={s.manage}>
             🔗 Merge into...
+          </button>
+          <button onClick={onRefresh} className={s.manage}>
+            ↻ Refresh
           </button>
         </div>
 

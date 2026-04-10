@@ -80,6 +80,10 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const genres = parseJSON<string[]>(title.genres)
   const credits = parseJSON<{ name: string; role: string }[]>(title.credits)
 
+  const handleRefresh = async () => {
+    await apiFetch(`/titles/${title.id}/refresh`, { method: 'POST' })
+  }
+
   const handleMarkNext = async () => {
     if (!next) return
     try {
@@ -294,6 +298,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onEdit={() => setShowEdit(true)}
         onRematch={() => setShowRematch(true)}
         onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
+        onRefresh={handleRefresh}
       />
 
       {/* Bottom sheets */}
