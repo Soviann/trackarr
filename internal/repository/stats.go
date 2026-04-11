@@ -225,11 +225,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var bingeCount int
 	var bingeTitle, bingeDate string
 	err := r.db.QueryRow(`
-		SELECT COUNT(*) AS cnt, tn.name, DATE(e.watched_at) AS d
+		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.watched_at) AS d
 		FROM episodes e
 		JOIN seasons s ON e.season_id = s.id
 		JOIN titles t ON s.title_id = t.id
-		JOIN title_names tn ON tn.title_id = t.id AND tn.is_primary = 1
 		WHERE e.watched = 1 AND e.watched_at IS NOT NULL
 		GROUP BY t.id, d
 		ORDER BY cnt DESC
@@ -250,11 +249,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var loyalTitle string
 	var loyalDays int
 	err = r.db.QueryRow(`
-		SELECT tn.name, CAST(julianday(MAX(e.watched_at)) - julianday(t.created_at) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.watched_at)) - julianday(t.created_at) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
 		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.watched_at IS NOT NULL
-		JOIN title_names tn ON tn.title_id = t.id AND tn.is_primary = 1
 		WHERE t.type IN ('series', 'anime')
 		GROUP BY t.id
 		ORDER BY days DESC
@@ -274,11 +272,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var speedTitle string
 	var speedDays int
 	err = r.db.QueryRow(`
-		SELECT tn.name, CAST(julianday(MAX(e.watched_at)) - julianday(MIN(e.watched_at)) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.watched_at)) - julianday(MIN(e.watched_at)) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
 		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.watched_at IS NOT NULL
-		JOIN title_names tn ON tn.title_id = t.id AND tn.is_primary = 1
 		WHERE t.status = 'completed' AND t.type IN ('series', 'anime')
 		GROUP BY t.id
 		HAVING COUNT(e.id) >= 5

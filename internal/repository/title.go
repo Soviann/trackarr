@@ -1032,15 +1032,11 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 }
 
 // ListContinueWatching returns Watching titles that have at least one unwatched episode,
-// ordered by last_watched_at DESC. Uses a preferred name (fr > any).
+// ordered by last_watched_at DESC. Display name priority: fr → en → (x-romaji → ja when anime) → any.
 func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error) {
 	query := `
 		SELECT t.id, t.type, t.cover_url,
-		       COALESCE(
-		           (SELECT name FROM title_names WHERE title_id = t.id AND language = 'fr' LIMIT 1),
-		           (SELECT name FROM title_names WHERE title_id = t.id LIMIT 1),
-		           ''
-		       ) AS name,
+		       COALESCE(` + displayNameExpr + `, '') AS name,
 		       t.next_air_episode,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 1) AS watched_episodes,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) AS total_episodes,
@@ -1073,11 +1069,7 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	query := `
 		SELECT t.id, t.type, t.cover_url,
-		       COALESCE(
-		           (SELECT name FROM title_names WHERE title_id = t.id AND language = 'fr' LIMIT 1),
-		           (SELECT name FROM title_names WHERE title_id = t.id LIMIT 1),
-		           ''
-		       ) AS name,
+		       COALESCE(` + displayNameExpr + `, '') AS name,
 		       t.next_air_date, t.next_air_episode, t.status
 		FROM titles t
 		WHERE t.status IN ('watching', 'plan_to_watch')

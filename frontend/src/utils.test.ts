@@ -26,17 +26,35 @@ function makeSeason(episodes: Episode[]): Season {
 }
 
 describe('getName', () => {
-  it('returns primary name', () => {
+  it('prefers French over English', () => {
     const t = makeTitle({ names: [makeName('Eng', 'en', true), makeName('Fr', 'fr', false)] })
-    expect(getName(t)).toBe('Eng')
-  })
-
-  it('falls back to French name', () => {
-    const t = makeTitle({ names: [makeName('Fr', 'fr', false), makeName('De', 'de', false)] })
     expect(getName(t)).toBe('Fr')
   })
 
-  it('falls back to first name', () => {
+  it('falls back to English when no French', () => {
+    const t = makeTitle({ names: [makeName('Eng', 'en', false), makeName('De', 'de', false)] })
+    expect(getName(t)).toBe('Eng')
+  })
+
+  it('falls back to romaji for anime when no fr/en', () => {
+    const t = makeTitle({
+      is_anime: true,
+      names: [makeName('Shingeki no Kyojin', 'x-romaji', false), makeName('進撃の巨人', 'ja', false)],
+    })
+    expect(getName(t)).toBe('Shingeki no Kyojin')
+  })
+
+  it('falls back to ja when anime has no romaji', () => {
+    const t = makeTitle({ is_anime: true, names: [makeName('進撃の巨人', 'ja', false)] })
+    expect(getName(t)).toBe('進撃の巨人')
+  })
+
+  it('does not use romaji fallback for non-anime', () => {
+    const t = makeTitle({ is_anime: false, names: [makeName('Something', 'x-romaji', false), makeName('Alt', 'de', false)] })
+    expect(getName(t)).toBe('Something')
+  })
+
+  it('falls back to first name when nothing matches', () => {
     const t = makeTitle({ names: [makeName('De', 'de', false)] })
     expect(getName(t)).toBe('De')
   })

@@ -36,7 +36,7 @@ func (r *ActivityRepository) List(_ context.Context, limit, offset int) ([]Activ
 	rows, err := r.db.Query(`
 		SELECT
 			we.title_id,
-			tn.name,
+			`+displayNameExpr+` AS name,
 			t.cover_url,
 			t.type,
 			we.episode_id,
@@ -56,7 +56,6 @@ func (r *ActivityRepository) List(_ context.Context, limit, offset int) ([]Activ
 			END AS is_completion
 		FROM watch_events we
 		JOIN titles t ON t.id = we.title_id
-		JOIN title_names tn ON tn.title_id = t.id AND tn.is_primary = 1
 		LEFT JOIN episodes e ON e.id = we.episode_id
 		LEFT JOIN seasons s ON s.id = e.season_id
 		ORDER BY we.created_at DESC

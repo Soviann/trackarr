@@ -1,12 +1,17 @@
 import { Title, TitleType, TitleStatus } from './types'
 
-/** Returns the best display name for a title (primary name, or first available). */
+/** Returns the best display name for a title. Priority: fr → en → (x-romaji → ja when anime) → first. */
 export function getName(title: Title): string {
   if (!title.names || title.names.length === 0) return '(untitled)'
-  const primary = title.names.find((n) => n.is_primary)
-  if (primary) return primary.name
-  const fr = title.names.find((n) => n.language === 'fr')
-  if (fr) return fr.name
+  const pick = (lang: string) => title.names.find((n) => n.language === lang)?.name
+  const fr = pick('fr')
+  if (fr) return fr
+  const en = pick('en')
+  if (en) return en
+  if (title.is_anime) {
+    const romaji = pick('x-romaji') ?? pick('ja')
+    if (romaji) return romaji
+  }
   return title.names[0].name
 }
 
