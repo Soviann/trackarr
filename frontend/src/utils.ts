@@ -53,3 +53,13 @@ export function totalEpisodes(title: Title): number {
     0
   )
 }
+
+/** Formats a watchtime in minutes to a human-readable string (e.g. "2h 30m"). Returns null if <= 0. */
+export function formatWatchtime(minutes: number): string | null {
+  if (minutes <= 0) return null
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}

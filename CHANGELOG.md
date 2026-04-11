@@ -5,6 +5,9 @@
 ### Ajouté
 - Intégration TheTVDB : enrichissement parallèle TMDB+TVDB à chaque import/refresh — note TVDB affichée en badge sur la fiche titre, lien externe TVDB dans l'ActionDrawer, champ TVDB ID dans Fix match → Manual IDs, et prise en charge des URLs `thetvdb.com/series/<slug>` et `thetvdb.com/movies/<slug>` dans le champ Add (et partage PWA)
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
+- Fiche titre : affichage du temps de visionnage total (ex : "2h 30m") dans l'onglet Détails, cumulé sur tous les visionnages y compris les rewatches
+- Colonne `total_watch_minutes` sur les titres (migration 015), maintenue automatiquement lors de chaque ajout ou suppression d'événement de visionnage (manuel, Plex, Simkl)
+- Le temps de visionnage est recalculé automatiquement lors de l'enrichissement TMDB quand le runtime change
 
 ### Corrigé
 - ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)

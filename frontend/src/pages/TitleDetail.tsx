@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { getName, getTypeLabel, getStatusLabel, formatDate } from '../utils'
+import { getName, getTypeLabel, getStatusLabel, formatDate, formatWatchtime } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { EpisodeRow } from '../components/EpisodeRow'
@@ -239,6 +239,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <div className={s.detailRow}>
             <span className={s.detailKey}>Last watched</span>
             <span className={s.detailVal}>{formatDate(title.last_watched_at)}</span>
+          </div>
+        )}
+        {formatWatchtime(title.total_watch_minutes) && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Watch time</span>
+            <span className={s.detailVal}>{formatWatchtime(title.total_watch_minutes)}</span>
           </div>
         )}
         {title.match_source && (

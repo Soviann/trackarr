@@ -44,6 +44,7 @@ type CoverFetchPayload struct {
 type TaskQueueWorker struct {
 	tasks       *repository.TaskRepository
 	titles      *repository.TitleRepository
+	events      *repository.WatchEventRepository
 	pipeline    *matching.Pipeline
 	tmdb        *matching.TMDBClient
 	anilist     *matching.AniListClient
@@ -58,6 +59,7 @@ type TaskQueueWorker struct {
 func NewTaskQueueWorker(
 	tasks *repository.TaskRepository,
 	titles *repository.TitleRepository,
+	events *repository.WatchEventRepository,
 	pipeline *matching.Pipeline,
 	tmdb *matching.TMDBClient,
 	anilist *matching.AniListClient,
@@ -69,6 +71,7 @@ func NewTaskQueueWorker(
 	return &TaskQueueWorker{
 		tasks:    tasks,
 		titles:   titles,
+		events:   events,
 		pipeline: pipeline,
 		tmdb:     tmdb,
 		anilist:  anilist,
@@ -285,6 +288,20 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 
 	if err := w.titles.Update(payload.TitleID, update); err != nil {
 		return err
+	}
+
+	// ── Watchtime Recalculation ──
+	// When runtime is set or changed, recalculate total_watch_minutes from scratch.
+	if result.Runtime != nil && w.events != nil {
+		count, err := w.events.CountByTitleID(payload.TitleID)
+		if err != nil {
+			log.Printf("enrichment: count watch events for title %d: %v", payload.TitleID, err)
+		} else {
+			newTotal := count * *result.Runtime
+			if err := w.titles.Update(payload.TitleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+				log.Printf("enrichment: update total_watch_minutes for title %d: %v", payload.TitleID, err)
+			}
+		}
 	}
 
 	// ── Consolidation Logic (Merge) ──

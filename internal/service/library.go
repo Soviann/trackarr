@@ -49,6 +49,14 @@ func NewLibraryService(
 	}
 }
 
+// safeRuntime safely dereferences a runtime pointer, returning 0 if nil.
+func safeRuntime(r *int) int {
+	if r == nil {
+		return 0
+	}
+	return *r
+}
+
 // ToggleEpisodeWatched toggles the watched status of an episode and logs a watch event.
 func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episodeID int64) (*model.Title, error) {
 	titles := repository.NewTitleRepository(db)
@@ -76,6 +84,21 @@ func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episode
 	if err != nil {
 		return nil, err
 	}
+
+	// Update total_watch_minutes: increment if watched, decrement if unwatched.
+	if title != nil {
+		delta := safeRuntime(title.Runtime)
+		if !ep.Watched {
+			delta = -delta
+		}
+		newTotal := title.TotalWatchMinutes + delta
+		if newTotal < 0 {
+			newTotal = 0
+		}
+		_ = titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal})
+		title.TotalWatchMinutes = newTotal
+	}
+
 	if ep.Watched && title != nil {
 		s.maybePromptRating(db, title)
 	}
@@ -113,6 +136,12 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 		return nil, err
 	}
 	if title != nil {
+		// Increment total_watch_minutes by runtime × number of newly watched episodes.
+		newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)*len(episodeIDs)
+		if err := titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+			log.Printf("library: update total_watch_minutes for title %d: %v", titleID, err)
+		}
+		title.TotalWatchMinutes = newTotal
 		s.maybePromptRating(db, title)
 	}
 
@@ -124,8 +153,15 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 	titles := repository.NewTitleRepository(db)
 	events := repository.NewWatchEventRepository(db)
 
+	// Fetch title first to get runtime for watchtime calculation.
+	title, err := titles.GetByID(titleID)
+	if err != nil {
+		return err
+	}
+
 	completedStatus := model.TitleStatusCompleted
-	if err := titles.Update(titleID, repository.TitleUpdate{Status: &completedStatus}); err != nil {
+	newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)
+	if err := titles.Update(titleID, repository.TitleUpdate{Status: &completedStatus, TotalWatchMinutes: &newTotal}); err != nil {
 		return err
 	}
 
@@ -135,13 +171,8 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 		PlexPayload: rawPayload,
 	})
 
-	title, err := titles.GetByID(titleID)
-	if err != nil {
-		return err
-	}
-	if title != nil {
-		s.maybePromptRating(db, title)
-	}
+	title.TotalWatchMinutes = newTotal
+	s.maybePromptRating(db, title)
 
 	return nil
 }

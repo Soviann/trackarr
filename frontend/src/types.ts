@@ -22,6 +22,7 @@ export interface Title {
   overview: string | null
   genres: string | null
   runtime: number | null
+  total_watch_minutes: number
   tmdb_rating: number | null
   credits: string | null
   anilist_rating: number | null

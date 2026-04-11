@@ -1,0 +1,1 @@
+ALTER TABLE titles ADD COLUMN total_watch_minutes INTEGER NOT NULL DEFAULT 0;

@@ -15,7 +15,7 @@ Update when adding routes, services, components, or commands.
 
 ### Models
 
-`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode), TitleName, Season (EpisodeCount, WatchedCount for listing), Episode, WatchEvent (WatchEventSource), Setting.
+`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode; `total_watch_minutes int` tracks cumulative watch time), TitleName, Season (EpisodeCount, WatchedCount for listing), Episode, WatchEvent (WatchEventSource), Setting.
 
 ### Services
 
@@ -72,7 +72,7 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 
 ### Repositories
 
-`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order), SeasonRepository, EpisodeRepository, WatchEventRepository, SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
+`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order), SeasonRepository, EpisodeRepository, WatchEventRepository (`CountByTitleID(titleID) (int, error)`), SettingRepository, StatsRepository. All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes.
 
 ### Handlers
 
