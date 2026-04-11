@@ -69,6 +69,11 @@ func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
 		return nil, fmt.Errorf("stats best streak: %w", err)
 	}
 
+	totalWatchMinutes, err := r.TotalWatchMinutes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stats total watch minutes: %w", err)
+	}
+
 	return &model.StatsResponse{
 		Overview:  *overview,
 		Ratings:   *ratings,
@@ -80,6 +85,7 @@ func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
 			Current: currentStreak,
 			Best:    bestStreak,
 		},
+		TotalWatchMinutes: totalWatchMinutes,
 	}, nil
 }
 
