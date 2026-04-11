@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Bibliothèque : strip "Coming up" — liste horizontale collapsible des prochains épisodes à diffuser (date issue de TMDB `next_episode_to_air`)
+- Bibliothèque : strip "Continue Watching" — liste horizontale collapsible des séries en cours avec barre de progression
+- Bibliothèque : mode sélection multiple — sélectionner des titres pour changer leur statut ou les supprimer en lot
+- API : `GET /api/titles/continue-watching` et `GET /api/titles/upcoming` — endpoints dédiés lazy-loadés
+- API : `DELETE /api/titles/{id}`, `POST /api/titles/batch-delete`, `POST /api/titles/batch-status` — suppression et mise à jour de statut par lot
+- DB : migration 017 — colonnes `next_air_date` et `next_air_episode` sur la table `titles`, peuplées lors du refresh TMDB
+
 ### Corrigé
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
 - Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion
