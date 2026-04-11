@@ -169,21 +169,30 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	}
 	seasonRows.Close()
 
-	// Load episodes for each season (cursor closed above to avoid deadlock with MaxOpenConns=1)
+	// Load all episodes in one query (seasons cursor is closed above; safe with MaxOpenConns=1)
+	epRows, err := r.db.Query(`
+		SELECT e.id, e.season_id, e.episode, e.name, e.air_date, e.watched, e.watched_at, e.plex_rating_key
+		FROM episodes e
+		JOIN seasons s ON e.season_id = s.id
+		WHERE s.title_id = ?
+		ORDER BY s.season_number, e.episode`, id)
+	if err != nil {
+		return nil, fmt.Errorf("get episodes: %w", err)
+	}
+	grouped := make(map[int64][]model.Episode)
+	for epRows.Next() {
+		var e model.Episode
+		if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
+			epRows.Close()
+			return nil, fmt.Errorf("scan episode: %w", err)
+		}
+		grouped[e.SeasonID] = append(grouped[e.SeasonID], e)
+	}
+	epRows.Close()
 	for i := range title.Seasons {
-		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, title.Seasons[i].ID)
-		if err != nil {
-			return nil, fmt.Errorf("get episodes: %w", err)
+		if eps, ok := grouped[title.Seasons[i].ID]; ok {
+			title.Seasons[i].Episodes = eps
 		}
-		for epRows.Next() {
-			var e model.Episode
-			if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
-				epRows.Close()
-				return nil, fmt.Errorf("scan episode: %w", err)
-			}
-			title.Seasons[i].Episodes = append(title.Seasons[i].Episodes, e)
-		}
-		epRows.Close()
 	}
 
 	return title, nil

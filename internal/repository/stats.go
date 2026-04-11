@@ -156,35 +156,28 @@ func (r *StatsRepository) breakdown() (*model.StatsBreakdown, error) {
 		ByType:   make(map[string]int),
 	}
 
-	rows, err := r.db.Query(`SELECT status, COUNT(*) FROM titles GROUP BY status`)
+	rows, err := r.db.Query(`
+		SELECT 'status' AS dim, status AS k, COUNT(*) FROM titles GROUP BY status
+		UNION ALL
+		SELECT 'type', type, COUNT(*) FROM titles GROUP BY type`)
 	if err != nil {
-		return nil, fmt.Errorf("by status: %w", err)
+		return nil, fmt.Errorf("breakdown: %w", err)
 	}
 	for rows.Next() {
-		var status string
+		var dim, k string
 		var count int
-		if err := rows.Scan(&status, &count); err != nil {
+		if err := rows.Scan(&dim, &k, &count); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scan status: %w", err)
+			return nil, fmt.Errorf("scan breakdown: %w", err)
 		}
-		b.ByStatus[status] = count
+		switch dim {
+		case "status":
+			b.ByStatus[k] = count
+		case "type":
+			b.ByType[k] = count
+		}
 	}
 	rows.Close()
-
-	typeRows, err := r.db.Query(`SELECT type, COUNT(*) FROM titles GROUP BY type`)
-	if err != nil {
-		return nil, fmt.Errorf("by type: %w", err)
-	}
-	for typeRows.Next() {
-		var t string
-		var count int
-		if err := typeRows.Scan(&t, &count); err != nil {
-			typeRows.Close()
-			return nil, fmt.Errorf("scan type: %w", err)
-		}
-		b.ByType[t] = count
-	}
-	typeRows.Close()
 
 	return b, nil
 }

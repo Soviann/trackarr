@@ -560,4 +560,35 @@ func TestTitleRepository_List_SortByLastWatched(t *testing.T) {
 	assert.Equal(t, "B", result2.Titles[2].PrimaryName())
 }
 
+func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	id, err := repo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "MultiSeason Show", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	for sn := 1; sn <= 3; sn++ {
+		s, err := seasonRepo.GetOrCreate(id, sn)
+		require.NoError(t, err)
+		for ep := 1; ep <= 5; ep++ {
+			_, err := episodeRepo.GetOrCreate(s.ID, ep)
+			require.NoError(t, err)
+		}
+	}
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+	require.Len(t, got.Seasons, 3)
+	for i, s := range got.Seasons {
+		assert.Len(t, s.Episodes, 5, "season %d should have 5 episodes", i+1)
+	}
+}
+
 func ptr[T any](v T) *T { return &v }
