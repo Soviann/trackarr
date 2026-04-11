@@ -15,9 +15,12 @@ func TestTitleSearch_GenreFilterOR(t *testing.T) {
 	t1 := createTestTitle(t, db, "movie", 120)
 	t2 := createTestTitle(t, db, "series", 45)
 	t3 := createTestTitle(t, db, "movie", 90)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t1.ID)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Action')`, t2.ID)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Thriller')`, t3.ID)
+	_, err := db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t1.ID)
+	assert.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO title_genres VALUES (?, 'Action')`, t2.ID)
+	assert.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO title_genres VALUES (?, 'Thriller')`, t3.ID)
+	assert.NoError(t, err)
 
 	result, err := repo.List(repository.TitleFilter{
 		Genres:  []string{"Drama", "Action"},
@@ -33,8 +36,10 @@ func TestTitleSearch_GenreFilterAND(t *testing.T) {
 
 	t1 := createTestTitle(t, db, "movie", 120)
 	t2 := createTestTitle(t, db, "series", 45)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama'), (?, 'Action')`, t1.ID, t1.ID)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t2.ID)
+	_, err := db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama'), (?, 'Action')`, t1.ID, t1.ID)
+	assert.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t2.ID)
+	assert.NoError(t, err)
 
 	result, err := repo.List(repository.TitleFilter{
 		Genres:  []string{"Drama", "Action"},
@@ -50,7 +55,8 @@ func TestGenreRepository_ListWithCounts_Context(t *testing.T) {
 	genreRepo := repository.NewGenreRepository(db)
 
 	t1 := createTestTitle(t, db, "movie", 120)
-	db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t1.ID)
+	_, err := db.Exec(`INSERT INTO title_genres VALUES (?, 'Drama')`, t1.ID)
+	assert.NoError(t, err)
 
 	genres, err := genreRepo.ListWithCounts(context.Background())
 	assert.NoError(t, err)

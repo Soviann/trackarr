@@ -33,8 +33,10 @@ func TestGenreHandler_List(t *testing.T) {
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Movie 2", Language: "en", IsPrimary: true}})
 
-	db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Action')`, id1, id1)
-	db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama')`, id2)
+	_, err = db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Action')`, id1, id1)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama')`, id2)
+	require.NoError(t, err)
 
 	h := handler.NewGenreHandler(repository.NewGenreRepository(db))
 
@@ -45,7 +47,7 @@ func TestGenreHandler_List(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var genres []map[string]any
-	json.NewDecoder(w.Body).Decode(&genres)
+	assert.NoError(t, json.NewDecoder(w.Body).Decode(&genres))
 	assert.Len(t, genres, 2)
 	assert.Equal(t, "Drama", genres[0]["genre"])
 	assert.InDelta(t, float64(2), genres[0]["count"], 0)

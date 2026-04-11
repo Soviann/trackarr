@@ -14,8 +14,10 @@ func TestGenreRepository_ListWithCounts(t *testing.T) {
 
 	t1 := createTestTitle(t, db, "movie", 120)
 	t2 := createTestTitle(t, db, "series", 45)
-	db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Thriller')`, t1.ID, t1.ID)
-	db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama')`, t2.ID)
+	_, err := db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Thriller')`, t1.ID, t1.ID)
+	assert.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama')`, t2.ID)
+	assert.NoError(t, err)
 
 	genres, err := genreRepo.ListWithCounts(context.Background())
 	assert.NoError(t, err)
@@ -31,10 +33,11 @@ func TestGenreRepository_ReplaceForTitle(t *testing.T) {
 	genreRepo := repository.NewGenreRepository(db)
 
 	t1 := createTestTitle(t, db, "movie", 120)
-	db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Action')`, t1.ID, t1.ID)
+	_, err := db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Drama'), (?, 'Action')`, t1.ID, t1.ID)
+	assert.NoError(t, err)
 
 	// Replace with a different set
-	err := genreRepo.ReplaceForTitle(context.Background(), t1.ID, []string{"Thriller", "Comedy"})
+	err = genreRepo.ReplaceForTitle(context.Background(), t1.ID, []string{"Thriller", "Comedy"})
 	assert.NoError(t, err)
 
 	genres, err := genreRepo.ListWithCounts(context.Background())
