@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.13.1] — 2026-04-11
+
 ### Modifié
 - i18n : traduction complète des pages Stats et Admin (plus divers libellés épars : Login, Search, Library, MatchReview, TitleHistory, aria-labels) du français vers l'anglais — toute l'interface est maintenant en anglais, conformément à la convention projet
 
