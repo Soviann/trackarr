@@ -7,6 +7,10 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Corrigé
+- ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)
+- Push notifications : les échecs d'enregistrement du service worker exposent désormais un état `pushError` retourné par `usePush`, exploitable par l'UI pour informer l'utilisateur
+- JWT : expiry calculé en UTC explicite (`time.Now().UTC()`) dans les deux chemins d'authentification (Google OAuth et dev login)
+- `parseSQLiteTime` : commentaire ajouté documentant que SQLite stocke les datetimes en UTC sans marqueur de fuseau — `time.Parse` retourne bien du temps UTC, comportement attendu
 - Accessibilité frontend : `PosterCard` et `TitleCard` utilisent désormais `<a href>` (navigables au clavier) ; poignée `ActionDrawer` et boutons retour (`AdminTasks`, `AdminNotifications`, `Validate`) remplacés par `<button>` avec `aria-label` et `aria-expanded` ; image miniature du poster en `role="presentation"` pour éviter la redondance lecteur d'écran — Lighthouse Library 74→76, TitleDetail 98/100
 - Frontend lifecycle : timer post-refresh (`setTimeout`) stocké dans un ref et annulé à l'unmount ; toutes les mises à jour d'état dans `ActionDrawer` gardées derrière un ref `mounted` — élimine les warnings de state update sur composant démonté
 - AdminTasks : stale closure sur `page` dans l'effect de pagination corrigée via `pageRef` ; `eslint-disable` supprimé

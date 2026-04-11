@@ -17,6 +17,20 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true }
   }
 
+  componentDidCatch(error: Error, info: unknown): void {
+    console.error('[ErrorBoundary]', error, info)
+    // TODO: implement POST /api/client-errors on the backend to persist these
+    try {
+      fetch('/api/client-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: error.message, stack: error.stack }),
+      }).catch(() => { /* non-blocking */ })
+    } catch {
+      // non-blocking
+    }
+  }
+
   handleReload = () => {
     window.location.reload()
   }

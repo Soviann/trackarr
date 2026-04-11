@@ -864,6 +864,10 @@ func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, se
 	return nil
 }
 
+// parseSQLiteTime parses a nullable SQLite datetime string into a *time.Time.
+// SQLite stores datetimes in UTC without a timezone marker; time.Parse returns
+// UTC when no timezone is embedded, which is the expected behaviour here.
+// Accepted formats: "2006-01-02 15:04:05" (SQLite default) or RFC3339.
 func parseSQLiteTime(s *string) *time.Time {
 	if s == nil {
 		return nil

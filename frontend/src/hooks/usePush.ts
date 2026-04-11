@@ -13,6 +13,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 
 export function usePush(vapidPublicKey: string | undefined) {
   const [subscribed, setSubscribed] = useState(false)
+  const [pushError, setPushError] = useState(false)
 
   useEffect(() => {
     if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
@@ -41,8 +42,9 @@ export function usePush(vapidPublicKey: string | undefined) {
       setSubscribed(true)
     }).catch((err) => {
       console.error('Service worker registration failed:', err)
+      setPushError(true)
     })
   }, [vapidPublicKey])
 
-  return subscribed
+  return { subscribed, pushError }
 }
