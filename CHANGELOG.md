@@ -17,6 +17,12 @@
 - Stats : cartes "Série en cours" et "Meilleure série" de jours consécutifs
 - Stats : flux d'activité récente paginé (`GET /api/stats/activity`) groupé par date
 - TitleDetail : bouton « Historique » ouvrant un panneau de visionnage par épisode avec compteur de rewatches (`GET /api/titles/{id}/history`)
+- Bibliothèque : strip "Coming up" — liste horizontale collapsible des prochains épisodes à diffuser (date issue de TMDB `next_episode_to_air`)
+- Bibliothèque : strip "Continue Watching" — liste horizontale collapsible des séries en cours avec barre de progression
+- Bibliothèque : mode sélection multiple — sélectionner des titres pour changer leur statut ou les supprimer en lot
+- API : `GET /api/titles/continue-watching` et `GET /api/titles/upcoming` — endpoints dédiés lazy-loadés
+- API : `DELETE /api/titles/{id}`, `POST /api/titles/batch-delete`, `POST /api/titles/batch-status` — suppression et mise à jour de statut par lot
+- DB : migration 017 — colonnes `next_air_date` et `next_air_episode` sur la table `titles`, peuplées lors du refresh TMDB
 
 ### Corrigé
 - ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)

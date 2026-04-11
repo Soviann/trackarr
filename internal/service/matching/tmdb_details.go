@@ -65,6 +65,11 @@ type TMDBTVDetails struct {
 		IMDBID string `json:"imdb_id"`
 		TVDBID int64  `json:"tvdb_id"`
 	} `json:"external_ids"`
+	NextEpisodeToAir *struct {
+		AirDate       string `json:"air_date"`
+		SeasonNumber  int    `json:"season_number"`
+		EpisodeNumber int    `json:"episode_number"`
+	} `json:"next_episode_to_air"`
 }
 
 type TMDBEpisode struct {

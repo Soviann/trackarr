@@ -91,9 +91,14 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 | GET | `/api/covers/{filename}` | Serve | No |
 | GET | `/api/titles` | List | Yes | `?sort=updated_at\|original_title\|release_date\|my_rating\|created_at&order=asc\|desc&decade=2020&release_from=YYYY-MM-DD&release_to=YYYY-MM-DD&include_no_release=false&genres=Drama&genres=Action&genre_op=AND\|OR` |
 | GET | `/api/genres` | List | Yes | Returns `[{genre, count}]` sorted by count desc |
+| GET | `/api/titles/continue-watching` | ContinueWatching | Yes | Returns Watching titles with ≥1 unwatched episode |
+| GET | `/api/titles/upcoming` | Upcoming | Yes | Returns titles with next_air_date ≥ today |
+| POST | `/api/titles/batch-delete` | BatchDelete | Yes | Body `{"ids": [1, 2]}` |
+| POST | `/api/titles/batch-status` | BatchStatus | Yes | Body `{"ids": [1, 2], "status": "completed"}` |
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
+| DELETE | `/api/titles/{id}` | Delete | Yes |
 | POST | `/api/titles/{id}/rematch` | Rematch | Yes | Set IDs + enqueue enrichment |
 | GET | `/api/tmdb/search` | Search | Yes | `?query=...&type=movie\|tv` |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
@@ -149,6 +154,8 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix wrong match |
 | MatchReviewCard | `components/MatchReviewCard.tsx` | Match review card with ID chips + confirm/fix |
 | CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for titles without cover (movie=blue, series=teal, anime=lavender). `coverBackground()` helper for CSS background string |
+| CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header strip with lazy-load `onExpand` callback. Props: `title`, `count?`, `children`, `onExpand?` |
+| PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip. Items have `id`, `cover_url`, `name`, `sublabel`, `sublabelVariant?`, `progressRatio?` |
 
 ### Pages & Routes
 

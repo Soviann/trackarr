@@ -1,12 +1,16 @@
-import { useEffect } from 'preact/hooks'
+import { useEffect, useState, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
-import type { Title } from '../types'
+import type { Title, ContinueWatchingTitle, UpcomingTitle } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { CollapsibleSection } from '../components/CollapsibleSection'
+import { PosterStrip } from '../components/PosterStrip'
+import { BottomSheet } from '../components/BottomSheet'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import s from './Library.module.css'
 
 function TitleList({ titles, onUpdate }: { titles: Title[]; onUpdate: () => void }) {
@@ -67,6 +71,17 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
   )
 }
 
+function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'teal' | 'muted' } {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const air = new Date(dateStr)
+  air.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
+  if (diffDays === 0) return { label: 'Today', variant: 'amber' }
+  if (diffDays <= 6) return { label: air.toLocaleDateString('fr-FR', { weekday: 'short' }), variant: 'teal' }
+  return { label: `in ${diffDays}d`, variant: 'muted' }
+}
+
 export function Library(_props: { path?: string }) {
   const titles = useTitleStore(s => s.titles)
   const total = useTitleStore(s => s.total)
@@ -80,6 +95,66 @@ export function Library(_props: { path?: string }) {
   const loadMore = useTitleStore(s => s.loadMore)
   const invalidate = useTitleStore(s => s.invalidate)
 
+  // Strips state
+  const [continueWatching, setContinueWatching] = useState<ContinueWatchingTitle[] | null>(null)
+  const [upcoming, setUpcoming] = useState<UpcomingTitle[] | null>(null)
+
+  const loadContinueWatching = useCallback(async () => {
+    if (continueWatching !== null) return
+    const data = await apiFetch<ContinueWatchingTitle[]>('/api/titles/continue-watching')
+    setContinueWatching(data)
+  }, [continueWatching])
+
+  const loadUpcoming = useCallback(async () => {
+    if (upcoming !== null) return
+    const data = await apiFetch<UpcomingTitle[]>('/api/titles/upcoming')
+    setUpcoming(data)
+  }, [upcoming])
+
+  // Bulk selection state
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [statusSheetOpen, setStatusSheetOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
+  function toggleSelect(id: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    setSelected(new Set(titles.map(t => t.id)))
+  }
+
+  function exitSelect() {
+    setSelecting(false)
+    setSelected(new Set())
+  }
+
+  async function applyBulkStatus(status: string) {
+    await apiFetch('/api/titles/batch-status', {
+      method: 'POST',
+      body: JSON.stringify({ ids: [...selected], status }),
+    })
+    setStatusSheetOpen(false)
+    exitSelect()
+    invalidate()
+  }
+
+  async function confirmBulkDelete() {
+    await apiFetch('/api/titles/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids: [...selected] }),
+    })
+    setDeleteConfirmOpen(false)
+    exitSelect()
+    invalidate()
+  }
+
   // Initial fetch on mount
   useEffect(() => { fetchTitles() }, [fetchTitles])
 
@@ -89,11 +164,24 @@ export function Library(_props: { path?: string }) {
 
   const useListView = filter.status === 'watching_behind' || filter.status === 'up_to_date'
 
+  const statusOptions: { value: string; label: string }[] = [
+    { value: 'watching', label: 'Watching' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'dropped', label: 'Dropped' },
+    { value: 'plan_to_watch', label: 'Plan to Watch' },
+  ]
+
   return (
     <div className={s.page}>
       {/* Header */}
       <div className={s.header}>
         <div className={s.headerTitle}>Library</div>
+        <button
+          className={`${s.selectBtn} ${selecting ? s.selectBtnActive : ''}`}
+          onClick={() => selecting ? exitSelect() : setSelecting(true)}
+        >
+          {selecting ? 'Cancel' : 'Select'}
+        </button>
         <button
           onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route('/login') }}
           className={s.logoutBtn}
@@ -106,7 +194,36 @@ export function Library(_props: { path?: string }) {
         </button>
       </div>
 
+      {selecting && (
+        <div className={s.selectAllRow}>
+          <button className={s.selectAllBtn} onClick={selectAll}>Select all</button>
+          <span className={s.selectCount}>{selected.size} of {titles.length}</span>
+        </div>
+      )}
+
       {error && <ErrorBanner message={error} onRetry={invalidate} />}
+
+      {/* Collapsible strips */}
+      <CollapsibleSection title="Coming up" count={upcoming?.length} onExpand={loadUpcoming}>
+        {upcoming && (
+          <PosterStrip items={upcoming.map(t => {
+            const { label, variant } = airDateBadge(t.next_air_date)
+            return { id: t.id, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
+          })} />
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Continue Watching" count={continueWatching?.length} onExpand={loadContinueWatching}>
+        {continueWatching && (
+          <PosterStrip items={continueWatching.map(t => ({
+            id: t.id,
+            cover_url: t.cover_url,
+            name: t.name,
+            sublabel: t.next_air_episode ?? '',
+            progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
+          }))} />
+        )}
+      </CollapsibleSection>
 
       {loading && titles.length === 0 && (
         <div className={s.centered}>Loading...</div>
@@ -133,7 +250,20 @@ export function Library(_props: { path?: string }) {
           {useListView ? (
             <TitleList titles={titles} onUpdate={invalidate} />
           ) : (
-            <PosterGrid titles={titles} />
+            <div className={s.posterGrid}>
+              {titles.map(t => (
+                selecting
+                  ? (
+                    <div key={t.id} className={s.selectableCard} onClick={() => toggleSelect(t.id)}>
+                      <PosterCard title={t} />
+                      <div className={`${s.checkbox} ${selected.has(t.id) ? s.checked : ''}`}>
+                        {selected.has(t.id) && '✓'}
+                      </div>
+                    </div>
+                  )
+                  : <PosterCard key={t.id} title={t} />
+              ))}
+            </div>
           )}
 
           {hasMore && (
@@ -141,6 +271,37 @@ export function Library(_props: { path?: string }) {
           )}
         </>
       )}
+
+      {/* Bulk action bar */}
+      {selecting && selected.size > 0 && (
+        <div className={s.actionBar}>
+          <span className={s.actionBarLabel}>{selected.size} selected</span>
+          <button className={s.actionBtnStatus} onClick={() => setStatusSheetOpen(true)}>Status</button>
+          <button className={s.actionBtnDelete} onClick={() => setDeleteConfirmOpen(true)}>Delete</button>
+        </div>
+      )}
+
+      {/* Status picker sheet */}
+      <BottomSheet open={statusSheetOpen} onClose={() => setStatusSheetOpen(false)}>
+        <div className={s.statusSheet}>
+          {statusOptions.map(opt => (
+            <button key={opt.value} className={s.statusOption} onClick={() => applyBulkStatus(opt.value)}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Delete confirmation */}
+      <ConfirmationDrawer
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title={`Delete ${selected.size} title${selected.size > 1 ? 's' : ''}?`}
+        description="This cannot be undone."
+        confirmText="Delete"
+        isDangerous
+      />
     </div>
   )
 }

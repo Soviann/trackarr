@@ -354,6 +354,13 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	if rating != nil {
 		metaUpdate.TMDBRating = rating
 	}
+	// Populate next_air_date and next_air_episode from TMDB next_episode_to_air
+	if details.NextEpisodeToAir != nil && details.NextEpisodeToAir.AirDate != "" {
+		airDate := details.NextEpisodeToAir.AirDate
+		airEp := fmt.Sprintf("S%d E%d", details.NextEpisodeToAir.SeasonNumber, details.NextEpisodeToAir.EpisodeNumber)
+		metaUpdate.NextAirDate = &airDate
+		metaUpdate.NextAirEpisode = &airEp
+	}
 	logTitleUpdate(title.ID, "series metadata", s.titles.Update(title.ID, metaUpdate))
 
 	// Persist genres to title_genres table
