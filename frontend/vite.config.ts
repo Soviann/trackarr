@@ -18,6 +18,9 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('/pages/Admin')) return 'admin'
+          if (id.includes('/pages/MatchReview') || id.includes('/components/MatchReviewCard')) return 'match-review'
+          if (id.includes('/pages/Stats')) return 'stats'
+          if (id.includes('/components/FilterDrawer')) return 'filter-drawer'
         },
       },
     },

@@ -152,7 +152,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Identity zone */}
       <div className={s.identity}>
         {title.cover_url ? (
-          <img src={`/api/covers/${title.cover_url}`} alt="" className={s.miniPoster} />
+          <img src={`/api/covers/${title.cover_url}`} alt="" className={s.miniPoster} width="80" height="120" />
         ) : (
           <div className={s.miniPosterPlaceholder} style={{ background: coverBackground(null, title.type) }}>
             <CoverPlaceholder type={title.type} iconSize="24px" />

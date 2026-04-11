@@ -7,6 +7,8 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Amélioré
+- Bundle frontend : `MatchReview`, `Stats` et `FilterDrawer` extraits dans des chunks séparés (en plus d'`Admin` déjà splitté) — améliore la mise en cache navigateur pour les sections rarement modifiées
+- Détail titre : `width`/`height` explicites sur l'image miniature (80×120 px) pour éviter le décalage de mise en page (CLS) avant chargement du CSS
 - Match Review : chargement initial réduit de 500 à 50 éléments par section (pending/unconfirmed), avec bouton « Load more » ; confirmation en lot parallélisée (requests simultanées au lieu de séquentielles)
 - Admin Tasks : pagination réelle par offset (`limit=50&offset=N`) au lieu d'un limit croissant qui re-téléchargeait tout à chaque page
 - Admin Notifications : annulation automatique du fetch lors de la navigation (remplacement de `apiFetch` brut par le hook `useApi`)
