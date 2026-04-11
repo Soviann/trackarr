@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { getName, formatDate } from '../utils'
@@ -10,10 +11,9 @@ interface PosterCardProps {
   title: Title
 }
 
-export function PosterCard({ title }: PosterCardProps) {
-  const { sort } = useTitleStore()
+export const PosterCard = memo(function PosterCard({ title }: PosterCardProps) {
+  const isLastWatchedSort = useTitleStore(s => s.sort.field === 'last_watched_at')
   const name = getName(title)
-  const isLastWatchedSort = sort.field === 'last_watched_at'
 
   return (
     <div onClick={() => route(`/title/${title.id}`)} className={s.card}>
@@ -34,4 +34,4 @@ export function PosterCard({ title }: PosterCardProps) {
       </div>
     </div>
   )
-}
+})

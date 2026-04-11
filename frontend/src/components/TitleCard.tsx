@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat'
 import { useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
@@ -35,7 +36,7 @@ function getProgress(title: Title) {
   return { season: currentSeason, watched, total }
 }
 
-export function TitleCard({ title, onUpdate }: TitleCardProps) {
+export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardProps) {
   const isLastWatchedSort = useTitleStore(s => s.sort.field === 'last_watched_at')
   const [toggling, setToggling] = useState(false)
   const name = getName(title)
@@ -112,4 +113,4 @@ export function TitleCard({ title, onUpdate }: TitleCardProps) {
       )}
     </div>
   )
-}
+})
