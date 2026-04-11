@@ -7,6 +7,7 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Corrigé
+- Accessibilité frontend : `PosterCard` et `TitleCard` utilisent désormais `<a href>` (navigables au clavier) ; poignée `ActionDrawer` et boutons retour (`AdminTasks`, `AdminNotifications`, `Validate`) remplacés par `<button>` avec `aria-label` et `aria-expanded` ; image miniature du poster en `role="presentation"` pour éviter la redondance lecteur d'écran — Lighthouse Library 74→76, TitleDetail 98/100
 - Frontend lifecycle : timer post-refresh (`setTimeout`) stocké dans un ref et annulé à l'unmount ; toutes les mises à jour d'état dans `ActionDrawer` gardées derrière un ref `mounted` — élimine les warnings de state update sur composant démonté
 - AdminTasks : stale closure sur `page` dans l'effect de pagination corrigée via `pageRef` ; `eslint-disable` supprimé
 - TitleDetail : clé stable (`${name}-${role}`) dans la liste des crédits au lieu d'un index numérique

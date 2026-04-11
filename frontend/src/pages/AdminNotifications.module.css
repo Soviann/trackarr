@@ -16,6 +16,10 @@
   width: 32px;
   height: 32px;
   cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
 }
 
 .title {

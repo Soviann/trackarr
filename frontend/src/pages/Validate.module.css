@@ -22,6 +22,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  border: none;
+  padding: 0;
 }
 
 .headerTitle {

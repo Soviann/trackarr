@@ -64,7 +64,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardP
   }
 
   return (
-    <div onClick={() => route(`/title/${title.id}`)} className={s.card}>
+    <a href={`/title/${title.id}`} onClick={(e) => { e.preventDefault(); route(`/title/${title.id}`) }} className={s.card}>
       {/* Cover */}
       <div
         className={s.cover}
@@ -111,6 +111,6 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardP
           </span>
         </button>
       )}
-    </div>
+    </a>
   )
 })

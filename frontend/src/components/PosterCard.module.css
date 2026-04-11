@@ -1,7 +1,10 @@
 .card {
+  display: block;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .poster {

@@ -190,11 +190,11 @@ export function AdminTasks({ path }: { path?: string }) {
       <div className={s.page}>
         <div className={s.header}>
           <div className={s.headerLeft}>
-            <div onClick={() => history.back()} className={s.backBtn}>
+            <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Retour">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
               </svg>
-            </div>
+            </button>
             <h1 className={s.title}>
               Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--color-text-secondary)', marginLeft: '8px'}}>({total})</span>
             </h1>

@@ -84,14 +84,16 @@ export function ActionDrawer({
       onTouchEnd={handleTouchEnd}
       style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
     >
-      <div
+      <button
+        type="button"
         className={s.handle}
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
       >
         <div className={s.handleBar} />
         <span className={s.handleText}>Actions</span>
         <span className={clsx(s.chevron, open && s.chevronOpen)}>&#9650;</span>
-      </div>
+      </button>
 
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
         <div className={clsx(s.sectionLabel, s.sectionLabelFirst)}>Quick actions</div>

@@ -16,7 +16,7 @@ export const PosterCard = memo(function PosterCard({ title }: PosterCardProps) {
   const name = getName(title)
 
   return (
-    <div onClick={() => route(`/title/${title.id}`)} className={s.card}>
+    <a href={`/title/${title.id}`} onClick={(e) => { e.preventDefault(); route(`/title/${title.id}`) }} className={s.card}>
       <div
         className={s.poster}
         style={{ background: coverBackground(title.cover_url, title.type) }}
@@ -32,6 +32,6 @@ export const PosterCard = memo(function PosterCard({ title }: PosterCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </a>
   )
 })
