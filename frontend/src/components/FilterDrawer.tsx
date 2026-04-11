@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import clsx from 'clsx'
-import type { TitleStatus, TitleType, SeriesStatus } from '../types'
+import type { TitleStatus, TitleType, SeriesStatus, GenreCount } from '../types'
 import type { SortField, SortOrder, SortState } from '../store'
 import { colors, accentWash } from '../theme'
+import { apiFetch } from '../api'
 import s from './FilterDrawer.module.css'
 
 const STORAGE_KEY_HOME = 'filter-drawer-open-home'
@@ -32,6 +33,10 @@ interface FilterDrawerProps {
   onReleaseFromChange: (date: string) => void
   onReleaseToChange: (date: string) => void
   onIncludeNoReleaseChange: (include: boolean) => void
+  selectedGenres: string[]
+  genreOp: 'AND' | 'OR'
+  onGenreToggle: (genre: string) => void
+  onGenreOpChange: (op: 'AND' | 'OR') => void
 }
 
 const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
@@ -96,6 +101,7 @@ export function FilterDrawer({
   defaultOpen = true,
   decade, releaseFrom, releaseTo, includeNoRelease,
   onDecadeChange, onReleaseFromChange, onReleaseToChange, onIncludeNoReleaseChange,
+  selectedGenres, genreOp, onGenreToggle, onGenreOpChange,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
     if (!defaultOpen) return false
@@ -104,6 +110,18 @@ export function FilterDrawer({
   })
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
+  const [genres, setGenres] = useState<GenreCount[]>([])
+  const [genreSearch, setGenreSearch] = useState('')
+
+  const fetchGenres = useCallback(() => {
+    apiFetch<GenreCount[]>('/genres')
+      .then(setGenres)
+      .catch(() => { /* ignore */ })
+  }, [])
+
+  useEffect(() => {
+    fetchGenres()
+  }, [fetchGenres])
 
   const handleTouchStart = (e: TouchEvent) => {
     if (!open) return
@@ -169,6 +187,9 @@ export function FilterDrawer({
       ? `${releaseFrom.slice(0, 7)} → ${releaseTo.slice(0, 7)}`
       : releaseFrom ? `≥ ${releaseFrom}` : `≤ ${releaseTo}`
     activeTags.push({ label: tag, color: colors.accentTeal })
+  }
+  if (selectedGenres.length > 0) {
+    activeTags.push({ label: `${selectedGenres.length} genre${selectedGenres.length > 1 ? 's' : ''}`, color: colors.accentLavender })
   }
 
   return (
@@ -311,6 +332,52 @@ export function FilterDrawer({
               <span>Include without release date</span>
             </label>
           </div>
+        )}
+
+        {genres.length > 0 && (
+          <>
+            <div className={s.filterLabel}>Genres</div>
+            <div className={s.genreOpRow}>
+              <button
+                className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
+                onClick={() => onGenreOpChange('OR')}
+              >Any</button>
+              <button
+                className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
+                onClick={() => onGenreOpChange('AND')}
+              >All</button>
+              {selectedGenres.length > 0 && (
+                <button
+                  className={s.clearGenresBtn}
+                  onClick={() => selectedGenres.forEach(g => onGenreToggle(g))}
+                >Clear</button>
+              )}
+            </div>
+            <div className={s.genreSearchRow}>
+              <input
+                type="text"
+                className={s.genreSearchInput}
+                placeholder="Filter genres…"
+                value={genreSearch}
+                onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div className={s.genreList}>
+              {genres
+                .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
+                .map(g => (
+                  <button
+                    key={g.genre}
+                    className={clsx(s.genreChip, selectedGenres.includes(g.genre) && s.genreChipActive)}
+                    onClick={() => onGenreToggle(g.genre)}
+                  >
+                    {g.genre}
+                    <span className={s.genreCount}>{g.count}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </>
         )}
 
         <div className={s.bottomPad} />

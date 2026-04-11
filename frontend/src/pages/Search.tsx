@@ -12,6 +12,13 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import s from './Search.module.css'
 
+interface TMDBResult {
+  id: number
+  title: string
+  year: number
+  poster_url: string | null
+}
+
 function getMetadata(t: Title) {
   const parts = [getTypeLabel(t.type), String(t.year)]
   const seasons = t.seasons ?? []
@@ -41,7 +48,9 @@ export function Search({ path: _ }: { path?: string }) {
   const [targetSeason, setTargetSeason] = useState(1)
   const [merging, setMerging] = useState(false)
   const [mergeError, setMergeError] = useState<string | null>(null)
-  
+  const [searchOnTMDB, setSearchOnTMDB] = useState(false)
+  const [tmdbResults, setTmdbResults] = useState<TMDBResult[]>([])
+
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -62,6 +71,20 @@ export function Search({ path: _ }: { path?: string }) {
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  // Load TMDB results when toggle is on
+  useEffect(() => {
+    if (!searchOnTMDB || !query.trim()) {
+      setTmdbResults([])
+      return
+    }
+    const trimmed = query.trim()
+    let cancelled = false
+    apiFetch<TMDBResult[]>(`/tmdb/search?query=${encodeURIComponent(trimmed)}&type=movie`)
+      .then(r => { if (!cancelled) setTmdbResults(r) })
+      .catch(() => { if (!cancelled) setTmdbResults([]) })
+    return () => { cancelled = true }
+  }, [searchOnTMDB, query])
 
   const retry = () => search(filter)
 
@@ -172,6 +195,29 @@ export function Search({ path: _ }: { path?: string }) {
                 </button>
               </div>
             )}
+
+            {/* TMDB results — only when toggle is on */}
+            {searchOnTMDB && tmdbResults.length > 0 && (
+              <>
+                <div className={s.sectionDivider}>TMDB Results</div>
+                {tmdbResults
+                  .filter(r => !results.some(l => l.tmdb_id === r.id))
+                  .map(r => (
+                    <div key={r.id} className={clsx(s.card, s.cardTMDB)}>
+                      <div
+                        className={s.cardCover}
+                        style={{ background: r.poster_url ? `url(${r.poster_url}) center/cover` : '#333' }}
+                      />
+                      <div className={s.cardBody}>
+                        <div className={s.cardHeader}>
+                          <span className={s.cardTitle}>{r.title}</span>
+                        </div>
+                        <div className={s.cardMeta}>{r.year || '—'}</div>
+                      </div>
+                    </div>
+                  ))}
+              </>
+            )}
           </>
         )}
 
@@ -227,6 +273,16 @@ export function Search({ path: _ }: { path?: string }) {
 
       {/* Search input */}
       <div className={s.searchBar}>
+        {!mergeSourceId && (
+          <button
+            className={clsx(s.tmdbToggle, searchOnTMDB && s.tmdbToggleOn)}
+            onClick={() => setSearchOnTMDB(v => !v)}
+            aria-pressed={searchOnTMDB}
+            title="Also search TMDB"
+          >
+            TMDB
+          </button>
+        )}
         <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.accentTeal} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />

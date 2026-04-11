@@ -25,7 +25,7 @@ type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
 type SeriesStatusFilter = SeriesStatus | null
 
-const defaultFilter = { status: undefined, type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined }
+const defaultFilter = { status: undefined, type: undefined, series_status: undefined, search: undefined, decade: undefined, release_from: undefined, release_to: undefined, include_no_release: undefined, genres: undefined, genre_op: undefined }
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
@@ -101,6 +101,16 @@ export function App() {
   const handleIncludeNoReleaseChange = useCallback((include: boolean) => {
     setFilter({ include_no_release: include ? undefined : 'false' })
   }, [setFilter])
+
+  const handleGenreToggle = useCallback((genre: string) => {
+    const current = filter.genres ?? []
+    const next = current.includes(genre) ? current.filter(g => g !== genre) : [...current, genre]
+    setFilter({ genres: next.length > 0 ? next : undefined })
+  }, [filter.genres, setFilter])
+
+  const handleGenreOpChange = useCallback((op: 'AND' | 'OR') => {
+    setFilter({ genre_op: op })
+  }, [setFilter])
   const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/admin/tasks')
   const pathname = currentPath.split('?')[0]
   const showDrawer = pathname === '/' || pathname === '/search'
@@ -147,6 +157,10 @@ export function App() {
                 onReleaseFromChange={handleReleaseFromChange}
                 onReleaseToChange={handleReleaseToChange}
                 onIncludeNoReleaseChange={handleIncludeNoReleaseChange}
+                selectedGenres={filter.genres ?? []}
+                genreOp={filter.genre_op ?? 'OR'}
+                onGenreToggle={handleGenreToggle}
+                onGenreOpChange={handleGenreOpChange}
               />
             ) : undefined}
           />
