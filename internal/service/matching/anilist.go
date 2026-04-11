@@ -62,7 +62,10 @@ func (c *AniListClient) query(ctx context.Context, gql string, variables map[str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("AniList: read error response: %w", err)
+		}
 		return newAPIError("AniList", resp, respBody)
 	}
 

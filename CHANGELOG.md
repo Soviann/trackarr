@@ -7,6 +7,8 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Corrigé
+- HTTP matchers : erreurs `io.ReadAll` sur les corps de réponse d'erreur (TMDB, AniList, Gemini) vérifiées et remontées explicitement au lieu d'être ignorées
+- Covers TMDB et AniList : fichier partiel supprimé (`os.Remove`) si `io.Copy` échoue pendant le téléchargement (même comportement que TVDB corrigé en session 2)
 - Refresh de fond : les échecs d'écriture SQLite (`titles.Update`) ne sont plus ignorés silencieusement — chaque site loggue maintenant `background: update <kind> for title <id>: <err>`
 - Covers TVDB : un fichier partiel n'est plus laissé sur disque si `io.Copy` échoue pendant le téléchargement
 - TVDB client : erreur `json.Marshal` dans `Login` remontée explicitement au lieu d'être ignorée

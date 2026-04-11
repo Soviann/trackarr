@@ -173,8 +173,11 @@ func (c *GeminiClient) generate(ctx context.Context, prompt string) (string, err
 			return "", err
 		}
 
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if err != nil {
+			return "", fmt.Errorf("read gemini response: %w", err)
+		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
 			continue

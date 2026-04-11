@@ -52,7 +52,10 @@ func (c *TMDBClient) get(ctx context.Context, path string, params url.Values, de
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("TMDB: read error response: %w", err)
+		}
 		return newAPIError("TMDB", resp, body)
 	}
 
