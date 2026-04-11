@@ -125,4 +125,31 @@ describe('PosterCard', () => {
     const anchor = container.querySelector('a')!
     expect(anchor.classList.contains('no-touch-callout')).toBe(true)
   })
+
+  it('resets the click-suppression flag on a new pointerdown even if no click followed the long-press', () => {
+    const onLongPress = vi.fn()
+    const onClick = vi.fn()
+
+    // First render: not in selection mode — no onClick
+    const { container, rerender } = render(<PosterCard title={baseTitle} onLongPress={onLongPress} />)
+    const anchor = container.querySelector('a')!
+
+    // Long-press fires
+    fireEvent(anchor, makePointerEvent('pointerdown'))
+    vi.advanceTimersByTime(500)
+    expect(onLongPress).toHaveBeenCalledTimes(1)
+
+    // User slides finger off the card — no click is dispatched
+    fireEvent(anchor, makePointerEvent('pointerup'))
+
+    // Re-render with onClick (selection mode now active)
+    rerender(<PosterCard title={baseTitle} onLongPress={onLongPress} onClick={onClick} />)
+
+    // New short tap — pointerdown resets the flag, so click must reach onClick
+    fireEvent(anchor, makePointerEvent('pointerdown'))
+    fireEvent(anchor, makePointerEvent('pointerup'))
+    fireEvent.click(anchor)
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
 })

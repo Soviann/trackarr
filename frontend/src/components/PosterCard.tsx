@@ -31,6 +31,11 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
     },
   })
 
+  const handlePointerDown = (e: PointerEvent) => {
+    justFiredRef.current = false
+    longPressHandlers.onPointerDown(e)
+  }
+
   const handleClick = (e: MouseEvent) => {
     if (justFiredRef.current) {
       e.preventDefault()
@@ -51,9 +56,10 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   return (
     <a
       href={`/title/${title.id}`}
-      onClick={handleClick}
       className={cardClass}
       {...longPressHandlers}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
     >
       <div
         className={s.poster}
