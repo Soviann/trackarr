@@ -58,27 +58,28 @@ type StatusCounts struct {
 }
 
 type TitleUpdate struct {
-	Status        *model.TitleStatus
-	MatchStatus   *model.MatchStatus
-	MyRating      *int
-	SeriesStatus  *model.SeriesStatus
-	CoverURL      *string
-	IMDBID        *string
-	AniListID     *int64
-	TMDBID        *int64
-	TVDBID        *int64
-	PlexRatingKey *string
-	MatchSource   *string
-	OriginalTitle *string
-	Type          *model.TitleType
-	IsAnime       *bool
-	Overview      *string
-	Genres        *string
-	Runtime       *int
-	TMDBRating    *float64
-	Credits       *string
-	AniListRating *int
-	ReleaseDate   *string
+	Status            *model.TitleStatus
+	MatchStatus       *model.MatchStatus
+	MyRating          *int
+	SeriesStatus      *model.SeriesStatus
+	CoverURL          *string
+	IMDBID            *string
+	AniListID         *int64
+	TMDBID            *int64
+	TVDBID            *int64
+	PlexRatingKey     *string
+	MatchSource       *string
+	OriginalTitle     *string
+	Type              *model.TitleType
+	IsAnime           *bool
+	Overview          *string
+	Genres            *string
+	Runtime           *int
+	TotalWatchMinutes *int
+	TMDBRating        *float64
+	Credits           *string
+	AniListRating     *int
+	ReleaseDate       *string
 }
 
 func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (int64, error) {
@@ -98,12 +99,12 @@ func (r *TitleRepository) Create(title *model.Title, names []model.TitleName) (i
 
 func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names []model.TitleName) (int64, error) {
 	res, err := db.Exec(`
-		INSERT INTO titles (type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO titles (type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		title.Type, title.IsAnime, title.Year, title.CoverURL, title.IMDBID, title.AniListID, title.TMDBID, title.TVDBID,
 		title.PlexRatingKey, title.MyRating, title.Status, title.SeriesStatus, title.MatchStatus,
 		title.OriginalTitle, title.MatchSource,
-		title.Overview, title.Genres, title.Runtime, title.TMDBRating, title.Credits, title.AniListRating,
+		title.Overview, title.Genres, title.Runtime, title.TotalWatchMinutes, title.TMDBRating, title.Credits, title.AniListRating,
 		title.ReleaseDate,
 	)
 	if err != nil {
@@ -126,10 +127,10 @@ func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var lastWatchedAtStr *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
-			&title.Overview, &title.Genres, &title.Runtime, &title.TMDBRating, &title.Credits, &title.AniListRating,
+			&title.Overview, &title.Genres, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &title.AniListRating,
 			&title.ReleaseDate, &lastWatchedAtStr, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
@@ -200,7 +201,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		return r.searchTitlesPaginated(searchTerm, filter)
 	}
 
-	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
+	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.genres, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.last_watched_at, t.created_at, t.updated_at`
 
 	var conditions []string
 	var args []interface{}
@@ -320,7 +321,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		var lastWatchedAtStr *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
+			&t.Overview, &t.Genres, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
@@ -447,7 +448,7 @@ func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, genres, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, last_watched_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -458,7 +459,7 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 		var lastWatchedAtStr *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Genres, &t.Runtime, &t.TMDBRating, &t.Credits, &t.AniListRating,
+			&t.Overview, &t.Genres, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
 			&t.ReleaseDate, &lastWatchedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
@@ -636,6 +637,10 @@ func (r *TitleRepository) Update(id int64, update TitleUpdate) error {
 	if update.Runtime != nil {
 		sets = append(sets, `runtime = ?`)
 		args = append(args, *update.Runtime)
+	}
+	if update.TotalWatchMinutes != nil {
+		sets = append(sets, `total_watch_minutes = ?`)
+		args = append(args, *update.TotalWatchMinutes)
 	}
 	if update.TMDBRating != nil {
 		sets = append(sets, `tmdb_rating = ?`)
