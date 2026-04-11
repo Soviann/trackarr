@@ -7,6 +7,8 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Amélioré
+- Enrichissement TVDB : le TMDB ID est désormais récupéré depuis les `remoteIds` TVDB si aucun TMDB ID n'est encore connu (back-fill silencieux)
+- Enrichissement TVDB : détection de conflits de cross-référence — si TMDB et TVDB fournissent des IDs IMDB ou TMDB différents, le titre passe automatiquement en `pending_review` pour examen humain
 - Détail titre : la bande hero de fond aligne désormais le haut de l'affiche en haut de l'écran, pour garder visibles les éléments graphiques importants (titres, visages) au lieu de couper au centre
 
 ### Corrigé

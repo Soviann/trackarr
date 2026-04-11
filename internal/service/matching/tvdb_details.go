@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 )
 
 // TVDBSeriesData holds series data from the TVDB API.
@@ -174,6 +175,32 @@ func extractMovieIMDB(d *tvdbMovieDetail) string {
 		}
 	}
 	return ""
+}
+
+// extractSeriesTMDB returns the TMDB ID from TVDB remote IDs (sourceId 5 = TMDB).
+func extractSeriesTMDB(d *tvdbSeriesDetail) int64 {
+	for _, r := range d.RemoteIDs {
+		if r.SourceID == 5 && len(r.ID) > 0 {
+			id, err := strconv.ParseInt(r.ID, 10, 64)
+			if err == nil {
+				return id
+			}
+		}
+	}
+	return 0
+}
+
+// extractMovieTMDB returns the TMDB ID from TVDB remote IDs (sourceId 5 = TMDB).
+func extractMovieTMDB(d *tvdbMovieDetail) int64 {
+	for _, r := range d.RemoteIDs {
+		if r.SourceID == 5 && len(r.ID) > 0 {
+			id, err := strconv.ParseInt(r.ID, 10, 64)
+			if err == nil {
+				return id
+			}
+		}
+	}
+	return 0
 }
 
 // extractSeriesNames returns en/fr names from TVDB translations.

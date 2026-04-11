@@ -492,6 +492,23 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		result.TVDBID = tmdbRes.tvdbID
 	}
 
+	// TMDB ID back-fill from TVDB remote IDs
+	if result.TMDBID == 0 && tvdbRes.tmdbID != 0 {
+		result.TMDBID = tvdbRes.tmdbID
+	}
+
+	// IMDB conflict: both sources returned an IMDB ID that differs
+	if tmdbRes.imdbID != "" && tvdbRes.imdbID != "" && tmdbRes.imdbID != tvdbRes.imdbID {
+		log.Printf("cross-ref conflict: IMDB mismatch (tvdb=%d): TMDB=%s TVDB=%s — downgrading to pending_review", result.TVDBID, tmdbRes.imdbID, tvdbRes.imdbID)
+		result.MatchStatus = model.MatchStatusPendingReview
+	}
+
+	// TMDB ID conflict: Plex/TMDB TMDB ID differs from TVDB's reported TMDB counterpart
+	if result.TMDBID != 0 && tvdbRes.tmdbID != 0 && result.TMDBID != tvdbRes.tmdbID {
+		log.Printf("cross-ref conflict: TMDB ID mismatch (tvdb=%d): have=%d TVDB says=%d — downgrading to pending_review", result.TVDBID, result.TMDBID, tvdbRes.tmdbID)
+		result.MatchStatus = model.MatchStatusPendingReview
+	}
+
 	// Anime detection from TVDB genres
 	if !result.IsAnime && tvdbRes.isAnime {
 		result.IsAnime = true
@@ -542,6 +559,7 @@ type tvdbFetchResult struct {
 	genres      []string
 	runtime     *int
 	imdbID      string
+	tmdbID      int64
 	names       map[string]string
 	coverFile   string
 	isAnime     bool
@@ -669,6 +687,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = extractMovieOverview(details)
 		out.genres = extractMovieGenres(details)
 		out.imdbID = extractMovieIMDB(details)
+		out.tmdbID = extractMovieTMDB(details)
 		out.names = extractMovieNames(details)
 		if details.Runtime != nil {
 			out.runtime = details.Runtime
@@ -700,6 +719,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = extractSeriesOverview(details)
 		out.genres = extractSeriesGenres(details)
 		out.imdbID = extractSeriesIMDB(details)
+		out.tmdbID = extractSeriesTMDB(details)
 		out.names = extractSeriesNames(details)
 		if details.Runtime != nil {
 			out.runtime = details.Runtime
