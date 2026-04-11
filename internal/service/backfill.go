@@ -104,7 +104,9 @@ func BackfillPreviousEpisodes(
 			log.Printf("backfill: create season %d: %v", si.Number, err)
 			continue
 		}
-		_ = seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount)
+		if err := seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount); err != nil {
+			log.Printf("backfill: update total episodes for season %d: %v", season.ID, err)
+		}
 
 		for epNum := 1; epNum <= si.EpisodeCount; epNum++ {
 			ep, err := episodes.GetOrCreate(season.ID, epNum)
@@ -127,7 +129,9 @@ func BackfillPreviousEpisodes(
 		// Update total_episodes from TMDB if available
 		for _, si := range tmdbSeasons {
 			if si.Number == triggerSeasonNum {
-				_ = seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount)
+				if err := seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount); err != nil {
+					log.Printf("backfill: update total episodes for season %d: %v", season.ID, err)
+				}
 				break
 			}
 		}

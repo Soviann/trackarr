@@ -3,7 +3,9 @@ package database
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
+	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -63,7 +65,9 @@ func WithTx(db *sql.DB, fn func(tx *sql.Tx) error) error {
 	}
 
 	if err := fn(tx); err != nil {
-		_ = tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			log.Printf("database: rollback tx: %v", rbErr)
+		}
 		return err
 	}
 

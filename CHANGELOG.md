@@ -7,6 +7,7 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Corrigé
+- Erreurs silencieuses dans les flux enrichissement/sync : `UpdateTotalEpisodes` (backfill), `MarkWatched` et `UpdateLastWatchedAt` (import Simkl) loggués en cas d'échec ; rollback SQLite échoué signalé en log si différent de `ErrTxDone` ; limit des tâches admin clampée à 500 pour éviter les valeurs arbitraires en query param
 - Goroutine cleanup `RateLimit` : la goroutine de nettoyage des IPs s'arrête proprement au shutdown de l'app (context annulé) au lieu de fuir
 - Goroutine enrichissement async Plex : bornée à 30 secondes via `context.WithTimeout` pour éviter qu'un appel API suspendu ne bloque indéfiniment
 - HTTP matchers : erreurs `io.ReadAll` sur les corps de réponse d'erreur (TMDB, AniList, Gemini) vérifiées et remontées explicitement au lieu d'être ignorées

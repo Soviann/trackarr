@@ -447,7 +447,7 @@ func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
 	// Extract title name from payload for the notification
 	titleName := "unknown"
 	var ep EnrichmentPayload
-	if json.Unmarshal([]byte(task.Payload), &ep) == nil && ep.TitleName != "" {
+	if err := json.Unmarshal([]byte(task.Payload), &ep); err == nil && ep.TitleName != "" {
 		titleName = ep.TitleName
 	}
 

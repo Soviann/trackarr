@@ -49,9 +49,13 @@ func (h *AdminHandler) ListTasks(w http.ResponseWriter, r *http.Request) error {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
+	const maxLimit = 500
 	limit := 50
 	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 		limit = l
+	}
+	if limit > maxLimit {
+		limit = maxLimit
 	}
 	offset := 0
 	if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {

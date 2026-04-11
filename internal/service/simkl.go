@@ -237,7 +237,9 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 				}
 			}
 
-			_ = s.episodes.MarkWatched(ep.ID, watchedAt)
+			if err := s.episodes.MarkWatched(ep.ID, watchedAt); err != nil {
+				log.Printf("simkl import: mark episode %d watched for title %d: %v", ep.ID, titleID, err)
+			}
 			_, _ = s.events.Create(&model.WatchEvent{
 				TitleID:   titleID,
 				EpisodeID: &ep.ID,
@@ -275,7 +277,9 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	// Update last_watched_at if available
 	if item.LastWatchedAt != "" {
 		if parsedAt, err := time.Parse(time.RFC3339, item.LastWatchedAt); err == nil {
-			_ = s.titles.UpdateLastWatchedAt(titleID, parsedAt)
+			if err := s.titles.UpdateLastWatchedAt(titleID, parsedAt); err != nil {
+				log.Printf("simkl import: update last_watched_at for title %d: %v", titleID, err)
+			}
 		}
 	}
 
