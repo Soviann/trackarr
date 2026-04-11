@@ -1,31 +1,60 @@
 import { memo } from 'preact/compat'
+import { useRef } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import type { Title } from '../types'
 import { getName, formatDate } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
+import { useLongPress } from '../hooks/useLongPress'
 import s from './PosterCard.module.css'
 
 interface PosterCardProps {
   title: Title
   onClick?: (e: MouseEvent) => void
+  onLongPress?: () => void
   overlay?: ComponentChildren
 }
 
-export const PosterCard = memo(function PosterCard({ title, onClick, overlay }: PosterCardProps) {
-  const isLastWatchedSort = useTitleStore(s => s.sort.field === 'last_watched_at')
+export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress, overlay }: PosterCardProps) {
+  const isLastWatchedSort = useTitleStore(st => st.sort.field === 'last_watched_at')
   const name = getName(title)
 
+  // Track whether a long-press just fired so we can swallow the
+  // synthetic click that the browser dispatches after pointer-up.
+  const justFiredRef = useRef(false)
+
+  const longPressHandlers = useLongPress({
+    onLongPress: () => {
+      justFiredRef.current = true
+      onLongPress?.()
+    },
+  })
+
   const handleClick = (e: MouseEvent) => {
+    if (justFiredRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      justFiredRef.current = false
+      return
+    }
     if (!onClick) return
     e.preventDefault()
     e.stopPropagation()
     onClick(e)
   }
 
+  // Apply no-touch-callout when a long-press handler is provided so the
+  // user doesn't see the "Save image" native callout during the hold.
+  const cardClass = `${s.card}${onLongPress ? ' no-touch-callout' : ''}`
+
   return (
-    <a href={`/title/${title.id}`} onClick={handleClick} className={s.card}>
+    <a
+      href={`/title/${title.id}`}
+      onClick={handleClick}
+      className={cardClass}
+      {...longPressHandlers}
+    >
       <div
         className={s.poster}
         style={{ background: coverBackground(title.cover_url, title.type) }}

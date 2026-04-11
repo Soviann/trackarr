@@ -5,6 +5,7 @@
   cursor: pointer;
   text-decoration: none;
   color: inherit;
+  touch-action: manipulation;
 }
 
 .poster {

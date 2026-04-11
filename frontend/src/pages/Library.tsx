@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import { haptic, HAPTIC_SHORT } from '../utils/haptic'
 import type { Title, ContinueWatchingTitle, UpcomingTitle } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
@@ -216,6 +217,7 @@ export function Library(_props: { path?: string }) {
         <div className={s.selectAllRow}>
           <button className={s.selectAllBtn} onClick={selectAll}>Select all</button>
           <span className={s.selectCount}>{selected.size} of {titles.length}</span>
+          <button className={s.cancelBtn} onClick={exitSelect}>Cancel</button>
         </div>
       )}
 
@@ -238,12 +240,6 @@ export function Library(_props: { path?: string }) {
               <span className={s.counterText}>
                 {titles.length} / {total} titles
               </span>
-              <button
-                className={`${s.selectBtn} ${selecting ? s.selectBtnActive : ''}`}
-                onClick={() => selecting ? exitSelect() : setSelecting(true)}
-              >
-                {selecting ? 'Cancel' : 'Select'}
-              </button>
             </div>
           )}
 
@@ -256,6 +252,11 @@ export function Library(_props: { path?: string }) {
                   key={t.id}
                   title={t}
                   onClick={selecting ? () => toggleSelect(t.id) : undefined}
+                  onLongPress={selecting ? undefined : () => {
+                    haptic(HAPTIC_SHORT)
+                    setSelecting(true)
+                    toggleSelect(t.id)
+                  }}
                   overlay={selecting && (
                     <div className={`${s.checkbox} ${selected.has(t.id) ? s.checked : ''}`}>
                       {selected.has(t.id) && '✓'}
