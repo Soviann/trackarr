@@ -10,6 +10,29 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
+// ContinueWatchingItem represents a Watching title with episode progress.
+type ContinueWatchingItem struct {
+	ID              int64   `json:"id"`
+	Type            string  `json:"type"`
+	CoverURL        *string `json:"cover_url"`
+	Name            string  `json:"name"`
+	NextAirEpisode  *string `json:"next_air_episode"`
+	WatchedEpisodes int     `json:"watched_episodes"`
+	TotalEpisodes   int     `json:"total_episodes"`
+	LastWatchedAt   *string `json:"last_watched_at"`
+}
+
+// UpcomingItem represents a title with an upcoming air date.
+type UpcomingItem struct {
+	ID             int64   `json:"id"`
+	Type           string  `json:"type"`
+	CoverURL       *string `json:"cover_url"`
+	Name           string  `json:"name"`
+	NextAirDate    string  `json:"next_air_date"`
+	NextAirEpisode *string `json:"next_air_episode"`
+	Status         string  `json:"status"`
+}
+
 type TitleRepository struct {
 	db database.DBTX
 }
@@ -893,4 +916,118 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 	}
 
 	return used, nil
+}
+
+// ListContinueWatching returns Watching titles that have at least one unwatched episode,
+// ordered by last_watched_at DESC. Uses a preferred name (fr > any).
+func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error) {
+	query := `
+		SELECT t.id, t.type, t.cover_url,
+		       COALESCE(
+		           (SELECT name FROM title_names WHERE title_id = t.id AND language = 'fr' LIMIT 1),
+		           (SELECT name FROM title_names WHERE title_id = t.id LIMIT 1),
+		           ''
+		       ) AS name,
+		       t.next_air_episode,
+		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 1) AS watched_episodes,
+		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) AS total_episodes,
+		       t.last_watched_at
+		FROM titles t
+		WHERE t.status = 'watching'
+		  AND (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0) > 0
+		ORDER BY t.last_watched_at DESC`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("list continue watching: %w", err)
+	}
+	defer rows.Close()
+
+	var items []ContinueWatchingItem
+	for rows.Next() {
+		var item ContinueWatchingItem
+		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name, &item.NextAirEpisode,
+			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt); err != nil {
+			return nil, fmt.Errorf("scan continue watching: %w", err)
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+// ListUpcoming returns Watching and PlanToWatch titles with next_air_date >= today,
+// ordered by next_air_date ASC.
+func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
+	query := `
+		SELECT t.id, t.type, t.cover_url,
+		       COALESCE(
+		           (SELECT name FROM title_names WHERE title_id = t.id AND language = 'fr' LIMIT 1),
+		           (SELECT name FROM title_names WHERE title_id = t.id LIMIT 1),
+		           ''
+		       ) AS name,
+		       t.next_air_date, t.next_air_episode, t.status
+		FROM titles t
+		WHERE t.status IN ('watching', 'plan_to_watch')
+		  AND t.next_air_date IS NOT NULL
+		  AND t.next_air_date >= ?
+		ORDER BY t.next_air_date ASC`
+
+	rows, err := r.db.Query(query, today)
+	if err != nil {
+		return nil, fmt.Errorf("list upcoming: %w", err)
+	}
+	defer rows.Close()
+
+	var items []UpcomingItem
+	for rows.Next() {
+		var item UpcomingItem
+		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name,
+			&item.NextAirDate, &item.NextAirEpisode, &item.Status); err != nil {
+			return nil, fmt.Errorf("scan upcoming: %w", err)
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+// Delete removes a title by ID. Cascaded deletes (seasons, episodes, etc.) are handled by FK constraints.
+func (r *TitleRepository) Delete(id int64) error {
+	_, err := r.db.Exec(`DELETE FROM titles WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete title: %w", err)
+	}
+	return nil
+}
+
+// BatchDelete removes multiple titles by ID.
+func (r *TitleRepository) BatchDelete(ids []int64) error {
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	query := `DELETE FROM titles WHERE id IN (` + strings.Join(placeholders, ",") + `)`
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("batch delete titles: %w", err)
+	}
+	return nil
+}
+
+// BatchUpdateStatus updates the status of multiple titles.
+func (r *TitleRepository) BatchUpdateStatus(ids []int64, status string) error {
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids)+1)
+	args[0] = status
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i+1] = id
+	}
+	query := `UPDATE titles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (` + strings.Join(placeholders, ",") + `)`
+	_, err := r.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("batch update status: %w", err)
+	}
+	return nil
 }
