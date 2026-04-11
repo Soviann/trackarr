@@ -15,7 +15,7 @@ const cards = [
   {
     id: 'validations',
     label: 'Validations',
-    description: 'Titres en attente de validation',
+    description: 'Titles pending validation',
     path: '/admin/validate',
     color: colors.accentAmber,
     countKey: 'pending_validations' as const,
@@ -28,8 +28,8 @@ const cards = [
   },
   {
     id: 'tasks',
-    label: 'Tâches',
-    description: 'File d\'attente et erreurs',
+    label: 'Tasks',
+    description: 'Queue and errors',
     path: '/admin/tasks',
     color: colors.accentCoral,
     countKey: 'dead_tasks' as const,
@@ -42,7 +42,7 @@ const cards = [
   {
     id: 'notifications',
     label: 'Notifications',
-    description: 'Gérer les préférences',
+    description: 'Manage preferences',
     path: '/admin/notifications',
     color: colors.accentBlue,
     countKey: null,
@@ -110,8 +110,8 @@ export function Admin({ path }: { path?: string }) {
             </svg>
           </div>
           <div>
-            <div className={s.actionLabel}>{refreshing ? 'Rafraîchissement lancé...' : 'Rafraîchir toutes les métadonnées'}</div>
-            <div className={s.actionDesc}>Met à jour synopsis, genres, casting et notes depuis TMDB/AniList</div>
+            <div className={s.actionLabel}>{refreshing ? 'Refresh started...' : 'Refresh all metadata'}</div>
+            <div className={s.actionDesc}>Updates synopsis, genres, cast and ratings from TMDB/AniList</div>
           </div>
         </button>
       </div>
@@ -120,10 +120,10 @@ export function Admin({ path }: { path?: string }) {
         open={showRefreshModal}
         onClose={() => setShowRefreshModal(false)}
         onConfirm={handleRefreshAll}
-        title="Rafraîchir les métadonnées ?"
-        description="Cette opération tourne en arrière-plan et peut prendre plusieurs minutes."
-        confirmText="Rafraîchir"
-        cancelText="Annuler"
+        title="Refresh metadata?"
+        description="This operation runs in the background and may take several minutes."
+        confirmText="Refresh"
+        cancelText="Cancel"
       />
     </div>
   )

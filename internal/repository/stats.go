@@ -160,11 +160,11 @@ func (r *StatsRepository) ratings() (*model.StatsRatings, error) {
 		pct := int(math.Round(float64(highRated) / float64(totalRated) * 100))
 		switch {
 		case pct >= 60:
-			s.Insight = fmt.Sprintf("Tu notes plutôt généreusement — %d%% de tes notes sont à 7 ou plus.", pct)
+			s.Insight = fmt.Sprintf("You rate pretty generously — %d%% of your ratings are 7 or above.", pct)
 		case pct <= 30:
-			s.Insight = fmt.Sprintf("Tu es plutôt exigeant — seulement %d%% de tes notes sont à 7 ou plus.", pct)
+			s.Insight = fmt.Sprintf("You're pretty demanding — only %d%% of your ratings are 7 or above.", pct)
 		default:
-			s.Insight = fmt.Sprintf("%d%% de tes notes sont à 7 ou plus.", pct)
+			s.Insight = fmt.Sprintf("%d%% of your ratings are 7 or above.", pct)
 		}
 	}
 
@@ -239,9 +239,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "longest_binge",
 			Icon:   "flame",
-			Title:  "Plus gros binge",
-			Value:  fmt.Sprintf("%d épisodes", bingeCount),
-			Detail: fmt.Sprintf("%s — %s", bingeTitle, d.Format("2 janvier 2006")),
+			Title:  "Biggest binge",
+			Value:  fmt.Sprintf("%d episodes", bingeCount),
+			Detail: fmt.Sprintf("%s — %s", bingeTitle, d.Format("January 2, 2006")),
 		})
 	}
 
@@ -262,8 +262,8 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "most_loyal",
 			Icon:   "heart",
-			Title:  "Série la plus fidèle",
-			Value:  fmt.Sprintf("%d jours", loyalDays),
+			Title:  "Most loyal series",
+			Value:  fmt.Sprintf("%d days", loyalDays),
 			Detail: loyalTitle,
 		})
 	}
@@ -283,14 +283,14 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		LIMIT 1
 	`).Scan(&speedTitle, &speedDays)
 	if err == nil {
-		value := fmt.Sprintf("%d jours", speedDays)
+		value := fmt.Sprintf("%d days", speedDays)
 		if speedDays <= 1 {
-			value = "1 jour"
+			value = "1 day"
 		}
 		stats = append(stats, model.FunStat{
 			ID:     "speed_completer",
 			Icon:   "zap",
-			Title:  "Sprint complétion",
+			Title:  "Speed completer",
 			Value:  value,
 			Detail: speedTitle,
 		})
@@ -311,17 +311,17 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 			stats = append(stats, model.FunStat{
 				ID:     "night_owl",
 				Icon:   "moon",
-				Title:  "Oiseau de nuit",
-				Value:  fmt.Sprintf("%d%% après 20h", pct),
-				Detail: "La majorité de tes visionnages sont en soirée.",
+				Title:  "Night owl",
+				Value:  fmt.Sprintf("%d%% after 8pm", pct),
+				Detail: "Most of your watching happens in the evening.",
 			})
 		} else if pct <= 25 {
 			stats = append(stats, model.FunStat{
 				ID:     "early_bird",
 				Icon:   "sun",
-				Title:  "Lève-tôt",
-				Value:  fmt.Sprintf("%d%% en journée", 100-pct),
-				Detail: "Tu regardes surtout en journée.",
+				Title:  "Early bird",
+				Value:  fmt.Sprintf("%d%% during the day", 100-pct),
+				Detail: "You watch mostly during the day.",
 			})
 		}
 	}
@@ -340,9 +340,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "plex_vs_manual",
 			Icon:   "tv",
-			Title:  "Plex vs Manuel",
-			Value:  fmt.Sprintf("%d%% Plex, %d%% manuels", plexPct, 100-plexPct),
-			Detail: fmt.Sprintf("%d événements au total.", total),
+			Title:  "Plex vs manual",
+			Value:  fmt.Sprintf("%d%% Plex, %d%% manual", plexPct, 100-plexPct),
+			Detail: fmt.Sprintf("%d events total.", total),
 		})
 	}
 
@@ -373,13 +373,13 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		if len(avgs) >= 2 {
 			high, low := avgs[0], avgs[len(avgs)-1]
 			if high.avg-low.avg >= 0.5 {
-				typeLabel := map[string]string{"movie": "films", "series": "séries"}
+				typeLabel := map[string]string{"movie": "movies", "series": "series"}
 				stats = append(stats, model.FunStat{
 					ID:     "rating_gap",
 					Icon:   "bar-chart",
-					Title:  "Écart de notes",
+					Title:  "Rating gap",
 					Value:  fmt.Sprintf("%.1f vs %.1f", high.avg, low.avg),
-					Detail: fmt.Sprintf("Tes %s obtiennent %.1f de moyenne, contre %.1f pour tes %s.", typeLabel[high.t], high.avg, low.avg, typeLabel[low.t]),
+					Detail: fmt.Sprintf("Your %s average %.1f, vs %.1f for your %s.", typeLabel[high.t], high.avg, low.avg, typeLabel[low.t]),
 				})
 			}
 		}
@@ -402,9 +402,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 			stats = append(stats, model.FunStat{
 				ID:     "decade_preference",
 				Icon:   "calendar",
-				Title:  "Préférence décennies",
-				Value:  fmt.Sprintf("Années %d", topDecade),
-				Detail: fmt.Sprintf("La majorité de tes titres viennent des années %d (%d%%).", topDecade, pct),
+				Title:  "Decade preference",
+				Value:  fmt.Sprintf("%ds", topDecade),
+				Detail: fmt.Sprintf("Most of your titles come from the %ds (%d%%).", topDecade, pct),
 			})
 		}
 	}
@@ -416,8 +416,8 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "graveyard",
 			Icon:   "skull",
-			Title:  "Le cimetière",
-			Value:  fmt.Sprintf("%d titres", droppedCount),
+			Title:  "The graveyard",
+			Value:  fmt.Sprintf("%d titles", droppedCount),
 			Detail: "R.I.P.",
 		})
 	}
@@ -434,7 +434,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 			AND watched_at >= datetime('now', '-90 days')
 		`).Scan(&recentEps)
 
-		detail := fmt.Sprintf("%d titres en attente.", backlogCount)
+		detail := fmt.Sprintf("%d titles waiting.", backlogCount)
 		if err == nil && recentEps > 0 {
 			// Count total episodes in plan_to_watch titles
 			var backlogEps int
@@ -449,7 +449,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 				daysNeeded := float64(backlogEps) / epsPerDay
 				months := int(math.Round(daysNeeded / 30))
 				if months > 0 {
-					detail = fmt.Sprintf("%d titres en attente. C'est ~%d mois au rythme actuel.", backlogCount, months)
+					detail = fmt.Sprintf("%d titles waiting. That's ~%d months at your current pace.", backlogCount, months)
 				}
 			}
 		}
@@ -457,8 +457,8 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "backlog_pressure",
 			Icon:   "clock",
-			Title:  "Pression du backlog",
-			Value:  fmt.Sprintf("%d titres", backlogCount),
+			Title:  "Backlog pressure",
+			Value:  fmt.Sprintf("%d titles", backlogCount),
 			Detail: detail,
 		})
 	}
@@ -479,9 +479,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		stats = append(stats, model.FunStat{
 			ID:     "peak_month",
 			Icon:   "trophy",
-			Title:  "Mois record",
-			Value:  fmt.Sprintf("%d épisodes", peakCount),
-			Detail: fmt.Sprintf("%s %d, ton record.", frenchMonth(t.Month()), t.Year()),
+			Title:  "Peak month",
+			Value:  fmt.Sprintf("%d episodes", peakCount),
+			Detail: fmt.Sprintf("%s %d, your record.", t.Month().String(), t.Year()),
 		})
 	}
 
@@ -509,14 +509,6 @@ func (r *StatsRepository) yearSummary(year int) (*model.StatsYear, error) {
 	}
 
 	return y, nil
-}
-
-func frenchMonth(m time.Month) string {
-	months := [...]string{
-		"janvier", "février", "mars", "avril", "mai", "juin",
-		"juillet", "août", "septembre", "octobre", "novembre", "décembre",
-	}
-	return months[m-1]
 }
 
 // TotalWatchMinutes returns the sum of total_watch_minutes across all titles.

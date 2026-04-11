@@ -81,7 +81,7 @@ func TestStatsRepository_FunStats_Graveyard(t *testing.T) {
 	for _, s := range resp.FunStats {
 		if s.ID == "graveyard" {
 			found = true
-			assert.Equal(t, "1 titres", s.Value)
+			assert.Equal(t, "1 titles", s.Value)
 		}
 	}
 	assert.True(t, found, "graveyard stat should be present")
@@ -109,7 +109,7 @@ func TestStatsRepository_FunStats_PlexVsManual(t *testing.T) {
 	for _, s := range resp.FunStats {
 		if s.ID == "plex_vs_manual" {
 			found = true
-			assert.Equal(t, "67% Plex, 33% manuels", s.Value)
+			assert.Equal(t, "67% Plex, 33% manual", s.Value)
 		}
 	}
 	assert.True(t, found, "plex_vs_manual stat should be present")
@@ -177,7 +177,7 @@ func TestStatsRepository_FunStats_LongestBinge(t *testing.T) {
 	for _, s := range resp.FunStats {
 		if s.ID == "longest_binge" {
 			found = true
-			assert.Equal(t, "4 épisodes", s.Value)
+			assert.Equal(t, "4 episodes", s.Value)
 			assert.Contains(t, s.Detail, "Attack on Titan")
 		}
 	}

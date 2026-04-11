@@ -191,7 +191,7 @@ export function Search({ path: _ }: { path?: string }) {
             {hasMore && (
               <div className={s.loadMoreWrap}>
                 <button onClick={() => loadMore(filter)} disabled={loadingMore} className={s.loadMoreBtn}>
-                  {loadingMore ? 'Chargement...' : 'Charger plus'}
+                  {loadingMore ? 'Loading...' : 'Load more'}
                 </button>
               </div>
             )}

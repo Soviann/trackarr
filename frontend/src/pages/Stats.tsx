@@ -20,15 +20,15 @@ const typeColors: Record<string, string> = {
 }
 
 const statusLabels: Record<string, string> = {
-  watching: 'En cours',
-  completed: 'Terminés',
-  dropped: 'Abandonnés',
-  plan_to_watch: 'À voir',
+  watching: 'Watching',
+  completed: 'Completed',
+  dropped: 'Dropped',
+  plan_to_watch: 'Plan to watch',
 }
 
 const typeLabels: Record<string, string> = {
-  movie: 'Films',
-  series: 'Séries',
+  movie: 'Movies',
+  series: 'Series',
   anime: 'Anime',
 }
 
@@ -52,7 +52,7 @@ export function Stats({ path }: { path?: string }) {
   if (loading || !data) {
     return (
       <div className={s.loading}>
-        Chargement...
+        Loading...
       </div>
     )
   }
@@ -75,11 +75,11 @@ export function Stats({ path }: { path?: string }) {
 
 function OverviewSection({ overview, watchtimeMinutes }: { overview: StatsResponse['overview']; watchtimeMinutes?: number }) {
   const cards = [
-    { value: overview.total_titles.toLocaleString('fr-FR'), label: 'TITRES SUIVIS' },
-    { value: overview.episodes_watched.toLocaleString('fr-FR'), label: '\u00C9PISODES VUS' },
-    { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPL\u00C9T\u00C9S' },
-    { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '\u2014', label: 'NOTE MOYENNE' },
-    { value: formatWatchtime(watchtimeMinutes) ?? '\u2014', label: 'TEMPS REGARD\u00C9' },
+    { value: overview.total_titles.toLocaleString('en-US'), label: 'TITLES TRACKED' },
+    { value: overview.episodes_watched.toLocaleString('en-US'), label: 'EPISODES WATCHED' },
+    { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPLETED' },
+    { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '\u2014', label: 'AVERAGE RATING' },
+    { value: formatWatchtime(watchtimeMinutes) ?? '\u2014', label: 'WATCH TIME' },
   ]
 
   return (
@@ -93,7 +93,7 @@ function OverviewSection({ overview, watchtimeMinutes }: { overview: StatsRespon
         ))}
       </div>
       <div className={s.overviewFooter}>
-        {overview.total_movies} films · {overview.total_series} séries · {overview.total_anime} anime
+        {overview.total_movies} movies · {overview.total_series} series · {overview.total_anime} anime
       </div>
     </section>
   )
@@ -104,7 +104,7 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
 
   return (
     <section className={s.section}>
-      <SectionLabel>Notes</SectionLabel>
+      <SectionLabel>Ratings</SectionLabel>
       <div className={s.ratingsCard}>
         {[...ratings.distribution].reverse().map((count, i) => {
           const rating = 10 - i
@@ -132,19 +132,19 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
 function BreakdownSection({ breakdown }: { breakdown: StatsResponse['breakdown'] }) {
   return (
     <section className={s.section}>
-      <SectionLabel>Bibliothèque</SectionLabel>
+      <SectionLabel>Library</SectionLabel>
       <div className={s.breakdownGrid}>
         <DonutChart
           data={breakdown.by_status}
           colorMap={statusColors}
           labelMap={statusLabels}
-          title="Par statut"
+          title="By status"
         />
         <DonutChart
           data={breakdown.by_type}
           colorMap={typeColors}
           labelMap={typeLabels}
-          title="Par type"
+          title="By type"
         />
       </div>
     </section>
@@ -201,7 +201,7 @@ function DonutChart({
 function FunStatsSection({ stats }: { stats: FunStat[] }) {
   return (
     <section className={s.section}>
-      <SectionLabel>Le savais-tu ?</SectionLabel>
+      <SectionLabel>Did you know?</SectionLabel>
       <div className={s.funStatList}>
         {stats.map((stat) => (
           <div key={stat.id} className={s.funStatCard}>
@@ -223,7 +223,7 @@ function GenreSection({ genres }: { genres: StatsResponse['genres'] }) {
   const max = Math.max(...genres.map(g => g.count), 1)
   return (
     <section className={s.section}>
-      <SectionLabel>Top genres</SectionLabel>
+      <SectionLabel>Top Genres</SectionLabel>
       <div className={s.genreBars}>
         {genres.map(g => (
           <div key={g.genre} className={s.genreBarRow}>
@@ -248,12 +248,12 @@ function StreakSection({ streaks }: { streaks: StatsResponse['streaks'] }) {
     <section className={s.section}>
       <div className={s.streakRow}>
         <div className={s.streakCard}>
-          <div className={s.streakValue}>🔥 {streaks.current}j</div>
-          <div className={s.streakLabel}>Série en cours</div>
+          <div className={s.streakValue}>🔥 {streaks.current}d</div>
+          <div className={s.streakLabel}>Current streak</div>
         </div>
         <div className={s.streakCard}>
-          <div className={s.streakValue}>🏆 {streaks.best}j</div>
-          <div className={s.streakLabel}>Meilleure série</div>
+          <div className={s.streakValue}>🏆 {streaks.best}d</div>
+          <div className={s.streakLabel}>Best streak</div>
         </div>
       </div>
     </section>
@@ -285,7 +285,7 @@ function ActivitySection() {
 
   return (
     <section className={s.sectionLast}>
-      <SectionLabel>Activité récente</SectionLabel>
+      <SectionLabel>Recent activity</SectionLabel>
       {Object.entries(grouped).map(([date, evts]) => (
         <div key={date}>
           <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
@@ -319,7 +319,7 @@ function ActivitySection() {
       ))}
       {hasMore && (
         <button className={s.loadMoreBtn} onClick={loadMore} disabled={loading}>
-          {loading ? 'Chargement…' : 'Voir plus'}
+          {loading ? 'Loading…' : 'Load more'}
         </button>
       )}
     </section>
@@ -338,22 +338,22 @@ function groupByDate(evts: ActivityEvent[]): Record<string, ActivityEvent[]> {
 function formatDateHeader(dateStr: string): string {
   const today = new Date().toISOString().split('T')[0]
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().split('T')[0]
-  if (dateStr === today) return "Aujourd'hui"
-  if (dateStr === yesterday) return 'Hier'
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  if (dateStr === today) return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
+  return new Date(dateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
 }
 
 function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
   const currentYear = new Date().getFullYear()
   const cards = [
-    { value: year.titles_added, label: 'Ajoutés' },
-    { value: year.episodes_watched, label: '\u00C9pisodes' },
-    { value: year.completions, label: 'Terminés' },
+    { value: year.titles_added, label: 'Added' },
+    { value: year.episodes_watched, label: 'Episodes' },
+    { value: year.completions, label: 'Completed' },
   ]
 
   return (
     <section className={s.section}>
-      <SectionLabel>{`${currentYear} en chiffres`}</SectionLabel>
+      <SectionLabel>{`${currentYear} in numbers`}</SectionLabel>
       <div className={s.yearGrid}>
         {cards.map((card) => (
           <div key={card.label} className={s.yearCard}>

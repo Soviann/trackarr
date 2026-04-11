@@ -39,7 +39,7 @@ export function MatchReview({ path }: { path?: string }) {
         <div className={s.headerLeft}>
           <button
             onClick={() => history.back()}
-            aria-label="Retour"
+            aria-label="Back"
             className={s.backBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -68,7 +68,7 @@ export function MatchReview({ path }: { path?: string }) {
 
       {!loading && titles.length === 0 && (
         <div className={s.statusMsg}>
-          Aucun titre à vérifier
+          No titles to review
         </div>
       )}
 

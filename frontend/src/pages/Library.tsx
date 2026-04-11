@@ -65,7 +65,7 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
   return (
     <div className={s.loadMoreWrapper}>
       <button onClick={onClick} disabled={loading} className={s.loadMoreBtn}>
-        {loading ? 'Chargement...' : 'Charger plus'}
+        {loading ? 'Loading...' : 'Load more'}
       </button>
     </div>
   )
@@ -78,7 +78,7 @@ function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'tea
   air.setHours(0, 0, 0, 0)
   const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
   if (diffDays === 0) return { label: 'Today', variant: 'amber' }
-  if (diffDays <= 6) return { label: air.toLocaleDateString('fr-FR', { weekday: 'short' }), variant: 'teal' }
+  if (diffDays <= 6) return { label: air.toLocaleDateString('en-US', { weekday: 'short' }), variant: 'teal' }
   return { label: `in ${diffDays}d`, variant: 'muted' }
 }
 

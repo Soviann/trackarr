@@ -70,7 +70,7 @@ export function Login({ path }: { path?: string }) {
         <img src="/plextracker-logo.png" alt="PlexTracker" className={s.logo} />
         <div className={s.title}>PlexTracker</div>
         <div className={s.subtitle}>
-          Suivez votre bibliothèque multimédia
+          Track your media library
         </div>
       </div>
 
