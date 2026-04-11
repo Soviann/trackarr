@@ -21,6 +21,7 @@ func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		return httputil.InternalError("Internal error", err)
 	}
 
+	w.Header().Set("Cache-Control", "private, max-age=300")
 	httputil.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
