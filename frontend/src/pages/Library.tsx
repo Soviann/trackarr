@@ -101,13 +101,13 @@ export function Library(_props: { path?: string }) {
 
   const loadContinueWatching = useCallback(async () => {
     if (continueWatching !== null) return
-    const data = await apiFetch<ContinueWatchingTitle[]>('/api/titles/continue-watching')
+    const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching')
     setContinueWatching(data)
   }, [continueWatching])
 
   const loadUpcoming = useCallback(async () => {
     if (upcoming !== null) return
-    const data = await apiFetch<UpcomingTitle[]>('/api/titles/upcoming')
+    const data = await apiFetch<UpcomingTitle[]>('/titles/upcoming')
     setUpcoming(data)
   }, [upcoming])
 
