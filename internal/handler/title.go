@@ -345,6 +345,9 @@ func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error 
 		return httputil.InternalError("refresh title", fmt.Errorf("background service not available"))
 	}
 
+	// Intentional fire-and-forget: 202 Accepted. The refresh runs in background
+	// with a 2-minute timeout; errors are logged. The caller does not wait for
+	// completion. If surfacing failures to the UI is needed, wire into task queue.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	go func() {
 		defer cancel()

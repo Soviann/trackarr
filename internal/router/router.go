@@ -81,7 +81,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		r.Get("/config", handler.PublicConfig(cfg.GoogleClientID, cfg.VAPIDPublicKey, cfg.DebugLogin))
 
 		// Auth (unauthenticated, rate-limited)
-		authRateLimit := mw.RateLimit(10, time.Minute)
+		authRateLimit := mw.RateLimit(ctx, 10, time.Minute)
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID, cfg.CookieSecure)
 		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
 			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
@@ -92,7 +92,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		r.Post("/auth/logout", httputil.WrapHandler(auth.Logout))
 
 		// Plex webhook (secured by secret token in URL, rate-limited)
-		webhookRateLimit := mw.RateLimit(60, time.Minute)
+		webhookRateLimit := mw.RateLimit(ctx, 60, time.Minute)
 		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
 
 		// Covers (unauthenticated for caching)

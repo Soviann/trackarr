@@ -280,7 +280,10 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		default:
 		}
 
-		result, err := s.pipeline.Run(s.ctx, matching.MatchInput{
+		enrichCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+		defer cancel()
+
+		result, err := s.pipeline.Run(enrichCtx, matching.MatchInput{
 			Title:  titleName,
 			Year:   year,
 			Type:   titleType,
