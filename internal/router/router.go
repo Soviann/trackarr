@@ -73,6 +73,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
 	settings := handler.NewSettingsHandler(settingRepo)
 	stats := handler.NewStatsHandler(statsRepo)
+	clientErrors := &handler.ClientErrorHandler{}
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -134,6 +135,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
+
+			r.Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))
 		})
 	})
 
