@@ -94,10 +94,37 @@ describe('useLongPress', () => {
 
   it('prevents native context menu via onContextMenu', () => {
     const { result } = renderHook(() => useLongPress({ onLongPress: vi.fn() }))
-    const event = { preventDefault: vi.fn() } as unknown as Event
+    const event = { preventDefault: vi.fn() } as unknown as MouseEvent
 
     result.current.onContextMenu(event)
 
     expect(event.preventDefault).toHaveBeenCalledOnce()
+  })
+
+  it('does not call onLongPress after unmount (timer leak guard)', () => {
+    const onLongPress = vi.fn()
+    const { result, unmount } = renderHook(() => useLongPress({ onLongPress, threshold: 500 }))
+
+    result.current.onPointerDown(makePointerEvent())
+    vi.advanceTimersByTime(300)
+    unmount()
+    vi.advanceTimersByTime(300)
+
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
+
+  it('returns referentially stable handlers across re-renders', () => {
+    const onLongPress = vi.fn()
+    const { result, rerender } = renderHook(() => useLongPress({ onLongPress }))
+
+    const first = result.current
+    rerender()
+    const second = result.current
+
+    expect(second.onPointerDown).toBe(first.onPointerDown)
+    expect(second.onPointerUp).toBe(first.onPointerUp)
+    expect(second.onPointerMove).toBe(first.onPointerMove)
+    expect(second.onPointerCancel).toBe(first.onPointerCancel)
+    expect(second.onContextMenu).toBe(first.onContextMenu)
   })
 })

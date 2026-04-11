@@ -1,9 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { haptic, HAPTIC_SHORT, HAPTIC_MEDIUM, HAPTIC_LONG } from './haptic'
 
 describe('haptic', () => {
+  let originalVibrate: Navigator['vibrate'] | undefined
+
   beforeEach(() => {
-    vi.restoreAllMocks()
+    originalVibrate = (navigator as Partial<Navigator>).vibrate
+  })
+
+  afterEach(() => {
+    if (originalVibrate !== undefined) {
+      Object.defineProperty(navigator, 'vibrate', { value: originalVibrate, configurable: true })
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (navigator as any).vibrate
+    }
   })
 
   it('calls navigator.vibrate with explicit pattern', () => {
@@ -19,7 +30,7 @@ describe('haptic', () => {
     Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
 
     haptic(HAPTIC_LONG)
-    expect(vibrate).toHaveBeenCalledWith(HAPTIC_LONG)
+    expect(vibrate).toHaveBeenCalledWith([10, 30, 10])
   })
 
   it('uses HAPTIC_SHORT as default when pattern is omitted', () => {
@@ -31,15 +42,10 @@ describe('haptic', () => {
   })
 
   it('does not throw when navigator.vibrate is absent', () => {
-    const originalVibrate = (navigator as Partial<Navigator>).vibrate
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (navigator as any).vibrate
 
     expect(() => haptic()).not.toThrow()
-
-    if (originalVibrate !== undefined) {
-      Object.defineProperty(navigator, 'vibrate', { value: originalVibrate, configurable: true })
-    }
   })
 
   it('exports semantic constants', () => {

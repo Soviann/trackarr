@@ -1,4 +1,4 @@
-import { useRef } from 'preact/hooks'
+import { useRef, useEffect, useCallback, useMemo } from 'preact/hooks'
 
 export interface UseLongPressOptions {
   onLongPress: (e: PointerEvent) => void
@@ -12,32 +12,49 @@ interface StartPosition {
   y: number
 }
 
+const DEFAULT_THRESHOLD = 500
+const DEFAULT_MOVE_TOLERANCE = 10
+
 export function useLongPress(options: UseLongPressOptions) {
-  const { onLongPress, onClick, threshold = 500, moveTolerance = 10 } = options
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startPositionRef = useRef<StartPosition | null>(null)
   const firedRef = useRef(false)
 
-  function clearTimer() {
+  const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-  }
+  }, [])
 
-  function onPointerDown(e: PointerEvent) {
+  // Cancel any pending timer on unmount to prevent stale callback invocations
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [])
+
+  const onPointerDown = useCallback((e: PointerEvent) => {
+    const { onLongPress, threshold = DEFAULT_THRESHOLD } = optionsRef.current
     startPositionRef.current = { x: e.clientX, y: e.clientY }
     firedRef.current = false
 
     timerRef.current = setTimeout(() => {
       firedRef.current = true
+      timerRef.current = null
       onLongPress(e)
     }, threshold)
-  }
+  }, [])
 
-  function onPointerMove(e: PointerEvent) {
+  const onPointerMove = useCallback((e: PointerEvent) => {
     if (startPositionRef.current === null) return
+    const { moveTolerance = DEFAULT_MOVE_TOLERANCE } = optionsRef.current
 
     const dx = e.clientX - startPositionRef.current.x
     const dy = e.clientY - startPositionRef.current.y
@@ -46,26 +63,30 @@ export function useLongPress(options: UseLongPressOptions) {
     if (distance > moveTolerance) {
       clearTimer()
     }
-  }
+  }, [clearTimer])
 
-  function onPointerUp(e: PointerEvent) {
-    if (timerRef.current !== null) {
+  const onPointerUp = useCallback((e: PointerEvent) => {
+    const { onClick } = optionsRef.current
+    if (startPositionRef.current !== null) {
       clearTimer()
       if (!firedRef.current) {
         onClick?.(e)
       }
     }
     startPositionRef.current = null
-  }
+  }, [clearTimer])
 
-  function onPointerCancel() {
+  const onPointerCancel = useCallback(() => {
     clearTimer()
     startPositionRef.current = null
-  }
+  }, [clearTimer])
 
-  function onContextMenu(e: Event) {
+  const onContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault()
-  }
+  }, [])
 
-  return { onPointerDown, onPointerUp, onPointerMove, onPointerCancel, onContextMenu }
+  return useMemo(
+    () => ({ onPointerDown, onPointerUp, onPointerMove, onPointerCancel, onContextMenu }),
+    [onPointerDown, onPointerUp, onPointerMove, onPointerCancel, onContextMenu],
+  )
 }
