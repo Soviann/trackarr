@@ -3,6 +3,7 @@ package matching
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 )
@@ -182,9 +183,11 @@ func extractSeriesTMDB(d *tvdbSeriesDetail) int64 {
 	for _, r := range d.RemoteIDs {
 		if r.SourceID == 5 && len(r.ID) > 0 {
 			id, err := strconv.ParseInt(r.ID, 10, 64)
-			if err == nil {
-				return id
+			if err != nil {
+				log.Printf("tvdb: malformed remote id %q for sourceId %d", r.ID, r.SourceID)
+				continue
 			}
+			return id
 		}
 	}
 	return 0
@@ -195,9 +198,11 @@ func extractMovieTMDB(d *tvdbMovieDetail) int64 {
 	for _, r := range d.RemoteIDs {
 		if r.SourceID == 5 && len(r.ID) > 0 {
 			id, err := strconv.ParseInt(r.ID, 10, 64)
-			if err == nil {
-				return id
+			if err != nil {
+				log.Printf("tvdb: malformed remote id %q for sourceId %d", r.ID, r.SourceID)
+				continue
 			}
+			return id
 		}
 	}
 	return 0

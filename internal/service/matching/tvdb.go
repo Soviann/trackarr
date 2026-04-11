@@ -41,7 +41,10 @@ func (c *TVDBClient) SetBaseURL(u string) { c.baseURL = u }
 
 // Login authenticates with the TVDB API and caches the JWT token.
 func (c *TVDBClient) Login(ctx context.Context) error {
-	body, _ := json.Marshal(map[string]string{"apikey": c.apiKey})
+	body, err := json.Marshal(map[string]string{"apikey": c.apiKey})
+	if err != nil {
+		return fmt.Errorf("tvdb login: marshal payload: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/login", bytes.NewReader(body))
 	if err != nil {
 		return err

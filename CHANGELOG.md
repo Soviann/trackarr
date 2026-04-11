@@ -8,6 +8,11 @@
 
 ### Corrigé
 - Refresh de fond : les échecs d'écriture SQLite (`titles.Update`) ne sont plus ignorés silencieusement — chaque site loggue maintenant `background: update <kind> for title <id>: <err>`
+- Covers TVDB : un fichier partiel n'est plus laissé sur disque si `io.Copy` échoue pendant le téléchargement
+- TVDB client : erreur `json.Marshal` dans `Login` remontée explicitement au lieu d'être ignorée
+- TVDB : les IDs distants malformés (TMDB remote ID non-numérique) sont loggués au lieu d'être ignorés silencieusement
+- Pipeline matching : en cas de conflit IMDB (TMDB vs TVDB), l'ID TMDB est explicitement rétabli comme canonique avant le downgrade en `pending_review`
+- Refresh de fond : overview et genres TVDB persistés lorsque le titre n'a pas de TMDB ID (évite des métadonnées vides pour les titres TVDB-only)
 
 ### Amélioré
 - Bundle frontend : `MatchReview`, `Stats` et `FilterDrawer` extraits dans des chunks séparés (en plus d'`Admin` déjà splitté) — améliore la mise en cache navigateur pour les sections rarement modifiées

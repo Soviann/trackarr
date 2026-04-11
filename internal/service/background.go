@@ -173,15 +173,16 @@ func logTitleUpdate(titleID int64, kind string, err error) {
 	}
 }
 
-// refreshFromTVDB fetches TVDB cover for titles that have a TVDB ID.
+// refreshFromTVDB fetches TVDB data for titles that have a TVDB ID.
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
+// For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
+// For titles without a TMDB ID, overview and genres are also persisted from TVDB.
 func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title) {
 	if title.TVDBID == nil {
 		return
 	}
 	tvdbID := *title.TVDBID
 
-	// Fetch TVDB details
 	update := repository.TitleUpdate{}
 	if title.Type == model.TitleTypeMovie {
 		details, err := s.tvdb.GetMovieDetails(ctx, tvdbID)
@@ -192,6 +193,24 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
 				update.CoverURL = &filename
+			}
+		}
+		if title.TMDBID == nil {
+			if details.Overview != "" {
+				ov := details.Overview
+				update.Overview = &ov
+			}
+			var genres []string
+			for _, g := range details.Genres {
+				if g.Name != "" {
+					genres = append(genres, g.Name)
+				}
+			}
+			if len(genres) > 0 {
+				if b, err := json.Marshal(genres); err == nil {
+					gs := string(b)
+					update.Genres = &gs
+				}
 			}
 		}
 	} else {
@@ -205,9 +224,27 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 				update.CoverURL = &filename
 			}
 		}
+		if title.TMDBID == nil {
+			if details.Overview != "" {
+				ov := details.Overview
+				update.Overview = &ov
+			}
+			var genres []string
+			for _, g := range details.Genres {
+				if g.Name != "" {
+					genres = append(genres, g.Name)
+				}
+			}
+			if len(genres) > 0 {
+				if b, err := json.Marshal(genres); err == nil {
+					gs := string(b)
+					update.Genres = &gs
+				}
+			}
+		}
 	}
-	if update.CoverURL != nil {
-		logTitleUpdate(title.ID, "tvdb cover", s.titles.Update(title.ID, update))
+	if update.CoverURL != nil || update.Overview != nil || update.Genres != nil {
+		logTitleUpdate(title.ID, "tvdb refresh", s.titles.Update(title.ID, update))
 	}
 }
 

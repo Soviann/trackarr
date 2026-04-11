@@ -112,7 +112,9 @@ func (p *Pipeline) Run(ctx context.Context, input MatchInput) (*MatchResult, err
 		IsAnime:   input.IsAnime,
 	}
 
-	// Step 1: Check Plex metadata IDs — if we have TMDB, IMDB or AniList, we're confirmed
+	// Step 1: Check Plex metadata IDs — if we have TMDB, IMDB or AniList, we're confirmed.
+	// result.TVDBID from input (if any) is forwarded to enrichFromIDs, which fetches TVDB data
+	// and runs conflict checks when both TMDB and TVDB IDs are present.
 	if result.TMDBID != 0 || result.IMDBID != "" || result.AniListID != 0 {
 		result.MatchStatus = model.MatchStatusConfirmed
 		result.MatchSource = MatchSourcePlexIDs
@@ -501,15 +503,19 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		result.TMDBID = tvdbRes.tmdbID
 	}
 
-	// IMDB conflict: both sources returned an IMDB ID that differs
+	// IMDB conflict: both sources returned an IMDB ID that differs.
+	// TMDB is canonical (primary matcher); result.IMDBID was already set from TMDB above (L487).
+	// Re-assign explicitly to make the canonical-source invariant clear, then flag for review.
 	if tmdbRes.imdbID != "" && tvdbRes.imdbID != "" && tmdbRes.imdbID != tvdbRes.imdbID {
-		log.Printf("cross-ref conflict: IMDB mismatch (tvdb=%d): TMDB=%s TVDB=%s — downgrading to pending_review", result.TVDBID, tmdbRes.imdbID, tvdbRes.imdbID)
+		log.Printf("cross-ref conflict: IMDB mismatch (tvdb=%d): TMDB says %q, TVDB says %q — keeping TMDB, downgrading to pending_review", result.TVDBID, tmdbRes.imdbID, tvdbRes.imdbID)
+		result.IMDBID = tmdbRes.imdbID // TMDB canonical; discard TVDB's conflicting IMDB ID
 		result.MatchStatus = model.MatchStatusPendingReview
 	}
 
-	// TMDB ID conflict: Plex/TMDB TMDB ID differs from TVDB's reported TMDB counterpart
+	// TMDB ID conflict: Plex/TMDB TMDB ID differs from TVDB's reported TMDB counterpart.
+	// result.TMDBID is never overwritten by tvdbRes (see guard above); Plex-sourced ID is canonical.
 	if result.TMDBID != 0 && tvdbRes.tmdbID != 0 && result.TMDBID != tvdbRes.tmdbID {
-		log.Printf("cross-ref conflict: TMDB ID mismatch (tvdb=%d): have=%d TVDB says=%d — downgrading to pending_review", result.TVDBID, result.TMDBID, tvdbRes.tmdbID)
+		log.Printf("cross-ref conflict: TMDB ID mismatch (tvdb=%d): have=%d, TVDB says=%d — keeping existing, downgrading to pending_review", result.TVDBID, result.TMDBID, tvdbRes.tmdbID)
 		result.MatchStatus = model.MatchStatusPendingReview
 	}
 
@@ -768,6 +774,9 @@ func (p *Pipeline) downloadAniListCover(ctx context.Context, result *MatchResult
 	result.CoverFile = filename
 }
 
+// mergeIDs fills empty ID slots from a cross-reference lookup.
+// All fills are gated on empty-slot conditions: existing runtime IDs (from Plex or a prior lookup)
+// are never overwritten. If a slot is already populated, the cross-ref value is silently ignored.
 func mergeIDs(result *MatchResult, ids *ExternalIDs) {
 	if result.IMDBID == "" && ids.IMDB != "" {
 		result.IMDBID = ids.IMDB

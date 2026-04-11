@@ -371,6 +371,72 @@ func TestPipeline_Step2_CrossRef(t *testing.T) {
 	assert.True(t, result.IsAnime)
 }
 
+func TestPipeline_IMDBConflict_TMDBWins(t *testing.T) {
+	dataDir := t.TempDir()
+
+	// TMDB mock: title 550 returns IMDB "tt0137523"
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc("/movie/550", func(w http.ResponseWriter, r *http.Request) {
+		poster := "/poster550.jpg"
+		_ = json.NewEncoder(w).Encode(TMDBMovieDetails{
+			ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15",
+			IMDBID: "tt0137523", PosterPath: &poster,
+			ExternalIDs: &struct {
+				IMDBID string `json:"imdb_id"`
+				TVDBID int64  `json:"tvdb_id"`
+			}{IMDBID: "tt0137523"},
+		})
+	})
+	tmdbMux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{})
+	})
+	tmdbMux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("fake-cover"))
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	defer tmdbServer.Close()
+	tmdbClient := NewTMDBClient("test-key")
+	tmdbClient.baseURL = tmdbServer.URL
+
+	// TVDB mock: TVDB ID 999 returns a CONFLICTING IMDB "tt9999999"
+	tvdbMux := http.NewServeMux()
+	tvdbMux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"data": map[string]string{"token": "test-token"},
+		})
+	})
+	tvdbMux.HandleFunc("/movies/999/extended", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"data": map[string]interface{}{
+				"id":   999,
+				"name": "Fight Club",
+				"remoteIds": []map[string]interface{}{
+					{"id": "tt9999999", "sourceId": 2}, // IMDB, conflicts with TMDB
+				},
+			},
+		})
+	})
+	tvdbServer := httptest.NewServer(tvdbMux)
+	defer tvdbServer.Close()
+	tvdbClient := NewTVDBClient("test-key")
+	tvdbClient.SetBaseURL(tvdbServer.URL)
+
+	pipeline := NewPipeline(tmdbClient, nil, nil, nil, dataDir)
+	pipeline.SetTVDB(tvdbClient)
+
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title:  "Fight Club",
+		Year:   1999,
+		Type:   model.TitleTypeMovie,
+		TMDBID: 550,
+		TVDBID: 999,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
+	assert.Equal(t, MatchSourcePlexIDs, result.MatchSource)
+	assert.Equal(t, "tt0137523", result.IMDBID, "TMDB IMDB ID should win over TVDB's conflicting value")
+}
+
 func TestPipeline_NilClients(t *testing.T) {
 	// Pipeline should work gracefully with nil optional clients
 	pipeline := NewPipeline(nil, nil, nil, nil, t.TempDir())
