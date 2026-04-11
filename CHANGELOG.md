@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Filtrage par genre dans la bibliothèque et la recherche (ANY ou ALL) via un panneau de genres déroulant avec recherche textuelle
+- Bouton TMDB dans la page de recherche pour afficher des résultats TMDB en complément de la bibliothèque locale
+- Endpoint `GET /api/genres` renvoyant les genres de la bibliothèque triés par occurrence
+- Migration 016 : les genres sont maintenant stockés dans une table de jointure `title_genres` (normalisée) au lieu d'une colonne JSON
+
 ### Corrigé
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
 - Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion
