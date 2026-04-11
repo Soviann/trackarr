@@ -58,6 +58,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
+	activityRepo := repository.NewActivityRepository(readDB)
+	historyRepo := repository.NewHistoryRepository(readDB)
 
 	// Handlers
 	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
@@ -73,6 +75,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
 	settings := handler.NewSettingsHandler(settingRepo)
 	stats := handler.NewStatsHandler(statsRepo)
+	activity := handler.NewActivityHandler(activityRepo)
+	history := handler.NewHistoryHandler(historyRepo)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -119,6 +123,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
 
 			r.Get("/stats", httputil.WrapHandler(stats.Get))
+			r.Get("/stats/activity", httputil.WrapHandler(activity.List))
+
+			r.Get("/titles/{id}/history", httputil.WrapHandler(history.Get))
 
 			r.Get("/settings", httputil.WrapHandler(settings.Get))
 
