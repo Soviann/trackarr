@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -264,4 +265,78 @@ func TestTitleHandler_List_WithPagination(t *testing.T) {
 	assert.Len(t, result.Titles, 2)
 	assert.Equal(t, 5, result.Total)
 	assert.True(t, result.HasMore)
+}
+
+func TestTitleHandler_Delete(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	id, err := titleRepo.Create(
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "To Delete", Language: "en", IsPrimary: true}},
+	)
+	require.NoError(t, err)
+
+	router := chi.NewRouter()
+	router.Delete("/api/titles/{id}", httputil.WrapHandler(h.Delete))
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/titles/%d", id), nil)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	// Verify deleted
+	_, err = titleRepo.GetByID(id)
+	assert.Error(t, err)
+}
+
+func TestTitleHandler_BatchDelete(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	id1, _ := titleRepo.Create(
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Title 1", Language: "en", IsPrimary: true}},
+	)
+	id2, _ := titleRepo.Create(
+		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Title 2", Language: "en", IsPrimary: true}},
+	)
+
+	body := fmt.Sprintf(`{"ids":[%d,%d]}`, id1, id2)
+	req := httptest.NewRequest(http.MethodPost, "/api/titles/batch-delete", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	require.NoError(t, h.BatchDelete(rr, req))
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	_, err := titleRepo.GetByID(id1)
+	assert.Error(t, err)
+	_, err = titleRepo.GetByID(id2)
+	assert.Error(t, err)
+}
+
+func TestTitleHandler_BatchStatus(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	id1, _ := titleRepo.Create(
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Title A", Language: "en", IsPrimary: true}},
+	)
+	id2, _ := titleRepo.Create(
+		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Title B", Language: "en", IsPrimary: true}},
+	)
+
+	body := fmt.Sprintf(`{"ids":[%d,%d],"status":"completed"}`, id1, id2)
+	req := httptest.NewRequest(http.MethodPost, "/api/titles/batch-status", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	require.NoError(t, h.BatchStatus(rr, req))
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	t1, err := titleRepo.GetByID(id1)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, t1.Status)
 }

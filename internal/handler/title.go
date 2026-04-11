@@ -323,3 +323,57 @@ func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
 	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	return nil
 }
+
+// Delete removes a title by ID.
+func (h *TitleHandler) Delete(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+	if err := h.titles.Delete(id); err != nil {
+		return fmt.Errorf("title: delete: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// BatchDelete removes multiple titles by ID.
+func (h *TitleHandler) BatchDelete(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid body")
+	}
+	if len(body.IDs) == 0 {
+		return httputil.BadRequest("ids is required")
+	}
+	if err := h.titles.BatchDelete(body.IDs); err != nil {
+		return fmt.Errorf("title: batch delete: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// BatchStatus updates the status of multiple titles.
+func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		IDs    []int64 `json:"ids"`
+		Status string  `json:"status"`
+	}
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid body")
+	}
+	if len(body.IDs) == 0 || body.Status == "" {
+		return httputil.BadRequest("ids and status are required")
+	}
+	validStatuses := map[string]bool{"watching": true, "completed": true, "dropped": true, "plan_to_watch": true}
+	if !validStatuses[body.Status] {
+		return httputil.BadRequest("Invalid status")
+	}
+	if err := h.titles.BatchUpdateStatus(body.IDs, body.Status); err != nil {
+		return fmt.Errorf("title: batch status: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
