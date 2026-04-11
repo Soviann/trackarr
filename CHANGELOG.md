@@ -25,6 +25,7 @@
 - DB : migration 017 — colonnes `next_air_date` et `next_air_episode` sur la table `titles`, peuplées lors du refresh TMDB
 
 ### Corrigé
+- Stats → Activité récente : le type de chaque entrée est désormais déterminé à partir du type du titre au lieu de la présence d'un nom d'épisode, les épisodes de séries sans titre renseigné ne sont plus étiquetés « Film »
 - ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)
 - Push notifications : les échecs d'enregistrement du service worker exposent désormais un état `pushError` retourné par `usePush`, exploitable par l'UI pour informer l'utilisateur
 - JWT : expiry calculé en UTC explicite (`time.Now().UTC()`) dans les deux chemins d'authentification (Google OAuth et dev login)

@@ -289,24 +289,32 @@ function ActivitySection() {
       {Object.entries(grouped).map(([date, evts]) => (
         <div key={date}>
           <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
-          {evts.map((ev, i) => (
-            <a key={i} href={`/titles/${ev.title_id}`} className={s.activityRow}>
-              {ev.cover_url
-                ? <img className={s.activityThumb} src={`/api/covers/${ev.cover_url}`} alt="" role="presentation" />
-                : <div className={s.activityThumbPlaceholder} />}
-              <div className={s.activityInfo}>
-                <span className={s.activityTitle}>{ev.title_name}</span>
-                <span className={s.activitySub}>
-                  {ev.episode_name
-                    ? `S${ev.season_number} E${ev.episode_number} — ${ev.episode_name}`
-                    : 'Film'}
+          {evts.map((ev, i) => {
+            const isMovie = ev.title_type === 'movie'
+            const episodeCode = ev.season_number != null && ev.episode_number != null
+              ? `S${ev.season_number} E${ev.episode_number}`
+              : null
+            return (
+              <a key={i} href={`/titles/${ev.title_id}`} className={s.activityRow}>
+                {ev.cover_url
+                  ? <img className={s.activityThumb} src={`/api/covers/${ev.cover_url}`} alt="" role="presentation" />
+                  : <div className={s.activityThumbPlaceholder} />}
+                <div className={s.activityInfo}>
+                  <span className={s.activityTitle}>{ev.title_name}</span>
+                  <span className={s.activitySub}>
+                    {isMovie
+                      ? 'Movie'
+                      : episodeCode
+                        ? ev.episode_name ? `${episodeCode} — ${ev.episode_name}` : episodeCode
+                        : 'Episode'}
+                  </span>
+                </div>
+                <span className={`${s.activityBadge} ${s[`badge_${ev.is_completion ? 'done' : ev.title_type}`]}`}>
+                  {ev.is_completion ? 'Completed' : isMovie ? 'Movie' : 'Episode'}
                 </span>
-              </div>
-              <span className={`${s.activityBadge} ${s[`badge_${ev.is_completion ? 'done' : ev.title_type}`]}`}>
-                {ev.is_completion ? 'Terminé' : ev.episode_name ? 'Épisode' : 'Film'}
-              </span>
-            </a>
-          ))}
+              </a>
+            )
+          })}
         </div>
       ))}
       {hasMore && (
