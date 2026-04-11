@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Stats : carte "Temps regardé" dans la vue d'ensemble (→ `total_watch_minutes`, gracieux si colonne absente)
+- Stats : histogramme des top genres (→ `title_genres`, gracieux si table absente)
+- Stats : cartes "Série en cours" et "Meilleure série" de jours consécutifs
+- Stats : flux d'activité récente paginé (`GET /api/stats/activity`) groupé par date
+- TitleDetail : bouton « Historique » ouvrant un panneau de visionnage par épisode avec compteur de rewatches (`GET /api/titles/{id}/history`)
+
 ### Corrigé
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
 - Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion
