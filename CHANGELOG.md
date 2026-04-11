@@ -6,6 +6,9 @@
 - Intégration TheTVDB : enrichissement parallèle TMDB+TVDB à chaque import/refresh — note TVDB affichée en badge sur la fiche titre, lien externe TVDB dans l'ActionDrawer, champ TVDB ID dans Fix match → Manual IDs, et prise en charge des URLs `thetvdb.com/series/<slug>` et `thetvdb.com/movies/<slug>` dans le champ Add (et partage PWA)
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
+### Corrigé
+- Refresh de fond : les échecs d'écriture SQLite (`titles.Update`) ne sont plus ignorés silencieusement — chaque site loggue maintenant `background: update <kind> for title <id>: <err>`
+
 ### Amélioré
 - Bundle frontend : `MatchReview`, `Stats` et `FilterDrawer` extraits dans des chunks séparés (en plus d'`Admin` déjà splitté) — améliore la mise en cache navigateur pour les sections rarement modifiées
 - Détail titre : `width`/`height` explicites sur l'image miniature (80×120 px) pour éviter le décalage de mise en page (CLS) avant chargement du CSS

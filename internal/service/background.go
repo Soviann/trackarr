@@ -166,6 +166,13 @@ func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Ti
 	}
 }
 
+// logTitleUpdate logs an error from s.titles.Update if non-nil.
+func logTitleUpdate(titleID int64, kind string, err error) {
+	if err != nil {
+		log.Printf("background: update %s for title %d: %v", kind, titleID, err)
+	}
+}
+
 // refreshFromTVDB fetches TVDB cover for titles that have a TVDB ID.
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title) {
@@ -200,7 +207,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 		}
 	}
 	if update.CoverURL != nil {
-		_ = s.titles.Update(title.ID, update)
+		logTitleUpdate(title.ID, "tvdb cover", s.titles.Update(title.ID, update))
 	}
 }
 
@@ -216,7 +223,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+			logTitleUpdate(title.ID, "movie cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
 		}
 	}
@@ -235,7 +242,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	if rating != nil {
 		metaUpdate.TMDBRating = rating
 	}
-	_ = s.titles.Update(title.ID, metaUpdate)
+	logTitleUpdate(title.ID, "movie metadata", s.titles.Update(title.ID, metaUpdate))
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
@@ -245,7 +252,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
 	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
 		tvdbID := details.ExternalIDs.TVDBID
-		_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+		logTitleUpdate(title.ID, "movie tvdb backfill", s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
 }
@@ -266,7 +273,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 			result.OldStatus = *title.SeriesStatus
 		}
 		result.NewStatus = *newStatus
-		_ = s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus})
+		logTitleUpdate(title.ID, "series status", s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus}))
 		title.SeriesStatus = newStatus
 
 		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
@@ -282,7 +289,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+			logTitleUpdate(title.ID, "series cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
 		}
 	}
@@ -301,7 +308,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	if rating != nil {
 		metaUpdate.TMDBRating = rating
 	}
-	_ = s.titles.Update(title.ID, metaUpdate)
+	logTitleUpdate(title.ID, "series metadata", s.titles.Update(title.ID, metaUpdate))
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
@@ -341,7 +348,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
 	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
 		tvdbID := details.ExternalIDs.TVDBID
-		_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+		logTitleUpdate(title.ID, "series tvdb backfill", s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
 }
@@ -404,7 +411,7 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 			if posterPath != nil && *posterPath != "" {
 				coverPath, err := s.tmdb.DownloadCover(*posterPath, s.coversDir())
 				if err == nil {
-					_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					logTitleUpdate(title.ID, "missing cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 					fetched++
 					_ = s.limiter.Wait(ctx)
 					continue
@@ -440,7 +447,7 @@ func (s *BackgroundService) downloadAniListCover(title *model.Title) bool {
 		return false
 	}
 
-	_ = s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+	logTitleUpdate(title.ID, "anilist cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 	return true
 }
 
