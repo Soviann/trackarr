@@ -42,6 +42,7 @@ type TitleFilter struct {
 }
 
 const DefaultPageSize = 50
+const MaxPageSize = 200
 
 // PaginatedResult wraps a list of titles with pagination metadata.
 type PaginatedResult struct {

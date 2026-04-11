@@ -61,8 +61,12 @@ var allowedSorts = map[string]bool{
 }
 
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
+	limit := httputil.ParseQueryInt(r, "limit", repository.DefaultPageSize)
+	if limit > repository.MaxPageSize {
+		limit = repository.MaxPageSize
+	}
 	filter := repository.TitleFilter{
-		Limit:  httputil.ParseQueryInt(r, "limit", repository.DefaultPageSize),
+		Limit:  limit,
 		Offset: httputil.ParseQueryInt(r, "offset", 0),
 	}
 	if sortField := r.URL.Query().Get("sort"); allowedSorts[sortField] {
