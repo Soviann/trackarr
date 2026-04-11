@@ -85,16 +85,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/commit-checkpoint.sh\""
-          }
-        ]
-      }
     ]
   },
   "enabledPlugins": {
