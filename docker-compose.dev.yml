@@ -3,10 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: plextracker-dev
+    container_name: plextracker-wt-af048674
     ports:
-      - "5174:5174"   # Vite dev server
-      - "8080:8080"   # Go backend (API, proxied by Vite)
+      - "5176:5174"   # Vite dev server
+      - "8082:8080"   # Go backend (API, proxied by Vite)
     volumes:
       - .:/app
       - go-mod-cache:/go/pkg/mod

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Fiche titre : affichage du temps de visionnage total (ex : "2h 30m") dans l'onglet Détails, cumulé sur tous les visionnages y compris les rewatches
+- Colonne `total_watch_minutes` sur les titres (migration 015), maintenue automatiquement lors de chaque ajout ou suppression d'événement de visionnage (manuel, Plex, Simkl)
+- Le temps de visionnage est recalculé automatiquement lors de l'enrichissement TMDB quand le runtime change
+
 ### Corrigé
 - Bibliothèque : correction de la date `last_watched_at` des titres (historique Simkl et webhooks Plex uniquement) en supprimant le trigger automatique qui polluait le tri "Recently Watched"
 - Webhook Plex : les scrobbles d'épisodes n'écrasent plus l'ID TMDB de la série par celui de l'épisode, ce qui empêchait l'enrichissement et l'auto-complétion
