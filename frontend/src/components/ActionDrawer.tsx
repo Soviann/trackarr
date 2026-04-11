@@ -1,4 +1,4 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
 import type { Title, Episode } from '../types'
 import s from './ActionDrawer.module.css'
@@ -23,17 +23,29 @@ export function ActionDrawer({
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const mounted = useRef(true)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false
+      if (timerRef.current !== null) clearTimeout(timerRef.current)
+    }
+  }, [])
 
   const handleRefreshClick = async () => {
     if (refreshState !== 'idle') return
     setRefreshState('loading')
     try {
       await onRefresh()
-      setRefreshState('success')
+      if (mounted.current) setRefreshState('success')
     } catch {
-      setRefreshState('error')
+      if (mounted.current) setRefreshState('error')
     } finally {
-      setTimeout(() => setRefreshState('idle'), 2000)
+      if (timerRef.current !== null) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => {
+        if (mounted.current) setRefreshState('idle')
+      }, 2000)
     }
   }
 

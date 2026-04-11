@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -76,16 +76,17 @@ export function AdminTasks({ path }: { path?: string }) {
   const limit = 50
   const offset = (page - 1) * 50
   const { data, loading, mutate: rawMutate } = useApi<TasksResponse>(`/admin/tasks?filter=${filter}&limit=${limit}&offset=${offset}`)
+  const pageRef = useRef(page)
+  pageRef.current = page
 
   useEffect(() => {
     if (!data?.tasks) return
-    // page is current at the time data arrives (after fetch completes)
-    if (page === 1) {
+    if (pageRef.current === 1) {
       setAllTasks(data.tasks)
     } else {
       setAllTasks(prev => [...prev, ...data.tasks])
     }
-  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data])
 
   const mutate = () => {
     setAllTasks([])

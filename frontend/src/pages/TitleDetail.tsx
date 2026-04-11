@@ -218,8 +218,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         <div className={s.card}>
           <div className={s.cardLabel}>Cast & Crew</div>
           <div className={s.castList}>
-            {credits.map((c, i) => (
-              <div key={i} className={s.castEntry}>
+            {credits.map((c) => (
+              <div key={`${c.name}-${c.role}`} className={s.castEntry}>
                 <span className={s.castPerson}>{c.name}</span>
                 <span className={s.castRole}>{c.role}</span>
               </div>
