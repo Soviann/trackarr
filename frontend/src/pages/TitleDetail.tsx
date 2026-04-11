@@ -14,6 +14,7 @@ import { AniListSheet } from '../components/AniListSheet'
 import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { TitleHistory } from '../components/TitleHistory'
 import s from './TitleDetail.module.css'
 
 function getNextUnwatched(title: Title) {
@@ -48,6 +49,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showEdit, setShowEdit] = useState(false)
   const [showAniList, setShowAniList] = useState(false)
   const [showRematch, setShowRematch] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -257,6 +259,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           </div>
         )}
       </div>
+
+      {/* Historique button */}
+      <div className={s.historyBtnWrap}>
+        <button className={s.historyBtn} onClick={() => setShowHistory(true)}>
+          Historique
+        </button>
+      </div>
+
+      {/* Watch history overlay */}
+      {showHistory && (
+        <div className={s.historyOverlay}>
+          <TitleHistory titleId={title.id} onClose={() => setShowHistory(false)} />
+        </div>
+      )}
 
       {/* Progress bar (series/anime) */}
       {current && title.type !== 'movie' && (
