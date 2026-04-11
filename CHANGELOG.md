@@ -7,6 +7,9 @@
 - Bibliothèque : badge de statut (Watching, Completed, Dropped, Plan) sur chaque entrée de la grille et de la liste pour identifier le statut d'un coup d'œil
 
 ### Amélioré
+- Match Review : chargement initial réduit de 500 à 50 éléments par section (pending/unconfirmed), avec bouton « Load more » ; confirmation en lot parallélisée (requests simultanées au lieu de séquentielles)
+- Admin Tasks : pagination réelle par offset (`limit=50&offset=N`) au lieu d'un limit croissant qui re-téléchargeait tout à chaque page
+- Admin Notifications : annulation automatique du fetch lors de la navigation (remplacement de `apiFetch` brut par le hook `useApi`)
 - Refresh de fond : la détection « tous les épisodes vus » utilise désormais une requête SQL EXISTS au lieu de recharger tout le titre (seasons + episodes), réduisant les requêtes SQLite lors du passage en `completed`
 - Refresh de fond : suppression de la double récupération TMDB dans `refreshFromTVDB` — le TVDB ID est désormais extrait en ligne dans `refreshMovieFromTMDB` / `refreshSeriesFromTMDB` (là où `details` est déjà en mémoire), réduisant la consommation de quota TMDB d'environ 50 % sur le chemin TVDB
 - Refresh de fond : goroutine `RefreshOne` limitée à 2 minutes via `context.WithTimeout` pour éviter les fuites en cas de timeout TMDB/TVDB
