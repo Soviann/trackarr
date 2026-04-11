@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -340,8 +341,10 @@ func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error 
 		return httputil.InternalError("refresh title", fmt.Errorf("background service not available"))
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	go func() {
-		if err := h.bgSvc.RefreshByID(context.Background(), id); err != nil {
+		defer cancel()
+		if err := h.bgSvc.RefreshByID(ctx, id); err != nil {
 			log.Printf("refresh title %d: %v", id, err)
 		}
 	}()

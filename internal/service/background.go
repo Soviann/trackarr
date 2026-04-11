@@ -104,7 +104,7 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 		return nil
 	}
 
-	var results []RefreshResult
+	results := make([]RefreshResult, 0, len(titles))
 
 	for _, title := range titles {
 		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
@@ -142,11 +142,10 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 	}
 
 	// Step 2: Auto-complete if series ended and all episodes watched
-	// Need full title with seasons/episodes for this check
 	if title.Type != model.TitleTypeMovie && title.SeriesStatus != nil {
 		if *title.SeriesStatus == model.SeriesStatusEnded || *title.SeriesStatus == model.SeriesStatusCancelled {
-			full, err := s.titles.GetByID(title.ID)
-			if err == nil && s.allEpisodesWatched(full) {
+			hasUnwatched, err := s.titles.HasUnwatchedEpisodes(title.ID)
+			if err == nil && !hasUnwatched {
 				completed := model.TitleStatusCompleted
 				if err := s.titles.Update(title.ID, repository.TitleUpdate{Status: &completed}); err == nil {
 					result.AutoCompleted = true
@@ -167,34 +166,13 @@ func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Ti
 	}
 }
 
-// refreshFromTVDB fetches TVDB rating and cover for titles that have (or can resolve) a TVDB ID.
-// It also writes tvdb_id to the DB when TMDB cross-references one that wasn't stored yet.
+// refreshFromTVDB fetches TVDB cover for titles that have a TVDB ID.
+// TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title) {
-	// Resolve TVDB ID: use stored value or cross-reference from TMDB external IDs
-	tvdbID := int64(0)
-	if title.TVDBID != nil {
-		tvdbID = *title.TVDBID
-	} else if title.TMDBID != nil {
-		// Try to get TVDB ID from TMDB external_ids
-		if title.Type == model.TitleTypeMovie {
-			if details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID); err == nil {
-				if details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-					tvdbID = details.ExternalIDs.TVDBID
-					_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
-				}
-			}
-		} else {
-			if details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID); err == nil {
-				if details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-					tvdbID = details.ExternalIDs.TVDBID
-					_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
-				}
-			}
-		}
-	}
-	if tvdbID == 0 {
+	if title.TVDBID == nil {
 		return
 	}
+	tvdbID := *title.TVDBID
 
 	// Fetch TVDB details
 	update := repository.TitleUpdate{}
@@ -262,6 +240,13 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
 		s.downloadAniListCover(title)
+	}
+
+	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
+	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+		tvdbID := details.ExternalIDs.TVDBID
+		_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+		title.TVDBID = &tvdbID
 	}
 }
 
@@ -352,20 +337,13 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 
 		_ = s.limiter.Wait(ctx)
 	}
-}
 
-func (s *BackgroundService) allEpisodesWatched(title *model.Title) bool {
-	for _, season := range title.Seasons {
-		if len(season.Episodes) == 0 {
-			return false
-		}
-		for _, ep := range season.Episodes {
-			if !ep.Watched {
-				return false
-			}
-		}
+	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
+	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
+		tvdbID := details.ExternalIDs.TVDBID
+		_ = s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID})
+		title.TVDBID = &tvdbID
 	}
-	return len(title.Seasons) > 0
 }
 
 func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {

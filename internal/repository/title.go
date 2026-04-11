@@ -871,6 +871,21 @@ func parseSQLiteTime(s *string) *time.Time {
 	return nil
 }
 
+// HasUnwatchedEpisodes returns true if the title has at least one unwatched episode.
+func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
+	const query = `
+		SELECT EXISTS(
+			SELECT 1 FROM episodes e
+			JOIN seasons s ON e.season_id = s.id
+			WHERE s.title_id = ? AND e.watched = 0
+		)`
+	var exists bool
+	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("has unwatched episodes: %w", err)
+	}
+	return exists, nil
+}
+
 // GetUsedCoversInBatch returns a map containing the subset of filenames that are currently in use.
 func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]bool, error) {
 	if len(filenames) == 0 {
