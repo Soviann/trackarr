@@ -33,6 +33,10 @@
 /* Counter */
 .counter {
   padding: 0 var(--space-lg) var(--space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
 .counterText {
@@ -136,7 +140,7 @@
 }
 
 /* Bulk selection */
-.selectBtn { font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: var(--surface-raised); color: var(--text-muted); border: none; cursor: pointer; margin-right: 8px; }
+.selectBtn { font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: var(--surface-raised); color: var(--text-muted); border: none; cursor: pointer; }
 .selectBtnActive { background: color-mix(in srgb, var(--accent-amber) 20%, transparent); color: var(--accent-amber); }
 .selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); }
 .selectAllBtn { font-size: 12px; font-weight: 600; color: var(--accent-amber); background: none; border: none; cursor: pointer; }
@@ -145,7 +149,6 @@
 .actionBarLabel { flex: 1; font-size: 12px; color: var(--text-muted); }
 .actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-teal) 20%, transparent); color: var(--accent-teal); border: none; cursor: pointer; }
 .actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-coral) 20%, transparent); color: var(--accent-coral); border: none; cursor: pointer; }
-.selectableCard { position: relative; }
 .checkbox { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; z-index: 1; pointer-events: none; }
 .checked { background: var(--accent-amber); border-color: var(--accent-amber); }
 .statusSheet { padding: 16px; display: flex; flex-direction: column; gap: 8px; }

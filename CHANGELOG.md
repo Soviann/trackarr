@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Bibliothèque : le mode sélection multiple est de nouveau utilisable — la grille ne déraille plus quand on active « Select » (une colonne s'élargissait à cause d'un wrapper sans `overflow: hidden`) et toucher une affiche en mode sélection coche la pastille au lieu d'ouvrir la fiche détail (le listener global de preact-router sur les `<a>` forçait la navigation en parallèle)
+
+### Modifié
+- Bibliothèque : le bouton « Select » quitte l'en-tête et rejoint la ligne du compteur de résultats, aligné à droite, pour mieux se rattacher visuellement à la liste qu'il concerne
+
 ## [v0.13.1] — 2026-04-11
 
 ### Modifié

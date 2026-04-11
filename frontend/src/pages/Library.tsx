@@ -177,12 +177,6 @@ export function Library(_props: { path?: string }) {
       <div className={s.header}>
         <div className={s.headerTitle}>Library</div>
         <button
-          className={`${s.selectBtn} ${selecting ? s.selectBtnActive : ''}`}
-          onClick={() => selecting ? exitSelect() : setSelecting(true)}
-        >
-          {selecting ? 'Cancel' : 'Select'}
-        </button>
-        <button
           onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route('/login') }}
           className={s.logoutBtn}
         >
@@ -193,13 +187,6 @@ export function Library(_props: { path?: string }) {
           </svg>
         </button>
       </div>
-
-      {selecting && (
-        <div className={s.selectAllRow}>
-          <button className={s.selectAllBtn} onClick={selectAll}>Select all</button>
-          <span className={s.selectCount}>{selected.size} of {titles.length}</span>
-        </div>
-      )}
 
       {error && <ErrorBanner message={error} onRetry={invalidate} />}
 
@@ -225,6 +212,13 @@ export function Library(_props: { path?: string }) {
         )}
       </CollapsibleSection>
 
+      {selecting && (
+        <div className={s.selectAllRow}>
+          <button className={s.selectAllBtn} onClick={selectAll}>Select all</button>
+          <span className={s.selectCount}>{selected.size} of {titles.length}</span>
+        </div>
+      )}
+
       {loading && titles.length === 0 && (
         <div className={s.centered}>Loading...</div>
       )}
@@ -244,6 +238,12 @@ export function Library(_props: { path?: string }) {
               <span className={s.counterText}>
                 {titles.length} / {total} titles
               </span>
+              <button
+                className={`${s.selectBtn} ${selecting ? s.selectBtnActive : ''}`}
+                onClick={() => selecting ? exitSelect() : setSelecting(true)}
+              >
+                {selecting ? 'Cancel' : 'Select'}
+              </button>
             </div>
           )}
 
@@ -252,16 +252,16 @@ export function Library(_props: { path?: string }) {
           ) : (
             <div className={s.posterGrid}>
               {titles.map(t => (
-                selecting
-                  ? (
-                    <div key={t.id} className={s.selectableCard} onClick={() => toggleSelect(t.id)}>
-                      <PosterCard title={t} />
-                      <div className={`${s.checkbox} ${selected.has(t.id) ? s.checked : ''}`}>
-                        {selected.has(t.id) && '✓'}
-                      </div>
+                <PosterCard
+                  key={t.id}
+                  title={t}
+                  onClick={selecting ? () => toggleSelect(t.id) : undefined}
+                  overlay={selecting && (
+                    <div className={`${s.checkbox} ${selected.has(t.id) ? s.checked : ''}`}>
+                      {selected.has(t.id) && '✓'}
                     </div>
-                  )
-                  : <PosterCard key={t.id} title={t} />
+                  )}
+                />
               ))}
             </div>
           )}
