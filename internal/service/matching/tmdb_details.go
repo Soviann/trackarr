@@ -165,12 +165,17 @@ func ExtractTVMetadata(d *TMDBTVDetails) (genres, credits string, runtime *int, 
 }
 
 func marshalGenres(genres []TMDBGenre) string {
+	b, _ := json.Marshal(extractGenreNames(genres))
+	return string(b)
+}
+
+// extractGenreNames returns genre names as a plain slice, without JSON marshaling.
+func extractGenreNames(genres []TMDBGenre) []string {
 	names := make([]string, 0, len(genres))
 	for _, g := range genres {
 		names = append(names, g.Name)
 	}
-	b, _ := json.Marshal(names)
-	return string(b)
+	return names
 }
 
 func marshalCredits(c *TMDBCredits) string {

@@ -15,6 +15,8 @@
 - Refresh de fond : la détection « tous les épisodes vus » utilise désormais une requête SQL EXISTS au lieu de recharger tout le titre (seasons + episodes), réduisant les requêtes SQLite lors du passage en `completed`
 - Refresh de fond : suppression de la double récupération TMDB dans `refreshFromTVDB` — le TVDB ID est désormais extrait en ligne dans `refreshMovieFromTMDB` / `refreshSeriesFromTMDB` (là où `details` est déjà en mémoire), réduisant la consommation de quota TMDB d'environ 50 % sur le chemin TVDB
 - Refresh de fond : goroutine `RefreshOne` limitée à 2 minutes via `context.WithTimeout` pour éviter les fuites en cas de timeout TMDB/TVDB
+- Matching : récupération TMDB+TVDB parallèle limitée à 20 secondes via `context.WithTimeout` — les goroutines d'enrichissement ne peuvent plus bloquer indéfiniment sur un timeout API
+- Matching : fusion des genres TMDB+TVDB sans aller-retour JSON — les genres TMDB sont conservés en `[]string` jusqu'à la sérialisation finale
 - Enrichissement TVDB : le TMDB ID est désormais récupéré depuis les `remoteIds` TVDB si aucun TMDB ID n'est encore connu (back-fill silencieux)
 - Enrichissement TVDB : détection de conflits de cross-référence — si TMDB et TVDB fournissent des IDs IMDB ou TMDB différents, le titre passe automatiquement en `pending_review` pour examen humain
 - Détail titre : la bande hero de fond aligne désormais le haut de l'affiche en haut de l'écran, pour garder visibles les éléments graphiques importants (titres, visages) au lieu de couper au centre

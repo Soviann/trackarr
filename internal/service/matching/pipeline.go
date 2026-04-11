@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
@@ -424,11 +425,14 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		wg      sync.WaitGroup
 	)
 
+	fetchCtx, fetchCancel := context.WithTimeout(ctx, 20*time.Second)
+	defer fetchCancel()
+
 	if p.tmdb != nil && result.TMDBID != 0 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			p.fetchTMDBData(ctx, result, &tmdbRes)
+			p.fetchTMDBData(fetchCtx, result, &tmdbRes)
 		}()
 	}
 
@@ -436,7 +440,7 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			p.fetchTVDBData(ctx, result, &tvdbRes)
+			p.fetchTVDBData(fetchCtx, result, &tvdbRes)
 		}()
 	}
 
@@ -542,7 +546,7 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 // tmdbFetchResult holds data fetched from TMDB in a goroutine.
 type tmdbFetchResult struct {
 	overview    string
-	genres      string
+	genres      []string
 	credits     string
 	runtime     *int
 	tmdbRating  *float64
@@ -566,16 +570,12 @@ type tvdbFetchResult struct {
 	releaseDate string // year only (e.g. "2008"), used as fallback when TMDB has no date
 }
 
-// mergeGenres unions TMDB genre JSON array and TVDB genre string list, deduplicating case-insensitively.
+// mergeGenres unions TMDB and TVDB genre slices, deduplicating case-insensitively.
 // TMDB genres take priority on case conflicts.
-func mergeGenres(tmdbGenresJSON string, tvdbGenres []string) string {
-	var tmdb []string
-	if tmdbGenresJSON != "" {
-		_ = json.Unmarshal([]byte(tmdbGenresJSON), &tmdb)
-	}
-	seen := make(map[string]bool, len(tmdb)+len(tvdbGenres))
-	merged := make([]string, 0, len(tmdb)+len(tvdbGenres))
-	for _, g := range tmdb {
+func mergeGenres(tmdbGenres []string, tvdbGenres []string) string {
+	seen := make(map[string]bool, len(tmdbGenres)+len(tvdbGenres))
+	merged := make([]string, 0, len(tmdbGenres)+len(tvdbGenres))
+	for _, g := range tmdbGenres {
 		lower := strings.ToLower(g)
 		if !seen[lower] {
 			seen[lower] = true
@@ -624,8 +624,8 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 			out.tvdbID = details.ExternalIDs.TVDBID
 		}
 		out.overview = details.Overview
-		genres, credits, runtime, rating := ExtractMovieMetadata(details)
-		out.genres = genres
+		_, credits, runtime, rating := ExtractMovieMetadata(details)
+		out.genres = extractGenreNames(details.Genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating
@@ -654,8 +654,8 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 			out.tvdbID = details.ExternalIDs.TVDBID
 		}
 		out.overview = details.Overview
-		genres, credits, runtime, rating := ExtractTVMetadata(details)
-		out.genres = genres
+		_, credits, runtime, rating := ExtractTVMetadata(details)
+		out.genres = extractGenreNames(details.Genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating
