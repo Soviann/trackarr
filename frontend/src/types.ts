@@ -147,3 +147,24 @@ export interface StatsYear {
   episodes_watched: number
   completions: number
 }
+
+export interface ContinueWatchingTitle {
+  id: number
+  type: string
+  cover_url: string | null
+  name: string
+  next_air_episode: string | null
+  watched_episodes: number
+  total_episodes: number
+  last_watched_at: string | null
+}
+
+export interface UpcomingTitle {
+  id: number
+  type: string
+  cover_url: string | null
+  name: string
+  next_air_date: string
+  next_air_episode: string | null
+  status: string
+}
