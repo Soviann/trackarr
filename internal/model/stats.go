@@ -7,6 +7,14 @@ type StatsResponse struct {
 	Breakdown StatsBreakdown `json:"breakdown"`
 	FunStats  []FunStat      `json:"fun_stats"`
 	Year      StatsYear      `json:"year_summary"`
+	Genres    interface{}    `json:"genres"`
+	Streaks   StatsStreaks   `json:"streaks"`
+}
+
+// StatsStreaks holds current and best consecutive watch day streaks.
+type StatsStreaks struct {
+	Current int `json:"current"`
+	Best    int `json:"best"`
 }
 
 type StatsOverview struct {

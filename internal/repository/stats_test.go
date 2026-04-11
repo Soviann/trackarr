@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -181,6 +182,80 @@ func TestStatsRepository_FunStats_LongestBinge(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "longest_binge stat should be present with 4 episodes on same day")
+}
+
+func TestStatsRepo_TotalWatchMinutes_NoColumn(t *testing.T) {
+	// Without the total_watch_minutes column (soft dependency not yet deployed), must return 0 gracefully.
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	total, err := repo.TotalWatchMinutes(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 0, total)
+}
+
+func TestStatsRepo_TopGenres_TableMissing(t *testing.T) {
+	// Without title_genres table, must return empty slice gracefully.
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	genres, err := repo.TopGenres(context.Background(), 10)
+	assert.NoError(t, err)
+	assert.Empty(t, genres)
+}
+
+func TestStatsRepo_CurrentStreak_Empty(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	streak, err := repo.CurrentStreak(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 0, streak)
+}
+
+func TestStatsRepo_CurrentStreak_Consecutive(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	// Need a title first to satisfy FK (titles table exists, but watch_events.title_id references it)
+	titleRepo := repository.NewTitleRepository(db)
+	id := createTitle(t, titleRepo, "TestTitle", model.TitleTypeMovie, false, model.TitleStatusWatching, nil)
+
+	today := time.Now().Format("2006-01-02")
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	twoDaysAgo := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
+
+	_, err := db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', ?), (?, 'manual', ?), (?, 'manual', ?)`,
+		id, today+" 21:00:00", id, yesterday+" 20:00:00", id, twoDaysAgo+" 19:00:00")
+	require.NoError(t, err)
+
+	streak, err := repo.CurrentStreak(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 3, streak)
+}
+
+func TestStatsRepo_BestStreak(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	titleRepo := repository.NewTitleRepository(db)
+	id := createTitle(t, titleRepo, "TestTitle", model.TitleTypeMovie, false, model.TitleStatusWatching, nil)
+
+	// 5 consecutive days (10..6 days ago), then gap, then 2 days (2..1 days ago)
+	for i := 10; i >= 6; i-- {
+		d := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		_, err := db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', ?)`, id, d+" 20:00:00")
+		require.NoError(t, err)
+	}
+	for i := 2; i >= 1; i-- {
+		d := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		_, err := db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'manual', ?)`, id, d+" 20:00:00")
+		require.NoError(t, err)
+	}
+
+	best, err := repo.BestStreak(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 5, best)
 }
 
 // Helper to create a title with a rating
