@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -19,6 +20,22 @@ func setupTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
 	return db
+}
+
+// createTestTitle inserts a minimal title and returns it with its assigned ID.
+func createTestTitle(t *testing.T, db *sql.DB, titleType string, runtime int) *model.Title {
+	t.Helper()
+	repo := repository.NewTitleRepository(db)
+	title := &model.Title{
+		Type:        model.TitleType(titleType),
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		Runtime:     &runtime,
+	}
+	id, err := repo.Create(title, []model.TitleName{{Name: "Test Title", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+	title.ID = id
+	return title
 }
 
 func TestTitleRepository_CreateAndGet(t *testing.T) {
@@ -451,7 +468,6 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	genres := `["Science Fiction","Drama"]`
 	credits := `[{"name":"Jack Arnold","role":"Director"},{"name":"Michel Ray","role":"Bud"}]`
 	overview := "A mysterious brain from space..."
 	runtime := 69
@@ -463,7 +479,6 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
 		Overview:    &overview,
-		Genres:      &genres,
 		Runtime:     &runtime,
 		TMDBRating:  &tmdbRating,
 		Credits:     &credits,
@@ -472,10 +487,13 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 	id, err := repo.Create(title, []model.TitleName{{Name: "The Space Children", Language: "en", IsPrimary: true}})
 	require.NoError(t, err)
 
+	// Insert genres via title_genres table
+	_, _ = db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Science Fiction'), (?, 'Drama')`, id, id)
+
 	got, err := repo.GetByID(id)
 	require.NoError(t, err)
 	assert.Equal(t, &overview, got.Overview)
-	assert.Equal(t, &genres, got.Genres)
+	assert.Equal(t, []string{"Drama", "Science Fiction"}, got.Genres)
 	assert.Equal(t, &runtime, got.Runtime)
 	assert.Equal(t, &tmdbRating, got.TMDBRating)
 	assert.Equal(t, &credits, got.Credits)
@@ -484,6 +502,7 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 func TestTitleRepository_UpdateMetadata(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
+	genreRepo := repository.NewGenreRepository(db)
 
 	title := &model.Title{
 		Type:        model.TitleTypeMovie,
@@ -496,24 +515,26 @@ func TestTitleRepository_UpdateMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	overview := "Updated overview"
-	genres := `["Action"]`
 	runtime := 120
 	tmdbRating := 7.5
 	credits := `[{"name":"Director","role":"Director"}]`
 
 	err = repo.Update(id, repository.TitleUpdate{
 		Overview:   &overview,
-		Genres:     &genres,
 		Runtime:    &runtime,
 		TMDBRating: &tmdbRating,
 		Credits:    &credits,
 	})
 	require.NoError(t, err)
 
+	// Genres now stored in title_genres
+	err = genreRepo.ReplaceForTitle(context.Background(), id, []string{"Action"})
+	require.NoError(t, err)
+
 	got, err := repo.GetByID(id)
 	require.NoError(t, err)
 	assert.Equal(t, &overview, got.Overview)
-	assert.Equal(t, &genres, got.Genres)
+	assert.Equal(t, []string{"Action"}, got.Genres)
 	assert.Equal(t, &runtime, got.Runtime)
 	assert.Equal(t, &tmdbRating, got.TMDBRating)
 	assert.Equal(t, &credits, got.Credits)

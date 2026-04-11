@@ -53,7 +53,7 @@ type Title struct {
 	OriginalTitle *string       `json:"original_title"`
 	MatchSource   *string       `json:"match_source"`
 	Overview      *string       `json:"overview"`
-	Genres        *string       `json:"genres"`
+	Genres        []string      `json:"genres,omitempty"`
 	Runtime       *int          `json:"runtime"`
 	TMDBRating    *float64      `json:"tmdb_rating"`
 	Credits       *string       `json:"credits"`
