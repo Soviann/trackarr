@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.13.0] — 2026-04-11
+
 ### Modifié
 - Affichage des titres : priorité de fallback passée de « anglais d'abord » à « français d'abord » (fr → en → fallback). Pour les titres marqués anime, ajout d'un 3ᵉ niveau de fallback japonais (x-romaji → ja). Appliqué partout : bibliothèque, Continue Watching, Coming up, fiche titre, Stats (activité récente, fun stats)
 
