@@ -47,6 +47,15 @@ func (r *WatchEventRepository) BatchCreate(events []model.WatchEvent) error {
 	return nil
 }
 
+func (r *WatchEventRepository) CountByTitleID(titleID int64) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM watch_events WHERE title_id = ?`, titleID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("watch_event: count by title: %w", err)
+	}
+	return count, nil
+}
+
 func (r *WatchEventRepository) ListByTitle(titleID int64) ([]model.WatchEvent, error) {
 	rows, err := r.db.Query(`SELECT id, title_id, episode_id, source, plex_payload, created_at FROM watch_events WHERE title_id = ? ORDER BY created_at DESC LIMIT 500`, titleID)
 	if err != nil {
