@@ -1,0 +1,10 @@
+.container { background: var(--color-bg-primary); min-height: 100vh; }
+.header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--color-border-card); }
+.backBtn { background: none; border: none; font-size: 18px; color: var(--color-text-muted); cursor: pointer; padding: 0; }
+.title { font-size: 15px; font-weight: 700; }
+.loading { padding: 20px 16px; color: var(--color-text-muted); }
+.row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--color-bg-surface); }
+.info { flex: 1; min-width: 0; }
+.epLabel { display: block; font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
+.date { display: block; font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.rewatchBadge { font-size: 10px; font-weight: 700; background: color-mix(in srgb, var(--color-accent-lavender) 20%, transparent); color: var(--color-accent-lavender); border-radius: 4px; padding: 2px 6px; }

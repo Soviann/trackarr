@@ -1,14 +1,22 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
+
+// GenreStat holds a genre name and the number of titles in that genre.
+type GenreStat struct {
+	Genre string `json:"genre"`
+	Count int    `json:"count"`
+}
 
 type StatsRepository struct {
 	db database.DBTX
@@ -19,6 +27,8 @@ func NewStatsRepository(db database.DBTX) *StatsRepository {
 }
 
 func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
+	ctx := context.Background()
+
 	overview, err := r.overview()
 	if err != nil {
 		return nil, fmt.Errorf("stats overview: %w", err)
@@ -44,12 +54,38 @@ func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
 		return nil, fmt.Errorf("stats year: %w", err)
 	}
 
+	genres, err := r.TopGenres(ctx, 10)
+	if err != nil {
+		return nil, fmt.Errorf("stats genres: %w", err)
+	}
+
+	currentStreak, err := r.CurrentStreak(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stats current streak: %w", err)
+	}
+
+	bestStreak, err := r.BestStreak(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stats best streak: %w", err)
+	}
+
+	totalWatchMinutes, err := r.TotalWatchMinutes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stats total watch minutes: %w", err)
+	}
+
 	return &model.StatsResponse{
 		Overview:  *overview,
 		Ratings:   *ratings,
 		Breakdown: *breakdown,
 		FunStats:  funStats,
 		Year:      *yearSummary,
+		Genres:    genres,
+		Streaks: model.StatsStreaks{
+			Current: currentStreak,
+			Best:    bestStreak,
+		},
+		TotalWatchMinutes: totalWatchMinutes,
 	}, nil
 }
 
@@ -484,4 +520,156 @@ func frenchMonth(m time.Month) string {
 		"juillet", "août", "septembre", "octobre", "novembre", "décembre",
 	}
 	return months[m-1]
+}
+
+// TotalWatchMinutes returns the sum of total_watch_minutes across all titles.
+// Returns 0 gracefully if the column does not exist (soft dependency on watchtime plan).
+func (r *StatsRepository) TotalWatchMinutes(_ context.Context) (int, error) {
+	var total int
+	err := r.db.QueryRow(`
+		SELECT COALESCE(SUM(total_watch_minutes), 0) FROM titles
+	`).Scan(&total)
+	if err != nil {
+		// Gracefully handle missing column (soft dependency)
+		if strings.Contains(err.Error(), "no such column") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("stats: total watch minutes: %w", err)
+	}
+	return total, nil
+}
+
+// TopGenres returns the top N genres by title count.
+// Returns an empty slice gracefully if the title_genres table does not exist (soft dependency on search-filter plan).
+func (r *StatsRepository) TopGenres(_ context.Context, limit int) ([]GenreStat, error) {
+	// Check table exists to handle soft dependency gracefully
+	var tableExists int
+	_ = r.db.QueryRow(`
+		SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='title_genres'
+	`).Scan(&tableExists)
+	if tableExists == 0 {
+		return []GenreStat{}, nil
+	}
+
+	rows, err := r.db.Query(`
+		SELECT genre, COUNT(*) AS count
+		FROM title_genres
+		GROUP BY genre
+		ORDER BY count DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top genres: %w", err)
+	}
+	defer rows.Close()
+
+	var results []GenreStat
+	for rows.Next() {
+		var g GenreStat
+		if err := rows.Scan(&g.Genre, &g.Count); err != nil {
+			return nil, fmt.Errorf("stats: genre scan: %w", err)
+		}
+		results = append(results, g)
+	}
+	return results, rows.Err()
+}
+
+// CurrentStreak returns the number of consecutive calendar days (ending today or yesterday) with ≥1 watch event.
+func (r *StatsRepository) CurrentStreak(_ context.Context) (int, error) {
+	rows, err := r.db.Query(`
+		SELECT DISTINCT DATE(created_at) AS day
+		FROM watch_events
+		ORDER BY day DESC
+		LIMIT 400
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("stats: current streak: %w", err)
+	}
+	defer rows.Close()
+
+	var days []string
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return 0, err
+		}
+		days = append(days, d)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	return computeCurrentStreak(days, time.Now()), nil
+}
+
+func computeCurrentStreak(days []string, now time.Time) int {
+	if len(days) == 0 {
+		return 0
+	}
+	today := now.Format("2006-01-02")
+	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
+
+	// Streak must end today or yesterday
+	if days[0] != today && days[0] != yesterday {
+		return 0
+	}
+
+	streak := 1
+	for i := 1; i < len(days); i++ {
+		prev, _ := time.Parse("2006-01-02", days[i-1])
+		curr, _ := time.Parse("2006-01-02", days[i])
+		if prev.AddDate(0, 0, -1).Format("2006-01-02") == curr.Format("2006-01-02") {
+			streak++
+		} else {
+			break
+		}
+	}
+	return streak
+}
+
+// BestStreak returns the longest ever consecutive watch streak.
+func (r *StatsRepository) BestStreak(_ context.Context) (int, error) {
+	rows, err := r.db.Query(`
+		SELECT DISTINCT DATE(created_at) AS day
+		FROM watch_events
+		ORDER BY day ASC
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("stats: best streak: %w", err)
+	}
+	defer rows.Close()
+
+	var days []string
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return 0, err
+		}
+		days = append(days, d)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	return computeBestStreak(days), nil
+}
+
+func computeBestStreak(days []string) int {
+	if len(days) == 0 {
+		return 0
+	}
+	best, current := 1, 1
+	for i := 1; i < len(days); i++ {
+		prev, _ := time.Parse("2006-01-02", days[i-1])
+		curr, _ := time.Parse("2006-01-02", days[i])
+		if prev.AddDate(0, 0, 1).Format("2006-01-02") == curr.Format("2006-01-02") {
+			current++
+			if current > best {
+				best = current
+			}
+		} else {
+			current = 1
+		}
+	}
+	return best
 }

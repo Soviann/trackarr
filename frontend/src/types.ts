@@ -117,6 +117,35 @@ export interface StatsResponse {
   breakdown: StatsBreakdown
   fun_stats: FunStat[]
   year_summary: StatsYear
+  genres: Array<{ genre: string; count: number }>
+  streaks: {
+    current: number
+    best: number
+  }
+  total_watch_minutes: number
+}
+
+export interface ActivityEvent {
+  title_id: number
+  title_name: string
+  cover_url: string | null
+  title_type: string
+  episode_id: number | null
+  episode_name: string | null
+  season_number: number | null
+  episode_number: number | null
+  watched_at: string
+  is_completion: boolean
+}
+
+export interface EpisodeHistory {
+  episode_id: number | null
+  episode_name: string | null
+  season_number: number | null
+  episode_number: number | null
+  watch_count: number
+  last_watched_at: string
+  watches: string[]
 }
 
 export interface StatsOverview {

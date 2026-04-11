@@ -12,6 +12,11 @@
 - Bouton TMDB dans la page de recherche pour afficher des résultats TMDB en complément de la bibliothèque locale
 - Endpoint `GET /api/genres` renvoyant les genres de la bibliothèque triés par occurrence
 - Migration 016 : les genres sont maintenant stockés dans une table de jointure `title_genres` (normalisée) au lieu d'une colonne JSON
+- Stats : carte "Temps regardé" dans la vue d'ensemble
+- Stats : histogramme des top genres
+- Stats : cartes "Série en cours" et "Meilleure série" de jours consécutifs
+- Stats : flux d'activité récente paginé (`GET /api/stats/activity`) groupé par date
+- TitleDetail : bouton « Historique » ouvrant un panneau de visionnage par épisode avec compteur de rewatches (`GET /api/titles/{id}/history`)
 
 ### Corrigé
 - ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)

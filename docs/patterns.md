@@ -72,11 +72,11 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 
 ### Repositories
 
-`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp), SeasonRepository, EpisodeRepository, WatchEventRepository (`CountByTitleID(titleID) (int, error)`), SettingRepository, StatsRepository, GenreRepository (`ListWithCounts`, `ReplaceForTitle`). All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes. Genres stored in `title_genres` join table (migration 016), loaded separately to respect MaxOpenConns=1.
+`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp), SeasonRepository, EpisodeRepository, WatchEventRepository (`CountByTitleID(titleID) (int, error)`), SettingRepository, StatsRepository (+ `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak`), ActivityRepository (`List`), HistoryRepository (`GetByTitleID`), GenreRepository (`ListWithCounts`, `ReplaceForTitle`). All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes. Genres stored in `title_genres` join table (migration 016), loaded separately to respect MaxOpenConns=1.
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, tmdb, genre, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
+`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, activity, history, tmdb, genre, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
 
 ### Routes
 
@@ -101,7 +101,9 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
-| GET | `/api/stats` | Get | Yes |
+| GET | `/api/stats` | Get | Yes | Response includes `total_watch_minutes`, `genres[]`, `streaks.{current,best}` |
+| GET | `/api/stats/activity` | List | Yes | `?limit=50&offset=0` (max 100) — paginated watch events |
+| GET | `/api/titles/{id}/history` | Get | Yes | per-title watch log grouped by episode |
 | GET | `/api/settings` | Get | Yes |
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
@@ -116,7 +118,7 @@ Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
 
 ## Frontend (Preact)
 
-Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules (`*.module.css`) for all components. `clsx` for conditional classes. `theme.ts` retained for SVG attributes and dynamic values (`coverBackground()`, `accentWash()`). Shared utils in `frontend/src/utils.ts` (`getName`, `getTypeLabel`, `getStatusLabel`, `formatDate`, `watchedCount`, `totalEpisodes`). API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules (`*.module.css`) for all components. `clsx` for conditional classes. `theme.ts` retained for SVG attributes and dynamic values (`coverBackground()`, `accentWash()`). Shared utils in `frontend/src/utils.ts` (`getName`, `getTypeLabel`, `getStatusLabel`, `formatDate`, `watchedCount`, `totalEpisodes`, `formatWatchtime`). API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
 
 ### Hooks
 
@@ -131,6 +133,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 
 | Component | File | Purpose |
 |---|---|---|
+| TitleHistory | `components/TitleHistory.tsx` | Full-screen watch history overlay per title (episode rows + rewatch badge) |
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
 | FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres), shared by Library+Search. Sort hidden during search. Release date section: decade dropdown, date range inputs, include-no-release toggle. Genre section: searchable checklist with Any/All toggle, fetches `/api/genres` on mount. Props: `selectedGenres`, `genreOp`, `onGenreToggle`, `onGenreOpChange`. |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |

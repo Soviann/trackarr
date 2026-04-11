@@ -2,11 +2,20 @@ package model
 
 // StatsResponse is the full response for GET /api/stats.
 type StatsResponse struct {
-	Overview  StatsOverview  `json:"overview"`
-	Ratings   StatsRatings   `json:"ratings"`
-	Breakdown StatsBreakdown `json:"breakdown"`
-	FunStats  []FunStat      `json:"fun_stats"`
-	Year      StatsYear      `json:"year_summary"`
+	Overview          StatsOverview  `json:"overview"`
+	Ratings           StatsRatings   `json:"ratings"`
+	Breakdown         StatsBreakdown `json:"breakdown"`
+	FunStats          []FunStat      `json:"fun_stats"`
+	Year              StatsYear      `json:"year_summary"`
+	Genres            interface{}    `json:"genres"`
+	Streaks           StatsStreaks   `json:"streaks"`
+	TotalWatchMinutes int            `json:"total_watch_minutes"`
+}
+
+// StatsStreaks holds current and best consecutive watch day streaks.
+type StatsStreaks struct {
+	Current int `json:"current"`
+	Best    int `json:"best"`
 }
 
 type StatsOverview struct {

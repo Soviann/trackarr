@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'preact/hooks'
 import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
-import type { StatsResponse, FunStat } from '../types'
+import { apiFetch } from '../api'
+import { formatWatchtime } from '../utils'
+import type { StatsResponse, FunStat, ActivityEvent } from '../types'
 import s from './Stats.module.css'
 
 const statusColors: Record<string, string> = {
@@ -58,21 +61,25 @@ export function Stats({ path }: { path?: string }) {
     <div className={s.page}>
       <h1 className={s.pageTitle}>Stats</h1>
 
-      <OverviewSection overview={data.overview} />
+      <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} />
+      <GenreSection genres={data.genres ?? []} />
       <RatingsSection ratings={data.ratings} />
       <BreakdownSection breakdown={data.breakdown} />
+      <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} />
       {data.fun_stats.length > 0 && <FunStatsSection stats={data.fun_stats} />}
       <YearSection year={data.year_summary} />
+      <ActivitySection />
     </div>
   )
 }
 
-function OverviewSection({ overview }: { overview: StatsResponse['overview'] }) {
+function OverviewSection({ overview, watchtimeMinutes }: { overview: StatsResponse['overview']; watchtimeMinutes?: number }) {
   const cards = [
     { value: overview.total_titles.toLocaleString('fr-FR'), label: 'TITRES SUIVIS' },
     { value: overview.episodes_watched.toLocaleString('fr-FR'), label: '\u00C9PISODES VUS' },
     { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPL\u00C9T\u00C9S' },
     { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '\u2014', label: 'NOTE MOYENNE' },
+    { value: formatWatchtime(watchtimeMinutes) ?? '\u2014', label: 'TEMPS REGARD\u00C9' },
   ]
 
   return (
@@ -211,6 +218,123 @@ function FunStatsSection({ stats }: { stats: FunStat[] }) {
   )
 }
 
+function GenreSection({ genres }: { genres: StatsResponse['genres'] }) {
+  if (genres.length === 0) return null
+  const max = Math.max(...genres.map(g => g.count), 1)
+  return (
+    <section className={s.section}>
+      <SectionLabel>Top genres</SectionLabel>
+      <div className={s.genreBars}>
+        {genres.map(g => (
+          <div key={g.genre} className={s.genreBarRow}>
+            <span className={s.genreBarName}>{g.genre}</span>
+            <div className={s.genreBarTrack}>
+              <div
+                className={s.genreBarFill}
+                style={{ width: `${(g.count / max) * 100}%` }}
+              />
+            </div>
+            <span className={s.genreBarCount}>{g.count}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function StreakSection({ streaks }: { streaks: StatsResponse['streaks'] }) {
+  if (streaks.current === 0 && streaks.best === 0) return null
+  return (
+    <section className={s.section}>
+      <div className={s.streakRow}>
+        <div className={s.streakCard}>
+          <div className={s.streakValue}>🔥 {streaks.current}j</div>
+          <div className={s.streakLabel}>Série en cours</div>
+        </div>
+        <div className={s.streakCard}>
+          <div className={s.streakValue}>🏆 {streaks.best}j</div>
+          <div className={s.streakLabel}>Meilleure série</div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ActivitySection() {
+  const [events, setEvents] = useState<ActivityEvent[]>([])
+  const [offset, setOffset] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const LIMIT = 50
+
+  const loadMore = async () => {
+    setLoading(true)
+    const data = await apiFetch<ActivityEvent[]>(
+      `/stats/activity?limit=${LIMIT}&offset=${offset}`
+    )
+    setEvents(prev => [...prev, ...data])
+    setOffset(o => o + LIMIT)
+    setHasMore(data.length === LIMIT)
+    setLoading(false)
+  }
+
+  useEffect(() => { loadMore() }, [])
+
+  // Group events by calendar date
+  const grouped = groupByDate(events)
+
+  return (
+    <section className={s.sectionLast}>
+      <SectionLabel>Activité récente</SectionLabel>
+      {Object.entries(grouped).map(([date, evts]) => (
+        <div key={date}>
+          <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
+          {evts.map((ev, i) => (
+            <a key={i} href={`/titles/${ev.title_id}`} className={s.activityRow}>
+              {ev.cover_url
+                ? <img className={s.activityThumb} src={`/api/covers/${ev.cover_url}`} alt="" role="presentation" />
+                : <div className={s.activityThumbPlaceholder} />}
+              <div className={s.activityInfo}>
+                <span className={s.activityTitle}>{ev.title_name}</span>
+                <span className={s.activitySub}>
+                  {ev.episode_name
+                    ? `S${ev.season_number} E${ev.episode_number} — ${ev.episode_name}`
+                    : 'Film'}
+                </span>
+              </div>
+              <span className={`${s.activityBadge} ${s[`badge_${ev.is_completion ? 'done' : ev.title_type}`]}`}>
+                {ev.is_completion ? 'Terminé' : ev.episode_name ? 'Épisode' : 'Film'}
+              </span>
+            </a>
+          ))}
+        </div>
+      ))}
+      {hasMore && (
+        <button className={s.loadMoreBtn} onClick={loadMore} disabled={loading}>
+          {loading ? 'Chargement…' : 'Voir plus'}
+        </button>
+      )}
+    </section>
+  )
+}
+
+function groupByDate(evts: ActivityEvent[]): Record<string, ActivityEvent[]> {
+  return evts.reduce((acc, ev) => {
+    const date = ev.watched_at.split('T')[0].split(' ')[0]
+    if (!acc[date]) acc[date] = []
+    acc[date].push(ev)
+    return acc
+  }, {} as Record<string, ActivityEvent[]>)
+}
+
+function formatDateHeader(dateStr: string): string {
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().split('T')[0]
+  if (dateStr === today) return "Aujourd'hui"
+  if (dateStr === yesterday) return 'Hier'
+  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
 function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
   const currentYear = new Date().getFullYear()
   const cards = [
@@ -220,7 +344,7 @@ function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
   ]
 
   return (
-    <section className={s.sectionLast}>
+    <section className={s.section}>
       <SectionLabel>{`${currentYear} en chiffres`}</SectionLabel>
       <div className={s.yearGrid}>
         {cards.map((card) => (

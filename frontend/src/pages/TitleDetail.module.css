@@ -263,3 +263,27 @@
   flex-direction: column;
   gap: 6px;
 }
+
+/* Historique button */
+.historyBtnWrap {
+  padding: 0 var(--space-lg) var(--space-md);
+}
+
+.historyBtn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
+}
+
+/* History overlay — full-screen sheet on top of TitleDetail */
+.historyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow-y: auto;
+}

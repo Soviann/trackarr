@@ -287,3 +287,76 @@
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
+
+/* Genre bars */
+.genreBars { display: flex; flex-direction: column; gap: 7px; }
+.genreBarRow { display: flex; align-items: center; gap: 8px; }
+.genreBarName { font-size: 11px; color: var(--color-text-muted); width: 90px; flex: 0 0 90px; text-align: right; }
+.genreBarTrack { flex: 1; height: 14px; background: var(--color-bg-surface); border-radius: 4px; overflow: hidden; }
+.genreBarFill { height: 100%; background: var(--color-accent-lavender); border-radius: 4px; }
+.genreBarCount { font-size: 11px; color: var(--color-text-muted); width: 32px; text-align: right; }
+
+/* Streak cards */
+.streakRow { display: flex; gap: 8px; }
+.streakCard { flex: 1; background: var(--color-bg-card); border: 1px solid var(--color-border-card); border-radius: 8px; padding: 10px 12px; }
+.streakValue { font-size: 18px; font-weight: 700; color: var(--color-accent-amber); }
+.streakLabel { font-size: 10px; color: var(--color-text-secondary); margin-top: 2px; }
+
+/* Activity feed */
+.activityDateHeader {
+  padding: 6px 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border-card);
+  margin-bottom: 2px;
+}
+
+.activityRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-bg-surface);
+  text-decoration: none;
+  color: inherit;
+}
+
+.activityThumb {
+  width: 36px;
+  height: 52px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex: 0 0 36px;
+}
+
+.activityThumbPlaceholder {
+  width: 36px;
+  height: 52px;
+  border-radius: 5px;
+  background: var(--color-bg-surface);
+  flex: 0 0 36px;
+}
+
+.activityInfo { flex: 1; min-width: 0; }
+.activityTitle { display: block; font-size: 13px; font-weight: 600; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activitySub { display: block; font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.activityBadge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.badge_series { background: color-mix(in srgb, var(--color-accent-teal) 20%, transparent); color: var(--color-accent-teal); }
+.badge_movie  { background: color-mix(in srgb, var(--color-accent-lavender) 20%, transparent); color: var(--color-accent-lavender); }
+.badge_done   { background: color-mix(in srgb, var(--color-accent-green) 20%, transparent); color: var(--color-accent-green); }
+.badge_anime  { background: color-mix(in srgb, var(--color-accent-lavender) 20%, transparent); color: var(--color-accent-lavender); }
+
+.loadMoreBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--color-bg-surface);
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+}
