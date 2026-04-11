@@ -19,7 +19,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: unknown): void {
     console.error('[ErrorBoundary]', error, info)
-    // TODO: implement POST /api/client-errors on the backend to persist these
     try {
       fetch('/api/client-errors', {
         method: 'POST',
