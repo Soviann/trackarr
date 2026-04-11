@@ -134,6 +134,14 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 	if r.URL.Query().Get("include_no_release") == "false" {
 		filter.IncludeNoRelease = false
 	}
+	if genres := r.URL.Query()["genres"]; len(genres) > 0 {
+		filter.Genres = genres
+		if op := r.URL.Query().Get("genre_op"); op == "AND" {
+			filter.GenreOp = "AND"
+		} else {
+			filter.GenreOp = "OR"
+		}
+	}
 
 	result, err := h.titlesRead.List(filter)
 	if err != nil {
