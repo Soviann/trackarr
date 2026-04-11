@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -62,17 +62,39 @@ export function AdminTasks({ path }: { path?: string }) {
   const [acting, setActing] = useState<number | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
   const [page, setPage] = useState(1)
+  const [allTasks, setAllTasks] = useState<Task[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isSelectMode, setIsSelectMode] = useState(false)
 
   useEffect(() => {
     setPage(1)
+    setAllTasks([])
     setSelectedIds(new Set())
     setIsSelectMode(false)
   }, [filter])
 
-  const limit = page * 50
-  const { data, loading, mutate } = useApi<TasksResponse>(`/admin/tasks?filter=${filter}&limit=${limit}&offset=0`)
+  const limit = 50
+  const offset = (page - 1) * 50
+  const { data, loading, mutate: rawMutate } = useApi<TasksResponse>(`/admin/tasks?filter=${filter}&limit=${limit}&offset=${offset}`)
+
+  useEffect(() => {
+    if (!data?.tasks) return
+    // page is current at the time data arrives (after fetch completes)
+    if (page === 1) {
+      setAllTasks(data.tasks)
+    } else {
+      setAllTasks(prev => [...prev, ...data.tasks])
+    }
+  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mutate = () => {
+    setAllTasks([])
+    if (page === 1) {
+      rawMutate()
+    } else {
+      setPage(1)
+    }
+  }
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -132,9 +154,9 @@ export function AdminTasks({ path }: { path?: string }) {
     setModalOpen(true)
   }
 
-  const filteredTasks = data?.tasks ?? []
+  const filteredTasks = allTasks
   const total = data?.total ?? 0
-  const hasMore = filteredTasks.length < total
+  const hasMore = allTasks.length < total
 
   const toggleSelection = (id: number) => {
     setSelectedIds(prev => {

@@ -94,3 +94,25 @@
 .cardListSpaced {
   margin-bottom: var(--space-md);
 }
+
+.loadMoreRow {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
+.loadMoreBtn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary) 20%, transparent);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loadMoreBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

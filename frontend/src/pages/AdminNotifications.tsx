@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
+import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import s from './AdminNotifications.module.css'
 
@@ -27,12 +28,13 @@ const notifTypes = [
 ]
 
 export function AdminNotifications({ path }: { path?: string }) {
+  const { data: fetchedPrefs } = useApi<NotifPrefs>('/admin/notifications')
   const [prefs, setPrefs] = useState<NotifPrefs | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    apiFetch<NotifPrefs>('/admin/notifications').then(setPrefs)
-  }, [])
+    if (fetchedPrefs && !prefs) setPrefs(fetchedPrefs)
+  }, [fetchedPrefs])
 
   const toggle = async (key: keyof NotifPrefs) => {
     if (!prefs || saving) return

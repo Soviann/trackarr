@@ -1,4 +1,5 @@
 import type { PaginatedResponse } from '../types'
+import { useState } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { MatchReviewCard } from '../components/MatchReviewCard'
@@ -7,8 +8,11 @@ import clsx from 'clsx'
 import s from './MatchReview.module.css'
 
 export function MatchReview({ path }: { path?: string }) {
-  const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>('/titles?match_status=pending_review&limit=500')
-  const { data: unconfirmedData, loading: l2, error: e2, mutate: m2 } = useApi<PaginatedResponse>('/titles?match_status=unconfirmed&limit=500')
+  const [pendingLimit, setPendingLimit] = useState(50)
+  const [unconfirmedLimit, setUnconfirmedLimit] = useState(50)
+
+  const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>(`/titles?match_status=pending_review&limit=${pendingLimit}`)
+  const { data: unconfirmedData, loading: l2, error: e2, mutate: m2 } = useApi<PaginatedResponse>(`/titles?match_status=unconfirmed&limit=${unconfirmedLimit}`)
 
   const loading = l1 || l2
   const error = e1 || e2
@@ -19,12 +23,12 @@ export function MatchReview({ path }: { path?: string }) {
   const titles = [...unconfirmed, ...pending]
 
   const handleBatchConfirm = async () => {
-    for (const t of titles) {
-      await apiFetch(`/titles/${t.id}`, {
+    await Promise.all(titles.map(t =>
+      apiFetch(`/titles/${t.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ match_status: 'confirmed' }),
       })
-    }
+    ))
     mutate()
   }
 
@@ -72,11 +76,18 @@ export function MatchReview({ path }: { path?: string }) {
       {unconfirmed.length > 0 && (
         <>
           <div className={clsx(s.sectionLabel, s.sectionLabelUnconfirmed)}>
-            Unconfirmed ({unconfirmed.length})
+            Unconfirmed ({unconfirmedData?.total ?? unconfirmed.length})
           </div>
           <div className={clsx(s.cardList, s.cardListSpaced)}>
             {unconfirmed.map((t) => <MatchReviewCard key={t.id} title={t} onUpdate={mutate} />)}
           </div>
+          {unconfirmedData?.has_more && (
+            <div className={s.loadMoreRow}>
+              <button className={s.loadMoreBtn} disabled={l2} onClick={() => setUnconfirmedLimit(l => l + 50)}>
+                {l2 ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -84,11 +95,18 @@ export function MatchReview({ path }: { path?: string }) {
       {pending.length > 0 && (
         <>
           <div className={clsx(s.sectionLabel, s.sectionLabelPending)}>
-            Pending review ({pending.length})
+            Pending review ({pendingData?.total ?? pending.length})
           </div>
           <div className={s.cardList}>
             {pending.map((t) => <MatchReviewCard key={t.id} title={t} onUpdate={mutate} />)}
           </div>
+          {pendingData?.has_more && (
+            <div className={s.loadMoreRow}>
+              <button className={s.loadMoreBtn} disabled={l1} onClick={() => setPendingLimit(l => l + 50)}>
+                {l1 ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
