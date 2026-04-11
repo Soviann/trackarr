@@ -8,6 +8,10 @@
 - Fiche titre : affichage du temps de visionnage total (ex : "2h 30m") dans l'onglet Détails, cumulé sur tous les visionnages y compris les rewatches
 - Colonne `total_watch_minutes` sur les titres (migration 015), maintenue automatiquement lors de chaque ajout ou suppression d'événement de visionnage (manuel, Plex, Simkl)
 - Le temps de visionnage est recalculé automatiquement lors de l'enrichissement TMDB quand le runtime change
+- Filtrage par genre dans la bibliothèque et la recherche (ANY ou ALL) via un panneau de genres déroulant avec recherche textuelle
+- Bouton TMDB dans la page de recherche pour afficher des résultats TMDB en complément de la bibliothèque locale
+- Endpoint `GET /api/genres` renvoyant les genres de la bibliothèque triés par occurrence
+- Migration 016 : les genres sont maintenant stockés dans une table de jointure `title_genres` (normalisée) au lieu d'une colonne JSON
 
 ### Corrigé
 - ErrorBoundary : `componentDidCatch` logue désormais l'erreur de render avec le préfixe `[ErrorBoundary]` et envoie un POST non-bloquant vers `/api/client-errors` (stub — endpoint à implémenter côté backend)

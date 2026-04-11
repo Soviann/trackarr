@@ -63,7 +63,7 @@
 }
 
 .drawerExpanded {
-  max-height: 400px;
+  max-height: 640px;
   opacity: 1;
 }
 
@@ -156,4 +156,98 @@
 
 .bottomPad {
   height: 4px;
+}
+
+/* Genre filter */
+.genreOpRow {
+  display: flex;
+  gap: 4px;
+  padding: 2px var(--space-lg) 4px;
+  align-items: center;
+}
+
+.opBtn {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-card);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.opBtnActive {
+  background: rgba(179, 157, 219, 0.18);
+  color: var(--color-accent-lavender);
+  border-color: var(--color-accent-lavender);
+  font-weight: 600;
+}
+
+.clearGenresBtn {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-dimmed);
+  font-family: inherit;
+  cursor: pointer;
+  margin-left: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreSearchRow {
+  padding: 2px var(--space-lg) 4px;
+}
+
+.genreSearchInput {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  outline: none;
+}
+
+.genreList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 2px var(--space-lg) 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.genreChip {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.genreChipActive {
+  background: rgba(179, 157, 219, 0.18);
+  color: var(--color-accent-lavender);
+  font-weight: 600;
+}
+
+.genreCount {
+  font-size: 8px;
+  opacity: 0.6;
 }

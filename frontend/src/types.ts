@@ -20,7 +20,7 @@ export interface Title {
   original_title: string | null
   match_source: string | null
   overview: string | null
-  genres: string | null
+  genres: string[] | null
   runtime: number | null
   total_watch_minutes: number
   tmdb_rating: number | null
@@ -35,6 +35,11 @@ export interface Title {
   next_episode?: NextEpisode
   matched_name?: string
   matched_language?: string
+}
+
+export interface GenreCount {
+  genre: string
+  count: number
 }
 
 export interface NextEpisode {
@@ -75,7 +80,7 @@ export interface MatchResult {
   type: TitleType
   is_anime: boolean
   overview: string | null
-  genres: string | null
+  genres: string[] | null
   runtime: number | null
   tmdb_rating: number | null
   credits: string | null

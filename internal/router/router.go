@@ -59,6 +59,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
 
+	// Genre repository (read-only)
+	genreReadRepo := repository.NewGenreRepository(readDB)
+
 	// Handlers
 	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
 
@@ -74,6 +77,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
 	settings := handler.NewSettingsHandler(settingRepo, tvdbReady)
 	stats := handler.NewStatsHandler(statsRepo)
+	genres := handler.NewGenreHandler(genreReadRepo)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -121,6 +125,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
 
 			r.Get("/stats", httputil.WrapHandler(stats.Get))
+			r.Get("/genres", httputil.WrapHandler(genres.List))
 
 			r.Get("/settings", httputil.WrapHandler(settings.Get))
 

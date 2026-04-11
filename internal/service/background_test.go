@@ -29,7 +29,7 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *reposito
 
 	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
 	// No external API clients in tests — nil TMDB/AniList
-	svc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, t.TempDir())
+	svc := service.NewBackgroundService(titleRepo, nil, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, t.TempDir())
 	return svc, titleRepo, seasonRepo, episodeRepo
 }
 
@@ -137,7 +137,7 @@ func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	settingRepo := repository.NewSettingRepository(db)
 
 	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
-	svc := service.NewBackgroundService(titleRepo, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, dataDir)
+	svc := service.NewBackgroundService(titleRepo, nil, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, dataDir)
 
 	coversDir := filepath.Join(dataDir, "covers")
 	err = os.MkdirAll(coversDir, 0755)

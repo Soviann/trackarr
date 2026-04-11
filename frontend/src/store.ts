@@ -44,6 +44,8 @@ type TitleFilter = {
   release_from?: string
   release_to?: string
   include_no_release?: string
+  genres?: string[]
+  genre_op?: 'AND' | 'OR'
 }
 
 function buildFilterParams(filter: TitleFilter, sort?: SortState): URLSearchParams {
@@ -58,6 +60,10 @@ function buildFilterParams(filter: TitleFilter, sort?: SortState): URLSearchPara
   if (filter.release_from) params.set('release_from', filter.release_from)
   if (filter.release_to) params.set('release_to', filter.release_to)
   if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
+  if (filter.genres && filter.genres.length > 0) {
+    filter.genres.forEach(g => params.append('genres', g))
+    if (filter.genre_op) params.set('genre_op', filter.genre_op)
+  }
   if (sort) {
     params.set('sort', sort.field)
     params.set('order', sort.order)
@@ -212,6 +218,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       if (filter.release_from) params.set('release_from', filter.release_from)
       if (filter.release_to) params.set('release_to', filter.release_to)
       if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
+      if (filter.genres && filter.genres.length > 0) {
+        filter.genres.forEach(g => params.append('genres', g))
+        if (filter.genre_op) params.set('genre_op', filter.genre_op)
+      }
 
       const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
       params.set('limit', String(limit))
@@ -249,7 +259,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       if (filter.release_from) params.set('release_from', filter.release_from)
       if (filter.release_to) params.set('release_to', filter.release_to)
       if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
-      
+      if (filter.genres && filter.genres.length > 0) {
+        filter.genres.forEach(g => params.append('genres', g))
+        if (filter.genre_op) params.set('genre_op', filter.genre_op)
+      }
+
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', String(results.length))
       
