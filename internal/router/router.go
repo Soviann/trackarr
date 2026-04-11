@@ -61,6 +61,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// Handlers
 	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc)
+	library := handler.NewLibraryHandler(titleRepo)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
@@ -102,10 +103,17 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Use(mw.JWTAuth(cfg.JWTSecret))
 
 			r.Get("/titles", httputil.WrapHandler(titles.List))
-			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
-			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
 			r.Post("/titles", httputil.WrapHandler(titles.Create))
+			// Static sub-routes must come BEFORE /{id} to avoid chi matching them as ID params
+			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
+			r.Get("/titles/continue-watching", httputil.WrapHandler(library.ContinueWatching))
+			r.Get("/titles/upcoming", httputil.WrapHandler(library.Upcoming))
+			r.Post("/titles/batch-delete", httputil.WrapHandler(titles.BatchDelete))
+			r.Post("/titles/batch-status", httputil.WrapHandler(titles.BatchStatus))
+			// Parameterized routes after static ones
+			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
 			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
+			r.Delete("/titles/{id}", httputil.WrapHandler(titles.Delete))
 			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
 			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
