@@ -16,6 +16,7 @@ import (
 
 type BackgroundService struct {
 	titles   *repository.TitleRepository
+	genres   *repository.GenreRepository
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	tasks    *repository.TaskRepository
@@ -29,6 +30,7 @@ type BackgroundService struct {
 
 func NewBackgroundService(
 	titles *repository.TitleRepository,
+	genres *repository.GenreRepository,
 	seasons *repository.SeasonRepository,
 	episodes *repository.EpisodeRepository,
 	tasks *repository.TaskRepository,
@@ -40,6 +42,7 @@ func NewBackgroundService(
 ) *BackgroundService {
 	return &BackgroundService{
 		titles:   titles,
+		genres:   genres,
 		seasons:  seasons,
 		episodes: episodes,
 		tasks:    tasks,
@@ -170,7 +173,6 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	overview := details.Overview
 	metaUpdate := repository.TitleUpdate{
 		Overview: &overview,
-		Genres:   &genres,
 		Credits:  &credits,
 	}
 	if runtime != nil {
@@ -180,6 +182,16 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 		metaUpdate.TMDBRating = rating
 	}
 	_ = s.titles.Update(title.ID, metaUpdate)
+
+	// Persist genres to title_genres table
+	if genres != "" && s.genres != nil {
+		var genreList []string
+		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
+			if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+				log.Printf("background: save genres for title %d: %v", title.ID, err)
+			}
+		}
+	}
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
@@ -229,7 +241,6 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	overview := details.Overview
 	metaUpdate := repository.TitleUpdate{
 		Overview: &overview,
-		Genres:   &genres,
 		Credits:  &credits,
 	}
 	if runtime != nil {
@@ -239,6 +250,16 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		metaUpdate.TMDBRating = rating
 	}
 	_ = s.titles.Update(title.ID, metaUpdate)
+
+	// Persist genres to title_genres table
+	if genres != "" && s.genres != nil {
+		var genreList []string
+		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
+			if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+				log.Printf("background: save genres for title %d: %v", title.ID, err)
+			}
+		}
+	}
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {

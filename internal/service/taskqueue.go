@@ -44,6 +44,7 @@ type CoverFetchPayload struct {
 type TaskQueueWorker struct {
 	tasks       *repository.TaskRepository
 	titles      *repository.TitleRepository
+	genres      *repository.GenreRepository
 	pipeline    *matching.Pipeline
 	tmdb        *matching.TMDBClient
 	anilist     *matching.AniListClient
@@ -58,6 +59,7 @@ type TaskQueueWorker struct {
 func NewTaskQueueWorker(
 	tasks *repository.TaskRepository,
 	titles *repository.TitleRepository,
+	genres *repository.GenreRepository,
 	pipeline *matching.Pipeline,
 	tmdb *matching.TMDBClient,
 	anilist *matching.AniListClient,
@@ -69,6 +71,7 @@ func NewTaskQueueWorker(
 	return &TaskQueueWorker{
 		tasks:    tasks,
 		titles:   titles,
+		genres:   genres,
 		pipeline: pipeline,
 		tmdb:     tmdb,
 		anilist:  anilist,
@@ -262,9 +265,6 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	if result.Overview != "" {
 		update.Overview = &result.Overview
 	}
-	if result.Genres != "" {
-		update.Genres = &result.Genres
-	}
 	if result.Runtime != nil {
 		update.Runtime = result.Runtime
 	}
@@ -310,6 +310,16 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	if len(result.Names) > 0 {
 		if err := w.titles.ReplaceNames(payload.TitleID, result.Names); err != nil {
 			log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+		}
+	}
+
+	// Persist genres to title_genres table
+	if result.Genres != "" && w.genres != nil {
+		var genreList []string
+		if err := json.Unmarshal([]byte(result.Genres), &genreList); err == nil && len(genreList) > 0 {
+			if err := w.genres.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
+				log.Printf("enrichment: save genres for title %d: %v", payload.TitleID, err)
+			}
 		}
 	}
 
