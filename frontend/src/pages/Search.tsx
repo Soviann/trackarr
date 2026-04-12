@@ -10,6 +10,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { PullToRefresh } from '../components/PullToRefresh'
 import s from './Search.module.css'
 
 interface TMDBResult {
@@ -111,6 +112,7 @@ export function Search({ path: _ }: { path?: string }) {
     t.matched_name && t.matched_name !== getName(t)
 
   return (
+    <PullToRefresh onRefresh={retry}>
     <div className={s.page}>
       {/* Results area */}
       <div className={s.results}>
@@ -311,5 +313,6 @@ export function Search({ path: _ }: { path?: string }) {
         </div>
       </div>
     </div>
+    </PullToRefresh>
   )
 }

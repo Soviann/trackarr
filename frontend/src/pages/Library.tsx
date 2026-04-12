@@ -12,6 +12,7 @@ import { CollapsibleSection } from '../components/CollapsibleSection'
 import { PosterStrip } from '../components/PosterStrip'
 import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
+import { PullToRefresh } from '../components/PullToRefresh'
 import s from './Library.module.css'
 
 function TitleList({ titles, onUpdate }: { titles: Title[]; onUpdate: () => void }) {
@@ -173,6 +174,7 @@ export function Library(_props: { path?: string }) {
   ]
 
   return (
+    <PullToRefresh onRefresh={invalidate}>
     <div className={s.page}>
       {/* Header */}
       <div className={s.header}>
@@ -304,5 +306,6 @@ export function Library(_props: { path?: string }) {
         isDangerous
       />
     </div>
+    </PullToRefresh>
   )
 }

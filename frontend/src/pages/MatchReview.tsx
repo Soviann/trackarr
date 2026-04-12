@@ -5,6 +5,7 @@ import { apiFetch } from '../api'
 import { MatchReviewCard } from '../components/MatchReviewCard'
 import { ErrorBanner } from '../components/ErrorBanner'
 import clsx from 'clsx'
+import { PullToRefresh } from '../components/PullToRefresh'
 import s from './MatchReview.module.css'
 
 export function MatchReview({ path }: { path?: string }) {
@@ -33,6 +34,7 @@ export function MatchReview({ path }: { path?: string }) {
   }
 
   return (
+    <PullToRefresh onRefresh={mutate}>
     <div className={s.page}>
       {/* Header */}
       <div className={s.header}>
@@ -110,5 +112,6 @@ export function MatchReview({ path }: { path?: string }) {
         </>
       )}
     </div>
+    </PullToRefresh>
   )
 }
