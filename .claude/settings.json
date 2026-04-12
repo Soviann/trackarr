@@ -66,16 +66,6 @@
         ]
       }
     ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/preserve-context.sh"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
