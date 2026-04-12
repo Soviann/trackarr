@@ -18,7 +18,7 @@
   height: 140px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--surface-raised);
+  background: var(--color-bg-card);
   position: relative;
 }
 
@@ -34,12 +34,12 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--surface-raised);
+  background: var(--color-bg-card);
 }
 
 .progressFill {
   height: 100%;
-  background: var(--accent-amber);
+  background: var(--color-accent-amber);
   border-radius: 0 2px 2px 0;
 }
 
@@ -53,10 +53,10 @@
   border-radius: 4px;
 }
 
-.badge_amber { background: var(--accent-amber); color: var(--bg); }
-.badge_teal  { background: var(--accent-teal);  color: var(--bg); }
-.badge_muted { background: var(--surface-raised); color: var(--text-muted); }
-.badge_default { background: var(--surface-raised); color: var(--text-secondary); }
+.badge_amber { background: var(--color-accent-amber); color: var(--color-bg-primary); }
+.badge_teal  { background: var(--color-accent-teal);  color: var(--color-bg-primary); }
+.badge_muted { background: var(--color-bg-card); color: var(--color-text-muted); }
+.badge_default { background: var(--color-bg-card); color: var(--color-text-secondary); }
 
 .info {
   padding: 5px 2px 0;
@@ -66,7 +66,7 @@
   display: block;
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -75,6 +75,6 @@
 .ep {
   display: block;
   font-size: 9px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   margin-top: 1px;
 }

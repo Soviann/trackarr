@@ -140,15 +140,15 @@
 }
 
 /* Bulk selection */
-.selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); }
-.selectAllBtn { font-size: 12px; font-weight: 600; color: var(--accent-amber); background: none; border: none; cursor: pointer; }
-.selectCount { font-size: 12px; color: var(--text-muted); }
-.cancelBtn { font-size: 12px; font-weight: 600; color: var(--text-muted); background: none; border: none; cursor: pointer; }
-.actionBar { position: fixed; bottom: 56px; left: 0; right: 0; background: var(--surface-alt); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 10; }
-.actionBarLabel { flex: 1; font-size: 12px; color: var(--text-muted); }
-.actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-teal) 20%, transparent); color: var(--accent-teal); border: none; cursor: pointer; }
-.actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-coral) 20%, transparent); color: var(--accent-coral); border: none; cursor: pointer; }
+.selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--color-border-subtle); }
+.selectAllBtn { font-size: 12px; font-weight: 600; color: var(--color-accent-amber); background: none; border: none; cursor: pointer; }
+.selectCount { font-size: 12px; color: var(--color-text-muted); }
+.cancelBtn { font-size: 12px; font-weight: 600; color: var(--color-text-muted); background: none; border: none; cursor: pointer; }
+.actionBar { position: fixed; bottom: 56px; left: 0; right: 0; background: var(--color-bg-surface); border-top: 1px solid var(--color-border-subtle); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+.actionBarLabel { flex: 1; font-size: 12px; color: var(--color-text-muted); }
+.actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--color-accent-teal) 20%, transparent); color: var(--color-accent-teal); border: none; cursor: pointer; }
+.actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--color-accent-coral) 20%, transparent); color: var(--color-accent-coral); border: none; cursor: pointer; }
 .checkbox { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; z-index: 1; pointer-events: none; }
-.checked { background: var(--accent-amber); border-color: var(--accent-amber); }
+.checked { background: var(--color-accent-amber); border-color: var(--color-accent-amber); }
 .statusSheet { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.statusOption { padding: 12px 16px; background: var(--surface-raised); border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; text-align: left; }
+.statusOption { padding: 12px 16px; background: var(--color-bg-card); border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; text-align: left; }

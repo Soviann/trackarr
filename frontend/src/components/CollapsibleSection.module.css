@@ -1,5 +1,5 @@
 .section {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .header {
@@ -8,7 +8,7 @@
   gap: 8px;
   width: 100%;
   padding: 10px 16px;
-  background: var(--surface-alt);
+  background: var(--color-bg-surface);
   border: none;
   cursor: pointer;
   text-align: left;
@@ -17,7 +17,7 @@
 .title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   flex: 1;
 }
 
@@ -26,13 +26,13 @@
   font-weight: 600;
   padding: 1px 7px;
   border-radius: 10px;
-  background: var(--surface-raised);
-  color: var(--text-muted);
+  background: var(--color-bg-card);
+  color: var(--color-text-muted);
 }
 
 .arrow {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   transition: transform 0.2s;
 }
 
