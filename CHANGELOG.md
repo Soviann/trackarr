@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Amélioré
+- Historique : les épisodes consécutifs d'une même saison sont regroupés en plages (ex: "S1 E1-12") au lieu d'une ligne par épisode — dans l'overlay History d'un titre et dans le feed Recent Activity de la page Stats
+
 ## [v0.14.0] — 2026-04-12
 
 ### Ajouté

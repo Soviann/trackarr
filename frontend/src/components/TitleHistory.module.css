@@ -3,6 +3,7 @@
 .backBtn { background: none; border: none; font-size: 18px; color: var(--color-text-muted); cursor: pointer; padding: 0; }
 .title { font-size: 15px; font-weight: 700; }
 .loading { padding: 20px 16px; color: var(--color-text-muted); }
+.seasonDivider { padding: 8px 16px; font-weight: 600; color: var(--color-text-muted); font-size: 0.85rem; border-bottom: 1px solid var(--color-bg-surface); }
 .row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--color-bg-surface); }
 .info { flex: 1; min-width: 0; }
 .epLabel { display: block; font-size: 13px; font-weight: 600; color: var(--color-text-primary); }

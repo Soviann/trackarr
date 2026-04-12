@@ -3,6 +3,7 @@ import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { formatWatchtime } from '../utils'
+import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
 import type { StatsResponse, FunStat, ActivityEvent } from '../types'
 import s from './Stats.module.css'
 
@@ -280,43 +281,34 @@ function ActivitySection() {
 
   useEffect(() => { loadMore() }, [])
 
-  // Group events by calendar date
+  // Group events by calendar date, then by title+season into episode ranges
   const grouped = groupByDate(events)
 
   return (
     <section className={s.sectionLast}>
       <SectionLabel>Recent activity</SectionLabel>
-      {Object.entries(grouped).map(([date, evts]) => (
-        <div key={date}>
-          <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
-          {evts.map((ev, i) => {
-            const isMovie = ev.title_type === 'movie'
-            const episodeCode = ev.season_number != null && ev.episode_number != null
-              ? `S${ev.season_number} E${ev.episode_number}`
-              : null
-            return (
-              <a key={i} href={`/titles/${ev.title_id}`} className={s.activityRow}>
-                {ev.cover_url
-                  ? <img className={s.activityThumb} src={`/api/covers/${ev.cover_url}`} alt="" role="presentation" />
+      {Object.entries(grouped).map(([date, evts]) => {
+        const rows = groupActivityEvents(evts)
+        return (
+          <div key={date}>
+            <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
+            {rows.map((row) => (
+              <a key={row.key} href={`/titles/${row.titleId}`} className={s.activityRow}>
+                {row.coverUrl
+                  ? <img className={s.activityThumb} src={`/api/covers/${row.coverUrl}`} alt="" role="presentation" />
                   : <div className={s.activityThumbPlaceholder} />}
                 <div className={s.activityInfo}>
-                  <span className={s.activityTitle}>{ev.title_name}</span>
-                  <span className={s.activitySub}>
-                    {isMovie
-                      ? 'Movie'
-                      : episodeCode
-                        ? ev.episode_name ? `${episodeCode} — ${ev.episode_name}` : episodeCode
-                        : 'Episode'}
-                  </span>
+                  <span className={s.activityTitle}>{row.titleName}</span>
+                  <span className={s.activitySub}>{row.subLabel}</span>
                 </div>
-                <span className={`${s.activityBadge} ${s[`badge_${ev.is_completion ? 'done' : ev.title_type}`]}`}>
-                  {ev.is_completion ? 'Completed' : isMovie ? 'Movie' : 'Episode'}
+                <span className={`${s.activityBadge} ${s[`badge_${row.isCompletion ? 'done' : row.titleType}`]}`}>
+                  {row.isCompletion ? 'Completed' : row.titleType === 'movie' ? 'Movie' : 'Episode'}
                 </span>
               </a>
-            )
-          })}
-        </div>
-      ))}
+            ))}
+          </div>
+        )
+      })}
       {hasMore && (
         <button className={s.loadMoreBtn} onClick={loadMore} disabled={loading}>
           {loading ? 'Loading…' : 'Load more'}
@@ -324,6 +316,62 @@ function ActivitySection() {
       )}
     </section>
   )
+}
+
+interface ActivityRow {
+  key: string
+  titleId: number
+  titleName: string
+  coverUrl: string | null
+  titleType: string
+  subLabel: string
+  isCompletion: boolean
+  watchedAt: string
+}
+
+function groupActivityEvents(evts: ActivityEvent[]): ActivityRow[] {
+  // Sub-group by (title_id, season_number)
+  const buckets = new Map<string, ActivityEvent[]>()
+  for (const ev of evts) {
+    const key = `${ev.title_id}-${ev.season_number ?? 'null'}`
+    const list = buckets.get(key) ?? []
+    list.push(ev)
+    buckets.set(key, list)
+  }
+
+  const rows: ActivityRow[] = []
+  for (const group of buckets.values()) {
+    // Sort by episode_number ASC for range detection
+    group.sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0))
+    const ranges = groupIntoRanges(group)
+    const rep = group[0]
+
+    for (const range of ranges) {
+      const label = formatRangeLabel(range)
+      const isSingle = range.items.length === 1
+      const subLabel = rep.title_type === 'movie'
+        ? 'Movie'
+        : isSingle && range.episodeName
+          ? `${label} — ${range.episodeName}`
+          : label
+
+      rows.push({
+        key: `${rep.title_id}-${range.seasonNumber}-${range.startEp}-${range.endEp}`,
+        titleId: rep.title_id,
+        titleName: rep.title_name,
+        coverUrl: rep.cover_url,
+        titleType: rep.title_type,
+        subLabel,
+        isCompletion: range.items.some(e => e.is_completion),
+        watchedAt: range.items.reduce((max, e) =>
+          e.watched_at > max ? e.watched_at : max, range.items[0].watched_at),
+      })
+    }
+  }
+
+  // Re-sort by watched_at DESC
+  rows.sort((a, b) => b.watchedAt.localeCompare(a.watchedAt))
+  return rows
 }
 
 function groupByDate(evts: ActivityEvent[]): Record<string, ActivityEvent[]> {
