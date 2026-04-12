@@ -63,7 +63,7 @@
 }
 
 .drawerExpanded {
-  max-height: 640px;
+  max-height: 800px;
   opacity: 1;
 }
 
@@ -248,7 +248,7 @@
   font-size: 9px;
   border: none;
   background: none;
-  color: var(--color-text-muted);
+  color: #fff;
   font-family: inherit;
   outline: none;
   padding: 0;

@@ -285,58 +285,6 @@ export function FilterDrawer({
           </>
         )}
 
-        <div className={s.filterLabel}>Release date</div>
-        <div className={s.filterRow}>
-          <select
-            className={s.select}
-            value={decade ?? ''}
-            onChange={(e) => {
-              const val = (e.target as HTMLSelectElement).value
-              onDecadeChange(val || null)
-              if (val) {
-                onReleaseFromChange('')
-                onReleaseToChange('')
-              }
-            }}
-          >
-            {decadeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            className={s.dateInput}
-            value={releaseFrom}
-            placeholder="From"
-            onChange={(e) => {
-              onReleaseFromChange((e.target as HTMLInputElement).value)
-              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
-            }}
-          />
-          <input
-            type="date"
-            className={s.dateInput}
-            value={releaseTo}
-            placeholder="To"
-            onChange={(e) => {
-              onReleaseToChange((e.target as HTMLInputElement).value)
-              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
-            }}
-          />
-        </div>
-        {(decade || releaseFrom || releaseTo) && (
-          <div className={s.filterRow}>
-            <label className={s.toggleLabel}>
-              <input
-                type="checkbox"
-                checked={includeNoRelease}
-                onChange={(e) => onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
-              />
-              <span>Include without release date</span>
-            </label>
-          </div>
-        )}
-
         {genres.length > 0 && (() => {
           const sortedGenres = [...genres].sort((a, b) => a.genre.localeCompare(b.genre))
           const filteredGenres = sortedGenres
@@ -421,6 +369,58 @@ export function FilterDrawer({
             </>
           )
         })()}
+
+        <div className={s.filterLabel}>Release date</div>
+        <div className={s.filterRow}>
+          <select
+            className={s.select}
+            value={decade ?? ''}
+            onChange={(e) => {
+              const val = (e.target as HTMLSelectElement).value
+              onDecadeChange(val || null)
+              if (val) {
+                onReleaseFromChange('')
+                onReleaseToChange('')
+              }
+            }}
+          >
+            {decadeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className={s.dateInput}
+            value={releaseFrom}
+            placeholder="From"
+            onChange={(e) => {
+              onReleaseFromChange((e.target as HTMLInputElement).value)
+              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+            }}
+          />
+          <input
+            type="date"
+            className={s.dateInput}
+            value={releaseTo}
+            placeholder="To"
+            onChange={(e) => {
+              onReleaseToChange((e.target as HTMLInputElement).value)
+              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+            }}
+          />
+        </div>
+        {(decade || releaseFrom || releaseTo) && (
+          <div className={s.filterRow}>
+            <label className={s.toggleLabel}>
+              <input
+                type="checkbox"
+                checked={includeNoRelease}
+                onChange={(e) => onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
+              />
+              <span>Include without release date</span>
+            </label>
+          </div>
+        )}
 
         <div className={s.bottomPad} />
       </div>
