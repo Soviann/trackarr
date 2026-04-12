@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.14.0] — 2026-04-12
+
 ### Ajouté
 - PWA : appui long (~500 ms) sur une vignette de la Bibliothèque pour entrer en mode sélection — vibration courte + vignette automatiquement cochée, comme Google Photos
 - PWA : pull-to-refresh personnalisé sur Library, Search, Validate, MatchReview et AdminNotifications — indicateur circulaire animé qui suit le doigt, passage en teal + haptic au franchissement du seuil, rotation (spinner) pendant le refresh, idempotent si un refresh est déjà en cours
