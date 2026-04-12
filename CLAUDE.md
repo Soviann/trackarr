@@ -27,13 +27,29 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 
 `docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session. No implement skill overhead.
 
-## Plans & Specs
+## Plans
 
 Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` once implementation is committed.
 Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
-After saving a plan, offer 3 options: (1) Subagent-Driven, (2) Inline Execution, (3) Save only — stop so I can run it in another session/model.
-Audience = PO (non-technical). Structure around: user-visible behavior, UX/UI flows, screen descriptions, acceptance criteria. No code snippets, no implementation details, no language/framework references. Technical notes only in collapsed section if essential for scope estimation.
 Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
+
+### Format
+- **PO summary first**: 2-3 sentences max, non-technical, describing what changes for the user/product. Enables fast validation before reading technical detail.
+- **Then phases**: phase N depends on N-1 output. Within each phase, mark tasks `[parallel]` or `[seq]`.
+- No prose — actionable instructions only. Each task: target files, method signatures/behavior, test criteria.
+- All architectural decisions made in plan. No "decide how to…" — Sonnet executes, doesn't architect.
+
+### Sonnet-readiness (per task)
+- Target files listed with expected changes
+- Input/output or behavior defined
+- Test criteria explicit (what to assert)
+
+### Execution model
+- Phase with independent tasks → `subagent-driven-development` (parallel Sonnet sub-agents)
+- Phase with dependencies → single sequential agent
+- Mechanical same-change × N → parallel sub-agents
+- One session per phase. Plan encodes execution — no orchestrator needed.
+- **Stop after plan creation.** Never start execution in the same session — present the plan, wait for approval, stop. Execution happens in a new session.
 
 ## Commands
 
