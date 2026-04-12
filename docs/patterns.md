@@ -2,8 +2,6 @@
 
 Update when adding routes, services, components, or commands.
 
-## Status: feat/pwa-native-feel in progress
-
 ## Backend (Go)
 
 ### CLI Commands
@@ -15,64 +13,59 @@ Update when adding routes, services, components, or commands.
 
 ### Models
 
-`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode; `total_watch_minutes int` tracks cumulative watch time), TitleName, Season (EpisodeCount, WatchedCount for listing), Episode, WatchEvent (WatchEventSource), Setting.
+`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode; `total_watch_minutes`), TitleName, Season (EpisodeCount, WatchedCount), Episode, WatchEvent (WatchEventSource), Setting.
 
 ### Services
 
 | Service | File | Purpose |
 |---|---|---|
-| PlexService | `internal/service/plex.go` | Webhook scrobble processing, delegates to `TitleService` and `LibraryService` |
-| TitleService | `internal/service/title.go` | Centralizes title logic (creation from Plex, rematching, URL resolution, manual merging) |
-| LibraryService | `internal/service/library.go` | User library logic (marking watched, auto-complete, rating, notifications). Orchestrates `BackfillService`. |
-| BackfillService | `internal/service/backfill.go` | Automates episode backfill (fetching metadata, marking previous episodes) |
-| PushNotifier | `internal/service/push.go` | Interface (PushService + noopNotifier). Web Push VAPID |
-| BackgroundService | `internal/service/background.go` | Daily title refresh (TMDB sync, auto-complete, push triggers) |
+| PlexService | `internal/service/plex.go` | Webhook scrobble, delegates to TitleService + LibraryService |
+| TitleService | `internal/service/title.go` | Title logic (creation, rematching, URL resolution, merging) |
+| LibraryService | `internal/service/library.go` | User library (marking watched, auto-complete, rating, notifications) |
+| BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous) |
+| PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
-| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates Steps 1-5 of media matching. Supports URL resolution (TMDB, IMDb, AniList, TVDB slugs). Parallel TMDB+TVDB fetch with fusion rules in `enrichFromIDs`. |
-| TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: client (tmdb.go), search, details, covers, find-by-id |
-| TVDBClient | `internal/service/matching/tvdb*.go` | TheTVDB v4 API: client (tvdb.go, JWT auth with auto-relogin), details, covers, search, slug resolution. Injected via `Pipeline.SetTVDB()`. |
-| AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: client (anilist.go), search, sync, covers |
+| Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
+| TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
+| TVDBClient | `internal/service/matching/tvdb*.go` | TVDB v4: details, covers, search, slug resolution (JWT auth) |
+| AniListClient | `internal/service/matching/anilist*.go` | AniList GraphQL: search, episodes, rating sync, covers |
 | CrossRefDB | `internal/service/matching/crossref.go` | anime-offline-database ID cross-referencing |
-| GeminiClient | `internal/service/matching/gemini.go` | Gemini AI match verification + fuzzy resolve + anime season identification, key rotation |
+| GeminiClient | `internal/service/matching/gemini.go` | AI match verification, fuzzy resolve, anime season ID, key rotation |
 
 ### Matching Pipeline Steps
 
-1. **Plex IDs** — use TMDB/IMDB from webhook metadata → `confirmed`
-2. **Cross-reference** — anime-offline-database lookup → `confirmed` (now handles multiple TMDB IDs for movies vs TV)
-3. **TMDB search** — by title+year → proceed to Step 5
-
-4. **AniList search** — anime only → proceed to Step 5
+1. **Plex IDs** — TMDB/IMDB from webhook metadata → `confirmed`
+2. **Cross-reference** — anime-offline-database lookup → `confirmed`
+3. **TMDB search** — by title+year → Step 5
+4. **AniList search** — anime only → Step 5
 5. **Gemini verification** — high confidence → `pending_review`, low → `unconfirmed`
 
-Confidence levels: `ConfidenceHigh`, `ConfidenceMedium`, `ConfidenceLow` (constants in `pipeline.go`). Graceful degradation: nil clients are skipped, pipeline falls through to next step.
+Confidence: `ConfidenceHigh`/`Medium`/`Low` (constants in `pipeline.go`). Nil clients are skipped (graceful degradation). Each step sets `MatchSource` (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`).
 
-Each step sets `MatchSource` on the result (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`). Stored on Title alongside `OriginalTitle` (raw Plex name) for Match Review provenance display.
-
-After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → fusion rules (overview: longest wins; genres: union; cover: TMDB first, TVDB fallback, AniList last). Names merged from both sources (TMDB wins on duplicate lang). TVDB covers stored as `tvdb_<id>.jpg`. AniList covers prefixed `al-`.
-
-**TVDB fusion fields**: `tvdb_rating` (score×10, stored as INTEGER), `tvdb_id` already existed. No divergence UI in v1 (TMDB wins on release date conflicts >1 year; server logs the diff).
-
-**TVDB URL resolution**: `ParseURLFull()` returns `TVDBSeriesSlug`/`TVDBMovieSlug` from `thetvdb.com/series/<slug>` or `/movies/<slug>`. `Pipeline.ResolveURL` calls `GetSeriesBySlug`/`GetMovieBySlug` → numeric ID → `Run()`. Graceful: if TVDB client nil, returns user-visible error.
-
-### External APIs
-
-| API | File | Purpose |
-|---|---|---|
-| TMDB | `internal/service/matching/tmdb.go` | Metadata, episodes, covers, names |
-| TVDB | `internal/service/matching/tvdb.go` | Metadata, covers, slug resolution, JWT auth |
-| AniList | `internal/service/matching/anilist.go` | Anime search, episodes, rating sync |
-| Gemini | `internal/service/matching/gemini.go` | Match verification/fallback |
-| anime-offline-database | `internal/service/matching/crossref.go` | Cross-reference ID mapping |
-| Google OAuth | `internal/handler/auth.go` | Auth |
-| Web Push | `internal/service/push.go` | VAPID notifications |
-
-### Database
-
-`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)` transaction helper, `DBTX` interface (shared by `*sql.DB` and `*sql.Tx`). SQLite with WAL, `MaxOpenConns=1`.
+After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres: union; cover: TMDB > TVDB > AniList). TVDB URL resolution via `ParseURLFull()` → slug → numeric ID.
 
 ### Repositories
 
-`internal/repository/` — All repos use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`). TitleRepository (PaginatedResult, TitleFilter with Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp), SeasonRepository, EpisodeRepository, WatchEventRepository (`CountByTitleID(titleID) (int, error)`), SettingRepository, StatsRepository (+ `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak`), ActivityRepository (`List`), HistoryRepository (`GetByTitleID`), GenreRepository (`ListWithCounts`, `ReplaceForTitle`). All DB queries live here. Title search in `title_search.go`. `List()` returns paginated light response (no episodes, season counters + next_episode). `ListAll()` returns full data for background jobs. `GetByID()` returns full detail with episodes. Genres stored in `title_genres` join table (migration 016), loaded separately to respect MaxOpenConns=1.
+`internal/repository/` — All use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`).
+
+| Repository | Key methods |
+|---|---|
+| TitleRepository | `List` (paginated, TitleFilter), `ListAll` (full, for jobs), `GetByID` (with episodes), search in `title_search.go` |
+| SeasonRepository | CRUD + season-level operations |
+| EpisodeRepository | CRUD + episode-level operations |
+| WatchEventRepository | `CountByTitleID` |
+| SettingRepository | Key-value settings |
+| StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
+| ActivityRepository | `List` (paginated watch events) |
+| HistoryRepository | `GetByTitleID` (per-title watch log) |
+| GenreRepository | `ListWithCounts`, `ReplaceForTitle` |
+
+TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp. Genres in `title_genres` join table (migration 016), loaded separately (MaxOpenConns=1).
+
+### Database
+
+`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)`, `DBTX` interface. SQLite with WAL, `MaxOpenConns=1`.
 
 ### Handlers
 
@@ -85,31 +78,31 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 | GET | `/api/health` | Health | No |
 | GET | `/api/config` | PublicConfig | No |
 | POST | `/api/auth/google` | GoogleCallback | No (rate-limited) |
-| POST | `/api/auth/dev` | DevLogin | No (debug only, rate-limited) |
+| POST | `/api/auth/dev` | DevLogin | No (debug only) |
 | POST | `/api/auth/logout` | Logout | No |
 | POST | `/api/webhook/plex/{secret}` | HandlePlex | No (secret in URL) |
 | GET | `/api/covers/{filename}` | Serve | No |
-| GET | `/api/titles` | List | Yes | `?sort=updated_at\|original_title\|release_date\|my_rating\|created_at&order=asc\|desc&decade=2020&release_from=YYYY-MM-DD&release_to=YYYY-MM-DD&include_no_release=false&genres=Drama&genres=Action&genre_op=AND\|OR` |
-| GET | `/api/genres` | List | Yes | Returns `[{genre, count}]` sorted by count desc |
-| GET | `/api/titles/continue-watching` | ContinueWatching | Yes | Returns Watching titles with ≥1 unwatched episode |
-| GET | `/api/titles/upcoming` | Upcoming | Yes | Returns titles with next_air_date ≥ today |
-| GET | `/api/titles/review-count` | ReviewCount | Yes | Returns `{count}` of titles needing review (pending_review + unconfirmed) for PWA badge |
-| POST | `/api/titles/batch-delete` | BatchDelete | Yes | Body `{"ids": [1, 2]}` |
-| POST | `/api/titles/batch-status` | BatchStatus | Yes | Body `{"ids": [1, 2], "status": "completed"}` |
+| GET | `/api/titles` | List | Yes |
+| GET | `/api/genres` | List | Yes |
+| GET | `/api/titles/continue-watching` | ContinueWatching | Yes |
+| GET | `/api/titles/upcoming` | Upcoming | Yes |
+| GET | `/api/titles/review-count` | ReviewCount | Yes |
+| POST | `/api/titles/batch-delete` | BatchDelete | Yes |
+| POST | `/api/titles/batch-status` | BatchStatus | Yes |
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
 | DELETE | `/api/titles/{id}` | Delete | Yes |
-| POST | `/api/titles/{id}/rematch` | Rematch | Yes | Set IDs + enqueue enrichment |
-| GET | `/api/tmdb/search` | Search | Yes | `?query=...&type=movie\|tv` |
+| POST | `/api/titles/{id}/rematch` | Rematch | Yes |
+| GET | `/api/tmdb/search` | Search | Yes |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | BatchMarkWatched | Yes |
 | PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
-| GET | `/api/stats` | Get | Yes | Response includes `total_watch_minutes`, `genres[]`, `streaks.{current,best}` |
-| GET | `/api/stats/activity` | List | Yes | `?limit=50&offset=0` (max 100) — paginated watch events |
-| GET | `/api/titles/{id}/history` | Get | Yes | per-title watch log grouped by episode |
+| GET | `/api/stats` | Get | Yes |
+| GET | `/api/stats/activity` | List | Yes |
+| GET | `/api/titles/{id}/history` | Get | Yes |
 | GET | `/api/settings` | Get | Yes |
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
@@ -117,49 +110,49 @@ After matching: parallel TMDB + TVDB fetch via `sync.WaitGroup` goroutines → f
 | GET | `/api/admin/tasks` | ListTasks | Yes |
 | POST | `/api/admin/tasks/{id}/retry` | RetryTask | Yes |
 | DELETE | `/api/admin/tasks/{id}` | DeleteTask | Yes |
-| POST | `/api/admin/tasks/batch-delete` | DeleteTasksBatch | Yes | Body `{"ids": [1, 2]}` |
+| POST | `/api/admin/tasks/batch-delete` | DeleteTasksBatch | Yes |
 | POST | `/api/admin/refresh-all` | RefreshAll | Yes |
 
 Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
 
 ## Frontend (Preact)
 
-Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules (`*.module.css`) for all components. `clsx` for conditional classes. `theme.ts` retained for SVG attributes and dynamic values (`coverBackground()`, `accentWash()`). Shared utils in `frontend/src/utils.ts` (`getName`, `getTypeLabel`, `getStatusLabel`, `formatDate`, `watchedCount`, `totalEpisodes`, `formatWatchtime`). API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. Shared utils in `frontend/src/utils.ts`. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
 
 ### Hooks
 
 | Hook | File | Purpose |
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
-| `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, sort (localStorage-persisted), loadMore, cache |
-| `useSearchStore` | `store.ts` | Zustand store: search results persistence and scroll position |
+| `useTitleStore` | `store.ts` | Zustand: paginated title fetch, filter, sort (localStorage), loadMore, cache |
+| `useSearchStore` | `store.ts` | Zustand: search results + scroll position persistence |
 | `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
-| `useLongPress` | `hooks/useLongPress.ts` | Long-press detection (pointer events, configurable threshold/tolerance, referentially stable handlers) |
+| `useLongPress` | `hooks/useLongPress.ts` | Long-press detection (pointer events, configurable threshold/tolerance) |
 
 ### Components
 
 | Component | File | Purpose |
 |---|---|---|
-| TitleHistory | `components/TitleHistory.tsx` | Full-screen watch history overlay per title (episode rows + rewatch badge) |
-| Navbar | `components/Navbar.tsx` | 4-tab bottom nav (amber/teal/green/lavender) |
-| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres), shared by Library+Search. Sort hidden during search. Release date section: decade dropdown, date range inputs, include-no-release toggle. Genre section: searchable checklist with Any/All toggle, fetches `/api/genres` on mount. Props: `selectedGenres`, `genreOp`, `onGenreToggle`, `onGenreOpChange`. |
+| TitleHistory | `components/TitleHistory.tsx` | Watch history overlay per title |
+| Navbar | `components/Navbar.tsx` | 4-tab bottom nav |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres) |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
-| PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3 aspect, gradient overlay) |
+| PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3, gradient overlay) |
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |
 | SeasonTab | `components/SeasonTab.tsx` | Season pill with progress/check |
 | EpisodeRow | `components/EpisodeRow.tsx` | Episode row with toggle watched |
-| ActionDrawer | `components/ActionDrawer.tsx` | Collapsible drawer with quick actions (next ep, rate, IMDb, AniList) + manage (edit, fix match) |
-| PullToRefresh | `components/PullToRefresh.tsx` | Custom pull-to-refresh wrapper (touch events, rubber-band indicator, haptic at threshold, idempotent) |
-| SwipeActions | `components/SwipeActions.tsx` | Swipe-to-reveal action buttons on list items (direction lock, one-at-a-time, exit animation) |
-| BottomSheet | `components/BottomSheet.tsx` | Reusable slide-up sheet with backdrop, drag-to-dismiss on full sheet, body scroll lock, Android back button support |
-| RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList buttons |
+| ActionDrawer | `components/ActionDrawer.tsx` | Quick actions (next ep, rate, links) + manage (edit, fix match) |
+| PullToRefresh | `components/PullToRefresh.tsx` | Pull-to-refresh (touch events, rubber-band, haptic) |
+| SwipeActions | `components/SwipeActions.tsx` | Swipe-to-reveal action buttons |
+| BottomSheet | `components/BottomSheet.tsx` | Slide-up sheet with drag-to-dismiss, body scroll lock |
+| RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList |
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
 | AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
-| RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix wrong match |
-| MatchReviewCard | `components/MatchReviewCard.tsx` | Match review card with ID chips + confirm/fix |
-| CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for titles without cover (movie=blue, series=teal, anime=lavender). `coverBackground()` helper for CSS background string |
-| CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header strip with lazy-load `onExpand` callback. Props: `title`, `count?`, `children`, `onExpand?` |
-| PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip. Items have `id`, `cover_url`, `name`, `sublabel`, `sublabelVariant?`, `progressRatio?` |
+| RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix match |
+| MatchReviewCard | `components/MatchReviewCard.tsx` | Match review with ID chips + confirm/fix |
+| CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for missing covers |
+| CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header with lazy-load `onExpand` |
+| PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip |
 
 ### Pages & Routes
 
@@ -180,13 +173,10 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 ## Quality
 
 ### Linting
-
 `.golangci.yml` — errcheck, gocritic, govet. Run `make lint`.
 
 ### Backend Tests
-
-`make test` — `testify/assert+require`, in-memory SQLite. Table-driven tests for repository (TitleRepository: filters, pagination, search, external IDs, status counts) and handlers (error paths: invalid ID, not found, bad JSON).
+`make test` — `testify/assert+require`, in-memory SQLite. Table-driven tests for repository and handlers.
 
 ### Frontend Tests
-
-`make test-front` — vitest + jsdom + @testing-library/preact. `vitest.config.ts` (CSS Modules non-scoped). `utils.test.ts` (19 tests), `ErrorBanner.test.tsx` (6 tests).
+`make test-front` — vitest + jsdom + @testing-library/preact.

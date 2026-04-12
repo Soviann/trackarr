@@ -1,9 +1,6 @@
 # CLAUDE.md — Mandatory rules
 
-<!-- TEMPLATE:START — managed by sync-template-config, do not edit manually.
-     Add here: conventions shared by ALL Siqual projects (coding standards, git rules,
-     language rules, approach, token optimization, recommended plugins).
-     If unsure whether a rule belongs here or in PROJECT, ask the user before adding. -->
+<!-- TEMPLATE:START — do not edit manually -->
 
 ## Approach
 - Act over ask; read only files you'll edit.
@@ -16,7 +13,7 @@
 ## Plans
 
 ### Format
-- **PO summary first**: 2-3 sentences max, non-technical, describing what changes for the user/product. Enables fast validation before reading technical detail.
+- **PO summary first**: 2-3 sentences max, non-technical, describing what changes for the user/product.
 - **Then phases**: phase N depends on N-1 output. Within each phase, mark tasks `[parallel]` or `[seq]`.
 - No prose — actionable instructions only. Each task: target files, method signatures/behavior, test criteria.
 - All architectural decisions made in plan. No "decide how to…" — Sonnet executes, doesn't architect.
@@ -50,9 +47,8 @@
 - Format: `<type>(scope|branch-name): description` — types: `feat|fix|chore|refactor|docs`
 - French descriptions: 3rd-person imperative (`ajoute`, `corrige`, `supprime` — not infinitive).
 - Commit title = visible impact, not implementation detail. Technical details in body.
-  - `fix`: problem solved. BAD: `utilise PATCH au lieu de PUT` GOOD: `corrige la perte des tomes`
-  - `feat`: capability added. BAD: `ajoute CoverSearchService` GOOD: `ajoute la recherche de couvertures`
-  - `refactor`/`chore`: improvement. BAD: `extrait getFieldPriority` GOOD: `simplifie la résolution de priorité`
+  - `fix`: problem solved. BAD: `utilise LEFT JOIN` GOOD: `corrige l'absence de médias`
+  - `feat`: capability added. BAD: `ajoute MergeService` GOOD: `permet de fusionner des titres`
 - Skip `git diff` when you made the edits — diff only to discover changes you didn't make.
 - Merges: `--no-ff`
 
@@ -64,77 +60,56 @@ Commits + docs/comments: French. Code identifiers: English. CLAUDE.md: English.
 
 <!-- TEMPLATE:END -->
 
-<!-- PROJECT:START — project-specific content, edit freely.
-     Add here: project description, tech stack, architecture, commands, project-specific
-     deviations from the template rules.
-     If unsure whether a rule belongs here or in TEMPLATE, ask the user before adding. -->
+<!-- PROJECT:START -->
 
 ## Project
-
 PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 / Vite / Docker. Single developer.
 
 ## Approach
-
-- Always prefer the robust/correct solution over the lazy/easy one, even if harder or more tedious. If trade-offs exist, present them to the user as a PO: describe user-visible impact of each option, not implementation effort.
+- Always prefer the robust/correct solution over the lazy/easy one. If trade-offs exist, present them as a PO: user-visible impact, not implementation effort.
 - Update `docs/patterns.md` when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
 
 ## Plans
-
 Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` before implementation is committed.
-Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
-Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
+Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/`, never to `~/.claude/` or any global path.
+Versioning: git history is sufficient. Don't version-number files. Keep immutable once approved — if scope changes, add `## Revision — YYYY-MM-DD` header. Name descriptively (`notification-push.md` not `plan-007.md`).
 
 ## Audits
-
-`docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session. No implement skill overhead.
+`docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session.
 
 ## Commands
-
 **All via Makefile (runs inside Docker).** Never `go`/`node`/`npm` on host. Host-only: `git`, `gh`, `docker`, `make`.
 
 `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
 
 ## Changelog
-
-Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security) — not only at release. Add under the appropriate `## [Unreleased]` section as you go. Release = move Unreleased block to a versioned heading + push `v*` tag.
+Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security). Add under `## [Unreleased]` as you go. Release = move Unreleased block to versioned heading + push `v*` tag.
 
 ## Deploy
-
-`.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: `CHANGELOG.md` already up to date → push `v*` tag. Hotfix: `gh workflow run deploy.yml`.
+`.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag. Hotfix: `gh workflow run deploy.yml`.
 
 ## Environment
-
 `.env` (committed, defaults) + `.env.local` (gitignored, secrets). Keys: `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_EMAIL`, `JWT_SECRET`, `TMDB_API_KEY`, `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET`, `GEMINI_API_KEY`, `VAPID_*`.
 
 ## Gotchas
-
 - SQLite `MaxOpenConns=1`: close row cursors before nested queries
 - `node_modules` in Docker volume: host IDE shows TS errors (expected, builds fine in container)
 - Vite dev server not started by `make up` — run `make dev-frontend` separately
 - Auth cookie: `HttpOnly`, `SameSite=Lax`, no `Secure` in dev
 
 ## Standards
-
 - `gofmt` + `golangci-lint`. TypeScript strict. Preact functional components.
 - No magic strings — constants/enums. DB queries in `repository/` only.
 - Handlers: struct with repos (DI), methods = HTTP handlers.
 - Errors: `fmt.Errorf("context: %w", err)`. Tests: `testify/assert`, in-memory SQLite.
 
 ## Visual Verification
-
-After UI/UX changes, verify in-browser via Chrome DevTools MCP:
-1. Login with `DEBUG_LOGIN*` credentials from `.env.local`
-2. Confirm changed screens work as expected
-3. Check console for errors/warnings
-4. Navigate other pages to catch regressions
-5. If broken: fix → re-verify. Never claim done without visual confirmation.
+After UI/UX changes, verify in-browser via Chrome DevTools MCP: login with `DEBUG_LOGIN*` from `.env.local`, confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation.
 
 ## Git
-
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
 
 ## Recommended Plugins
-
 `chrome-devtools-mcp`, `cc-skills-golang`.
 
 <!-- PROJECT:END -->
