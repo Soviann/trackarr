@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Casting cliquable : les noms du casting dans la fiche titre sont cliquables et ouvrent une page listant tous les titres dans lesquels cette personne apparaît
+
 ### Amélioré
 - Historique : les épisodes consécutifs d'une même saison sont regroupés en plages (ex: "S1 E1-12") au lieu d'une ligne par épisode — dans l'overlay History d'un titre et dans le feed Recent Activity de la page Stats
 

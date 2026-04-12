@@ -612,4 +612,33 @@ func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 	}
 }
 
+func TestTitleRepository_List_PersonFilter(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	credits := `[{"name":"John Doe","role":"Director"}]`
+	idA, err := repo.Create(&model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &credits,
+	}, []model.TitleName{{Name: "Film A", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	_, err = repo.Create(&model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Film B", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	person := "John Doe"
+	result, err := repo.List(repository.TitleFilter{Person: &person})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 1)
+	assert.Equal(t, idA, result.Titles[0].ID)
+}
+
 func ptr[T any](v T) *T { return &v }

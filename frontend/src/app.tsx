@@ -15,6 +15,7 @@ import { Stats } from './pages/Stats'
 import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
+import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
 import { updateBadge } from './utils/badge'
 import { useTitleStore, useSearchStore } from './store'
@@ -128,6 +129,7 @@ export function App() {
           <Stats path="/stats" />
           <Login path="/login" />
           <TitleDetail path="/title/:id" />
+          <PersonTitles path="/person/:name" />
           <Admin path="/admin" />
           <Validate path="/admin/validate" />
           <AdminTasks path="/admin/tasks" />

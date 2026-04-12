@@ -152,6 +152,10 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
+	if p := r.URL.Query().Get("person"); p != "" {
+		filter.Person = &p
+	}
+
 	result, err := h.titlesRead.List(filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)

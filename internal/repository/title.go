@@ -65,6 +65,7 @@ type TitleFilter struct {
 	IncludeNoRelease bool     // when false + date filter active, exclude NULL release_date
 	Genres           []string // filter by these genres
 	GenreOp          string   // "AND" | "OR", defaults to "OR"
+	Person           *string  // filter by credit name (json_each on credits column)
 }
 
 const DefaultPageSize = 50
@@ -336,6 +337,11 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 				args = append(args, g)
 			}
 		}
+	}
+
+	if filter.Person != nil {
+		conditions = append(conditions, `t.credits IS NOT NULL AND EXISTS (SELECT 1 FROM json_each(t.credits) je WHERE json_extract(je.value, '$.name') = ?)`)
+		args = append(args, *filter.Person)
 	}
 
 	whereClause := ""

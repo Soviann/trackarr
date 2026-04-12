@@ -222,7 +222,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <div className={s.castList}>
             {credits.map((c) => (
               <div key={`${c.name}-${c.role}`} className={s.castEntry}>
-                <span className={s.castPerson}>{c.name}</span>
+                <button
+                  type="button"
+                  className={s.castPerson}
+                  onClick={() => route('/person/' + encodeURIComponent(c.name))}
+                >
+                  {c.name}
+                </button>
                 <span className={s.castRole}>{c.role}</span>
               </div>
             ))}
