@@ -1,5 +1,5 @@
 import type { PaginatedResponse } from '../types'
-import { useState } from 'preact/hooks'
+import { useState, useCallback } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { MatchReviewCard } from '../components/MatchReviewCard'
@@ -17,7 +17,7 @@ export function MatchReview({ path }: { path?: string }) {
 
   const loading = l1 || l2
   const error = e1 || e2
-  const mutate = () => { m1(); m2() }
+  const mutate = useCallback(() => { m1(); m2() }, [m1, m2])
 
   const pending = pendingData?.titles ?? []
   const unconfirmed = unconfirmedData?.titles ?? []

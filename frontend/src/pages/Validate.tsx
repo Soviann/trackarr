@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../types'
 import { useApi } from '../hooks/useApi'
@@ -163,7 +163,7 @@ export function Validate({ path }: { path?: string }) {
     }
   }
 
-  const handleRefresh = () => { mutateSearch(); mutateCurrent() }
+  const handleRefresh = useCallback(() => { mutateSearch(); mutateCurrent() }, [mutateSearch, mutateCurrent])
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>

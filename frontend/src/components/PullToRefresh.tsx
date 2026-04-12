@@ -51,13 +51,14 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
   thresholdRef.current = threshold
   onRefreshRef.current = onRefresh
 
-  function updatePhase(p: Phase) {
+  const updatePhase = useCallback((p: Phase) => {
     phaseRef.current = p
     setPhase(p)
-  }
+  }, [])
 
   const handlePointerDown = useCallback((e: PointerEvent) => {
-    if (disabledRef.current || refreshingRef.current) return
+    if (refreshingRef.current) return
+    if (disabledRef.current) return
     if (window.scrollY > 0) return
     startYRef.current = e.clientY
     hapticFiredRef.current = false
