@@ -41,6 +41,8 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
   const thresholdRef = useRef(threshold)
   const actionsWidthRef = useRef(0)
   const animatingRef = useRef(false)
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipNextCloseRef = useRef(false)
 
   // Re-sync props refs each render
   disabledRef.current = disabled
@@ -85,16 +87,19 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
     if (animate) animatingRef.current = true
     applyOffset(0)
     updatePhase('idle')
-    setTimeout(() => { animatingRef.current = false }, 220)
+    if (animationTimerRef.current !== null) clearTimeout(animationTimerRef.current)
+    animationTimerRef.current = setTimeout(() => { animatingRef.current = false }, 220)
   }, [applyOffset, updatePhase])
 
   // Open (snap to actions-width reveal)
   const open = useCallback(() => {
     const w = getActionsWidth()
+    if (animationTimerRef.current !== null) clearTimeout(animationTimerRef.current)
     animatingRef.current = true
     applyOffset(-w)
     updatePhase('open')
-    setTimeout(() => { animatingRef.current = false }, 220)
+    animationTimerRef.current = setTimeout(() => { animatingRef.current = false }, 220)
+    skipNextCloseRef.current = true
     // Notify all other instances to close
     document.dispatchEvent(new CustomEvent(CLOSE_EVENT, { detail: { id } }))
   }, [id, applyOffset, updatePhase, getActionsWidth])
@@ -115,16 +120,16 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
   useEffect(() => {
     if (phase !== 'open') return
     const handler = (e: PointerEvent) => {
+      if (skipNextCloseRef.current) {
+        skipNextCloseRef.current = false
+        return
+      }
       if (!containerRef.current?.contains(e.target as Node)) {
         close(true)
       }
     }
-    // Small delay to avoid catching the pointerup that opened it
-    const timer = setTimeout(() => {
-      document.addEventListener('pointerdown', handler)
-    }, 50)
+    document.addEventListener('pointerdown', handler)
     return () => {
-      clearTimeout(timer)
       document.removeEventListener('pointerdown', handler)
     }
   }, [phase, close])
@@ -133,6 +138,13 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
     if (disabledRef.current) return
     if (activePointerRef.current !== null) return
     if (phaseRef.current === 'exiting') return
+
+    // Clear any pending animation timer so animatingRef is accurate immediately
+    if (animationTimerRef.current !== null) {
+      clearTimeout(animationTimerRef.current)
+      animationTimerRef.current = null
+      animatingRef.current = false
+    }
 
     activePointerRef.current = e.pointerId
     startXRef.current = e.clientX
@@ -186,62 +198,6 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
     }
   }, [applyOffset, updatePhase, getActionsWidth, getThreshold])
 
-  const handlePointerUp = useCallback((e: PointerEvent) => {
-    if (activePointerRef.current !== e.pointerId) return
-    activePointerRef.current = null
-
-    if (phaseRef.current !== 'swiping') return
-
-    const threshold = getThreshold()
-    const currentX = currentOffsetRef.current
-
-    if (Math.abs(currentX) >= threshold) {
-      // Past threshold: full reveal or auto-execute primary action
-      const actionsWidth = getActionsWidth()
-      if (Math.abs(currentX) >= actionsWidth * 1.1) {
-        // Far drag — execute primary action automatically
-        const primary = actions[0]
-        if (primary && !primary.disabled) {
-          animatingRef.current = true
-          applyOffset(-actionsWidth)
-          updatePhase('open')
-          setTimeout(() => {
-            animatingRef.current = false
-            executeAction(primary)
-          }, 220)
-        } else {
-          open()
-        }
-      } else {
-        // Snap to reveal
-        open()
-      }
-    } else {
-      // Below threshold — snap back
-      close(true)
-    }
-  }, [getThreshold, getActionsWidth, actions, applyOffset, updatePhase, open, close])
-
-  const handlePointerCancel = useCallback((e: PointerEvent) => {
-    if (activePointerRef.current !== e.pointerId) return
-    activePointerRef.current = null
-    if (phaseRef.current === 'swiping') {
-      close(true)
-    }
-  }, [close])
-
-  // Attach move/up/cancel on window so drag tracks past container bounds
-  useEffect(() => {
-    window.addEventListener('pointermove', handlePointerMove, { passive: false })
-    window.addEventListener('pointerup', handlePointerUp)
-    window.addEventListener('pointercancel', handlePointerCancel)
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-      window.removeEventListener('pointercancel', handlePointerCancel)
-    }
-  }, [handlePointerMove, handlePointerUp, handlePointerCancel])
-
   const executeAction = useCallback((action: SwipeAction) => {
     if (action.disabled) return
 
@@ -268,11 +224,69 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
 
     // Execute and let parent re-fetch (mutate) remove from DOM
     Promise.resolve(action.onAction()).catch(() => {
-      // On error, snap back
+      // On error, clear exit animation styles and snap back
+      if (containerEl) containerEl.style.cssText = ''
       applyOffset(0)
       updatePhase('idle')
     })
   }, [applyOffset, updatePhase])
+
+  const handlePointerUp = useCallback((e: PointerEvent) => {
+    if (activePointerRef.current !== e.pointerId) return
+    activePointerRef.current = null
+
+    if (phaseRef.current !== 'swiping') return
+
+    const threshold = getThreshold()
+    const currentX = currentOffsetRef.current
+
+    if (Math.abs(currentX) >= threshold) {
+      // Past threshold: full reveal or auto-execute primary action
+      const actionsWidth = getActionsWidth()
+      if (Math.abs(currentX) >= actionsWidth * 1.1) {
+        // Far drag — execute primary action automatically
+        const primary = actions[0]
+        if (primary && !primary.disabled) {
+          if (animationTimerRef.current !== null) clearTimeout(animationTimerRef.current)
+          animatingRef.current = true
+          applyOffset(-actionsWidth)
+          updatePhase('open')
+          animationTimerRef.current = setTimeout(() => {
+            animatingRef.current = false
+            executeAction(primary)
+          }, 220)
+        } else {
+          open()
+        }
+      } else {
+        // Snap to reveal
+        open()
+      }
+    } else {
+      // Below threshold — snap back
+      close(true)
+    }
+  }, [getThreshold, getActionsWidth, actions, applyOffset, updatePhase, open, close, executeAction])
+
+  const handlePointerCancel = useCallback((e: PointerEvent) => {
+    if (activePointerRef.current !== e.pointerId) return
+    activePointerRef.current = null
+    if (phaseRef.current === 'swiping') {
+      close(true)
+    }
+  }, [close])
+
+  // Attach move/up/cancel on window so drag tracks past container bounds
+  useEffect(() => {
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerCancel)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+    }
+  }, [handlePointerMove, handlePointerUp, handlePointerCancel])
 
   const isAnimating = animatingRef.current || phase === 'idle' || phase === 'open'
 
