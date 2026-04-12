@@ -29,6 +29,10 @@ PlexTracker est une PWA (Progressive Web App) accessible depuis le navigateur Ch
 2. Se connecter avec le compte Google autorisé
 3. Ajouter à l'écran d'accueil pour un accès rapide (Chrome → menu → "Ajouter à l'écran d'accueil")
 
+**Raccourcis** : un appui long sur l'icône PlexTracker dans le launcher Android affiche 3 raccourcis : Ajouter un titre, Bibliothèque, Recherche.
+
+**Badge** : l'icône affiche le nombre de titres en attente de révision (pending review + unconfirmed). Le compteur se met à jour à l'ouverture de l'app et après chaque action dans Match Review.
+
 ---
 
 ## Écrans
@@ -44,6 +48,10 @@ L'écran principal affiche tous les titres organisés par statut.
 **Tri** : le tiroir de filtres propose 5 options de tri (dernière mise à jour, titre, année, note, date d'ajout). Taper un chip l'active ; taper à nouveau inverse la direction (↑/↓). Le tri est masqué pendant la recherche et persiste via localStorage.
 
 **Action rapide** : le badge rond sur chaque carte "En cours" affiche le numéro du prochain épisode. Un tap marque cet épisode comme vu et passe au suivant.
+
+**Sélection multiple** : un appui long (~500 ms) sur une vignette active le mode sélection (vibration courte). Toucher d'autres vignettes les coche/décoche. Actions disponibles : changement de statut ou suppression en lot.
+
+**Pull-to-refresh** : tirer vers le bas pour rafraîchir la page. Un indicateur circulaire suit le doigt ; il passe en teal avec une vibration au franchissement du seuil, puis tourne pendant le chargement. Disponible sur Library, Search, Validate, Match Review et Admin Notifications.
 
 **Bannière de revue** : si des titres ont un match à vérifier, une bannière rouge apparaît sous le titre "Library" avec le nombre de titres concernés.
 
@@ -97,7 +105,13 @@ Quand PlexTracker reçoit un nouveau titre via Plex, il tente de l'identifier au
 
 Actions : Confirmer le match ou Corriger (re-recherche ou saisie manuelle d'IDs).
 
+**Swipe actions** : glisser une carte vers la gauche révèle deux boutons — Confirm (vert) et Fix match (orange). Glisser loin exécute automatiquement l'action principale (Confirm).
+
 Le bouton "Batch confirm" permet de confirmer tous les matchs "pending" d'un coup.
+
+### Panneaux (BottomSheet)
+
+Les panneaux (notation, édition, AniList, fix match) s'ouvrent en glissant depuis le bas. On peut les fermer en glissant vers le bas depuis n'importe quel endroit du panneau, en tapant le fond, ou avec le bouton retour Android. Le scroll de la page en arrière-plan est bloqué pendant l'ouverture.
 
 ### Notation
 

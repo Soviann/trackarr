@@ -16,6 +16,7 @@
 
 ### Corrigé
 - Bibliothèque : le mode sélection multiple est de nouveau utilisable — la grille ne déraille plus quand on active « Select » (une colonne s'élargissait à cause d'un wrapper sans `overflow: hidden`) et toucher une affiche en mode sélection coche la pastille au lieu d'ouvrir la fiche détail (le listener global de preact-router sur les `<a>` forçait la navigation en parallèle)
+- PWA : le pull-to-refresh n'interfère plus avec le scroll tactile — migration de pointer events vers touch events et retrait de `touch-action: pan-x` qui bloquait le défilement vertical
 
 ### Modifié
 - Bibliothèque : le bouton « Select » est remplacé par l'appui long — bouton Cancel accessible dans la barre de sélection
