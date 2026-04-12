@@ -112,6 +112,9 @@ export function FilterDrawer({
   const touchStartY = useRef<number | null>(null)
   const [genres, setGenres] = useState<GenreCount[]>([])
   const [genreSearch, setGenreSearch] = useState('')
+  const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
+  const genreBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const genreInputRef = useRef<HTMLInputElement>(null)
 
   const fetchGenres = useCallback(() => {
     apiFetch<GenreCount[]>('/genres')
@@ -334,51 +337,90 @@ export function FilterDrawer({
           </div>
         )}
 
-        {genres.length > 0 && (
-          <>
-            <div className={s.filterLabel}>Genres</div>
-            <div className={s.genreOpRow}>
-              <button
-                className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
-                onClick={() => onGenreOpChange('OR')}
-              >Any</button>
-              <button
-                className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
-                onClick={() => onGenreOpChange('AND')}
-              >All</button>
-              {selectedGenres.length > 0 && (
+        {genres.length > 0 && (() => {
+          const sortedGenres = [...genres].sort((a, b) => a.genre.localeCompare(b.genre))
+          const filteredGenres = sortedGenres
+            .filter(g => !selectedGenres.includes(g.genre))
+            .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
+          return (
+            <>
+              <div className={s.filterLabel}>Genres</div>
+              <div className={s.genreOpRow}>
                 <button
-                  className={s.clearGenresBtn}
-                  onClick={() => selectedGenres.forEach(g => onGenreToggle(g))}
-                >Clear</button>
-              )}
-            </div>
-            <div className={s.genreSearchRow}>
-              <input
-                type="text"
-                className={s.genreSearchInput}
-                placeholder="Filter genres…"
-                value={genreSearch}
-                onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
-              />
-            </div>
-            <div className={s.genreList}>
-              {genres
-                .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
-                .map(g => (
+                  className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
+                  onClick={() => onGenreOpChange('OR')}
+                >Any</button>
+                <button
+                  className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
+                  onClick={() => onGenreOpChange('AND')}
+                >All</button>
+                {selectedGenres.length > 0 && (
                   <button
-                    key={g.genre}
-                    className={clsx(s.genreChip, selectedGenres.includes(g.genre) && s.genreChipActive)}
-                    onClick={() => onGenreToggle(g.genre)}
-                  >
-                    {g.genre}
-                    <span className={s.genreCount}>{g.count}</span>
-                  </button>
-                ))
-              }
-            </div>
-          </>
-        )}
+                    className={s.clearGenresBtn}
+                    onClick={() => selectedGenres.forEach(g => onGenreToggle(g))}
+                  >Clear</button>
+                )}
+              </div>
+              <div className={s.genreDropdownWrapper}>
+                <div
+                  className={s.genreAutocomplete}
+                  onClick={() => genreInputRef.current?.focus()}
+                >
+                  {selectedGenres.map(g => (
+                    <span key={g} className={s.genreTag}>
+                      {g}
+                      <button
+                        className={s.genreTagRemove}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { e.stopPropagation(); onGenreToggle(g) }}
+                      >&times;</button>
+                    </span>
+                  ))}
+                  <input
+                    ref={genreInputRef}
+                    type="text"
+                    className={s.genreInput}
+                    placeholder={selectedGenres.length === 0 ? 'Search genres…' : ''}
+                    value={genreSearch}
+                    onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
+                    onFocus={() => {
+                      if (genreBlurTimeout.current) clearTimeout(genreBlurTimeout.current)
+                      setGenreDropdownOpen(true)
+                    }}
+                    onBlur={() => {
+                      genreBlurTimeout.current = setTimeout(() => setGenreDropdownOpen(false), 150)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setGenreDropdownOpen(false)
+                        ;(e.target as HTMLInputElement).blur()
+                      }
+                    }}
+                  />
+                </div>
+                {genreDropdownOpen && filteredGenres.length > 0 && (
+                  <div className={s.genreDropdown}>
+                    {filteredGenres.map(g => (
+                      <div
+                        key={g.genre}
+                        className={s.genreDropdownItem}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          onGenreToggle(g.genre)
+                          setGenreSearch('')
+                          genreInputRef.current?.focus()
+                        }}
+                      >
+                        <span>{g.genre}</span>
+                        <span className={s.genreDropdownCount}>{g.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        })()}
 
         <div className={s.bottomPad} />
       </div>

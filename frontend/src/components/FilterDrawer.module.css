@@ -199,55 +199,91 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.genreSearchRow {
+.genreDropdownWrapper {
+  position: relative;
   padding: 2px var(--space-lg) 4px;
 }
 
-.genreSearchInput {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 9px;
-  padding: 3px 8px;
-  border-radius: 10px;
-  border: none;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  font-family: inherit;
-  outline: none;
-}
-
-.genreList {
+.genreAutocomplete {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  padding: 2px var(--space-lg) 4px;
-  max-height: 120px;
-  overflow-y: auto;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  min-height: 26px;
+  cursor: text;
 }
 
-.genreChip {
-  font-size: 9px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  border: none;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  font-family: inherit;
-  cursor: pointer;
+.genreTag {
   display: flex;
   align-items: center;
-  gap: 3px;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s;
-}
-
-.genreChipActive {
+  gap: 2px;
+  font-size: 9px;
+  padding: 1px 4px 1px 6px;
+  border-radius: 8px;
   background: rgba(179, 157, 219, 0.18);
   color: var(--color-accent-lavender);
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.genreCount {
+.genreTagRemove {
+  font-size: 10px;
+  line-height: 1;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreInput {
+  flex: 1;
+  min-width: 60px;
+  font-size: 9px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  outline: none;
+  padding: 0;
+}
+
+.genreDropdown {
+  position: absolute;
+  left: var(--space-lg);
+  right: var(--space-lg);
+  top: 100%;
+  margin-top: 2px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-card);
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.genreDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreDropdownItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.genreDropdownCount {
   font-size: 8px;
   opacity: 0.6;
 }
