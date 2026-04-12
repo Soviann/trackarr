@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -1118,6 +1119,13 @@ func (r *TitleRepository) BatchDelete(ids []int64) error {
 		return fmt.Errorf("batch delete titles: %w", err)
 	}
 	return nil
+}
+
+// ReviewCount returns the number of titles with match_status in ('pending_review', 'unconfirmed').
+func (r *TitleRepository) ReviewCount(_ context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE match_status IN ('pending_review', 'unconfirmed')`).Scan(&count)
+	return count, err
 }
 
 // BatchUpdateStatus updates the status of multiple titles.

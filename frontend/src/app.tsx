@@ -16,6 +16,7 @@ import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
 import { usePush } from './hooks/usePush'
+import { updateBadge } from './utils/badge'
 import { useTitleStore, useSearchStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import s from './app.module.css'
@@ -38,6 +39,8 @@ export function App() {
       console.error('Failed to load config:', err)
     })
   }, [])
+
+  useEffect(() => { updateBadge() }, [])
 
   usePush(currentPath !== '/login' ? vapidKey : undefined)
 

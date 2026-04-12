@@ -316,6 +316,34 @@ func TestTitleHandler_BatchDelete(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestTitleHandler_ReviewCount(t *testing.T) {
+	h, titleRepo := setupHandler(t)
+
+	// Insert titles with varying match_status
+	_, _ = titleRepo.Create(
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview},
+		[]model.TitleName{{Name: "Pending Title", Language: "en", IsPrimary: true}},
+	)
+	_, _ = titleRepo.Create(
+		&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed},
+		[]model.TitleName{{Name: "Unconfirmed Title", Language: "en", IsPrimary: true}},
+	)
+	_, _ = titleRepo.Create(
+		&model.Title{Type: model.TitleTypeSeries, Year: 2022, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Confirmed Title", Language: "en", IsPrimary: true}},
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/titles/review-count", nil)
+	rr := httptest.NewRecorder()
+
+	require.NoError(t, h.ReviewCount(rr, req))
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var result map[string]int
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.Equal(t, 2, result["count"])
+}
+
 func TestTitleHandler_BatchStatus(t *testing.T) {
 	h, titleRepo := setupHandler(t)
 

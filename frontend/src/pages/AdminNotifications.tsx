@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
+import { PullToRefresh } from '../components/PullToRefresh'
 import s from './AdminNotifications.module.css'
 
 interface NotifPrefs {
@@ -28,7 +29,7 @@ const notifTypes = [
 ]
 
 export function AdminNotifications({ path }: { path?: string }) {
-  const { data: fetchedPrefs } = useApi<NotifPrefs>('/admin/notifications')
+  const { data: fetchedPrefs, mutate: refetch } = useApi<NotifPrefs>('/admin/notifications')
   const [prefs, setPrefs] = useState<NotifPrefs | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -52,6 +53,7 @@ export function AdminNotifications({ path }: { path?: string }) {
   }
 
   return (
+    <PullToRefresh onRefresh={refetch}>
     <div className={s.page}>
       <div className={s.header}>
         <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
@@ -85,5 +87,6 @@ export function AdminNotifications({ path }: { path?: string }) {
         </div>
       )}
     </div>
+    </PullToRefresh>
   )
 }

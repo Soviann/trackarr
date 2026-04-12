@@ -25,7 +25,7 @@ Quand une saison source entre en collision avec une saison déjà existante sur 
 
 ## Fichier à modifier
 
-`/Users/nicolasvasse/Siqual/plextracker/internal/repository/title.go` — fonction `mergeInTx`, bloc de la boucle sur `moves` (lignes ~793–801)
+`internal/repository/title.go` — fonction `mergeInTx`, bloc de la boucle sur `moves` (lignes ~793–801)
 
 ## Changement
 

@@ -421,3 +421,14 @@ func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
+
+// ReviewCount handles GET /api/titles/review-count.
+// Returns the number of titles needing match review (pending_review + unconfirmed).
+func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error {
+	count, err := h.titlesRead.ReviewCount(r.Context())
+	if err != nil {
+		return fmt.Errorf("review count: %w", err)
+	}
+	httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
+	return nil
+}

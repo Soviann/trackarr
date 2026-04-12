@@ -115,6 +115,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Get("/titles", httputil.WrapHandler(titles.List))
 			r.Post("/titles", httputil.WrapHandler(titles.Create))
 			// Static sub-routes must come BEFORE /{id} to avoid chi matching them as ID params
+			r.Get("/titles/review-count", httputil.WrapHandler(titles.ReviewCount))
 			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
 			r.Get("/titles/continue-watching", httputil.WrapHandler(library.ContinueWatching))
 			r.Get("/titles/upcoming", httputil.WrapHandler(library.Upcoming))

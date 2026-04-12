@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../types'
 import { useApi } from '../hooks/useApi'
@@ -8,6 +8,7 @@ import { apiFetch } from '../api'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import clsx from 'clsx'
+import { PullToRefresh } from '../components/PullToRefresh'
 import s from './Validate.module.css'
 
 function isUrl(str: string): boolean {
@@ -40,10 +41,10 @@ export function Validate({ path }: { path?: string }) {
   const id = params.get('id')
   
   const searchPath = query && !isUrl(query) ? `/titles?search=${encodeURIComponent(query)}` : null
-  const { data: resultsData, loading: loadingSearch } = useApi<PaginatedResponse>(searchPath)
+  const { data: resultsData, loading: loadingSearch, mutate: mutateSearch } = useApi<PaginatedResponse>(searchPath)
   const results = resultsData?.titles ?? []
 
-  const { data: currentTitle, loading: loadingCurrent } = useApi<Title>(id ? `/titles/${id}` : null)
+  const { data: currentTitle, loading: loadingCurrent, mutate: mutateCurrent } = useApi<Title>(id ? `/titles/${id}` : null)
   
   const [inputValue, setInputValue] = useState(query)
   const [adding, setAdding] = useState(false)
@@ -162,7 +163,10 @@ export function Validate({ path }: { path?: string }) {
     }
   }
 
+  const handleRefresh = useCallback(() => { mutateSearch(); mutateCurrent() }, [mutateSearch, mutateCurrent])
+
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className={s.page}>
       {/* Header */}
       <div className={s.header}>
@@ -347,5 +351,6 @@ export function Validate({ path }: { path?: string }) {
         isDangerous
       />
     </div>
+    </PullToRefresh>
   )
 }

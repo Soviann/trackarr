@@ -1,8 +1,17 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  overscroll-behavior-y: contain;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background: #0D0D0D;
   color: #F0F0F0;
   -webkit-font-smoothing: antialiased;
+}
+
+.no-touch-callout {
+  -webkit-touch-callout: none;
+  user-select: none;
 }
