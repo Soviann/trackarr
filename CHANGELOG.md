@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Ajouté
+- PWA : pull-to-refresh personnalisé sur Library, Search, Validate, MatchReview et AdminNotifications — indicateur circulaire animé qui suit le doigt, passage en teal + haptic au franchissement du seuil, rotation (spinner) pendant le refresh, idempotent si un refresh est déjà en cours
+
 ### Corrigé
 - Bibliothèque : le mode sélection multiple est de nouveau utilisable — la grille ne déraille plus quand on active « Select » (une colonne s'élargissait à cause d'un wrapper sans `overflow: hidden`) et toucher une affiche en mode sélection coche la pastille au lieu d'ouvrir la fiche détail (le listener global de preact-router sur les `<a>` forçait la navigation en parallèle)
 
