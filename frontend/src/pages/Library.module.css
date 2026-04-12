@@ -32,7 +32,7 @@
 
 /* Counter */
 .counter {
-  padding: 0 var(--space-lg) var(--space-sm);
+  padding: var(--space-md) var(--space-lg) var(--space-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
