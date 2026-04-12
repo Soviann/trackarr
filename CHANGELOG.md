@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.15.0] — 2026-04-12
+
 ### Ajouté
 - Casting cliquable : les noms du casting dans la fiche titre sont cliquables et ouvrent une page listant tous les titres dans lesquels cette personne apparaît
 
