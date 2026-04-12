@@ -3,6 +3,7 @@ import { useState, useCallback } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
+import { updateBadge } from '../utils/badge'
 import { MatchReviewCard } from '../components/MatchReviewCard'
 import { SwipeActions } from '../components/SwipeActions'
 import type { SwipeAction } from '../components/SwipeActions'
@@ -46,6 +47,7 @@ export function MatchReview({ path }: { path?: string }) {
             body: JSON.stringify({ match_status: 'confirmed' }),
           })
           mutate()
+          updateBadge()
         },
       },
       {
@@ -72,6 +74,7 @@ export function MatchReview({ path }: { path?: string }) {
       })
     ))
     mutate()
+    updateBadge()
   }
 
   return (
