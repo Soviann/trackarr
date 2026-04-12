@@ -8,7 +8,12 @@ self.addEventListener('push', (event) => {
     tag: 'plextracker',
     data: { url: data.url || '/' },
   }
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      updateBadge(),
+    ])
+  )
 })
 
 self.addEventListener('notificationclick', (event) => {
@@ -28,3 +33,20 @@ self.addEventListener('notificationclick', (event) => {
     })
   )
 })
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(updateBadge())
+})
+
+async function updateBadge() {
+  try {
+    const resp = await fetch('/api/titles/review-count')
+    if (!resp.ok) return
+    const { count } = await resp.json()
+    if (count > 0) {
+      navigator.setAppBadge(count)
+    } else {
+      navigator.clearAppBadge()
+    }
+  } catch {}
+}
