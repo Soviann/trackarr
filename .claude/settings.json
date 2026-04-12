@@ -87,6 +87,13 @@
       }
     ]
   },
+  "sandbox": {
+    "enabled": false,
+    "excludedCommands": ["docker *", "docker compose *", "make *"],
+    "filesystem": {
+      "allowWrite": ["."]
+    }
+  },
   "enabledPlugins": {
     "commit-commands@claude-plugins-official": false,
     "gopls-lsp@claude-plugins-official": true
