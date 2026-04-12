@@ -3,13 +3,22 @@
 ## [Unreleased]
 
 ### Ajouté
+- PWA : appui long (~500 ms) sur une vignette de la Bibliothèque pour entrer en mode sélection — vibration courte + vignette automatiquement cochée, comme Google Photos
 - PWA : pull-to-refresh personnalisé sur Library, Search, Validate, MatchReview et AdminNotifications — indicateur circulaire animé qui suit le doigt, passage en teal + haptic au franchissement du seuil, rotation (spinner) pendant le refresh, idempotent si un refresh est déjà en cours
+- PWA : swipe actions sur les cartes de Match Review — glisser à gauche révèle Confirm (vert) et Fix match (orange), glisser loin exécute l'action principale automatiquement
+- PWA : raccourcis depuis l'icône — appui long sur l'icône PlexTracker dans le launcher Android affiche 3 raccourcis : Ajouter un titre, Bibliothèque, Recherche
+- PWA : badge sur l'icône — affiche le nombre de titres en attente de révision (pending_review + unconfirmed) ; se met à jour à l'ouverture de l'app et après chaque action dans Match Review
+- API : `GET /api/titles/review-count` — nombre de titres à réviser pour le badge PWA
+
+### Amélioré
+- PWA : BottomSheet amélioré — glisser-pour-fermer sur toute la surface du sheet (plus seulement la barre), blocage du scroll en arrière-plan, bouton retour Android ferme le sheet au lieu de quitter la page
+- PWA : le rafraîchissement natif de Chrome (tirer vers le bas) est bloqué globalement — seul le pull-to-refresh personnalisé s'active
 
 ### Corrigé
 - Bibliothèque : le mode sélection multiple est de nouveau utilisable — la grille ne déraille plus quand on active « Select » (une colonne s'élargissait à cause d'un wrapper sans `overflow: hidden`) et toucher une affiche en mode sélection coche la pastille au lieu d'ouvrir la fiche détail (le listener global de preact-router sur les `<a>` forçait la navigation en parallèle)
 
 ### Modifié
-- Bibliothèque : le bouton « Select » quitte l'en-tête et rejoint la ligne du compteur de résultats, aligné à droite, pour mieux se rattacher visuellement à la liste qu'il concerne
+- Bibliothèque : le bouton « Select » est remplacé par l'appui long — bouton Cancel accessible dans la barre de sélection
 
 ## [v0.13.1] — 2026-04-11
 

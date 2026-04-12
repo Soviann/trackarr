@@ -133,6 +133,7 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | `useTitleStore` | `store.ts` | Zustand store: paginated title fetch, filter, sort (localStorage-persisted), loadMore, cache |
 | `useSearchStore` | `store.ts` | Zustand store: search results persistence and scroll position |
 | `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
+| `useLongPress` | `hooks/useLongPress.ts` | Long-press detection (pointer events, configurable threshold/tolerance, referentially stable handlers) |
 
 ### Components
 
@@ -147,7 +148,9 @@ Design tokens in `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS c
 | SeasonTab | `components/SeasonTab.tsx` | Season pill with progress/check |
 | EpisodeRow | `components/EpisodeRow.tsx` | Episode row with toggle watched |
 | ActionDrawer | `components/ActionDrawer.tsx` | Collapsible drawer with quick actions (next ep, rate, IMDb, AniList) + manage (edit, fix match) |
-| BottomSheet | `components/BottomSheet.tsx` | Reusable slide-up sheet with backdrop |
+| PullToRefresh | `components/PullToRefresh.tsx` | Custom pull-to-refresh wrapper (pointer events, rubber-band indicator, haptic at threshold, idempotent) |
+| SwipeActions | `components/SwipeActions.tsx` | Swipe-to-reveal action buttons on list items (direction lock, one-at-a-time, exit animation) |
+| BottomSheet | `components/BottomSheet.tsx` | Reusable slide-up sheet with backdrop, drag-to-dismiss on full sheet, body scroll lock, Android back button support |
 | RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList buttons |
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
 | AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
