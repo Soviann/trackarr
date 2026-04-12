@@ -80,7 +80,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 
 ## Plans
 
-Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` once implementation is committed.
+Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` before implementation is committed.
 Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
 Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
 
