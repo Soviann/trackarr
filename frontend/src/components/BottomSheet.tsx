@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useRef, useEffect } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import s from './BottomSheet.module.css'
 
@@ -9,7 +9,7 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
-  const [dragY, setDragY] = useState(0)
+  const dragYRef = useRef(0)
   const startYRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   // Stable ref to onClose so effects don't re-run when parent re-renders
@@ -29,18 +29,19 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
     if (!open) return
     const token = `bottomsheet-${Date.now()}`
     history.pushState({ token }, '')
-    const onPopState = (e: PopStateEvent) => {
-      if (e.state?.token === token) {
-        onCloseRef.current()
-      }
+    const closedViaBackRef = { current: false }
+    const onPopState = () => {
+      closedViaBackRef.current = true
+      onCloseRef.current()
     }
     window.addEventListener('popstate', onPopState)
     return () => {
       window.removeEventListener('popstate', onPopState)
-      // If closing normally (not via back), pop the dummy entry
-      if (history.state?.token === token) {
+      // If closing normally (tap overlay, drag dismiss) — pop the dummy entry
+      if (!closedViaBackRef.current) {
         history.back()
       }
+      closedViaBackRef.current = false
     }
   }, [open])
 
@@ -48,7 +49,7 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
   useEffect(() => {
     if (!open) {
       startYRef.current = null
-      setDragY(0)
+      dragYRef.current = 0
     }
   }, [open])
 
@@ -65,17 +66,34 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
     if (startYRef.current === null) return
     const deltaY = e.clientY - startYRef.current
     if (deltaY > 0) {
-      setDragY(deltaY)
+      dragYRef.current = deltaY
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translateY(${deltaY}px)`
+        sheetRef.current.style.transition = 'none'
+      }
     }
   }
 
   const handlePointerUp = () => {
     if (startYRef.current === null) return
-    if (dragY > 100) {
+    if (dragYRef.current > 100) {
       onCloseRef.current()
     }
-    setDragY(0)
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = ''
+      sheetRef.current.style.transition = ''
+    }
+    dragYRef.current = 0
     startYRef.current = null
+  }
+
+  const handlePointerCancel = () => {
+    startYRef.current = null
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = ''
+      sheetRef.current.style.transition = ''
+    }
+    dragYRef.current = 0
   }
 
   return (
@@ -84,10 +102,10 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
         ref={sheetRef}
         onClick={(e: Event) => e.stopPropagation()}
         className={s.sheet}
-        style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {/* Drag handle */}
         <div className={s.handleBar}>

@@ -111,4 +111,16 @@ describe('BottomSheet', () => {
     const [state] = pushState.mock.calls[0]
     expect((state as { token: string }).token).toMatch(/^bottomsheet-\d+$/)
   })
+
+  // Test 7 — popstate event closes sheet
+  it('calls onClose when a popstate event is dispatched', () => {
+    const onClose = vi.fn()
+    render(
+      <BottomSheet open={true} onClose={onClose}>
+        <p>content</p>
+      </BottomSheet>,
+    )
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
 })
