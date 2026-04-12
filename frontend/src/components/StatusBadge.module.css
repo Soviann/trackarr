@@ -12,8 +12,8 @@
 }
 
 .completed {
-  color: var(--color-accent-green);
-  background: var(--wash-green);
+  color: var(--color-bg-primary);
+  background: var(--color-accent-green);
 }
 
 .dropped {
