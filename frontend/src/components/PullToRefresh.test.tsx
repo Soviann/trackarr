@@ -2,30 +2,36 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act, waitFor } from '@testing-library/preact'
 import { PullToRefresh } from './PullToRefresh'
 
-// PointerEvent is not fully available in jsdom — provide a minimal constructor
-function makePointerEvent(type: string, overrides: Partial<PointerEvent> = {}): PointerEvent {
-  return new PointerEvent(type, {
+function touchStart(el: HTMLElement, clientY: number) {
+  el.dispatchEvent(new TouchEvent('touchstart', {
     bubbles: true,
     cancelable: true,
-    clientX: 0,
-    clientY: 0,
-    pointerId: 1,
-    ...overrides,
-  })
+    touches: [{ clientX: 0, clientY, identifier: 0, target: el } as Touch],
+  }))
 }
 
-function dispatchOnWindow(event: PointerEvent) {
-  window.dispatchEvent(event)
+function touchMove(el: HTMLElement, clientY: number) {
+  el.dispatchEvent(new TouchEvent('touchmove', {
+    bubbles: true,
+    cancelable: true,
+    touches: [{ clientX: 0, clientY, identifier: 0, target: el } as Touch],
+  }))
+}
+
+function touchEnd(el: HTMLElement) {
+  el.dispatchEvent(new TouchEvent('touchend', {
+    bubbles: true,
+    cancelable: true,
+    touches: [],
+  }))
 }
 
 const THRESHOLD = 70
 
 describe('PullToRefresh', () => {
   beforeEach(() => {
-    // Ensure window.scrollY is 0 (simulate scrolled to top)
     Object.defineProperty(window, 'scrollY', { configurable: true, get: () => 0 })
 
-    // jsdom doesn't provide navigator.vibrate — define it before spying
     if (!('vibrate' in navigator)) {
       Object.defineProperty(navigator, 'vibrate', {
         configurable: true,
@@ -49,20 +55,9 @@ describe('PullToRefresh', () => {
     )
     const wrapper = container.firstChild as HTMLElement
 
-    // pointerdown on the container
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-
-    // Move past threshold
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 20 }))
-    })
-
-    // Release
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 20 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 20) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(onRefresh).toHaveBeenCalledOnce()
   })
@@ -76,18 +71,9 @@ describe('PullToRefresh', () => {
     )
     const wrapper = container.firstChild as HTMLElement
 
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-
-    // Move just below threshold
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD - 10 }))
-    })
-
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD - 10 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD - 10) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(onRefresh).not.toHaveBeenCalled()
   })
@@ -105,29 +91,16 @@ describe('PullToRefresh', () => {
     const wrapper = container.firstChild as HTMLElement
 
     // First gesture — triggers refresh
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 20 }))
-    })
-    // Don't await — let refresh hang
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 20 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 20) })
+    act(() => { touchEnd(wrapper) })
 
     expect(onRefresh).toHaveBeenCalledTimes(1)
 
     // Second gesture during refresh — must be ignored
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0, pointerId: 2 }))
-    })
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 20, pointerId: 2 }))
-    })
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 20, pointerId: 2 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 20) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(onRefresh).toHaveBeenCalledTimes(1)
 
@@ -145,21 +118,14 @@ describe('PullToRefresh', () => {
     )
     const wrapper = container.firstChild as HTMLElement
 
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 20 }))
-    })
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 20 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 20) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
   it('does not pull when window.scrollY > 0', async () => {
-    // Override scrollY to non-zero
     Object.defineProperty(window, 'scrollY', { configurable: true, get: () => 50 })
 
     const onRefresh = vi.fn().mockResolvedValue(undefined)
@@ -170,23 +136,15 @@ describe('PullToRefresh', () => {
     )
     const wrapper = container.firstChild as HTMLElement
 
-    // pointerdown happens when scrollY > 0 — should be ignored
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 20 }))
-    })
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 20 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 20) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
   it('fires haptic once when crossing threshold going down', async () => {
     const onRefresh = vi.fn().mockResolvedValue(undefined)
-    // navigator.vibrate spy is already set up in beforeEach
     const vibrate = vi.mocked(navigator.vibrate)
 
     const { container } = render(
@@ -196,22 +154,10 @@ describe('PullToRefresh', () => {
     )
     const wrapper = container.firstChild as HTMLElement
 
-    act(() => {
-      wrapper.dispatchEvent(makePointerEvent('pointerdown', { clientY: 0 }))
-    })
-
-    // Cross threshold
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 10 }))
-    })
-    // Move further past threshold — haptic must NOT fire again
-    act(() => {
-      dispatchOnWindow(makePointerEvent('pointermove', { clientY: THRESHOLD + 30 }))
-    })
-
-    await act(async () => {
-      dispatchOnWindow(makePointerEvent('pointerup', { clientY: THRESHOLD + 30 }))
-    })
+    act(() => { touchStart(wrapper, 0) })
+    act(() => { touchMove(wrapper, THRESHOLD + 10) })
+    act(() => { touchMove(wrapper, THRESHOLD + 30) })
+    await act(async () => { touchEnd(wrapper) })
 
     expect(vibrate).toHaveBeenCalledOnce()
   })

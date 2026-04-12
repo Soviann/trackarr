@@ -36,17 +36,15 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
   const [phase, setPhase] = useState<Phase>('idle')
   const [pullY, setPullY] = useState(0)
 
-  // All gesture state lives in refs — avoids stale closure issues in window listeners
   const startYRef = useRef<number | null>(null)
   const refreshingRef = useRef(false)
   const hapticFiredRef = useRef(false)
-  const activePointerRef = useRef<number | null>(null)
   const phaseRef = useRef<Phase>('idle')
   const disabledRef = useRef(disabled)
   const thresholdRef = useRef(threshold)
   const onRefreshRef = useRef(onRefresh)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Keep refs in sync with props/state
   disabledRef.current = disabled
   thresholdRef.current = threshold
   onRefreshRef.current = onRefresh
@@ -56,19 +54,18 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
     setPhase(p)
   }, [])
 
-  const handlePointerDown = useCallback((e: PointerEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     if (refreshingRef.current) return
     if (disabledRef.current) return
     if (window.scrollY > 0) return
-    startYRef.current = e.clientY
+    if (e.touches.length !== 1) return
+    startYRef.current = e.touches[0].clientY
     hapticFiredRef.current = false
-    activePointerRef.current = e.pointerId
   }, [])
 
-  const handlePointerMove = useCallback((e: PointerEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (disabledRef.current || refreshingRef.current) return
     if (startYRef.current === null) return
-    if (activePointerRef.current !== e.pointerId) return
     if (window.scrollY > 0) {
       startYRef.current = null
       setPullY(0)
@@ -76,7 +73,7 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
       return
     }
 
-    const delta = e.clientY - startYRef.current
+    const delta = e.touches[0].clientY - startYRef.current
     if (delta <= 0) {
       if (phaseRef.current !== 'idle') {
         setPullY(0)
@@ -85,7 +82,9 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
       return
     }
 
-    // Threshold check uses raw delta; visual position uses resistance for rubber-band feel
+    // Prevent browser scroll — we're handling this gesture
+    e.preventDefault()
+
     const isOverThreshold = delta >= thresholdRef.current
     const resistance = 1 - delta / (MAX_PULL * 2.5)
     const visualY = Math.min(delta * Math.max(resistance, 0.2), MAX_PULL)
@@ -102,15 +101,13 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
     }
 
     setPullY(visualY)
-  }, [])
+  }, [updatePhase])
 
-  const handlePointerUp = useCallback(async (e: PointerEvent) => {
+  const handleTouchEnd = useCallback(async () => {
     if (disabledRef.current) return
     if (startYRef.current === null) return
-    if (activePointerRef.current !== e.pointerId) return
 
     startYRef.current = null
-    activePointerRef.current = null
 
     if (refreshingRef.current) return
 
@@ -127,35 +124,37 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
         updatePhase('idle')
       }
     }
-  }, [])
+  }, [updatePhase])
 
-  const handlePointerCancel = useCallback(() => {
+  const handleTouchCancel = useCallback(() => {
     startYRef.current = null
-    activePointerRef.current = null
     hapticFiredRef.current = false
     if (!refreshingRef.current) {
       setPullY(0)
       updatePhase('idle')
     }
-  }, [])
+  }, [updatePhase])
 
-  // Attach move/up/cancel on window so gesture tracks past container bounds
+  // Attach touch listeners on the container with { passive: false } so we can preventDefault
   useEffect(() => {
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-    window.addEventListener('pointercancel', handlePointerCancel)
+    const el = containerRef.current
+    if (!el) return
+    el.addEventListener('touchstart', handleTouchStart, { passive: true })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false })
+    el.addEventListener('touchend', handleTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', handleTouchCancel, { passive: true })
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-      window.removeEventListener('pointercancel', handlePointerCancel)
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove', handleTouchMove)
+      el.removeEventListener('touchend', handleTouchEnd)
+      el.removeEventListener('touchcancel', handleTouchCancel)
     }
-  }, [handlePointerMove, handlePointerUp, handlePointerCancel])
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel])
 
   const isVisible = phase !== 'idle'
   const isReady = phase === 'ready'
   const isSpinning = phase === 'refreshing'
 
-  // Indicator top position: follows finger while pulling, locks when refreshing
   const indicatorOffset = isSpinning
     ? 12
     : Math.max(-48, pullY - 48)
@@ -166,10 +165,7 @@ export function PullToRefresh({ onRefresh, children, disabled = false, threshold
   }
 
   return (
-    <div
-      class={s.container}
-      onPointerDown={handlePointerDown}
-    >
+    <div class={s.container} ref={containerRef}>
       {isVisible && (
         <div
           class={`${s.indicator} ${isReady ? s.indicatorReady : ''} ${isSpinning ? s.indicatorSpinning : ''}`}
