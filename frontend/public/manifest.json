@@ -25,5 +25,25 @@
     "params": {
       "url": "url"
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Add a title",
+      "short_name": "Add",
+      "url": "/add",
+      "icons": [{ "src": "/shortcut-add.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Library",
+      "short_name": "Library",
+      "url": "/",
+      "icons": [{ "src": "/shortcut-library.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Search",
+      "short_name": "Search",
+      "url": "/search",
+      "icons": [{ "src": "/shortcut-search.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    }
+  ]
 }
