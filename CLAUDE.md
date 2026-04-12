@@ -1,37 +1,19 @@
 # CLAUDE.md — Mandatory rules
 
-## Project
-
-PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 / Vite / Docker. Single developer.
+<!-- TEMPLATE:START — managed by sync-template-config, do not edit manually.
+     Add here: conventions shared by ALL Siqual projects (coding standards, git rules,
+     language rules, approach, token optimization, recommended plugins).
+     If unsure whether a rule belongs here or in PROJECT, ask the user before adding. -->
 
 ## Approach
-
-- Act over ask. Only read files you will edit.
-- Act on user instructions directly — no exploratory glob/grep when the user already says where/what.
-- Don't verify existence of items already known from the plan or memory.
-- Always prefer the robust/correct solution over the lazy/easy one, even if harder or more tedious. If trade-offs exist, present them to the user as a PO: describe user-visible impact of each option, not implementation effort.
-- Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update patterns.md when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
-- CLAUDE.md and patterns.md must be optimized for LLM use and token efficiency, without loss of information/instruction.
+- Act over ask; read only files you'll edit.
+- Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md`.
+- CLAUDE.md and `docs/patterns.md` must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
-
-## Token Cost Optimization
-
-- **Parallelize independent tool calls** in one turn (multiple Read/Grep/Glob = 1 round-trip, not N). Only serialize when output of call A is needed for call B.
-- **Combine sequential Bash** with `&&` when simple and output-independent (`make lint && make test`). Don't combine when you need to read A's output to decide B, or when failure diagnosis/timeouts differ.
-- **No exploratory search when the target is known.** User named a file/symbol → Read/Grep it directly. Skip verifying existence of items already known from plan/memory.
-- **Direct tools > subagents for simple lookups.** A subagent = a full Opus conversation billed on top. Use Grep/Glob/Read for: known targets, single-file reads, specific symbol lookups, <3 expected queries. Use subagents (Explore, general-purpose) only for: open-ended research spanning many files, tasks whose raw output would pollute main context, genuinely parallel independent investigations.
-- **Force cheap models on mechanical subagents.** When dispatching a subagent for file search, simple refactor, or mechanical lookup, pass `model: "haiku"` or `"sonnet"` in the Agent call.
-- **Prefer `gh --json field1,field2`** over MCP GitHub tools for simple queries. `minimal_output: true` on MCP list/search calls.
-
-## Audits
-
-`docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session. No implement skill overhead.
+- Act on user instructions directly — no exploratory glob/grep when user names the target.
+- Don't verify existence of items already known from plan or memory.
 
 ## Plans
-
-Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` once implementation is committed.
-Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
-Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
 
 ### Format
 - **PO summary first**: 2-3 sentences max, non-technical, describing what changes for the user/product. Enables fast validation before reading technical detail.
@@ -50,6 +32,61 @@ Versioning: git history is sufficient (single developer). Don't version-number f
 - Mechanical same-change × N → parallel sub-agents
 - One session per phase. Plan encodes execution — no orchestrator needed.
 - **Stop after plan creation.** Never start execution in the same session — present the plan, wait for approval, stop. Execution happens in a new session.
+
+## Quality
+- Linters/formatters: before committing only, ONLY on modified files.
+- DRY: extract at 3+ occurrences (or 2 if complex). Exception: abstraction obscures intent or coupling > duplication cost.
+- Prefer native/library solutions over custom code.
+
+## Token Cost Optimization
+- **Parallelize** independent tool calls in one turn. Serialize only when B depends on A's output.
+- **Combine Bash** with `&&` when output-independent. Don't combine when you need A's output to decide B, or when failure diagnosis/timeouts differ.
+- **No exploratory search when target is known.** Named file/symbol → Read/Grep directly. Skip verifying items known from plan/memory.
+- **Direct tools > subagents.** Subagent = full Opus conversation billed on top. Use Grep/Glob/Read for known targets, single-file reads, <3 queries. Use subagents only for open-ended multi-file research or to protect main context.
+- **Cheap models on mechanical subagents.** File search, simple refactor, mechanical lookup → `model: "haiku"` or `"sonnet"`.
+- **`gh --json field1,field2`** over MCP GitHub tools for simple queries. `minimal_output: true` on MCP list/search calls.
+
+## Git
+- Format: `<type>(scope|branch-name): description` — types: `feat|fix|chore|refactor|docs`
+- French descriptions: 3rd-person imperative (`ajoute`, `corrige`, `supprime` — not infinitive).
+- Commit title = visible impact, not implementation detail. Technical details in body.
+  - `fix`: problem solved. BAD: `utilise PATCH au lieu de PUT` GOOD: `corrige la perte des tomes`
+  - `feat`: capability added. BAD: `ajoute CoverSearchService` GOOD: `ajoute la recherche de couvertures`
+  - `refactor`/`chore`: improvement. BAD: `extrait getFieldPriority` GOOD: `simplifie la résolution de priorité`
+- Skip `git diff` when you made the edits — diff only to discover changes you didn't make.
+- Merges: `--no-ff`
+
+## Language
+Commits + docs/comments: French. Code identifiers: English. CLAUDE.md: English.
+
+## Recommended Plugins
+`context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`.
+
+<!-- TEMPLATE:END -->
+
+<!-- PROJECT:START — project-specific content, edit freely.
+     Add here: project description, tech stack, architecture, commands, project-specific
+     deviations from the template rules.
+     If unsure whether a rule belongs here or in TEMPLATE, ask the user before adding. -->
+
+## Project
+
+PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 / Vite / Docker. Single developer.
+
+## Approach
+
+- Always prefer the robust/correct solution over the lazy/easy one, even if harder or more tedious. If trade-offs exist, present them to the user as a PO: describe user-visible impact of each option, not implementation effort.
+- Update `docs/patterns.md` when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
+
+## Plans
+
+Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` once implementation is committed.
+Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/` in the project, never to `~/.claude/` or any global path.
+Versioning: git history is sufficient (single developer). Don't version-number files. Keep immutable once approved — if scope changes mid-implementation, add a `## Revision — YYYY-MM-DD` header with a one-liner. Name descriptively (`notification-push.md` not `plan-007.md`).
+
+## Audits
+
+`docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session. No implement skill overhead.
 
 ## Commands
 
@@ -79,9 +116,6 @@ Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security) 
 ## Standards
 
 - `gofmt` + `golangci-lint`. TypeScript strict. Preact functional components.
-- Linters/formatters: run before committing (not after each file edit), only on modified files.
-- Prefer native/library solutions over custom code.
-- DRY: extract at 3+ occurrences (or 2 if complex). Exception: when abstraction obscures intent or coupling > duplication cost.
 - No magic strings — constants/enums. DB queries in `repository/` only.
 - Handlers: struct with repos (DI), methods = HTTP handlers.
 - Errors: `fmt.Errorf("context: %w", err)`. Tests: `testify/assert`, in-memory SQLite.
@@ -97,17 +131,10 @@ After UI/UX changes, verify in-browser via Chrome DevTools MCP:
 
 ## Git
 
-- Format: `<type>(scope|branch-name): description` — types: `feat|fix|chore|refactor|docs`, French 3rd-person imperative
-- Commit title = visible impact, not implementation detail. Technical details in body.
-  - `fix`: the problem solved. BAD: `utilise LEFT JOIN au lieu de subquery`. GOOD: `corrige l'absence de médias dans la liste`
-  - `feat`: the capability added. BAD: `ajoute MergeService`. GOOD: `permet de fusionner des titres en double`
-  - `refactor`/`chore`: the improvement. BAD: `extrait buildQuery`. GOOD: `simplifie la construction des requêtes de liste`
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
-- Skip `git diff` when you made the edits — diff only to discover changes you didn't make. Merges: `--no-ff`.
-
-## Language
-
-Commits/docs: French. Code: English. CLAUDE.md: English.
 
 ## Recommended Plugins
-`context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`, `chrome-devtools-mcp`, `cc-skills-golang`.
+
+`chrome-devtools-mcp`, `cc-skills-golang`.
+
+<!-- PROJECT:END -->

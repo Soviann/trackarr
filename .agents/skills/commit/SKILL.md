@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Create clean, well-scoped git commits with French conventional commit messages.
+description: Create clean, well-scoped git commits with French conventional commit messages. Use this skill whenever the user asks to commit, says "/commit", or when you need to commit after completing work. Also use when you notice uncommitted changes that should be saved. This skill handles staging, commit splitting, message formatting, and safety checks.
 user_invocable: true
 ---
 
@@ -15,6 +15,9 @@ user_invocable: true
    > 1. **fix(scope): ...** — `file1.go`, `file2.go`
    > 2. **feat(scope): ...** — `component.tsx`
    > Commit separately or all at once?
+
+   Hunk-level staging (`git add -p`) is supported when a single file has changes for different commits — flag it to the user.
+
 5. **Stage and commit** via HEREDOC:
    ```bash
    git add file1.go file2.go && git commit -m "$(cat <<'EOF'
@@ -32,7 +35,7 @@ user_invocable: true
 
 **Types:** `feat` · `fix` · `chore` · `refactor` · `docs`
 
-**Scope:** branch/ticket name for feature work · `claude` for CLAUDE.md · module name otherwise.
+**Scope:** branch/ticket name for feature work · `claude` for CLAUDE.md · module name otherwise. Never use ticket scope for non-ticket changes.
 
 **Title = visible impact**, not implementation detail.
 
@@ -40,6 +43,8 @@ user_invocable: true
 |-|-|
 | `fix: utilise PATCH au lieu de PUT` | `fix: corrige la perte des tomes` |
 | `feat: ajoute CoverSearchService` | `feat: ajoute la recherche de couvertures` |
+
+**Body:** optional, for technical details/reasoning. On title rejection retry: fix only the title, always preserve and adapt the body.
 
 ## Rules
 
