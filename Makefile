@@ -86,9 +86,12 @@ ssh-db-pull: ## Pull la BDD du NAS vers le local (nettoie le local avant)
 	-$(DC) stop app
 	@echo "Nettoyage de la base de données locale..."
 	rm -f data/plextracker.db data/plextracker.db-wal data/plextracker.db-shm
-	@echo "Téléchargement de la base de données depuis le NAS..."
+	@echo "Téléchargement de la base de données depuis le NAS (db + wal + shm)..."
 	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
-		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db data/plextracker.db'
+		NAS_DB_PATH=/volume1/docker/plextracker/data/plextracker.db && \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$$NAS_DB_PATH data/plextracker.db; \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-wal data/plextracker.db-wal 2>/dev/null || true; \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-shm data/plextracker.db-shm 2>/dev/null || true'
 	@echo "Démarrage de l'application locale..."
 	$(DC) start app
 	@echo "Database pulled from NAS and local app started"
