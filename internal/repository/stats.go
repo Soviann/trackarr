@@ -225,11 +225,11 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var bingeCount int
 	var bingeTitle, bingeDate string
 	err := r.db.QueryRow(`
-		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.first_first_watched_at) AS d
+		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.first_watched_at) AS d
 		FROM episodes e
 		JOIN seasons s ON e.season_id = s.id
 		JOIN titles t ON s.title_id = t.id
-		WHERE e.watched = 1 AND e.first_first_watched_at IS NOT NULL
+		WHERE e.watched = 1 AND e.first_watched_at IS NOT NULL
 		GROUP BY t.id, d
 		ORDER BY cnt DESC
 		LIMIT 1
@@ -249,10 +249,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var loyalTitle string
 	var loyalDays int
 	err = r.db.QueryRow(`
-		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_first_watched_at)) - julianday(t.created_at) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(t.created_at) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
-		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_first_watched_at IS NOT NULL
+		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_watched_at IS NOT NULL
 		WHERE t.type IN ('series', 'anime')
 		GROUP BY t.id
 		ORDER BY days DESC
@@ -272,10 +272,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var speedTitle string
 	var speedDays int
 	err = r.db.QueryRow(`
-		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_first_watched_at)) - julianday(MIN(e.first_first_watched_at)) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(MIN(e.first_watched_at)) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
-		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_first_watched_at IS NOT NULL
+		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_watched_at IS NOT NULL
 		WHERE t.status = 'completed' AND t.type IN ('series', 'anime')
 		GROUP BY t.id
 		HAVING COUNT(e.id) >= 5

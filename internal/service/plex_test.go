@@ -383,3 +383,163 @@ func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 	result, _ := titleRepo.List(repository.TitleFilter{})
 	assert.Len(t, result.Titles, 0)
 }
+
+func TestPlexService_PlayIgnoredForUnwatchedEpisode(t *testing.T) {
+	svc, titleRepo := setupPlexService(t)
+
+	// Pre-create a tracked series with a plex rating key
+	plexKey := "series1"
+	_, err := titleRepo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          2024,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		PlexRatingKey: &plexKey,
+	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	// Send a media.play for an episode that has never been watched
+	payload := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypePlay,
+		Metadata: plexwebhooks.Metadata{
+			Title:                "S01E01",
+			GrandparentTitle:     "Poirot",
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                1,
+			RatingKey:            "ep1",
+			GrandparentRatingKey: "series1",
+		},
+	}
+
+	require.NoError(t, svc.ProcessWebhook(payload, `{}`))
+
+	// No watch event should have been created
+	result, _ := titleRepo.List(repository.TitleFilter{})
+	require.Len(t, result.Titles, 1)
+	title, _ := titleRepo.GetByID(result.Titles[0].ID)
+	// Episode must still be unwatched
+	require.Len(t, title.Seasons, 1)
+	assert.False(t, title.Seasons[0].Episodes[0].Watched)
+}
+
+func TestPlexService_PlayCreatesRewatchEvent(t *testing.T) {
+	svc, titleRepo := setupPlexService(t)
+	db, _, err := database.Open(":memory:")
+	// Use the service's own DB; grab the repo from titleRepo
+	_ = db
+	_ = err
+
+	// Pre-create a tracked series
+	plexKey := "series-poirot"
+	titleID, err := titleRepo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          1989,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		PlexRatingKey: &plexKey,
+	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	// First scrobble → marks the episode watched
+	scrobble := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypeScrobble,
+		Metadata: plexwebhooks.Metadata{
+			Title:                "The Adventure of the Clapham Cook",
+			GrandparentTitle:     "Poirot",
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                1,
+			RatingKey:            "ep1",
+			GrandparentRatingKey: "series-poirot",
+		},
+	}
+	require.NoError(t, svc.ProcessWebhook(scrobble, `{}`))
+
+	title, _ := titleRepo.GetByID(titleID)
+	require.Len(t, title.Seasons[0].Episodes, 1)
+	ep := title.Seasons[0].Episodes[0]
+	require.True(t, ep.Watched)
+	require.NotNil(t, ep.FirstWatchedAt)
+	firstWatchedAt := ep.FirstWatchedAt
+
+	// Rewatch via media.play
+	play := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypePlay,
+		Metadata: plexwebhooks.Metadata{
+			Title:                "The Adventure of the Clapham Cook",
+			GrandparentTitle:     "Poirot",
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                1,
+			RatingKey:            "ep1",
+			GrandparentRatingKey: "series-poirot",
+		},
+	}
+	require.NoError(t, svc.ProcessWebhook(play, `{}`))
+
+	title, _ = titleRepo.GetByID(titleID)
+	ep = title.Seasons[0].Episodes[0]
+	assert.True(t, ep.Watched, "episode must stay watched")
+	assert.Equal(t, firstWatchedAt, ep.FirstWatchedAt, "first_watched_at must be preserved")
+	assert.NotNil(t, ep.LastWatchedAt)
+	assert.True(t, ep.LastWatchedAt.After(*ep.FirstWatchedAt) || ep.LastWatchedAt.Equal(*ep.FirstWatchedAt),
+		"last_watched_at must be >= first_watched_at after rewatch")
+}
+
+func TestPlexService_PlayNoAutoComplete(t *testing.T) {
+	tmdbSeasons := []struct {
+		SeasonNumber int `json:"season_number"`
+		EpisodeCount int `json:"episode_count"`
+	}{
+		{SeasonNumber: 1, EpisodeCount: 1},
+	}
+	tmdbClient := newTMDBMock(t, "Ended", tmdbSeasons)
+	svc, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
+
+	tmdbID := int64(1399)
+	plexKey := "series1"
+	titleID, err := titleRepo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          1989,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		TMDBID:        &tmdbID,
+		PlexRatingKey: &plexKey,
+	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	// First scrobble to mark the episode watched
+	scrobble := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypeScrobble,
+		Metadata: plexwebhooks.Metadata{
+			GrandparentTitle:     "Poirot",
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                1,
+			RatingKey:            "ep1",
+			GrandparentRatingKey: "series1",
+		},
+	}
+	require.NoError(t, svc.ProcessWebhook(scrobble, `{}`))
+
+	title, _ := titleRepo.GetByID(titleID)
+	require.Equal(t, model.TitleStatusCompleted, title.Status, "series should auto-complete after scrobble")
+
+	// media.play rewatch — must NOT reset status
+	play := &plexwebhooks.Payload{
+		Event: plexwebhooks.EventTypePlay,
+		Metadata: plexwebhooks.Metadata{
+			GrandparentTitle:     "Poirot",
+			Type:                 plexwebhooks.MediaTypeEpisode,
+			ParentIndex:          1,
+			Index:                1,
+			RatingKey:            "ep1",
+			GrandparentRatingKey: "series1",
+		},
+	}
+	require.NoError(t, svc.ProcessWebhook(play, `{}`))
+
+	title, _ = titleRepo.GetByID(titleID)
+	assert.Equal(t, model.TitleStatusCompleted, title.Status, "status must stay completed after rewatch play")
+}
