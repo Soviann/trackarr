@@ -18,7 +18,7 @@ function makeName(name: string, lang: string, primary: boolean): TitleName {
 }
 
 function makeEpisode(watched: boolean): Episode {
-  return { id: 1, season_id: 1, episode: 1, name: null, air_date: null, watched, watched_at: null }
+  return { id: 1, season_id: 1, episode: 1, name: null, air_date: null, watched, first_watched_at: null, last_watched_at: null }
 }
 
 function makeSeason(episodes: Episode[]): Season {

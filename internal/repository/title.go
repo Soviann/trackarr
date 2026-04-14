@@ -155,15 +155,16 @@ func (r *TitleRepository) createInTx(db database.DBTX, title *model.Title, names
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
-	var lastWatchedAtStr *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
+	var firstWatchedAtStr, lastWatchedAtStr *string
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &lastWatchedAtStr, &title.CreatedAt, &title.UpdatedAt)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
+	title.FirstWatchedAt = parseSQLiteTime(firstWatchedAtStr)
 	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 
 	// Load names
@@ -216,7 +217,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 
 	// Load all episodes in one query (seasons cursor is closed above; safe with MaxOpenConns=1)
 	epRows, err := r.db.Query(`
-		SELECT e.id, e.season_id, e.episode, e.name, e.air_date, e.watched, e.watched_at, e.plex_rating_key
+		SELECT e.id, e.season_id, e.episode, e.name, e.air_date, e.watched, e.first_watched_at, e.last_watched_at, e.plex_rating_key
 		FROM episodes e
 		JOIN seasons s ON e.season_id = s.id
 		WHERE s.title_id = ?
@@ -227,7 +228,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	grouped := make(map[int64][]model.Episode)
 	for epRows.Next() {
 		var e model.Episode
-		if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
+		if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.PlexRatingKey); err != nil {
 			epRows.Close()
 			return nil, fmt.Errorf("scan episode: %w", err)
 		}
@@ -490,13 +491,13 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 	// 3. Bulk load episodes
 	if len(seasonIDs) > 0 {
 		epInClause := strings.Join(seasonPlaceholders, ",")
-		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id IN (`+epInClause+`) ORDER BY season_id, episode`, seasonArgs...)
+		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, plex_rating_key FROM episodes WHERE season_id IN (`+epInClause+`) ORDER BY season_id, episode`, seasonArgs...)
 		if err != nil {
 			return nil, fmt.Errorf("get episodes bulk: %w", err)
 		}
 		for epRows.Next() {
 			var e model.Episode
-			if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
+			if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.PlexRatingKey); err != nil {
 				epRows.Close()
 				return nil, fmt.Errorf("scan episode: %w", err)
 			}

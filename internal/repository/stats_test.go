@@ -166,7 +166,7 @@ func TestStatsRepository_FunStats_LongestBinge(t *testing.T) {
 	// Insert 4 episodes watched on the same day
 	watchDate := time.Now().Format("2006-01-02") + " 20:00:00"
 	for i := 1; i <= 4; i++ {
-		_, err := db.Exec(`INSERT INTO episodes (season_id, episode, watched, watched_at) VALUES (?, ?, 1, ?)`, seasonID, i, watchDate)
+		_, err := db.Exec(`INSERT INTO episodes (season_id, episode, watched, first_watched_at) VALUES (?, ?, 1, ?)`, seasonID, i, watchDate)
 		require.NoError(t, err)
 	}
 

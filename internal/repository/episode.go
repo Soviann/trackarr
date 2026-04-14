@@ -21,8 +21,8 @@ func NewEpisodeRepository(db database.DBTX) *EpisodeRepository {
 // GetOrCreate returns the episode for the given season and number, creating it if needed.
 func (r *EpisodeRepository) GetOrCreate(seasonID int64, episodeNumber int) (*model.Episode, error) {
 	var e model.Episode
-	err := r.db.QueryRow(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? AND episode = ?`,
-		seasonID, episodeNumber).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey)
+	err := r.db.QueryRow(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, plex_rating_key FROM episodes WHERE season_id = ? AND episode = ?`,
+		seasonID, episodeNumber).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.PlexRatingKey)
 	if err == nil {
 		return &e, nil
 	}
@@ -44,11 +44,12 @@ func (r *EpisodeRepository) ToggleWatched(id int64) (*model.Episode, error) {
 	err := r.db.QueryRow(
 		`UPDATE episodes
 		 SET watched = CASE WHEN watched = 1 THEN 0 ELSE 1 END,
-		     watched_at = CASE WHEN watched = 1 THEN NULL ELSE ? END
+		     first_watched_at = CASE WHEN watched = 1 THEN NULL ELSE COALESCE(first_watched_at, ?) END,
+		     last_watched_at  = CASE WHEN watched = 1 THEN NULL ELSE ? END
 		 WHERE id = ?
-		 RETURNING id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key`,
-		time.Now().UTC(), id,
-	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey)
+		 RETURNING id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, plex_rating_key`,
+		time.Now().UTC(), time.Now().UTC(), id,
+	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.PlexRatingKey)
 	if err != nil {
 		return nil, fmt.Errorf("toggle episode: %w", err)
 	}
@@ -60,13 +61,20 @@ func (r *EpisodeRepository) BatchMarkWatched(ids []int64, watchedAt time.Time) e
 		return nil
 	}
 	placeholders := make([]string, len(ids))
-	args := make([]interface{}, 0, len(ids)+1)
-	args = append(args, watchedAt.UTC())
+	args := make([]interface{}, 0, len(ids)+2)
+	args = append(args, watchedAt.UTC(), watchedAt.UTC())
 	for i, id := range ids {
 		placeholders[i] = "?"
 		args = append(args, id)
 	}
-	query := fmt.Sprintf(`UPDATE episodes SET watched = 1, watched_at = ? WHERE id IN (%s)`, strings.Join(placeholders, ","))
+	query := fmt.Sprintf(
+		`UPDATE episodes
+		 SET watched = 1,
+		     first_watched_at = CASE WHEN first_watched_at IS NULL THEN ? ELSE first_watched_at END,
+		     last_watched_at  = ?
+		 WHERE id IN (%s)`,
+		strings.Join(placeholders, ","),
+	)
 	_, err := r.db.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("batch mark watched: %w", err)
@@ -134,7 +142,7 @@ func (r *EpisodeRepository) UpsertBatch(seasonID int64, entries []EpisodeUpsert)
 }
 
 func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, error) {
-	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
+	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, plex_rating_key FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
 	if err != nil {
 		return nil, fmt.Errorf("get episodes: %w", err)
 	}
@@ -143,7 +151,7 @@ func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, erro
 	var episodes []model.Episode
 	for rows.Next() {
 		var e model.Episode
-		if err := rows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.WatchedAt, &e.PlexRatingKey); err != nil {
+		if err := rows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.PlexRatingKey); err != nil {
 			return nil, fmt.Errorf("scan episode: %w", err)
 		}
 		episodes = append(episodes, e)
@@ -152,9 +160,26 @@ func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, erro
 }
 
 func (r *EpisodeRepository) MarkWatched(id int64, watchedAt time.Time) error {
-	_, err := r.db.Exec(`UPDATE episodes SET watched = 1, watched_at = ? WHERE id = ?`, watchedAt.UTC(), id)
+	_, err := r.db.Exec(
+		`UPDATE episodes
+		 SET watched = 1,
+		     first_watched_at = CASE WHEN first_watched_at IS NULL THEN ? ELSE first_watched_at END,
+		     last_watched_at  = ?
+		 WHERE id = ?`,
+		watchedAt.UTC(), watchedAt.UTC(), id,
+	)
 	if err != nil {
 		return fmt.Errorf("mark watched: %w", err)
+	}
+	return nil
+}
+
+// UpdateLastWatchedAt sets last_watched_at on an episode without touching first_watched_at.
+// Used for rewatch events (media.play on already-watched episodes).
+func (r *EpisodeRepository) UpdateLastWatchedAt(id int64, at time.Time) error {
+	_, err := r.db.Exec(`UPDATE episodes SET last_watched_at = ? WHERE id = ?`, at.UTC(), id)
+	if err != nil {
+		return fmt.Errorf("update episode last watched at: %w", err)
 	}
 	return nil
 }
