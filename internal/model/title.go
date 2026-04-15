@@ -62,6 +62,7 @@ type Title struct {
 	ReleaseDate       *string       `json:"release_date"`
 	NextAirDate       *string       `json:"next_air_date,omitempty"`
 	NextAirEpisode    *string       `json:"next_air_episode,omitempty"`
+	FirstWatchedAt    *time.Time    `json:"first_watched_at,omitempty"`
 	LastWatchedAt     *time.Time    `json:"last_watched_at,omitempty"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`

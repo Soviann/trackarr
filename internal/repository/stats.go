@@ -225,11 +225,11 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var bingeCount int
 	var bingeTitle, bingeDate string
 	err := r.db.QueryRow(`
-		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.watched_at) AS d
+		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.first_watched_at) AS d
 		FROM episodes e
 		JOIN seasons s ON e.season_id = s.id
 		JOIN titles t ON s.title_id = t.id
-		WHERE e.watched = 1 AND e.watched_at IS NOT NULL
+		WHERE e.watched = 1 AND e.first_watched_at IS NOT NULL
 		GROUP BY t.id, d
 		ORDER BY cnt DESC
 		LIMIT 1
@@ -249,10 +249,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var loyalTitle string
 	var loyalDays int
 	err = r.db.QueryRow(`
-		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.watched_at)) - julianday(t.created_at) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(t.created_at) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
-		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.watched_at IS NOT NULL
+		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_watched_at IS NOT NULL
 		WHERE t.type IN ('series', 'anime')
 		GROUP BY t.id
 		ORDER BY days DESC
@@ -272,10 +272,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var speedTitle string
 	var speedDays int
 	err = r.db.QueryRow(`
-		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.watched_at)) - julianday(MIN(e.watched_at)) AS INTEGER) AS days
+		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(MIN(e.first_watched_at)) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
-		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.watched_at IS NOT NULL
+		JOIN episodes e ON e.season_id = s.id AND e.watched = 1 AND e.first_watched_at IS NOT NULL
 		WHERE t.status = 'completed' AND t.type IN ('series', 'anime')
 		GROUP BY t.id
 		HAVING COUNT(e.id) >= 5
@@ -300,10 +300,10 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var nightCount, totalCount int
 	err = r.db.QueryRow(`
 		SELECT
-			COALESCE(SUM(CASE WHEN CAST(strftime('%H', watched_at) AS INTEGER) >= 20 OR CAST(strftime('%H', watched_at) AS INTEGER) < 6 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN CAST(strftime('%H', first_watched_at) AS INTEGER) >= 20 OR CAST(strftime('%H', first_watched_at) AS INTEGER) < 6 THEN 1 ELSE 0 END), 0),
 			COUNT(*)
 		FROM episodes
-		WHERE watched = 1 AND watched_at IS NOT NULL
+		WHERE watched = 1 AND first_watched_at IS NOT NULL
 	`).Scan(&nightCount, &totalCount)
 	if err == nil && totalCount >= 10 {
 		pct := int(math.Round(float64(nightCount) / float64(totalCount) * 100))
@@ -430,8 +430,8 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		var recentEps int
 		err = r.db.QueryRow(`
 			SELECT COUNT(*) FROM episodes
-			WHERE watched = 1 AND watched_at IS NOT NULL
-			AND watched_at >= datetime('now', '-90 days')
+			WHERE watched = 1 AND first_watched_at IS NOT NULL
+			AND first_watched_at >= datetime('now', '-90 days')
 		`).Scan(&recentEps)
 
 		detail := fmt.Sprintf("%d titles waiting.", backlogCount)
@@ -467,9 +467,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	var peakMonth string
 	var peakCount int
 	err = r.db.QueryRow(`
-		SELECT strftime('%Y-%m', watched_at) AS m, COUNT(*) AS cnt
+		SELECT strftime('%Y-%m', first_watched_at) AS m, COUNT(*) AS cnt
 		FROM episodes
-		WHERE watched = 1 AND watched_at IS NOT NULL
+		WHERE watched = 1 AND first_watched_at IS NOT NULL
 		GROUP BY m
 		ORDER BY cnt DESC
 		LIMIT 1
@@ -498,7 +498,7 @@ func (r *StatsRepository) yearSummary(year int) (*model.StatsYear, error) {
 		return nil, fmt.Errorf("titles added: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1 AND watched_at >= ? AND watched_at < ?`, yearStart, yearEnd).Scan(&y.EpisodesWatched)
+	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1 AND first_watched_at >= ? AND first_watched_at < ?`, yearStart, yearEnd).Scan(&y.EpisodesWatched)
 	if err != nil {
 		return nil, fmt.Errorf("eps watched year: %w", err)
 	}

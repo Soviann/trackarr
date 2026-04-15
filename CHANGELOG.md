@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Ajouté
+- Plex : les relectures sont maintenant suivies — regarder un épisode déjà vu sur Plex déclenche un événement de visionnage et remonte le titre dans la liste « Derniers regardés »
+- Épisodes et titres : deux timestamps distincts — `first_watched_at` (première vision) et `last_watched_at` (dernière relecture)
+
+### Corrigé
+- `make ssh-db-pull` : inclut maintenant les fichiers WAL et SHM pour ne pas rater les écritures récentes non checkpointées
+
 ## [v0.15.0] — 2026-04-12
 
 ### Ajouté

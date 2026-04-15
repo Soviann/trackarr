@@ -107,7 +107,8 @@ export interface Episode {
   name: string | null
   air_date: string | null
   watched: boolean
-  watched_at: string | null
+  first_watched_at: string | null
+  last_watched_at: string | null
 }
 
 // Stats

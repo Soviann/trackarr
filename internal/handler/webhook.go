@@ -36,7 +36,7 @@ func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) erro
 		return httputil.BadRequest("Invalid request")
 	}
 
-	if err := h.plex.ProcessScrobble(payload, rawPayload); err != nil {
+	if err := h.plex.ProcessWebhook(payload, rawPayload); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

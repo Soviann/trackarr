@@ -74,11 +74,28 @@ func NewPlexService(ctx context.Context, db *sql.DB, titles *repository.TitleRep
 	}
 }
 
-func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
-	if payload.Event != plexwebhooks.EventTypeScrobble {
+// ProcessWebhook handles all inbound Plex webhook events, routing by event type.
+func (s *PlexService) ProcessWebhook(payload *plexwebhooks.Payload, rawPayload string) error {
+	meta := payload.Metadata
+	log.Printf("plex webhook: event=%s type=%s title=%q season=%d episode=%d ratingKey=%s",
+		payload.Event, meta.Type, meta.Title, meta.ParentIndex, meta.Index, meta.RatingKey)
+
+	switch payload.Event {
+	case plexwebhooks.EventTypeScrobble:
+		return s.handleScrobble(payload, rawPayload)
+	case plexwebhooks.EventTypePlay:
+		return s.handlePlay(payload, rawPayload)
+	default:
 		return nil
 	}
+}
 
+// ProcessScrobble is kept for backward compatibility with existing tests.
+func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
+	return s.ProcessWebhook(payload, rawPayload)
+}
+
+func (s *PlexService) handleScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
 	meta := payload.Metadata
 	var ids PlexExternalIDs
 	if meta.Type == plexwebhooks.MediaTypeMovie {
@@ -93,6 +110,67 @@ func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload 
 	default:
 		return fmt.Errorf("unknown media type: %s", meta.Type)
 	}
+}
+
+// handlePlay handles media.play events. Only processes already-watched episodes
+// (rewatches) — first-time watches wait for the media.scrobble event.
+func (s *PlexService) handlePlay(payload *plexwebhooks.Payload, rawPayload string) error {
+	// Movies always get a media.scrobble from Plex; only episodes need rewatch tracking.
+	if payload.Metadata.Type != plexwebhooks.MediaTypeEpisode {
+		return nil
+	}
+	return database.WithTx(s.db, func(tx *sql.Tx) error {
+		return s.handleEpisodePlayInTx(tx, payload.Metadata, rawPayload)
+	})
+}
+
+func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string) error {
+	titles := repository.NewTitleRepository(tx)
+	seasons := repository.NewSeasonRepository(tx)
+	episodes := repository.NewEpisodeRepository(tx)
+	events := repository.NewWatchEventRepository(tx)
+
+	grandparentKey := meta.GrandparentRatingKey
+	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil)
+	if err != nil {
+		// Not a tracked title — nothing to do.
+		return nil
+	}
+
+	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
+	if err != nil {
+		return fmt.Errorf("get/create season: %w", err)
+	}
+
+	ep, err := episodes.GetOrCreate(season.ID, meta.Index)
+	if err != nil {
+		return fmt.Errorf("get/create episode: %w", err)
+	}
+
+	// First-time watch — let media.scrobble handle it.
+	if !ep.Watched {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	if _, err := events.Create(&model.WatchEvent{
+		TitleID:     title.ID,
+		EpisodeID:   &ep.ID,
+		Source:      model.WatchEventSourcePlex,
+		PlexPayload: &rawPayload,
+	}); err != nil {
+		log.Printf("plex play: create watch event for title %d ep %d: %v", title.ID, ep.ID, err)
+	}
+
+	if err := episodes.UpdateLastWatchedAt(ep.ID, now); err != nil {
+		log.Printf("plex play: update episode last_watched_at for ep %d: %v", ep.ID, err)
+	}
+
+	if err := titles.UpdateLastWatchedAt(title.ID, now); err != nil {
+		log.Printf("plex play: update title last_watched_at for title %d: %v", title.ID, err)
+	}
+
+	return nil
 }
 
 func (s *PlexService) processMovie(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {

@@ -41,13 +41,15 @@ func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 	toggled, err := episodeRepo.ToggleWatched(ep.ID)
 	require.NoError(t, err)
 	assert.True(t, toggled.Watched)
-	assert.NotNil(t, toggled.WatchedAt)
+	assert.NotNil(t, toggled.FirstWatchedAt)
+	assert.NotNil(t, toggled.LastWatchedAt)
 
 	// Toggle off
 	toggled, err = episodeRepo.ToggleWatched(ep.ID)
 	require.NoError(t, err)
 	assert.False(t, toggled.Watched)
-	assert.Nil(t, toggled.WatchedAt)
+	assert.Nil(t, toggled.FirstWatchedAt)
+	assert.Nil(t, toggled.LastWatchedAt)
 }
 
 func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
@@ -69,6 +71,38 @@ func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 	assert.Len(t, episodes, 2)
 	assert.True(t, episodes[0].Watched)
 	assert.True(t, episodes[1].Watched)
+}
+
+func TestEpisodeRepository_BatchMarkWatched_PreservesFirstWatchedAt(t *testing.T) {
+	db := setupTestDB(t)
+	titleRepo := repository.NewTitleRepository(db)
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	titleID, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	season, _ := seasonRepo.GetOrCreate(titleID, 1)
+	ep, _ := episodeRepo.GetOrCreate(season.ID, 1)
+
+	// First watch
+	first := time.Now().UTC().Add(-24 * time.Hour)
+	err := episodeRepo.BatchMarkWatched([]int64{ep.ID}, first)
+	require.NoError(t, err)
+
+	episodes, _ := episodeRepo.GetBySeasonID(season.ID)
+	require.Len(t, episodes, 1)
+	require.NotNil(t, episodes[0].FirstWatchedAt)
+	assert.WithinDuration(t, first, *episodes[0].FirstWatchedAt, time.Second)
+	assert.WithinDuration(t, first, *episodes[0].LastWatchedAt, time.Second)
+
+	// Rewatch — first_watched_at must be preserved, last_watched_at must update
+	rewatch := time.Now().UTC()
+	err = episodeRepo.BatchMarkWatched([]int64{ep.ID}, rewatch)
+	require.NoError(t, err)
+
+	episodes, _ = episodeRepo.GetBySeasonID(season.ID)
+	require.NotNil(t, episodes[0].FirstWatchedAt)
+	assert.WithinDuration(t, first, *episodes[0].FirstWatchedAt, time.Second, "first_watched_at must not change on rewatch")
+	assert.WithinDuration(t, rewatch, *episodes[0].LastWatchedAt, time.Second, "last_watched_at must update on rewatch")
 }
 
 func TestSettingRepository_SetAndGet(t *testing.T) {
