@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-<<<<<<< HEAD
+## [v0.16.0] — 2026-04-15
+
 ### Ajouté
 - Plex : les relectures sont maintenant suivies — regarder un épisode déjà vu sur Plex déclenche un événement de visionnage et remonte le titre dans la liste « Derniers regardés »
 - Épisodes et titres : deux timestamps distincts — `first_watched_at` (première vision) et `last_watched_at` (dernière relecture)
