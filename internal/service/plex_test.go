@@ -384,12 +384,12 @@ func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 	assert.Len(t, result.Titles, 0)
 }
 
-func TestPlexService_PlayIgnoredForUnwatchedEpisode(t *testing.T) {
+func TestHandleEpisodePlay_UnwatchedEpisode_MarksWatched(t *testing.T) {
 	svc, titleRepo := setupPlexService(t)
 
 	// Pre-create a tracked series with a plex rating key
 	plexKey := "series1"
-	_, err := titleRepo.Create(&model.Title{
+	titleID, err := titleRepo.Create(&model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2024,
 		Status:        model.TitleStatusWatching,
@@ -398,7 +398,7 @@ func TestPlexService_PlayIgnoredForUnwatchedEpisode(t *testing.T) {
 	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
 	require.NoError(t, err)
 
-	// Send a media.play for an episode that has never been watched
+	// Send a media.play for an episode that has never been watched (catch-up).
 	payload := &plexwebhooks.Payload{
 		Event: plexwebhooks.EventTypePlay,
 		Metadata: plexwebhooks.Metadata{
@@ -414,13 +414,14 @@ func TestPlexService_PlayIgnoredForUnwatchedEpisode(t *testing.T) {
 
 	require.NoError(t, svc.ProcessWebhook(payload, `{}`))
 
-	// No watch event should have been created
-	result, _ := titleRepo.List(repository.TitleFilter{})
-	require.Len(t, result.Titles, 1)
-	title, _ := titleRepo.GetByID(result.Titles[0].ID)
-	// Episode must still be unwatched
+	title, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
 	require.Len(t, title.Seasons, 1)
-	assert.False(t, title.Seasons[0].Episodes[0].Watched)
+	require.Len(t, title.Seasons[0].Episodes, 1)
+	ep := title.Seasons[0].Episodes[0]
+	assert.True(t, ep.Watched, "episode must be marked watched on catch-up")
+	require.NotNil(t, ep.FirstWatchedAt, "first_watched_at must be set")
+	require.NotNil(t, ep.LastWatchedAt, "last_watched_at must be set")
 }
 
 func TestPlexService_PlayCreatesRewatchEvent(t *testing.T) {

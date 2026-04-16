@@ -962,7 +962,20 @@ func (r *TitleRepository) mergeInTx(db database.DBTX, destID, sourceID int64, se
 		return fmt.Errorf("move watch events: %w", err)
 	}
 
-	// 4. Delete source title (cascades should be handled by DB, but we already moved most things)
+	// 4. Transfer external IDs (NULL-only: never overwrite existing values on dest).
+	// Prevents re-creation of duplicates when a future webhook arrives on the source's ratingKey.
+	_, err = db.Exec(`UPDATE titles SET
+		imdb_id         = COALESCE(imdb_id,         (SELECT imdb_id         FROM titles WHERE id = ?)),
+		tmdb_id         = COALESCE(tmdb_id,         (SELECT tmdb_id         FROM titles WHERE id = ?)),
+		tvdb_id         = COALESCE(tvdb_id,         (SELECT tvdb_id         FROM titles WHERE id = ?)),
+		anilist_id      = COALESCE(anilist_id,      (SELECT anilist_id      FROM titles WHERE id = ?)),
+		plex_rating_key = COALESCE(plex_rating_key, (SELECT plex_rating_key FROM titles WHERE id = ?))
+		WHERE id = ?`, sourceID, sourceID, sourceID, sourceID, sourceID, destID)
+	if err != nil {
+		return fmt.Errorf("transfer external ids: %w", err)
+	}
+
+	// 5. Delete source title (cascades should be handled by DB, but we already moved most things)
 	_, err = db.Exec(`DELETE FROM titles WHERE id = ?`, sourceID)
 	if err != nil {
 		return fmt.Errorf("delete source title: %w", err)

@@ -147,12 +147,15 @@ func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metada
 		return fmt.Errorf("get/create episode: %w", err)
 	}
 
-	// First-time watch — let media.scrobble handle it.
+	now := time.Now().UTC()
+
+	// media.play on unwatched episode — catch-up (media.scrobble missed).
 	if !ep.Watched {
-		return nil
+		if err := episodes.MarkWatched(ep.ID, now); err != nil {
+			return fmt.Errorf("mark episode watched: %w", err)
+		}
 	}
 
-	now := time.Now().UTC()
 	if _, err := events.Create(&model.WatchEvent{
 		TitleID:     title.ID,
 		EpisodeID:   &ep.ID,

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Fusion : la fiche conservée récupère désormais les identifiants externes (IMDb, TMDB, TVDB, AniList, Plex rating key) manquants depuis la fiche supprimée — évite la recréation d'un doublon au prochain webhook Plex
+- Plex : un webhook `media.play` sur un épisode jamais marqué vu déclenche désormais le marquage (rattrapage après un `media.scrobble` manqué) au lieu d'être silencieusement ignoré
+
 ## [v0.16.0] — 2026-04-15
 
 ### Ajouté

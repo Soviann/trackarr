@@ -641,4 +641,124 @@ func TestTitleRepository_List_PersonFilter(t *testing.T) {
 	assert.Equal(t, idA, result.Titles[0].ID)
 }
 
+func TestTitleRepository_Merge_TransfersMissingExternalIDs(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destID, err := repo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        1989,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Poirot (Simkl)", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	imdb := "tt0094525"
+	var tmdb int64 = 790
+	var tvdb int64 = 77623
+	var anilist int64 = 9999
+	plexKey := "19908"
+	sourceID, err := repo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          1989,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		IMDBID:        &imdb,
+		TMDBID:        &tmdb,
+		TVDBID:        &tvdb,
+		AniListID:     &anilist,
+		PlexRatingKey: &plexKey,
+	}, []model.TitleName{{Name: "Poirot (Plex)", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Merge(destID, sourceID, 0))
+
+	got, err := repo.GetByID(destID)
+	require.NoError(t, err)
+	require.NotNil(t, got.IMDBID)
+	assert.Equal(t, imdb, *got.IMDBID)
+	require.NotNil(t, got.TMDBID)
+	assert.Equal(t, tmdb, *got.TMDBID)
+	require.NotNil(t, got.TVDBID)
+	assert.Equal(t, tvdb, *got.TVDBID)
+	require.NotNil(t, got.AniListID)
+	assert.Equal(t, anilist, *got.AniListID)
+	require.NotNil(t, got.PlexRatingKey)
+	assert.Equal(t, plexKey, *got.PlexRatingKey)
+}
+
+func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destImdb := "tt-dest"
+	var destTmdb int64 = 111
+	destPlexKey := "dest-key"
+	destID, err := repo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          1989,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		IMDBID:        &destImdb,
+		TMDBID:        &destTmdb,
+		PlexRatingKey: &destPlexKey,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	srcImdb := "tt-src"
+	var srcTmdb int64 = 222
+	var srcTvdb int64 = 333
+	srcPlexKey := "src-key"
+	sourceID, err := repo.Create(&model.Title{
+		Type:          model.TitleTypeSeries,
+		Year:          1989,
+		Status:        model.TitleStatusWatching,
+		MatchStatus:   model.MatchStatusConfirmed,
+		IMDBID:        &srcImdb,
+		TMDBID:        &srcTmdb,
+		TVDBID:        &srcTvdb,
+		PlexRatingKey: &srcPlexKey,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Merge(destID, sourceID, 0))
+
+	got, err := repo.GetByID(destID)
+	require.NoError(t, err)
+	// Non-NULL dest values must be preserved.
+	require.NotNil(t, got.IMDBID)
+	assert.Equal(t, destImdb, *got.IMDBID)
+	require.NotNil(t, got.TMDBID)
+	assert.Equal(t, destTmdb, *got.TMDBID)
+	require.NotNil(t, got.PlexRatingKey)
+	assert.Equal(t, destPlexKey, *got.PlexRatingKey)
+	// NULL dest value must be filled from source.
+	require.NotNil(t, got.TVDBID)
+	assert.Equal(t, srcTvdb, *got.TVDBID)
+}
+
+func TestTitleRepository_Merge_DeletesSource(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destID, err := repo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	sourceID, err := repo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.Merge(destID, sourceID, 0))
+
+	_, err = repo.GetByID(sourceID)
+	assert.Error(t, err)
+}
+
 func ptr[T any](v T) *T { return &v }
