@@ -66,7 +66,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// Handlers
 	titles := handler.NewTitleHandler(writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
-	library := handler.NewLibraryHandler(titleRepo)
+	library := handler.NewLibraryHandler(titleReadRepo)
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)

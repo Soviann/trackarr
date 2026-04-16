@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Accueil : les bandeaux « Coming up » et « Continue Watching » ne tombent plus en 504 quand un refresh en arrière-plan tourne — leurs requêtes passent désormais par le pool de lectures (WAL) au lieu de la connexion d'écriture unique
+- Performance : ajout d'un index partiel sur `titles(next_air_date)` pour accélérer le bandeau « Coming up » sur les bibliothèques fournies (migration 019)
+
 ## [v0.16.1] — 2026-04-16
 
 ### Corrigé
