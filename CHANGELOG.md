@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Corrigé
+- Accueil : les affiches des bandeaux « Coming up » et « Continue Watching » s'affichent désormais au lieu de l'icône d'image cassée — l'URL de couverture était utilisée brute sans le préfixe `/api/covers/`
+
 ## [v0.16.2] — 2026-04-16
 
 ### Corrigé

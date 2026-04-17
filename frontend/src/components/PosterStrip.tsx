@@ -29,7 +29,7 @@ export function PosterStrip({ items }: Props) {
         >
           <div className={s.poster}>
             {item.cover_url
-              ? <img src={item.cover_url} alt="" role="presentation" />
+              ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" />
               : <CoverPlaceholder />}
             {item.progressRatio !== undefined && (
               <div className={s.progressBar}>
