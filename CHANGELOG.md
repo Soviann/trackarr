@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [v0.16.4] — 2026-04-17
+
+### Corrigé
+- Accueil : les noms des titres dans les bandeaux « Coming up » et « Continue Watching » sont désormais tronqués avec des points de suspension au lieu de déborder sur les cartes voisines
+
 ## [v0.16.3] — 2026-04-17
 
 ### Corrigé
