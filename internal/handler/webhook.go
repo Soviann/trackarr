@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"io"
@@ -8,12 +9,19 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
+
+// webhookProcessingTimeout caps how long a single Plex webhook may run.
+// Plex itself retries aggressively and our payloads only touch SQLite + optional
+// TMDB/push I/O, so anything longer than this points to a stuck goroutine that
+// would otherwise hold the sole writeDB connection indefinitely.
+const webhookProcessingTimeout = 30 * time.Second
 
 type WebhookHandler struct {
 	plex   *service.PlexService
@@ -36,7 +44,10 @@ func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) erro
 		return httputil.BadRequest("Invalid request")
 	}
 
-	if err := h.plex.ProcessWebhook(payload, rawPayload); err != nil {
+	ctx, cancel := context.WithTimeout(r.Context(), webhookProcessingTimeout)
+	defer cancel()
+
+	if err := h.plex.ProcessWebhook(ctx, payload, rawPayload); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

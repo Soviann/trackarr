@@ -75,16 +75,19 @@ func NewPlexService(ctx context.Context, db *sql.DB, titles *repository.TitleRep
 }
 
 // ProcessWebhook handles all inbound Plex webhook events, routing by event type.
-func (s *PlexService) ProcessWebhook(payload *plexwebhooks.Payload, rawPayload string) error {
+// ctx should carry the HTTP request deadline so the write transaction is aborted
+// if the client disconnects (preventing the sole write connection from being
+// held indefinitely when a downstream I/O call blocks).
+func (s *PlexService) ProcessWebhook(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
 	meta := payload.Metadata
 	log.Printf("plex webhook: event=%s type=%s title=%q season=%d episode=%d ratingKey=%s",
 		payload.Event, meta.Type, meta.Title, meta.ParentIndex, meta.Index, meta.RatingKey)
 
 	switch payload.Event {
 	case plexwebhooks.EventTypeScrobble:
-		return s.handleScrobble(payload, rawPayload)
+		return s.handleScrobble(ctx, payload, rawPayload)
 	case plexwebhooks.EventTypePlay:
-		return s.handlePlay(payload, rawPayload)
+		return s.handlePlay(ctx, payload, rawPayload)
 	default:
 		return nil
 	}
@@ -92,10 +95,10 @@ func (s *PlexService) ProcessWebhook(payload *plexwebhooks.Payload, rawPayload s
 
 // ProcessScrobble is kept for backward compatibility with existing tests.
 func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
-	return s.ProcessWebhook(payload, rawPayload)
+	return s.ProcessWebhook(context.Background(), payload, rawPayload)
 }
 
-func (s *PlexService) handleScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
+func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
 	meta := payload.Metadata
 	var ids PlexExternalIDs
 	if meta.Type == plexwebhooks.MediaTypeMovie {
@@ -104,9 +107,9 @@ func (s *PlexService) handleScrobble(payload *plexwebhooks.Payload, rawPayload s
 
 	switch meta.Type {
 	case plexwebhooks.MediaTypeMovie:
-		return s.processMovie(meta, ids, rawPayload)
+		return s.processMovie(ctx, meta, ids, rawPayload)
 	case plexwebhooks.MediaTypeEpisode:
-		return s.processEpisode(meta, ids, rawPayload)
+		return s.processEpisode(ctx, meta, ids, rawPayload)
 	default:
 		return fmt.Errorf("unknown media type: %s", meta.Type)
 	}
@@ -114,12 +117,12 @@ func (s *PlexService) handleScrobble(payload *plexwebhooks.Payload, rawPayload s
 
 // handlePlay handles media.play events. Only processes already-watched episodes
 // (rewatches) — first-time watches wait for the media.scrobble event.
-func (s *PlexService) handlePlay(payload *plexwebhooks.Payload, rawPayload string) error {
+func (s *PlexService) handlePlay(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
 	// Movies always get a media.scrobble from Plex; only episodes need rewatch tracking.
 	if payload.Metadata.Type != plexwebhooks.MediaTypeEpisode {
 		return nil
 	}
-	return database.WithTx(s.db, func(tx *sql.Tx) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
 		return s.handleEpisodePlayInTx(tx, payload.Metadata, rawPayload)
 	})
 }
@@ -176,10 +179,10 @@ func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metada
 	return nil
 }
 
-func (s *PlexService) processMovie(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
 	// Check notification preference before the transaction to avoid SQLite deadlock (MaxOpenConns=1).
 	ratingNotifEnabled := IsNotificationEnabled(s.settings, NotifRatingPrompt)
-	return database.WithTx(s.db, func(tx *sql.Tx) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
 		return s.processMovieInTx(tx, meta, ids, rawPayload, ratingNotifEnabled)
 	})
 }
@@ -223,13 +226,42 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 	return titles.UpdateLastWatchedAt(title.ID, time.Now().UTC())
 }
 
-func (s *PlexService) processEpisode(meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
-	return database.WithTx(s.db, func(tx *sql.Tx) error {
-		return s.processEpisodeInTx(tx, meta, ids, rawPayload)
-	})
+func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+	// autoCompleteCheck is populated inside the transaction and, if non-nil, is
+	// executed AFTER commit. This keeps the TMDB HTTP request (performed by
+	// CheckAutoComplete) out of the write transaction, so a slow/hanging TMDB
+	// call can never tie up the sole writeDB connection.
+	var autoCompleteCheck *autoCompleteRequest
+
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		req, err := s.processEpisodeInTx(tx, meta, ids, rawPayload)
+		if err != nil {
+			return err
+		}
+		autoCompleteCheck = req
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if autoCompleteCheck != nil {
+		if err := s.libSvc.CheckAutoComplete(ctx, s.db, autoCompleteCheck.titleID, autoCompleteCheck.tmdbID, autoCompleteCheck.seasonNum, autoCompleteCheck.episodeNum); err != nil {
+			log.Printf("auto-complete warning: %v", err)
+		}
+	}
+	return nil
 }
 
-func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+// autoCompleteRequest captures the inputs needed to run CheckAutoComplete
+// outside the write transaction.
+type autoCompleteRequest struct {
+	titleID    int64
+	tmdbID     int64
+	seasonNum  int
+	episodeNum int
+}
+
+func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, error) {
 	titles := repository.NewTitleRepository(tx)
 	seasons := repository.NewSeasonRepository(tx)
 	episodes := repository.NewEpisodeRepository(tx)
@@ -254,7 +286,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 
 		titleID, createErr := s.titleSvc.CreateFromPlex(tx, seriesName, meta.Year, ids, model.TitleTypeSeries, grandparentKey, meta.GUIDExternal, model.TitleStatusWatching)
 		if createErr != nil {
-			return fmt.Errorf("create series: %w", createErr)
+			return nil, fmt.Errorf("create series: %w", createErr)
 		}
 		title = &model.Title{ID: titleID, Status: model.TitleStatusWatching}
 	} else {
@@ -275,35 +307,40 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 
 	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
 	if err != nil {
-		return fmt.Errorf("get/create season: %w", err)
+		return nil, fmt.Errorf("get/create season: %w", err)
 	}
 
 	ep, err := episodes.GetOrCreate(season.ID, meta.Index)
 	if err != nil {
-		return fmt.Errorf("get/create episode: %w", err)
+		return nil, fmt.Errorf("get/create episode: %w", err)
 	}
 
 	// Use LibraryService to mark as watched + notify
 	if _, err := s.libSvc.MarkEpisodesWatched(tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
 		log.Printf("plex: update last watched at for title %d: %v", title.ID, err)
 	}
 
-	// Auto-complete check
+	// Auto-complete check runs AFTER the transaction commits (see processEpisode).
+	// Keeping the TMDB HTTP call out of the transaction prevents a hung network
+	// request from holding the sole write connection.
 	backfillTMDBID := title.TMDBID
 	if backfillTMDBID == nil {
 		backfillTMDBID = &ids.TMDB
 	}
 	if backfillTMDBID != nil && *backfillTMDBID != 0 {
-		if err := s.libSvc.CheckAutoComplete(context.Background(), tx, title.ID, *backfillTMDBID, meta.ParentIndex, meta.Index); err != nil {
-			log.Printf("auto-complete warning: %v", err)
-		}
+		return &autoCompleteRequest{
+			titleID:    title.ID,
+			tmdbID:     *backfillTMDBID,
+			seasonNum:  meta.ParentIndex,
+			episodeNum: meta.Index,
+		}, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // checkSeriesCompleted checks if the given season/episode is the last episode

@@ -412,7 +412,7 @@ func TestHandleEpisodePlay_UnwatchedEpisode_MarksWatched(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, svc.ProcessWebhook(payload, `{}`))
+	require.NoError(t, svc.ProcessWebhook(context.Background(), payload, `{}`))
 
 	title, err := titleRepo.GetByID(titleID)
 	require.NoError(t, err)
@@ -455,7 +455,7 @@ func TestPlexService_PlayCreatesRewatchEvent(t *testing.T) {
 			GrandparentRatingKey: "series-poirot",
 		},
 	}
-	require.NoError(t, svc.ProcessWebhook(scrobble, `{}`))
+	require.NoError(t, svc.ProcessWebhook(context.Background(), scrobble, `{}`))
 
 	title, _ := titleRepo.GetByID(titleID)
 	require.Len(t, title.Seasons[0].Episodes, 1)
@@ -477,7 +477,7 @@ func TestPlexService_PlayCreatesRewatchEvent(t *testing.T) {
 			GrandparentRatingKey: "series-poirot",
 		},
 	}
-	require.NoError(t, svc.ProcessWebhook(play, `{}`))
+	require.NoError(t, svc.ProcessWebhook(context.Background(), play, `{}`))
 
 	title, _ = titleRepo.GetByID(titleID)
 	ep = title.Seasons[0].Episodes[0]
@@ -522,7 +522,7 @@ func TestPlexService_PlayNoAutoComplete(t *testing.T) {
 			GrandparentRatingKey: "series1",
 		},
 	}
-	require.NoError(t, svc.ProcessWebhook(scrobble, `{}`))
+	require.NoError(t, svc.ProcessWebhook(context.Background(), scrobble, `{}`))
 
 	title, _ := titleRepo.GetByID(titleID)
 	require.Equal(t, model.TitleStatusCompleted, title.Status, "series should auto-complete after scrobble")
@@ -539,7 +539,7 @@ func TestPlexService_PlayNoAutoComplete(t *testing.T) {
 			GrandparentRatingKey: "series1",
 		},
 	}
-	require.NoError(t, svc.ProcessWebhook(play, `{}`))
+	require.NoError(t, svc.ProcessWebhook(context.Background(), play, `{}`))
 
 	title, _ = titleRepo.GetByID(titleID)
 	assert.Equal(t, model.TitleStatusCompleted, title.Status, "status must stay completed after rewatch play")

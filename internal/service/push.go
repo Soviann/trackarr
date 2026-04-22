@@ -4,10 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
+
+// pushHTTPClient caps every outbound push request at 5 seconds. The default
+// webpush-go client has no timeout; without this cap a stalled FCM/Mozilla
+// endpoint would hang the caller (and, when called inside a DB transaction,
+// block the sole write connection).
+var pushHTTPClient = &http.Client{Timeout: 5 * time.Second}
 
 // PushNotifier abstracts push notification operations.
 // Use NewNoopNotifier() when VAPID keys are not configured.
@@ -83,6 +91,7 @@ func (s *PushService) SendNotification(title, body, url string) error {
 	})
 
 	resp, err := webpush.SendNotification(payload, &sub, &webpush.Options{
+		HTTPClient:      pushHTTPClient,
 		VAPIDPublicKey:  s.publicKey,
 		VAPIDPrivateKey: s.privateKey,
 		Subscriber:      s.subject,

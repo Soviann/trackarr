@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
@@ -57,9 +58,20 @@ func Open(dsn string) (writeDB, readDB *sql.DB, err error) {
 }
 
 // WithTx executes fn within a transaction. If fn returns an error, the
-// transaction is rolled back; otherwise it is committed.
+// transaction is rolled back; otherwise it is committed. Prefer
+// WithTxContext from new code paths so the transaction can be aborted when
+// the caller's context is cancelled.
 func WithTx(db *sql.DB, fn func(tx *sql.Tx) error) error {
-	tx, err := db.Begin()
+	return WithTxContext(context.Background(), db, fn)
+}
+
+// WithTxContext executes fn within a transaction tied to ctx. If ctx is
+// cancelled (e.g. client disconnect, request timeout) the driver aborts the
+// in-flight statement and the transaction is rolled back, freeing the write
+// connection. If fn returns an error, the transaction is rolled back;
+// otherwise it is committed.
+func WithTxContext(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) error {
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
