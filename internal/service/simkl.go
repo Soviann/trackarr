@@ -267,7 +267,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 			latestWatchedAt = time.Now().UTC()
 		}
 		if maxSeason > 0 && maxEpisode > 0 {
-			if err := BackfillPreviousEpisodes(s.db, nil, titleID, tmdbID, maxSeason, maxEpisode, latestWatchedAt); err != nil {
+			if err := BackfillPreviousEpisodes(s.db, titleID, nil, maxSeason, maxEpisode, latestWatchedAt); err != nil {
 				log.Printf("simkl import: backfill for title %d: %v", titleID, err)
 				result.Errors++
 			}

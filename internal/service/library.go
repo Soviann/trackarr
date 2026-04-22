@@ -57,15 +57,24 @@ func safeRuntime(r *int) int {
 	return *r
 }
 
+// RatingPrompt captures the data needed to fire a rating-prompt notification
+// AFTER the write transaction commits. Holding push I/O inside the tx would
+// tie up the sole SQLite write connection on any push-endpoint slowness.
+type RatingPrompt struct {
+	TitleID int64
+	Message string
+}
+
 // ToggleEpisodeWatched toggles the watched status of an episode and logs a watch event.
-func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episodeID int64) (*model.Title, error) {
+// Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
+func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, db database.DBTX, titleID, episodeID int64) (*model.Title, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(db)
 	episodes := repository.NewEpisodeRepository(db)
 	events := repository.NewWatchEventRepository(db)
 
 	ep, err := episodes.ToggleWatched(episodeID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ep.Watched {
@@ -76,13 +85,13 @@ func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episode
 		})
 
 		if s.backfill != nil {
-			s.backfill.BackfillForEpisode(titleID, ep)
+			s.backfill.BackfillForEpisode(ctx, titleID, ep)
 		}
 	}
 
 	title, err := titles.GetByID(titleID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Update total_watch_minutes: increment if watched, decrement if unwatched.
@@ -99,22 +108,24 @@ func (s *LibraryService) ToggleEpisodeWatched(db database.DBTX, titleID, episode
 		title.TotalWatchMinutes = newTotal
 	}
 
+	var prompt *RatingPrompt
 	if ep.Watched && title != nil {
-		s.maybePromptRating(db, title)
+		prompt = s.buildRatingPrompt(db, title)
 	}
 
-	return title, nil
+	return title, prompt, nil
 }
 
 // MarkEpisodesWatched marks multiple episodes as watched and logs watch events.
-func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, error) {
+// Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
+func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(db)
 	episodes := repository.NewEpisodeRepository(db)
 	events := repository.NewWatchEventRepository(db)
 
 	now := time.Now().UTC()
 	if err := episodes.BatchMarkWatched(episodeIDs, now); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	watchEvents := make([]model.WatchEvent, len(episodeIDs))
@@ -133,8 +144,9 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 
 	title, err := titles.GetByID(titleID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	var prompt *RatingPrompt
 	if title != nil {
 		// Increment total_watch_minutes by runtime × number of newly watched episodes.
 		newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)*len(episodeIDs)
@@ -142,27 +154,28 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 			log.Printf("library: update total_watch_minutes for title %d: %v", titleID, err)
 		}
 		title.TotalWatchMinutes = newTotal
-		s.maybePromptRating(db, title)
+		prompt = s.buildRatingPrompt(db, title)
 	}
 
-	return title, nil
+	return title, prompt, nil
 }
 
 // MarkMovieWatched marks a movie title as completed and logs a watch event.
-func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, source model.WatchEventSource, rawPayload *string) error {
+// Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
+func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, source model.WatchEventSource, rawPayload *string) (*RatingPrompt, error) {
 	titles := repository.NewTitleRepository(db)
 	events := repository.NewWatchEventRepository(db)
 
 	// Fetch title first to get runtime for watchtime calculation.
 	title, err := titles.GetByID(titleID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	completedStatus := model.TitleStatusCompleted
 	newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)
 	if err := titles.Update(titleID, repository.TitleUpdate{Status: &completedStatus, TotalWatchMinutes: &newTotal}); err != nil {
-		return err
+		return nil, err
 	}
 
 	_, _ = events.Create(&model.WatchEvent{
@@ -172,51 +185,61 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 	})
 
 	title.TotalWatchMinutes = newTotal
-	s.maybePromptRating(db, title)
-
-	return nil
+	return s.buildRatingPrompt(db, title), nil
 }
 
-// maybePromptRating sends a push notification if a title is finished and has no rating.
-func (s *LibraryService) maybePromptRating(db database.DBTX, title *model.Title) {
-	if title.MyRating != nil {
+// SendRatingPrompt fires a rating-prompt push notification. Must be called
+// AFTER any enclosing write transaction has committed so a slow push endpoint
+// cannot hold the sole SQLite write connection. Safe to call with nil.
+func (s *LibraryService) SendRatingPrompt(p *RatingPrompt) {
+	if p == nil || s.push == nil {
 		return
+	}
+	_ = s.push.SendNotification("PlexTracker", p.Message, fmt.Sprintf("/title/%d", p.TitleID))
+}
+
+// buildRatingPrompt inspects a title and returns a RatingPrompt if a rating
+// notification should fire. Read-only DB access; performs no I/O.
+func (s *LibraryService) buildRatingPrompt(db database.DBTX, title *model.Title) *RatingPrompt {
+	if title.MyRating != nil {
+		return nil
 	}
 
 	settings := repository.NewSettingRepository(db)
 	if !IsNotificationEnabled(settings, NotifRatingPrompt) {
-		return
+		return nil
 	}
 
-	shouldPrompt := false
-	msg := ""
-
 	if title.Type == model.TitleTypeMovie {
-		shouldPrompt = title.Status == model.TitleStatusCompleted
-		msg = fmt.Sprintf("Rate %s? You just watched this movie", title.PrimaryName())
-	} else {
-		for _, season := range title.Seasons {
-			if len(season.Episodes) == 0 {
-				continue
-			}
-			allWatched := true
-			for _, ep := range season.Episodes {
-				if !ep.Watched {
-					allWatched = false
-					break
-				}
-			}
-			if allWatched {
-				shouldPrompt = true
-				msg = fmt.Sprintf("Rate %s? You finished season %d", title.PrimaryName(), season.SeasonNumber)
+		if title.Status != model.TitleStatusCompleted {
+			return nil
+		}
+		return &RatingPrompt{
+			TitleID: title.ID,
+			Message: fmt.Sprintf("Rate %s? You just watched this movie", title.PrimaryName()),
+		}
+	}
+
+	for _, season := range title.Seasons {
+		if len(season.Episodes) == 0 {
+			continue
+		}
+		allWatched := true
+		for _, ep := range season.Episodes {
+			if !ep.Watched {
+				allWatched = false
 				break
+			}
+		}
+		if allWatched {
+			return &RatingPrompt{
+				TitleID: title.ID,
+				Message: fmt.Sprintf("Rate %s? You finished season %d", title.PrimaryName(), season.SeasonNumber),
 			}
 		}
 	}
 
-	if shouldPrompt && s.push != nil {
-		_ = s.push.SendNotification("PlexTracker", msg, fmt.Sprintf("/title/%d", title.ID))
-	}
+	return nil
 }
 
 // CheckAutoComplete checks if a series should be marked as completed based on last watched episode.

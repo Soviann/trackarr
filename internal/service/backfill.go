@@ -22,8 +22,43 @@ func NewBackfillService(db *sql.DB, tmdb *matching.TMDBClient) *BackfillService 
 	return &BackfillService{db: db, tmdb: tmdb}
 }
 
-// BackfillForEpisode resolves season/episode context and runs backfill in a transaction.
-func (s *BackfillService) BackfillForEpisode(titleID int64, episode *model.Episode) {
+// TMDBSeasonInfo is the minimal season metadata needed to backfill previous
+// seasons. Callers fetch this from TMDB outside the write transaction to keep
+// HTTP I/O out of the sole SQLite write connection.
+type TMDBSeasonInfo struct {
+	Number       int
+	EpisodeCount int
+}
+
+// fetchTMDBSeasons fetches season metadata from TMDB. Returns nil on any
+// failure (missing TMDB client, missing ID, or network error) so the caller
+// can still run a same-season backfill.
+func fetchTMDBSeasons(ctx context.Context, tmdb *matching.TMDBClient, titleID int64, tmdbID *int64) []TMDBSeasonInfo {
+	if tmdb == nil || tmdbID == nil {
+		return nil
+	}
+	details, err := tmdb.GetTVDetails(ctx, *tmdbID)
+	if err != nil {
+		log.Printf("backfill: TMDB fetch failed for title %d: %v", titleID, err)
+		return nil
+	}
+	seasons := make([]TMDBSeasonInfo, 0, len(details.Seasons))
+	for _, s := range details.Seasons {
+		if s.SeasonNumber == 0 {
+			continue // skip specials
+		}
+		seasons = append(seasons, TMDBSeasonInfo{
+			Number:       s.SeasonNumber,
+			EpisodeCount: s.EpisodeCount,
+		})
+	}
+	return seasons
+}
+
+// BackfillForEpisode resolves season/episode context, fetches TMDB metadata
+// outside the write transaction, then runs the DB-only backfill inside a
+// transaction tied to ctx.
+func (s *BackfillService) BackfillForEpisode(ctx context.Context, titleID int64, episode *model.Episode) {
 	seasonRepo := repository.NewSeasonRepository(s.db)
 	titleRepo := repository.NewTitleRepository(s.db)
 
@@ -39,21 +74,24 @@ func (s *BackfillService) BackfillForEpisode(titleID int64, episode *model.Episo
 		return
 	}
 
-	if err := database.WithTx(s.db, func(tx *sql.Tx) error {
-		return BackfillPreviousEpisodes(tx, s.tmdb, title.ID, title.TMDBID, season.SeasonNumber, episode.Episode, time.Now().UTC())
+	tmdbSeasons := fetchTMDBSeasons(ctx, s.tmdb, title.ID, title.TMDBID)
+
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		return BackfillPreviousEpisodes(tx, title.ID, tmdbSeasons, season.SeasonNumber, episode.Episode, time.Now().UTC())
 	}); err != nil {
 		log.Printf("backfill warning for title %d: %v", titleID, err)
 	}
 }
 
 // BackfillPreviousEpisodes creates and marks as watched all episodes before the
-// given season/episode number. If TMDB is available, previous seasons are also
-// backfilled. Without TMDB, only episodes in the current season are backfilled.
+// given season/episode number. Previous-season backfill requires prefetched
+// TMDB season data (see fetchTMDBSeasons); without it, only episodes in the
+// current season are backfilled. This function performs DB writes only — any
+// TMDB fetching must happen outside the transaction.
 func BackfillPreviousEpisodes(
 	db database.DBTX,
-	tmdb *matching.TMDBClient,
 	titleID int64,
-	tmdbID *int64,
+	tmdbSeasons []TMDBSeasonInfo,
 	triggerSeasonNum int,
 	triggerEpisodeNum int,
 	watchedAt time.Time,
@@ -69,30 +107,6 @@ func BackfillPreviousEpisodes(
 
 	var toMarkIDs []int64
 	var toEventTitleID = titleID
-
-	// Fetch TMDB season data if available
-	type seasonInfo struct {
-		Number       int
-		EpisodeCount int
-	}
-	var tmdbSeasons []seasonInfo
-
-	if tmdb != nil && tmdbID != nil {
-		details, err := tmdb.GetTVDetails(context.Background(), *tmdbID)
-		if err != nil {
-			log.Printf("backfill: TMDB fetch failed for title %d: %v", titleID, err)
-		} else {
-			for _, s := range details.Seasons {
-				if s.SeasonNumber == 0 {
-					continue // skip specials
-				}
-				tmdbSeasons = append(tmdbSeasons, seasonInfo{
-					Number:       s.SeasonNumber,
-					EpisodeCount: s.EpisodeCount,
-				})
-			}
-		}
-	}
 
 	// Backfill previous seasons (only with TMDB data)
 	for _, si := range tmdbSeasons {

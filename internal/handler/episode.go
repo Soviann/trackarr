@@ -32,10 +32,13 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 		return httputil.BadRequest("Invalid episode ID")
 	}
 
-	title, err := h.service.ToggleEpisodeWatched(h.db, titleID, episodeID)
+	title, prompt, err := h.service.ToggleEpisodeWatched(r.Context(), h.db, titleID, episodeID)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
+	// h.db is not a transaction, so this push would not block a write tx;
+	// calling it post-response-write would be nicer but the existing order is fine.
+	h.service.SendRatingPrompt(prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil
@@ -54,10 +57,11 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		return httputil.BadRequest("Invalid request")
 	}
 
-	title, err := h.service.MarkEpisodesWatched(h.db, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
+	title, prompt, err := h.service.MarkEpisodesWatched(h.db, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
+	h.service.SendRatingPrompt(prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil

@@ -4,6 +4,8 @@
 
 ### Corrigé
 - Webhooks Plex : un appel réseau bloqué (TMDB, push) pendant le traitement ne gèle plus indéfiniment la connexion d'écriture SQLite ; les transactions respectent désormais le contexte de la requête HTTP (timeout 30 s), l'auto-complétion TMDB tourne hors transaction et les notifications push ont un timeout HTTP de 5 s — corrige la perte silencieuse d'événements `media.scrobble` / `media.play` observée depuis le 17 avril
+- Backfill d'épisodes : l'appel TMDB de récupération des saisons précédentes se fait désormais hors transaction — plus aucun blocage de la connexion d'écriture unique en cas de lenteur TMDB
+- Notifications « Noter ce titre » : le push part désormais après le commit de la transaction — un endpoint push lent ne peut plus bloquer l'écriture SQLite
 
 ## [v0.16.4] — 2026-04-17
 

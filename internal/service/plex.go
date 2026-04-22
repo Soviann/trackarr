@@ -180,14 +180,27 @@ func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metada
 }
 
 func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
-	// Check notification preference before the transaction to avoid SQLite deadlock (MaxOpenConns=1).
-	ratingNotifEnabled := IsNotificationEnabled(s.settings, NotifRatingPrompt)
-	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		return s.processMovieInTx(tx, meta, ids, rawPayload, ratingNotifEnabled)
-	})
+	// ratingPrompt is populated inside the transaction and, if non-nil, is fired
+	// AFTER commit. Keeps the webpush HTTP request out of the write transaction
+	// so a slow push endpoint cannot tie up the sole writeDB connection.
+	var ratingPrompt *RatingPrompt
+
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		prompt, err := s.processMovieInTx(tx, meta, ids, rawPayload)
+		if err != nil {
+			return err
+		}
+		ratingPrompt = prompt
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	s.libSvc.SendRatingPrompt(ratingPrompt)
+	return nil
 }
 
-func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, ratingNotifEnabled bool) error {
+func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	var imdbID *string
 	var tmdbID *int64
@@ -205,44 +218,55 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 	if err != nil {
 		titleID, err := s.titleSvc.CreateFromPlex(tx, meta.Title, meta.Year, ids, model.TitleTypeMovie, ratingKey, meta.GUIDExternal, model.TitleStatusCompleted)
 		if err != nil {
-			return fmt.Errorf("create movie: %w", err)
+			return nil, fmt.Errorf("create movie: %w", err)
 		}
 
-		// Use LibraryService to mark as watched + notify
-		if err := s.libSvc.MarkMovieWatched(tx, titleID, model.WatchEventSourcePlex, &rawPayload); err != nil {
-			return err
+		prompt, err := s.libSvc.MarkMovieWatched(tx, titleID, model.WatchEventSourcePlex, &rawPayload)
+		if err != nil {
+			return nil, err
 		}
-		return titles.UpdateLastWatchedAt(titleID, time.Now().UTC())
+		if err := titles.UpdateLastWatchedAt(titleID, time.Now().UTC()); err != nil {
+			return nil, err
+		}
+		return prompt, nil
 	}
 
 	if needsEnrichment(title) {
 		s.triggerAsyncEnrichment(title.ID, meta.Title, meta.Year, title.Type, ids)
 	}
 
-	// Use LibraryService to mark as watched + notify
-	if err := s.libSvc.MarkMovieWatched(tx, title.ID, model.WatchEventSourcePlex, &rawPayload); err != nil {
-		return err
+	prompt, err := s.libSvc.MarkMovieWatched(tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
+	if err != nil {
+		return nil, err
 	}
-	return titles.UpdateLastWatchedAt(title.ID, time.Now().UTC())
+	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+	return prompt, nil
 }
 
 func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
-	// autoCompleteCheck is populated inside the transaction and, if non-nil, is
-	// executed AFTER commit. This keeps the TMDB HTTP request (performed by
-	// CheckAutoComplete) out of the write transaction, so a slow/hanging TMDB
-	// call can never tie up the sole writeDB connection.
+	// Both autoCompleteCheck and ratingPrompt are populated inside the
+	// transaction and, if non-nil, executed AFTER commit. This keeps the TMDB
+	// HTTP request (CheckAutoComplete) and the webpush HTTP request out of the
+	// write transaction so slow external I/O cannot tie up the sole writeDB
+	// connection.
 	var autoCompleteCheck *autoCompleteRequest
+	var ratingPrompt *RatingPrompt
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		req, err := s.processEpisodeInTx(tx, meta, ids, rawPayload)
+		req, prompt, err := s.processEpisodeInTx(tx, meta, ids, rawPayload)
 		if err != nil {
 			return err
 		}
 		autoCompleteCheck = req
+		ratingPrompt = prompt
 		return nil
 	}); err != nil {
 		return err
 	}
+
+	s.libSvc.SendRatingPrompt(ratingPrompt)
 
 	if autoCompleteCheck != nil {
 		if err := s.libSvc.CheckAutoComplete(ctx, s.db, autoCompleteCheck.titleID, autoCompleteCheck.tmdbID, autoCompleteCheck.seasonNum, autoCompleteCheck.episodeNum); err != nil {
@@ -261,7 +285,7 @@ type autoCompleteRequest struct {
 	episodeNum int
 }
 
-func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, error) {
+func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	seasons := repository.NewSeasonRepository(tx)
 	episodes := repository.NewEpisodeRepository(tx)
@@ -286,7 +310,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 
 		titleID, createErr := s.titleSvc.CreateFromPlex(tx, seriesName, meta.Year, ids, model.TitleTypeSeries, grandparentKey, meta.GUIDExternal, model.TitleStatusWatching)
 		if createErr != nil {
-			return nil, fmt.Errorf("create series: %w", createErr)
+			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}
 		title = &model.Title{ID: titleID, Status: model.TitleStatusWatching}
 	} else {
@@ -307,17 +331,17 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 
 	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
 	if err != nil {
-		return nil, fmt.Errorf("get/create season: %w", err)
+		return nil, nil, fmt.Errorf("get/create season: %w", err)
 	}
 
 	ep, err := episodes.GetOrCreate(season.ID, meta.Index)
 	if err != nil {
-		return nil, fmt.Errorf("get/create episode: %w", err)
+		return nil, nil, fmt.Errorf("get/create episode: %w", err)
 	}
 
-	// Use LibraryService to mark as watched + notify
-	if _, err := s.libSvc.MarkEpisodesWatched(tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload); err != nil {
-		return nil, err
+	_, prompt, err := s.libSvc.MarkEpisodesWatched(tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
@@ -337,10 +361,10 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 			tmdbID:     *backfillTMDBID,
 			seasonNum:  meta.ParentIndex,
 			episodeNum: meta.Index,
-		}, nil
+		}, prompt, nil
 	}
 
-	return nil, nil
+	return nil, prompt, nil
 }
 
 // checkSeriesCompleted checks if the given season/episode is the last episode
