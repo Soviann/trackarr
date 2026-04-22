@@ -48,7 +48,7 @@ func (r *GenreRepository) ListWithCounts(_ context.Context) ([]GenreCount, error
 }
 
 // ReplaceForTitle deletes all existing genres for a title and inserts the new ones atomically.
-func (r *GenreRepository) ReplaceForTitle(_ context.Context, titleID int64, genres []string) error {
+func (r *GenreRepository) ReplaceForTitle(ctx context.Context, titleID int64, genres []string) error {
 	db, ok := r.db.(*sql.DB)
 	if !ok {
 		// Already inside a transaction — execute directly.
@@ -63,7 +63,7 @@ func (r *GenreRepository) ReplaceForTitle(_ context.Context, titleID int64, genr
 		return nil
 	}
 
-	return database.WithTx(db, func(tx *sql.Tx) error {
+	return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`DELETE FROM title_genres WHERE title_id = ?`, titleID); err != nil {
 			return fmt.Errorf("genre: replace: delete: %w", err)
 		}
