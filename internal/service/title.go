@@ -185,8 +185,10 @@ func (s *TitleService) ResolveURL(ctx context.Context, url string) (*matching.Ma
 	return s.pipeline.ResolveURL(ctx, url)
 }
 
-// Merge consolidates sourceID into destID.
-func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sourceID int64, explicitOffset *int) error {
+// Merge consolidates sourceID into destID. db must be the pool handle (*sql.DB),
+// never a *sql.Tx — the method opens its own transaction internally via
+// database.WithTxContext so that a cancelled ctx aborts the write immediately.
+func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID int64, explicitOffset *int) error {
 	titles := repository.NewTitleRepository(db)
 	source, err := titles.GetByID(sourceID)
 	if err != nil {
@@ -206,5 +208,7 @@ func (s *TitleService) Merge(ctx context.Context, db database.DBTX, destID, sour
 		}
 	}
 
-	return titles.Merge(destID, sourceID, seasonOffset)
+	return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleRepository(tx).Merge(destID, sourceID, seasonOffset)
+	})
 }

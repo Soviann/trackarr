@@ -55,6 +55,7 @@ type TaskQueueWorker struct {
 	limiter     *APILimiter
 	pausedUntil time.Time
 	titleSvc    *TitleService
+	writeDB     *sql.DB
 }
 
 func NewTaskQueueWorker(
@@ -69,6 +70,7 @@ func NewTaskQueueWorker(
 	settings *repository.SettingRepository,
 	dataDir string,
 	titleSvc *TitleService,
+	writeDB *sql.DB,
 ) *TaskQueueWorker {
 	return &TaskQueueWorker{
 		tasks:    tasks,
@@ -83,6 +85,7 @@ func NewTaskQueueWorker(
 		dataDir:  dataDir,
 		limiter:  NewAPILimiter(2, 1),
 		titleSvc: titleSvc,
+		writeDB:  writeDB,
 	}
 }
 
@@ -312,7 +315,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 			// CONFLICT! Same IMDB ID but different local titles.
 			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
 
-			if err := w.titleSvc.Merge(ctx, w.titles.DB(), existing.ID, payload.TitleID, nil); err != nil {
+			if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, nil); err != nil {
 				log.Printf("enrichment: merge failed: %v", err)
 			} else {
 				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)

@@ -97,7 +97,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 
 	pipeline := matching.NewPipeline(tmdbClient, nil, geminiClient, nil, t.TempDir())
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
-	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, nil, nil, pipeline, tmdbClient, nil, nil, nil, t.TempDir(), titleSvc)
+	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, nil, nil, pipeline, tmdbClient, nil, nil, nil, t.TempDir(), titleSvc, db)
 
 	// 4. Enqueue Enrichment for Duplicate
 	payload := service.EnrichmentPayload{

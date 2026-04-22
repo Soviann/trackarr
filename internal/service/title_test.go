@@ -1,6 +1,9 @@
 package service_test
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -61,4 +64,76 @@ func TestTitleService_CreateFromPlex_DuplicateDetection(t *testing.T) {
 	title, _ := titleRepo.GetByID(existingID)
 	require.NotNil(t, title.PlexRatingKey)
 	assert.Equal(t, "plex-123", *title.PlexRatingKey)
+}
+
+func TestMerge_OpensOwnTx(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	destID, err := titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Dest Title", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	sourceID, err := titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2021,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Source Title", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	err = svc.Merge(context.Background(), db, destID, sourceID, nil)
+	require.NoError(t, err)
+
+	// Source title must be deleted after merge.
+	_, err = titleRepo.GetByID(sourceID)
+	assert.True(t, errors.Is(err, sql.ErrNoRows), "expected sql.ErrNoRows, got: %v", err)
+}
+
+func TestMerge_CancelledContext(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	sourceID, err := titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2021,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Source Title", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	destID, err := titleRepo.Create(&model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Dest Title", Language: "en", IsPrimary: true}})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel before calling Merge
+
+	err = svc.Merge(ctx, db, destID, sourceID, nil)
+	assert.Error(t, err)
+
+	// Source title must still exist — merge was aborted.
+	src, getErr := titleRepo.GetByID(sourceID)
+	require.NoError(t, getErr)
+	assert.Equal(t, sourceID, src.ID)
 }
