@@ -258,7 +258,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 
 	err = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		titlesTx := repository.NewTitleWriter(tx)
-		genresTx := repository.NewGenreRepository(tx)
+		genresTx := repository.NewGenreWriter(tx)
 
 		if err := titlesTx.Update(ctx, payload.TitleID, update); err != nil {
 			return err

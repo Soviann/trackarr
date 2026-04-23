@@ -1,7 +1,6 @@
 package repository_test
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -495,7 +494,6 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 func TestTitleRepository_UpdateMetadata(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
-	genreRepo := repository.NewGenreRepository(db)
 
 	title := &model.Title{
 		Type:        model.TitleTypeMovie,
@@ -519,8 +517,7 @@ func TestTitleRepository_UpdateMetadata(t *testing.T) {
 	})
 
 	// Genres now stored in title_genres
-	err := genreRepo.ReplaceForTitle(context.Background(), id, []string{"Action"})
-	require.NoError(t, err)
+	testutil.ReplaceGenres(t, db, id, []string{"Action"})
 
 	got, err := repo.GetByID(id)
 	require.NoError(t, err)

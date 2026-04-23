@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,8 +38,7 @@ func TestGenreRepository_ReplaceForTitle(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Replace with a different set
-	err = genreRepo.ReplaceForTitle(context.Background(), t1.ID, []string{"Thriller", "Comedy"})
-	assert.NoError(t, err)
+	testutil.ReplaceGenres(t, db, t1.ID, []string{"Thriller", "Comedy"})
 
 	genres, err := genreRepo.ListWithCounts(context.Background())
 	assert.NoError(t, err)

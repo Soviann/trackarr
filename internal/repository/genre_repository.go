@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -14,7 +13,8 @@ type GenreCount struct {
 	Count int    `json:"count"`
 }
 
-// GenreRepository handles genre persistence in the title_genres join table.
+// GenreRepository handles read access to the title_genres join table. Writes
+// live on GenreWriter, which requires a *sql.Tx.
 type GenreRepository struct {
 	db database.DBTX
 }
@@ -45,33 +45,4 @@ func (r *GenreRepository) ListWithCounts(_ context.Context) ([]GenreCount, error
 		results = append(results, g)
 	}
 	return results, rows.Err()
-}
-
-// ReplaceForTitle deletes all existing genres for a title and inserts the new ones atomically.
-func (r *GenreRepository) ReplaceForTitle(ctx context.Context, titleID int64, genres []string) error {
-	db, ok := r.db.(*sql.DB)
-	if !ok {
-		// Already inside a transaction — execute directly.
-		if _, err := r.db.Exec(`DELETE FROM title_genres WHERE title_id = ?`, titleID); err != nil {
-			return fmt.Errorf("genre: replace: delete: %w", err)
-		}
-		for _, g := range genres {
-			if _, err := r.db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, ?)`, titleID, g); err != nil {
-				return fmt.Errorf("genre: replace: insert %q: %w", g, err)
-			}
-		}
-		return nil
-	}
-
-	return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		if _, err := tx.Exec(`DELETE FROM title_genres WHERE title_id = ?`, titleID); err != nil {
-			return fmt.Errorf("genre: replace: delete: %w", err)
-		}
-		for _, g := range genres {
-			if _, err := tx.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, ?)`, titleID, g); err != nil {
-				return fmt.Errorf("genre: replace: insert %q: %w", g, err)
-			}
-		}
-		return nil
-	})
 }

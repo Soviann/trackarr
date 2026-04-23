@@ -225,7 +225,9 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 				}
 			}
 			if len(genreList) > 0 && s.genres != nil {
-				if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
+				}); err != nil {
 					log.Printf("background: save tvdb genres for title %d: %v", title.ID, err)
 				}
 			}
@@ -253,7 +255,9 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 				}
 			}
 			if len(genreList) > 0 && s.genres != nil {
-				if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
+				}); err != nil {
 					log.Printf("background: save tvdb genres for title %d: %v", title.ID, err)
 				}
 			}
@@ -300,7 +304,9 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	if genres != "" && s.genres != nil {
 		var genreList []string
 		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+				return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
+			}); err != nil {
 				log.Printf("background: save genres for title %d: %v", title.ID, err)
 			}
 		}
@@ -382,7 +388,9 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	if genres != "" && s.genres != nil {
 		var genreList []string
 		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := s.genres.ReplaceForTitle(ctx, title.ID, genreList); err != nil {
+			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+				return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
+			}); err != nil {
 				log.Printf("background: save genres for title %d: %v", title.ID, err)
 			}
 		}
