@@ -57,11 +57,12 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | Season | `GetByID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
+| Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch` |
+| Genre | `ListWithCounts` | `ReplaceForTitle` |
 | SettingRepository | Key-value settings |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
 | ActivityRepository | `List` (paginated watch events) |
 | HistoryRepository | `GetByTitleID` (per-title watch log) |
-| Genre | `ListWithCounts` | `ReplaceForTitle` |
 
 TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp. Genres in `title_genres` join table (migration 016), loaded separately (MaxOpenConns=1).
 
