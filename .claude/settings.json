@@ -5,10 +5,6 @@
   },
   "permissions": {
     "allow": [
-      "Bash(ddev describe*)",
-      "Bash(ddev exec *)",
-      "Bash(ddev list*)",
-      "Bash(ddev status*)",
       "Bash(docker compose:*)",
       "Bash(echo:*)",
       "Bash(gh api:*)",
