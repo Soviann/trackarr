@@ -19,11 +19,7 @@ import (
 type BackgroundService struct {
 	writeDB  *sql.DB
 	titles   *repository.TitleRepository
-	genres   *repository.GenreRepository
-	seasons  *repository.SeasonRepository
-	episodes *repository.EpisodeRepository
 	tvdb     *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
-	tasks    *repository.TaskRepository
 	settings *repository.SettingRepository
 	tmdb     *matching.TMDBClient
 	anilist  *matching.AniListClient
@@ -35,10 +31,6 @@ type BackgroundService struct {
 func NewBackgroundService(
 	writeDB *sql.DB,
 	titles *repository.TitleRepository,
-	genres *repository.GenreRepository,
-	seasons *repository.SeasonRepository,
-	episodes *repository.EpisodeRepository,
-	tasks *repository.TaskRepository,
 	settings *repository.SettingRepository,
 	tmdb *matching.TMDBClient,
 	anilist *matching.AniListClient,
@@ -48,10 +40,6 @@ func NewBackgroundService(
 	return &BackgroundService{
 		writeDB:  writeDB,
 		titles:   titles,
-		genres:   genres,
-		seasons:  seasons,
-		episodes: episodes,
-		tasks:    tasks,
 		settings: settings,
 		tmdb:     tmdb,
 		anilist:  anilist,
@@ -224,7 +212,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 					genreList = append(genreList, g.Name)
 				}
 			}
-			if len(genreList) > 0 && s.genres != nil {
+			if len(genreList) > 0 {
 				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
 				}); err != nil {
@@ -254,7 +242,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 					genreList = append(genreList, g.Name)
 				}
 			}
-			if len(genreList) > 0 && s.genres != nil {
+			if len(genreList) > 0 {
 				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
 				}); err != nil {
@@ -301,7 +289,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
 	// Persist genres to title_genres table
-	if genres != "" && s.genres != nil {
+	if genres != "" {
 		var genreList []string
 		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
 			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
@@ -385,7 +373,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
 	// Persist genres to title_genres table
-	if genres != "" && s.genres != nil {
+	if genres != "" {
 		var genreList []string
 		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
 			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
@@ -684,7 +672,7 @@ func (s *BackgroundService) processCoverBatch(coversDir string, batch []string) 
 }
 
 func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, titleID int64, err error) {
-	if s.tasks == nil || !matching.IsRetryableError(err) {
+	if !matching.IsRetryableError(err) {
 		return
 	}
 	payload, marshalErr := json.Marshal(RefreshPayload{TitleID: titleID})
@@ -702,7 +690,7 @@ func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, title
 }
 
 func (s *BackgroundService) enqueueCoverOnRetryable(ctx context.Context, titleID, tmdbID int64, anilistID *int64, titleType model.TitleType, err error) {
-	if s.tasks == nil || !matching.IsRetryableError(err) {
+	if !matching.IsRetryableError(err) {
 		return
 	}
 	p := CoverFetchPayload{TitleID: titleID, TMDBID: tmdbID, TitleType: titleType}

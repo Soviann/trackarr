@@ -43,11 +43,8 @@ func Serve(distFS embed.FS) error {
 
 	// Background refresh job (all writes — use writeDB)
 	titleRepo := repository.NewTitleRepository(writeDB)
-	seasonRepo := repository.NewSeasonRepository(writeDB)
-	episodeRepo := repository.NewEpisodeRepository(writeDB)
 	settingRepo := repository.NewSettingRepository(writeDB)
 	taskRepo := repository.NewTaskRepository(writeDB)
-	watchEventRepo := repository.NewWatchEventRepository(writeDB)
 
 	var tmdbClient *matching.TMDBClient
 	var pipeline *matching.Pipeline
@@ -95,8 +92,7 @@ func Serve(distFS embed.FS) error {
 
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
-	bgGenreRepo := repository.NewGenreRepository(writeDB)
-	bgSvc := service.NewBackgroundService(writeDB, titleRepo, bgGenreRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
+	bgSvc := service.NewBackgroundService(writeDB, titleRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	if tvdbClient != nil {
 		bgSvc.SetTVDB(tvdbClient)
 	}
@@ -107,7 +103,7 @@ func Serve(distFS embed.FS) error {
 	r := router.New(ctx, cfg, writeDB, readDB, distFS, bgSvc, pipeline)
 
 	// Task queue worker
-	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, watchEventRepo, bgGenreRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc, writeDB)
+	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc, writeDB)
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(ctx)
 	}

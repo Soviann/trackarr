@@ -45,8 +45,6 @@ type CoverFetchPayload struct {
 type TaskQueueWorker struct {
 	tasks       *repository.TaskRepository
 	titles      *repository.TitleRepository
-	events      *repository.WatchEventRepository
-	genres      *repository.GenreRepository
 	pipeline    *matching.Pipeline
 	tmdb        *matching.TMDBClient
 	anilist     *matching.AniListClient
@@ -62,8 +60,6 @@ type TaskQueueWorker struct {
 func NewTaskQueueWorker(
 	tasks *repository.TaskRepository,
 	titles *repository.TitleRepository,
-	events *repository.WatchEventRepository,
-	genres *repository.GenreRepository,
 	pipeline *matching.Pipeline,
 	tmdb *matching.TMDBClient,
 	anilist *matching.AniListClient,
@@ -76,8 +72,6 @@ func NewTaskQueueWorker(
 	return &TaskQueueWorker{
 		tasks:    tasks,
 		titles:   titles,
-		events:   events,
-		genres:   genres,
 		pipeline: pipeline,
 		tmdb:     tmdb,
 		anilist:  anilist,
@@ -273,7 +267,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	update := buildEnrichmentUpdate(result, payload)
 
 	var genreList []string
-	if result.Genres != "" && w.genres != nil {
+	if result.Genres != "" {
 		if err := json.Unmarshal([]byte(result.Genres), &genreList); err != nil {
 			log.Printf("enrichment: decode genres for title %d: %v", payload.TitleID, err)
 			genreList = nil

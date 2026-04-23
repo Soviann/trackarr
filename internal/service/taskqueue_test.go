@@ -28,8 +28,6 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	defer db.Close()
 
 	titles := repository.NewTitleRepository(db)
-	events := repository.NewWatchEventRepository(db)
-	genres := repository.NewGenreRepository(db)
 	tasks := repository.NewTaskRepository(db)
 
 	id := testutil.CreateTitle(t, db, &model.Title{
@@ -48,7 +46,7 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	// Plex-IDs branch because payload.TMDBID is non-zero, so no HTTP is hit.
 	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
 	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
-	worker := service.NewTaskQueueWorker(tasks, titles, events, genres, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
 
 	payload := service.EnrichmentPayload{
 		TitleID:   id,
@@ -87,8 +85,6 @@ func TestHandleEnrichment_CtxCancelRollsBack(t *testing.T) {
 	defer db.Close()
 
 	titles := repository.NewTitleRepository(db)
-	events := repository.NewWatchEventRepository(db)
-	genres := repository.NewGenreRepository(db)
 	tasks := repository.NewTaskRepository(db)
 
 	origName := "Keep Me Pristine"
@@ -101,7 +97,7 @@ func TestHandleEnrichment_CtxCancelRollsBack(t *testing.T) {
 
 	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
 	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
-	worker := service.NewTaskQueueWorker(tasks, titles, events, genres, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
 
 	payload := service.EnrichmentPayload{
 		TitleID:   id,

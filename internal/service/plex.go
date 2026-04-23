@@ -45,30 +45,16 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 type PlexService struct {
 	ctx      context.Context
 	db       *sql.DB
-	titles   *repository.TitleRepository
-	seasons  *repository.SeasonRepository
-	episodes *repository.EpisodeRepository
-	events   *repository.WatchEventRepository
-	tasks    *repository.TaskRepository
-	settings *repository.SettingRepository
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
-	push     PushNotifier
 	titleSvc *TitleService
 	libSvc   *LibraryService
 }
 
-func NewPlexService(ctx context.Context, db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, settings *repository.SettingRepository, pipeline *matching.Pipeline, push PushNotifier, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
+func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
 	return &PlexService{
 		ctx:      ctx,
 		db:       db,
-		titles:   titles,
-		seasons:  seasons,
-		episodes: episodes,
-		events:   events,
-		tasks:    tasks,
-		settings: settings,
 		pipeline: pipeline,
-		push:     push,
 		titleSvc: titleSvc,
 		libSvc:   libSvc,
 	}
@@ -483,9 +469,6 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 }
 
 func (s *PlexService) enqueueEnrichment(ctx context.Context, titleID int64, titleName string, year int, titleType model.TitleType, isAnime bool, ids PlexExternalIDs) {
-	if s.tasks == nil {
-		return
-	}
 	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   titleID,
 		TitleName: titleName,
