@@ -25,6 +25,17 @@ type DBTX interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
+// WriteDBTX is the contract for transactional write access. Only *sql.Tx
+// satisfies it in practice, which makes "pass a pool where a tx was expected"
+// a compile-time error instead of a runtime deadlock or lost write.
+type WriteDBTX interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+var _ WriteDBTX = (*sql.Tx)(nil)
+
 // Open creates two SQLite connections: one for writes (MaxOpenConns=1) and one
 // for reads (MaxOpenConns=4, read-only). SQLite WAL mode supports concurrent
 // readers alongside a single writer, so separating connections prevents the
