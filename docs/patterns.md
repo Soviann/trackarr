@@ -61,7 +61,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
 | ActivityRepository | `List` (paginated watch events) |
 | HistoryRepository | `GetByTitleID` (per-title watch log) |
-| GenreRepository | `ListWithCounts`, `ReplaceForTitle` |
+| Genre | `ListWithCounts` | `ReplaceForTitle` |
 
 TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp. Genres in `title_genres` join table (migration 016), loaded separately (MaxOpenConns=1).
 
