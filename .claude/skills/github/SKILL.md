@@ -1,6 +1,6 @@
 ---
 name: github
-description: "GitHub operations via gh CLI: issues, PRs, CI runs, code review."
+description: "GitHub operations via gh CLI — issues, PRs, CI runs, code review. Use when the user asks to view/merge PRs, check CI status, list or comment on issues, watch workflow runs, or trigger the deploy workflow."
 ---
 
 # GitHub

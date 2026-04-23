@@ -1,6 +1,6 @@
 ---
 name: maintain
-description: "Project maintenance: modernization (Go 1.24, SQLite), tech debt tracking, and CHANGELOG preparation."
+description: "Project maintenance: modernization (Go 1.24, SQLite), tech debt tracking, and CHANGELOG preparation. Use when preparing a release, auditing tech debt, drafting changelog entries from recent commits, or modernizing Go/SQLite code."
 ---
 
 # Maintain

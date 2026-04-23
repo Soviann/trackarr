@@ -1,7 +1,7 @@
 ---
 name: release
 description: Create a release — determine version bump from changelog, update CHANGELOG.md, tag and push to trigger deploy
-user_invocable: true
+disable-model-invocation: true
 ---
 
 # Release
