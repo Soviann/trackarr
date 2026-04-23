@@ -358,6 +358,179 @@ func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result
 
 // enrichFromIDs fetches multilingual names, covers, and cross-references.
 func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input MatchInput) {
+	p.resolveIDsFromSources(ctx, result, input)
+	p.appendAniListRomaji(ctx, result)
+
+	// Fallback: use input title if no names found
+	if len(result.Names) == 0 {
+		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
+	}
+
+	tmdbRes, tvdbRes := p.fetchTMDBAndTVDBParallel(ctx, result)
+	mergeMetadata(result, tmdbRes, tvdbRes)
+	reconcileIDs(result, tmdbRes, tvdbRes)
+
+	// AniList cover as last resort
+	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
+		p.downloadAniListCover(ctx, result)
+	}
+}
+
+// mergeMetadata fuses TMDB and TVDB fetch results into MatchResult metadata
+// fields, applying these precedence rules:
+//
+//   - Overview: longest wins (TMDB on tie).
+//   - Genres: case-insensitive union (TMDB ordering first, TVDB appended).
+//   - Runtime / ReleaseDate / Cover: TMDB preferred, TVDB fallback.
+//   - TMDBRating, Credits: TMDB only (TVDB does not provide these).
+//   - IsAnime: stays true if already set; promoted to true when TVDB tags it.
+//   - Names: union of TMDB+TVDB language maps (TMDB wins on duplicate language);
+//     "en" entries are flagged IsPrimary.
+func mergeMetadata(result *MatchResult, tmdbRes tmdbFetchResult, tvdbRes tvdbFetchResult) {
+	if tmdbRes.overview != "" || tvdbRes.overview != "" {
+		if len(tvdbRes.overview) > len(tmdbRes.overview) {
+			result.Overview = tvdbRes.overview
+		} else if tmdbRes.overview != "" {
+			result.Overview = tmdbRes.overview
+		}
+	}
+
+	result.Genres = mergeGenres(tmdbRes.genres, tvdbRes.genres)
+
+	if tmdbRes.runtime != nil {
+		result.Runtime = tmdbRes.runtime
+	} else if tvdbRes.runtime != nil {
+		result.Runtime = tvdbRes.runtime
+	}
+
+	if tmdbRes.tmdbRating != nil {
+		result.TMDBRating = tmdbRes.tmdbRating
+	}
+
+	if tmdbRes.credits != "" {
+		result.Credits = tmdbRes.credits
+	}
+
+	if tmdbRes.releaseDate != "" {
+		result.ReleaseDate = tmdbRes.releaseDate
+	} else if tvdbRes.releaseDate != "" {
+		result.ReleaseDate = tvdbRes.releaseDate
+	}
+
+	if !result.IsAnime && tvdbRes.isAnime {
+		result.IsAnime = true
+	}
+
+	if len(tmdbRes.names) > 0 || len(tvdbRes.names) > 0 {
+		mergedNames := mergeNames(tmdbRes.names, tvdbRes.names)
+		for lang, name := range mergedNames {
+			result.Names = append(result.Names, model.TitleName{
+				Name:      name,
+				Language:  lang,
+				IsPrimary: lang == "en",
+			})
+		}
+	}
+
+	if tmdbRes.coverFile != "" {
+		result.CoverFile = tmdbRes.coverFile
+	} else if tvdbRes.coverFile != "" {
+		result.CoverFile = tvdbRes.coverFile
+	}
+}
+
+// reconcileIDs fills missing external IDs from TMDB/TVDB fetch results and
+// detects cross-source conflicts. Precedence:
+//
+//   - Empty IDs are filled (IMDB from TMDB then TVDB; TVDBID and TMDBID back-fill from the other source).
+//   - When TMDB and TVDB both return an IMDBID and they differ, TMDB wins
+//     (canonical primary matcher) and MatchStatus is downgraded to pending_review.
+//   - When the existing TMDBID (Plex/TMDB-sourced) differs from TVDB's reported
+//     TMDB counterpart, the existing ID is kept and MatchStatus is downgraded.
+//
+// Existing populated IDs are never overwritten except by the IMDB conflict rule
+// (which re-assigns to make TMDB-canonical invariant explicit).
+func reconcileIDs(result *MatchResult, tmdbRes tmdbFetchResult, tvdbRes tvdbFetchResult) {
+	if result.IMDBID == "" && tmdbRes.imdbID != "" {
+		result.IMDBID = tmdbRes.imdbID
+	}
+	if result.IMDBID == "" && tvdbRes.imdbID != "" {
+		result.IMDBID = tvdbRes.imdbID
+	}
+
+	if result.TVDBID == 0 && tmdbRes.tvdbID != 0 {
+		result.TVDBID = tmdbRes.tvdbID
+	}
+
+	if result.TMDBID == 0 && tvdbRes.tmdbID != 0 {
+		result.TMDBID = tvdbRes.tmdbID
+	}
+
+	if tmdbRes.imdbID != "" && tvdbRes.imdbID != "" && tmdbRes.imdbID != tvdbRes.imdbID {
+		log.Printf("cross-ref conflict: IMDB mismatch (tvdb=%d): TMDB says %q, TVDB says %q — keeping TMDB, downgrading to pending_review", result.TVDBID, tmdbRes.imdbID, tvdbRes.imdbID)
+		result.IMDBID = tmdbRes.imdbID // TMDB canonical; discard TVDB's conflicting IMDB ID
+		result.MatchStatus = model.MatchStatusPendingReview
+	}
+
+	if result.TMDBID != 0 && tvdbRes.tmdbID != 0 && result.TMDBID != tvdbRes.tmdbID {
+		log.Printf("cross-ref conflict: TMDB ID mismatch (tvdb=%d): have=%d, TVDB says=%d — keeping existing, downgrading to pending_review", result.TVDBID, result.TMDBID, tvdbRes.tmdbID)
+		result.MatchStatus = model.MatchStatusPendingReview
+	}
+}
+
+// fetchTMDBAndTVDBParallel fetches TMDB and TVDB details concurrently when
+// the corresponding IDs are populated. A 20s timeout caps the combined fetch.
+// Returns zero-valued structs for any source that is nil, has no ID, or fails.
+func (p *Pipeline) fetchTMDBAndTVDBParallel(ctx context.Context, result *MatchResult) (tmdbFetchResult, tvdbFetchResult) {
+	var (
+		tmdbRes tmdbFetchResult
+		tvdbRes tvdbFetchResult
+		wg      sync.WaitGroup
+	)
+
+	fetchCtx, fetchCancel := context.WithTimeout(ctx, 20*time.Second)
+	defer fetchCancel()
+
+	if p.tmdb != nil && result.TMDBID != 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p.fetchTMDBData(fetchCtx, result, &tmdbRes)
+		}()
+	}
+
+	if p.tvdb != nil && result.TVDBID != 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p.fetchTVDBData(fetchCtx, result, &tvdbRes)
+		}()
+	}
+
+	wg.Wait()
+	return tmdbRes, tvdbRes
+}
+
+// appendAniListRomaji appends an "x-romaji" name from AniList GetNames when
+// an AniList ID is known. Best-effort: errors and empty romaji are silently skipped.
+func (p *Pipeline) appendAniListRomaji(ctx context.Context, result *MatchResult) {
+	if p.anilist == nil || result.AniListID == 0 {
+		return
+	}
+	alNames, err := p.anilist.GetNames(ctx, result.AniListID)
+	if err != nil || alNames.Romaji == "" {
+		return
+	}
+	result.Names = append(result.Names, model.TitleName{
+		Name:     alNames.Romaji,
+		Language: "x-romaji",
+	})
+}
+
+// resolveIDsFromSources fills missing external IDs by chaining cross-ref lookup,
+// TMDB FindByID (using IMDBID), and AniList search. Sets IsAnime=true when an
+// AniList ID is present after resolution.
+func (p *Pipeline) resolveIDsFromSources(ctx context.Context, result *MatchResult, input MatchInput) {
 	// Cross-reference to fill missing IDs
 	if p.crossDB != nil {
 		crossIDs := p.crossDB.Lookup(ExternalIDs{
@@ -400,152 +573,6 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 	// Detect anime from AniList ID
 	if result.AniListID != 0 {
 		result.IsAnime = true
-	}
-
-	// Add AniList names (romaji)
-	if p.anilist != nil && result.AniListID != 0 {
-		alNames, err := p.anilist.GetNames(ctx, result.AniListID)
-		if err == nil {
-			if alNames.Romaji != "" {
-				result.Names = append(result.Names, model.TitleName{
-					Name:     alNames.Romaji,
-					Language: "x-romaji",
-				})
-			}
-		}
-	}
-
-	// Fallback: use input title if no names found
-	if len(result.Names) == 0 {
-		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
-	}
-
-	// Parallel fetch: TMDB details + TVDB details (when IDs are known)
-	var (
-		tmdbRes tmdbFetchResult
-		tvdbRes tvdbFetchResult
-		wg      sync.WaitGroup
-	)
-
-	fetchCtx, fetchCancel := context.WithTimeout(ctx, 20*time.Second)
-	defer fetchCancel()
-
-	if p.tmdb != nil && result.TMDBID != 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			p.fetchTMDBData(fetchCtx, result, &tmdbRes)
-		}()
-	}
-
-	if p.tvdb != nil && result.TVDBID != 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			p.fetchTVDBData(fetchCtx, result, &tvdbRes)
-		}()
-	}
-
-	wg.Wait()
-
-	// ── Fusion rules ──
-	// Overview: longest wins (TMDB on tie)
-	if tmdbRes.overview != "" || tvdbRes.overview != "" {
-		if len(tvdbRes.overview) > len(tmdbRes.overview) {
-			result.Overview = tvdbRes.overview
-		} else if tmdbRes.overview != "" {
-			result.Overview = tmdbRes.overview
-		}
-	}
-
-	// Genres: union, deduplicated (case-insensitive)
-	result.Genres = mergeGenres(tmdbRes.genres, tvdbRes.genres)
-
-	// Runtime: TMDB first, TVDB fallback
-	if tmdbRes.runtime != nil {
-		result.Runtime = tmdbRes.runtime
-	} else if tvdbRes.runtime != nil {
-		result.Runtime = tvdbRes.runtime
-	}
-
-	// Ratings
-	if tmdbRes.tmdbRating != nil {
-		result.TMDBRating = tmdbRes.tmdbRating
-	}
-
-	// Credits (TMDB only)
-	if tmdbRes.credits != "" {
-		result.Credits = tmdbRes.credits
-	}
-
-	// Release date: TMDB first, TVDB year as fallback
-	if tmdbRes.releaseDate != "" {
-		result.ReleaseDate = tmdbRes.releaseDate
-	} else if tvdbRes.releaseDate != "" {
-		result.ReleaseDate = tvdbRes.releaseDate
-	}
-
-	// IMDB ID: fill from any source
-	if result.IMDBID == "" && tmdbRes.imdbID != "" {
-		result.IMDBID = tmdbRes.imdbID
-	}
-	if result.IMDBID == "" && tvdbRes.imdbID != "" {
-		result.IMDBID = tvdbRes.imdbID
-	}
-
-	// TVDB ID: fill if TMDB provided it
-	if result.TVDBID == 0 && tmdbRes.tvdbID != 0 {
-		result.TVDBID = tmdbRes.tvdbID
-	}
-
-	// TMDB ID back-fill from TVDB remote IDs
-	if result.TMDBID == 0 && tvdbRes.tmdbID != 0 {
-		result.TMDBID = tvdbRes.tmdbID
-	}
-
-	// IMDB conflict: both sources returned an IMDB ID that differs.
-	// TMDB is canonical (primary matcher); result.IMDBID was already set from TMDB above (L487).
-	// Re-assign explicitly to make the canonical-source invariant clear, then flag for review.
-	if tmdbRes.imdbID != "" && tvdbRes.imdbID != "" && tmdbRes.imdbID != tvdbRes.imdbID {
-		log.Printf("cross-ref conflict: IMDB mismatch (tvdb=%d): TMDB says %q, TVDB says %q — keeping TMDB, downgrading to pending_review", result.TVDBID, tmdbRes.imdbID, tvdbRes.imdbID)
-		result.IMDBID = tmdbRes.imdbID // TMDB canonical; discard TVDB's conflicting IMDB ID
-		result.MatchStatus = model.MatchStatusPendingReview
-	}
-
-	// TMDB ID conflict: Plex/TMDB TMDB ID differs from TVDB's reported TMDB counterpart.
-	// result.TMDBID is never overwritten by tvdbRes (see guard above); Plex-sourced ID is canonical.
-	if result.TMDBID != 0 && tvdbRes.tmdbID != 0 && result.TMDBID != tvdbRes.tmdbID {
-		log.Printf("cross-ref conflict: TMDB ID mismatch (tvdb=%d): have=%d, TVDB says=%d — keeping existing, downgrading to pending_review", result.TVDBID, result.TMDBID, tvdbRes.tmdbID)
-		result.MatchStatus = model.MatchStatusPendingReview
-	}
-
-	// Anime detection from TVDB genres
-	if !result.IsAnime && tvdbRes.isAnime {
-		result.IsAnime = true
-	}
-
-	// Names: union from TMDB and TVDB (TMDB wins on duplicate language)
-	if len(tmdbRes.names) > 0 || len(tvdbRes.names) > 0 {
-		mergedNames := mergeNames(tmdbRes.names, tvdbRes.names)
-		for lang, name := range mergedNames {
-			result.Names = append(result.Names, model.TitleName{
-				Name:      name,
-				Language:  lang,
-				IsPrimary: lang == "en",
-			})
-		}
-	}
-
-	// Cover: TMDB first, TVDB fallback
-	if tmdbRes.coverFile != "" {
-		result.CoverFile = tmdbRes.coverFile
-	} else if tvdbRes.coverFile != "" {
-		result.CoverFile = tvdbRes.coverFile
-	}
-
-	// AniList cover as last resort
-	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
-		p.downloadAniListCover(ctx, result)
 	}
 }
 
