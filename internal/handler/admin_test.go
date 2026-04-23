@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -26,7 +27,7 @@ func setupAdminHandler(t *testing.T) *handler.AdminHandler {
 	taskRepo := repository.NewTaskRepository(db)
 	titleRepo := repository.NewTitleRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	return handler.NewAdminHandler(db, taskRepo, titleRepo, settingRepo, nil) // bgSvc=nil
+	return handler.NewAdminHandler(context.Background(), db, taskRepo, titleRepo, settingRepo, nil) // bgSvc=nil
 }
 
 func TestAdminHandler_Counts(t *testing.T) {

@@ -19,6 +19,7 @@ import (
 )
 
 type TitleHandler struct {
+	serverCtx  context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
 	db         *sql.DB
 	titles     *repository.TitleRepository // writeDB — Create, Update, Merge, Rematch
 	titlesRead *repository.TitleRepository // readDB — List, GetByID (non-blocking reads)
@@ -31,8 +32,9 @@ type TitleHandler struct {
 	bgSvc      *service.BackgroundService
 }
 
-func NewTitleHandler(db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
+func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
 	return &TitleHandler{
+		serverCtx:  serverCtx,
 		db:         db,
 		titles:     titles,
 		titlesRead: titlesRead,
@@ -369,8 +371,9 @@ func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error 
 
 	// Intentional fire-and-forget: 202 Accepted. The refresh runs in background
 	// with a 2-minute timeout; errors are logged. The caller does not wait for
-	// completion. If surfacing failures to the UI is needed, wire into task queue.
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	// completion. Parent ctx is the server lifecycle so SIGTERM cancels the
+	// goroutine instead of leaking it until its own timeout.
+	ctx, cancel := context.WithTimeout(h.serverCtx, 2*time.Minute)
 	go func() {
 		defer cancel()
 		if err := h.bgSvc.RefreshByID(ctx, id); err != nil {

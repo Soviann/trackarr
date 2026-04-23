@@ -16,15 +16,16 @@ import (
 )
 
 type AdminHandler struct {
-	writeDB  *sql.DB
-	tasks    *repository.TaskRepository
-	titles   *repository.TitleRepository
-	settings *repository.SettingRepository
-	bgSvc    *service.BackgroundService
+	serverCtx context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
+	writeDB   *sql.DB
+	tasks     *repository.TaskRepository
+	titles    *repository.TitleRepository
+	settings  *repository.SettingRepository
+	bgSvc     *service.BackgroundService
 }
 
-func NewAdminHandler(writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
-	return &AdminHandler{writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
+func NewAdminHandler(serverCtx context.Context, writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
+	return &AdminHandler{serverCtx: serverCtx, writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
 }
 
 // Counts returns aggregate counts for the admin hub badges.
@@ -174,7 +175,7 @@ func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error 
 		return httputil.InternalError("refresh all", fmt.Errorf("background service not available"))
 	}
 
-	go h.bgSvc.RefreshAllTitles(context.Background())
+	go h.bgSvc.RefreshAllTitles(h.serverCtx)
 
 	w.WriteHeader(http.StatusAccepted)
 	return nil

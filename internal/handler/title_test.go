@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -36,7 +37,7 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *sql.DB, *repository.Tit
 	eventRepo := repository.NewWatchEventRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
-	h := handler.NewTitleHandler(db, titleRepo, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc, nil)
+	h := handler.NewTitleHandler(context.Background(), db, titleRepo, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc, nil)
 	return h, db, titleRepo
 }
 
