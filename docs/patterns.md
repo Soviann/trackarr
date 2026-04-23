@@ -59,7 +59,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
 | Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch` |
 | Genre | `ListWithCounts` | `ReplaceForTitle` |
-| SettingRepository | Key-value settings |
+| Setting | `Get` | `Set`, `Delete` |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
 | ActivityRepository | `List` (paginated watch events) |
 | HistoryRepository | `GetByTitleID` (per-title watch log) |
