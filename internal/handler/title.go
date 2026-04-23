@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -48,11 +46,6 @@ func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.T
 	}
 }
 
-var (
-	reIMDB    = regexp.MustCompile(`imdb\.com/title/(tt\d+)`)
-	reAniList = regexp.MustCompile(`anilist\.co/anime/(\d+)`)
-)
-
 var allowedSorts = map[string]bool{
 	"updated_at":      true,
 	"original_title":  true,
@@ -61,6 +54,34 @@ var allowedSorts = map[string]bool{
 	"created_at":      true,
 	"release_date":    true,
 	"last_watched_at": true,
+}
+
+// findTitleByURL returns an existing title matching an external URL pasted in the
+// search box (IMDB / AniList only). Returns nil when the query is not a
+// recognized URL or no matching title exists.
+func (h *TitleHandler) findTitleByURL(q string) *model.Title {
+	ids := matching.ParseURL(q)
+	if ids == nil {
+		return nil
+	}
+	var (
+		imdbPtr    *string
+		anilistPtr *int64
+	)
+	if ids.IMDB != "" {
+		imdbPtr = &ids.IMDB
+	}
+	if ids.AniList != 0 {
+		anilistPtr = &ids.AniList
+	}
+	if imdbPtr == nil && anilistPtr == nil {
+		return nil
+	}
+	t, err := h.titlesRead.FindByExternalID(imdbPtr, nil, nil, anilistPtr, nil)
+	if err != nil {
+		return nil
+	}
+	return t
 }
 
 func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
@@ -98,28 +119,12 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.IsAnime = &isAnime
 	}
 	if q := r.URL.Query().Get("search"); q != "" {
-		// If search looks like a URL, try to find by external ID first
-		if m := reIMDB.FindStringSubmatch(q); m != nil {
-			id := m[1]
-			if t, err := h.titlesRead.FindByExternalID(&id, nil, nil, nil, nil); err == nil {
-				httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
-					Titles: []model.Title{*t},
-					Total:  1,
-				})
-				return nil
-			}
-		}
-		if m := reAniList.FindStringSubmatch(q); m != nil {
-			idStr := m[1]
-			if alID, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-				if t, err := h.titlesRead.FindByExternalID(nil, nil, nil, &alID, nil); err == nil {
-					httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
-						Titles: []model.Title{*t},
-						Total:  1,
-					})
-					return nil
-				}
-			}
+		if t := h.findTitleByURL(q); t != nil {
+			httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
+				Titles: []model.Title{*t},
+				Total:  1,
+			})
+			return nil
 		}
 		filter.Search = &q
 	}
