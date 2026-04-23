@@ -71,7 +71,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc)
-	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
+	admin := handler.NewAdminHandler(writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
 	seasons := handler.NewSeasonHandler(writeDB)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)

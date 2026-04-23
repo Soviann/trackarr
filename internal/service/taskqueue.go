@@ -93,7 +93,9 @@ func NewTaskQueueWorker(
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
 func (w *TaskQueueWorker) Start(ctx context.Context) {
 	// Rescue stuck tasks from previous crashes
-	if err := w.tasks.ResetRunning(); err != nil {
+	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTaskWriter(tx).ResetRunning(ctx)
+	}); err != nil {
 		log.Printf("task queue: reset running tasks: %v", err)
 	}
 
@@ -154,8 +156,12 @@ func (w *TaskQueueWorker) processDueTasks(ctx context.Context) {
 		return
 	}
 
-	tasks, err := w.tasks.FetchDue(10)
-	if err != nil {
+	var tasks []model.Task
+	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		var e error
+		tasks, e = repository.NewTaskWriter(tx).FetchDue(ctx, 10)
+		return e
+	}); err != nil {
 		log.Printf("task queue: fetch due: %v", err)
 		return
 	}
@@ -175,7 +181,9 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("task queue: panic processing task %d: %v", task.ID, r)
-			_ = w.tasks.Fail(task.ID, fmt.Sprintf("panic: %v", r), time.Now().Add(time.Hour))
+			_ = database.WithTxContext(context.Background(), w.writeDB, func(tx *sql.Tx) error {
+				return repository.NewTaskWriter(tx).Fail(context.Background(), task.ID, fmt.Sprintf("panic: %v", r), time.Now().Add(time.Hour))
+			})
 		}
 	}()
 
@@ -190,7 +198,11 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		err = w.handleCoverFetch(ctx, task)
 	default:
 		log.Printf("task queue: unknown task type %q for task %d", task.TaskType, task.ID)
-		_ = w.tasks.Delete(task.ID)
+		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTaskWriter(tx).Delete(bookkeepCtx, task.ID)
+		})
+		cancel()
 		return
 	}
 
@@ -208,9 +220,16 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		}
 
 		nextRunAt := calculateNextRunAt(task.Attempts+1, retryAfter)
-		if failErr := w.tasks.Fail(task.ID, err.Error(), nextRunAt); failErr != nil {
+		// Task bookkeeping must run on a fresh context: ctx might already be
+		// canceled (e.g. HTTP client disconnected) and leaving the row in
+		// 'running' would let a retry deadlock start-up's ResetRunning.
+		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if failErr := database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTaskWriter(tx).Fail(bookkeepCtx, task.ID, err.Error(), nextRunAt)
+		}); failErr != nil {
 			log.Printf("task queue: fail task %d: %v", task.ID, failErr)
 		}
+		cancel()
 
 		// Check if task just died (day 7 + last attempt)
 		if task.Day >= 7 && task.Attempts+1 >= task.MaxAttempts {
@@ -219,7 +238,12 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 
 		return
 	}
-	if err := w.tasks.Complete(task.ID); err != nil {
+	// Complete must run on a fresh context for the same reason as Fail above.
+	bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTaskWriter(tx).Complete(bookkeepCtx, task.ID)
+	}); err != nil {
 		log.Printf("task queue: complete task %d: %v", task.ID, err)
 	}
 }

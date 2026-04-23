@@ -337,7 +337,10 @@ func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, 
 		return
 	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
-	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+	if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(context.Background(), model.TaskTypeEnrichment, string(payload), &dedupKey)
+		return e
+	}); err != nil {
 		log.Printf("simkl import: enqueue enrichment for title %d: %v", titleID, err)
 	}
 }

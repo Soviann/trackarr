@@ -2,26 +2,29 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
 type AdminHandler struct {
+	writeDB  *sql.DB
 	tasks    *repository.TaskRepository
 	titles   *repository.TitleRepository
 	settings *repository.SettingRepository
 	bgSvc    *service.BackgroundService
 }
 
-func NewAdminHandler(tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
-	return &AdminHandler{tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
+func NewAdminHandler(writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
+	return &AdminHandler{writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
 }
 
 // Counts returns aggregate counts for the admin hub badges.
@@ -81,7 +84,9 @@ func (h *AdminHandler) RetryTask(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Invalid task ID")
 	}
 
-	if err := h.tasks.RetryDead(id); err != nil {
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTaskWriter(tx).RetryDead(r.Context(), id)
+	}); err != nil {
 		return httputil.InternalError("retry task", err)
 	}
 
@@ -96,7 +101,9 @@ func (h *AdminHandler) DeleteTask(w http.ResponseWriter, r *http.Request) error 
 		return httputil.BadRequest("Invalid task ID")
 	}
 
-	if err := h.tasks.Delete(id); err != nil {
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTaskWriter(tx).Delete(r.Context(), id)
+	}); err != nil {
 		return httputil.InternalError("delete task", err)
 	}
 
@@ -113,7 +120,9 @@ func (h *AdminHandler) DeleteTasksBatch(w http.ResponseWriter, r *http.Request) 
 		return httputil.BadRequest("Invalid JSON")
 	}
 
-	if err := h.tasks.DeleteBatch(req.IDs); err != nil {
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTaskWriter(tx).DeleteBatch(r.Context(), req.IDs)
+	}); err != nil {
 		return httputil.InternalError("delete batch tasks", err)
 	}
 

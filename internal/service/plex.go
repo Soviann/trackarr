@@ -439,7 +439,7 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		if err != nil {
 			log.Printf("async enrichment failed for title %d: %v", titleID, err)
 			if matching.IsRetryableError(err) {
-				s.enqueueEnrichment(titleID, titleName, year, titleType, false, ids)
+				s.enqueueEnrichment(enrichCtx, titleID, titleName, year, titleType, false, ids)
 			}
 			return
 		}
@@ -482,7 +482,7 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 	}()
 }
 
-func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, isAnime bool, ids PlexExternalIDs) {
+func (s *PlexService) enqueueEnrichment(ctx context.Context, titleID int64, titleName string, year int, titleType model.TitleType, isAnime bool, ids PlexExternalIDs) {
 	if s.tasks == nil {
 		return
 	}
@@ -501,7 +501,10 @@ func (s *PlexService) enqueueEnrichment(titleID int64, titleName string, year in
 		return
 	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
-	if _, err := s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey)
+		return e
+	}); err != nil {
 		log.Printf("enqueue enrichment for title %d: %v", titleID, err)
 	}
 }

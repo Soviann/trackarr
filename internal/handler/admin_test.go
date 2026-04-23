@@ -26,7 +26,7 @@ func setupAdminHandler(t *testing.T) *handler.AdminHandler {
 	taskRepo := repository.NewTaskRepository(db)
 	titleRepo := repository.NewTitleRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	return handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, nil) // bgSvc=nil
+	return handler.NewAdminHandler(db, taskRepo, titleRepo, settingRepo, nil) // bgSvc=nil
 }
 
 func TestAdminHandler_Counts(t *testing.T) {

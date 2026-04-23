@@ -177,8 +177,10 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 		return fmt.Errorf("marshal enrichment payload: %w", err)
 	}
 	dedupKey := fmt.Sprintf("enrichment:%d", id)
-	_, err = s.tasks.Enqueue(model.TaskTypeEnrichment, string(payload), &dedupKey)
-	return err
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		_, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey)
+		return err
+	})
 }
 
 // ResolveURL identifies a title from an external URL.

@@ -105,7 +105,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 		TMDBID:    301796,
 	}
 	payloadJSON, _ := json.Marshal(payload)
-	taskID, _ := taskRepo.Enqueue(model.TaskTypeEnrichment, string(payloadJSON), nil)
+	taskID := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(payloadJSON), nil)
 
 	// 5. Run Worker
 	tasks, _ := taskRepo.ListPending()

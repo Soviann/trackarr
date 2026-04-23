@@ -272,7 +272,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
-		s.enqueueRefreshOnRetryable(title.ID, err)
+		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
 		return
 	}
 
@@ -329,7 +329,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
-		s.enqueueRefreshOnRetryable(title.ID, err)
+		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
 		return
 	}
 
@@ -486,14 +486,14 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 			if title.Type == model.TitleTypeMovie {
 				details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 				if err != nil {
-					s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.AniListID, title.Type, err)
+					s.enqueueCoverOnRetryable(ctx, title.ID, *title.TMDBID, title.AniListID, title.Type, err)
 				} else {
 					posterPath = details.PosterPath
 				}
 			} else {
 				details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 				if err != nil {
-					s.enqueueCoverOnRetryable(title.ID, *title.TMDBID, title.AniListID, title.Type, err)
+					s.enqueueCoverOnRetryable(ctx, title.ID, *title.TMDBID, title.AniListID, title.Type, err)
 				} else {
 					posterPath = details.PosterPath
 				}
@@ -683,7 +683,7 @@ func (s *BackgroundService) processCoverBatch(coversDir string, batch []string) 
 	return deleted
 }
 
-func (s *BackgroundService) enqueueRefreshOnRetryable(titleID int64, err error) {
+func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, titleID int64, err error) {
 	if s.tasks == nil || !matching.IsRetryableError(err) {
 		return
 	}
@@ -693,12 +693,15 @@ func (s *BackgroundService) enqueueRefreshOnRetryable(titleID int64, err error) 
 		return
 	}
 	dedupKey := fmt.Sprintf("refresh:%d", titleID)
-	if _, enqErr := s.tasks.Enqueue(model.TaskTypeRefresh, string(payload), &dedupKey); enqErr != nil {
+	if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeRefresh, string(payload), &dedupKey)
+		return e
+	}); enqErr != nil {
 		log.Printf("enqueue refresh for title %d: %v", titleID, enqErr)
 	}
 }
 
-func (s *BackgroundService) enqueueCoverOnRetryable(titleID, tmdbID int64, anilistID *int64, titleType model.TitleType, err error) {
+func (s *BackgroundService) enqueueCoverOnRetryable(ctx context.Context, titleID, tmdbID int64, anilistID *int64, titleType model.TitleType, err error) {
 	if s.tasks == nil || !matching.IsRetryableError(err) {
 		return
 	}
@@ -712,7 +715,10 @@ func (s *BackgroundService) enqueueCoverOnRetryable(titleID, tmdbID int64, anili
 		return
 	}
 	dedupKey := fmt.Sprintf("cover_fetch:%d", titleID)
-	if _, enqErr := s.tasks.Enqueue(model.TaskTypeCoverFetch, string(payload), &dedupKey); enqErr != nil {
+	if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeCoverFetch, string(payload), &dedupKey)
+		return e
+	}); enqErr != nil {
 		log.Printf("enqueue cover fetch for title %d: %v", titleID, enqErr)
 	}
 }

@@ -59,8 +59,7 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	}
 	raw, err := json.Marshal(payload)
 	require.NoError(t, err)
-	_, err = tasks.Enqueue(model.TaskTypeEnrichment, string(raw), nil)
-	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
 
 	queued, err := tasks.ListPending()
 	require.NoError(t, err)
@@ -112,8 +111,7 @@ func TestHandleEnrichment_CtxCancelRollsBack(t *testing.T) {
 	}
 	raw, err := json.Marshal(payload)
 	require.NoError(t, err)
-	taskID, err := tasks.Enqueue(model.TaskTypeEnrichment, string(raw), nil)
-	require.NoError(t, err)
+	taskID := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
 
 	queued, err := tasks.ListPending()
 	require.NoError(t, err)
