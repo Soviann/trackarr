@@ -34,21 +34,25 @@ func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
-	ep, _ := episodeRepo.GetOrCreate(season.ID, 1)
+	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 
 	// Toggle on
-	toggled, err := episodeRepo.ToggleWatched(ep.ID)
-	require.NoError(t, err)
+	toggled := testutil.ToggleEpisodeWatched(t, db, ep.ID)
 	assert.True(t, toggled.Watched)
 	assert.NotNil(t, toggled.FirstWatchedAt)
 	assert.NotNil(t, toggled.LastWatchedAt)
 
 	// Toggle off
-	toggled, err = episodeRepo.ToggleWatched(ep.ID)
-	require.NoError(t, err)
+	toggled = testutil.ToggleEpisodeWatched(t, db, ep.ID)
 	assert.False(t, toggled.Watched)
 	assert.Nil(t, toggled.FirstWatchedAt)
 	assert.Nil(t, toggled.LastWatchedAt)
+
+	// Reader still returns the stored state.
+	got, err := episodeRepo.GetBySeasonID(season.ID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.False(t, got[0].Watched)
 }
 
 func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
@@ -58,12 +62,11 @@ func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
-	ep1, _ := episodeRepo.GetOrCreate(season.ID, 1)
-	ep2, _ := episodeRepo.GetOrCreate(season.ID, 2)
+	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	ep2 := testutil.GetOrCreateEpisode(t, db, season.ID, 2)
 
 	now := time.Now().UTC()
-	err := episodeRepo.BatchMarkWatched([]int64{ep1.ID, ep2.ID}, now)
-	require.NoError(t, err)
+	testutil.BatchMarkEpisodesWatched(t, db, []int64{ep1.ID, ep2.ID}, now)
 
 	episodes, _ := episodeRepo.GetBySeasonID(season.ID)
 	assert.Len(t, episodes, 2)
@@ -78,12 +81,11 @@ func TestEpisodeRepository_BatchMarkWatched_PreservesFirstWatchedAt(t *testing.T
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
-	ep, _ := episodeRepo.GetOrCreate(season.ID, 1)
+	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 
 	// First watch
 	first := time.Now().UTC().Add(-24 * time.Hour)
-	err := episodeRepo.BatchMarkWatched([]int64{ep.ID}, first)
-	require.NoError(t, err)
+	testutil.BatchMarkEpisodesWatched(t, db, []int64{ep.ID}, first)
 
 	episodes, _ := episodeRepo.GetBySeasonID(season.ID)
 	require.Len(t, episodes, 1)
@@ -93,8 +95,7 @@ func TestEpisodeRepository_BatchMarkWatched_PreservesFirstWatchedAt(t *testing.T
 
 	// Rewatch — first_watched_at must be preserved, last_watched_at must update
 	rewatch := time.Now().UTC()
-	err = episodeRepo.BatchMarkWatched([]int64{ep.ID}, rewatch)
-	require.NoError(t, err)
+	testutil.BatchMarkEpisodesWatched(t, db, []int64{ep.ID}, rewatch)
 
 	episodes, _ = episodeRepo.GetBySeasonID(season.ID)
 	require.NotNil(t, episodes[0].FirstWatchedAt)

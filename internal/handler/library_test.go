@@ -31,7 +31,7 @@ func setupLibraryHandler(t *testing.T) (*handler.LibraryHandler, *sql.DB, *repos
 }
 
 func TestLibraryHandler_ContinueWatching(t *testing.T) {
-	h, db, _, seasonRepo, episodeRepo := setupLibraryHandler(t)
+	h, db, _, seasonRepo, _ := setupLibraryHandler(t)
 
 	// Create a Watching title with one unwatched episode
 	watchingID := testutil.CreateTitle(t, db,
@@ -40,10 +40,10 @@ func TestLibraryHandler_ContinueWatching(t *testing.T) {
 	)
 	season, err := seasonRepo.Upsert(watchingID, 1, 3)
 	require.NoError(t, err)
-	require.NoError(t, episodeRepo.UpsertBatch(season.ID, []repository.EpisodeUpsert{
+	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
 		{EpisodeNumber: 1, Name: "Ep1"},
 		{EpisodeNumber: 2, Name: "Ep2"},
-	}))
+	})
 
 	// Create a Completed title — should not appear
 	testutil.CreateTitle(t, db,

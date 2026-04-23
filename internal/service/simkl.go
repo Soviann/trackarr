@@ -222,35 +222,44 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 
 	s.enqueueEnrichment(titleID, media.Title, media.Year, titleType, isAnime, media.IDs)
 
-	// Import seasons/episodes
-	for _, simklSeason := range item.Seasons {
-		season, err := s.seasons.GetOrCreate(titleID, simklSeason.Number)
-		if err != nil {
-			continue
-		}
-
-		for _, simklEp := range simklSeason.Episodes {
-			ep, err := s.episodes.GetOrCreate(season.ID, simklEp.Number)
+	// Import seasons/episodes inside a single transaction per title so a crash
+	// mid-import never leaves orphaned seasons/episodes or unmatched events.
+	if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+		seasons := repository.NewSeasonRepository(tx)
+		episodes := repository.NewEpisodeWriter(tx)
+		events := repository.NewWatchEventRepository(tx)
+		for _, simklSeason := range item.Seasons {
+			season, err := seasons.GetOrCreate(titleID, simklSeason.Number)
 			if err != nil {
 				continue
 			}
 
-			watchedAt := time.Now().UTC()
-			if simklEp.WatchedAt != "" {
-				if t, err := time.Parse(time.RFC3339, simklEp.WatchedAt); err == nil {
-					watchedAt = t
+			for _, simklEp := range simklSeason.Episodes {
+				ep, err := episodes.GetOrCreate(context.Background(), season.ID, simklEp.Number)
+				if err != nil {
+					continue
 				}
-			}
 
-			if err := s.episodes.MarkWatched(ep.ID, watchedAt); err != nil {
-				log.Printf("simkl import: mark episode %d watched for title %d: %v", ep.ID, titleID, err)
+				watchedAt := time.Now().UTC()
+				if simklEp.WatchedAt != "" {
+					if t, err := time.Parse(time.RFC3339, simklEp.WatchedAt); err == nil {
+						watchedAt = t
+					}
+				}
+
+				if err := episodes.MarkWatched(context.Background(), ep.ID, watchedAt); err != nil {
+					log.Printf("simkl import: mark episode %d watched for title %d: %v", ep.ID, titleID, err)
+				}
+				_, _ = events.Create(&model.WatchEvent{
+					TitleID:   titleID,
+					EpisodeID: &ep.ID,
+					Source:    model.WatchEventSourceManual,
+				})
 			}
-			_, _ = s.events.Create(&model.WatchEvent{
-				TitleID:   titleID,
-				EpisodeID: &ep.ID,
-				Source:    model.WatchEventSourceManual,
-			})
 		}
+		return nil
+	}); err != nil {
+		log.Printf("simkl import: seasons/episodes tx for title %d: %v", titleID, err)
 	}
 
 	// Backfill previous episodes
@@ -272,7 +281,9 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 			latestWatchedAt = time.Now().UTC()
 		}
 		if maxSeason > 0 && maxEpisode > 0 {
-			if err := BackfillPreviousEpisodes(s.db, titleID, nil, maxSeason, maxEpisode, latestWatchedAt); err != nil {
+			if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+				return BackfillPreviousEpisodes(context.Background(), tx, titleID, nil, maxSeason, maxEpisode, latestWatchedAt)
+			}); err != nil {
 				log.Printf("simkl import: backfill for title %d: %v", titleID, err)
 				result.Errors++
 			}

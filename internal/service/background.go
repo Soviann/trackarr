@@ -418,7 +418,9 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 				AirDate:       ep.AirDate,
 			}
 		}
-		_ = s.episodes.UpsertBatch(season.ID, entries)
+		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+		})
 
 		_ = s.limiter.Wait(ctx)
 	}

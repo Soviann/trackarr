@@ -48,8 +48,8 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, s1)
 	for i := 1; i <= 12; i++ {
-		ep, _ := episodeRepo.GetOrCreate(s1.ID, i)
-		_, _ = episodeRepo.ToggleWatched(ep.ID)
+		ep := testutil.GetOrCreateEpisode(t, db, s1.ID, i)
+		_ = testutil.ToggleEpisodeWatched(t, db, ep.ID)
 	}
 
 	// 2. Create Duplicate Title (Solo Leveling S2 - Arise from the Shadow)
@@ -63,8 +63,8 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	}, []model.TitleName{{Name: "Ore dake Level Up na Ken: Arise from the Shadow", Language: "ja", IsPrimary: true}})
 
 	s2Split, _ := seasonRepo.GetOrCreate(dupID, 1) // In Simkl, S2 is often its own S1
-	epS2, _ := episodeRepo.GetOrCreate(s2Split.ID, 1)
-	_, _ = episodeRepo.ToggleWatched(epS2.ID)
+	epS2 := testutil.GetOrCreateEpisode(t, db, s2Split.ID, 1)
+	_ = testutil.ToggleEpisodeWatched(t, db, epS2.ID)
 
 	// 3. Setup Mock Pipeline & Worker
 	tmdbMux := http.NewServeMux()

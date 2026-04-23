@@ -70,10 +70,10 @@ type RatingPrompt struct {
 func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, titleID, episodeID int64) (*model.Title, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
-	episodes := repository.NewEpisodeRepository(tx)
+	episodes := repository.NewEpisodeWriter(tx)
 	events := repository.NewWatchEventRepository(tx)
 
-	ep, err := episodes.ToggleWatched(episodeID)
+	ep, err := episodes.ToggleWatched(ctx, episodeID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,11 +122,11 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
-	episodes := repository.NewEpisodeRepository(tx)
+	episodes := repository.NewEpisodeWriter(tx)
 	events := repository.NewWatchEventRepository(tx)
 
 	now := time.Now().UTC()
-	if err := episodes.BatchMarkWatched(episodeIDs, now); err != nil {
+	if err := episodes.BatchMarkWatched(ctx, episodeIDs, now); err != nil {
 		return nil, nil, err
 	}
 

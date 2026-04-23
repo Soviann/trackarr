@@ -37,7 +37,7 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *sql.DB, 
 }
 
 func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
-	svc, db, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
+	svc, db, titleRepo, seasonRepo, _ := setupBackgroundService(t)
 
 	// Create a series with status=watching, series_status=ended
 	ended := model.SeriesStatusEnded
@@ -54,13 +54,11 @@ func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
 
-	ep1, err := episodeRepo.GetOrCreate(season.ID, 1)
-	require.NoError(t, err)
-	ep2, err := episodeRepo.GetOrCreate(season.ID, 2)
-	require.NoError(t, err)
+	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	ep2 := testutil.GetOrCreateEpisode(t, db, season.ID, 2)
 	now := time.Now().UTC()
-	require.NoError(t, episodeRepo.MarkWatched(ep1.ID, now))
-	require.NoError(t, episodeRepo.MarkWatched(ep2.ID, now))
+	testutil.MarkEpisodeWatched(t, db, ep1.ID, now)
+	testutil.MarkEpisodeWatched(t, db, ep2.ID, now)
 
 	// Run refresh
 	results := svc.RefreshTitles(context.Background())
@@ -88,7 +86,7 @@ func TestBackgroundService_SkipCompletedTitles(t *testing.T) {
 }
 
 func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
-	svc, db, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
+	svc, db, titleRepo, seasonRepo, _ := setupBackgroundService(t)
 
 	ended := model.SeriesStatusEnded
 	titleID := testutil.CreateTitle(t, db, &model.Title{
@@ -103,11 +101,9 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
 
-	ep1, err := episodeRepo.GetOrCreate(season.ID, 1)
-	require.NoError(t, err)
-	_, err = episodeRepo.GetOrCreate(season.ID, 2) // ep2 unwatched
-	require.NoError(t, err)
-	require.NoError(t, episodeRepo.MarkWatched(ep1.ID, time.Now().UTC()))
+	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 2) // ep2 unwatched
+	testutil.MarkEpisodeWatched(t, db, ep1.ID, time.Now().UTC())
 
 	results := svc.RefreshTitles(context.Background())
 

@@ -131,7 +131,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonRepository(tx)
-	episodes := repository.NewEpisodeRepository(tx)
+	episodes := repository.NewEpisodeWriter(tx)
 	events := repository.NewWatchEventRepository(tx)
 
 	grandparentKey := meta.GrandparentRatingKey
@@ -146,7 +146,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		return fmt.Errorf("get/create season: %w", err)
 	}
 
-	ep, err := episodes.GetOrCreate(season.ID, meta.Index)
+	ep, err := episodes.GetOrCreate(ctx, season.ID, meta.Index)
 	if err != nil {
 		return fmt.Errorf("get/create episode: %w", err)
 	}
@@ -155,7 +155,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 
 	// media.play on unwatched episode — catch-up (media.scrobble missed).
 	if !ep.Watched {
-		if err := episodes.MarkWatched(ep.ID, now); err != nil {
+		if err := episodes.MarkWatched(ctx, ep.ID, now); err != nil {
 			return fmt.Errorf("mark episode watched: %w", err)
 		}
 	}
@@ -169,7 +169,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		log.Printf("plex play: create watch event for title %d ep %d: %v", title.ID, ep.ID, err)
 	}
 
-	if err := episodes.UpdateLastWatchedAt(ep.ID, now); err != nil {
+	if err := episodes.UpdateLastWatchedAt(ctx, ep.ID, now); err != nil {
 		log.Printf("plex play: update episode last_watched_at for ep %d: %v", ep.ID, err)
 	}
 
@@ -291,7 +291,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonRepository(tx)
-	episodes := repository.NewEpisodeRepository(tx)
+	episodes := repository.NewEpisodeWriter(tx)
 
 	grandparentKey := meta.GrandparentRatingKey
 	var imdbID *string
@@ -337,7 +337,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 		return nil, nil, fmt.Errorf("get/create season: %w", err)
 	}
 
-	ep, err := episodes.GetOrCreate(season.ID, meta.Index)
+	ep, err := episodes.GetOrCreate(ctx, season.ID, meta.Index)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get/create episode: %w", err)
 	}

@@ -77,7 +77,7 @@ func (s *BackfillService) BackfillForEpisode(ctx context.Context, titleID int64,
 	tmdbSeasons := fetchTMDBSeasons(ctx, s.tmdb, title.ID, title.TMDBID)
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		return BackfillPreviousEpisodes(tx, title.ID, tmdbSeasons, season.SeasonNumber, episode.Episode, time.Now().UTC())
+		return BackfillPreviousEpisodes(ctx, tx, title.ID, tmdbSeasons, season.SeasonNumber, episode.Episode, time.Now().UTC())
 	}); err != nil {
 		log.Printf("backfill warning for title %d: %v", titleID, err)
 	}
@@ -86,10 +86,12 @@ func (s *BackfillService) BackfillForEpisode(ctx context.Context, titleID int64,
 // BackfillPreviousEpisodes creates and marks as watched all episodes before the
 // given season/episode number. Previous-season backfill requires prefetched
 // TMDB season data (see fetchTMDBSeasons); without it, only episodes in the
-// current season are backfilled. This function performs DB writes only — any
-// TMDB fetching must happen outside the transaction.
+// current season are backfilled. Must run inside a transaction: episode
+// writes are tx-only and the entire backfill (season upsert, episode upsert,
+// batch mark, watch events) must commit atomically.
 func BackfillPreviousEpisodes(
-	db database.DBTX,
+	ctx context.Context,
+	tx *sql.Tx,
 	titleID int64,
 	tmdbSeasons []TMDBSeasonInfo,
 	triggerSeasonNum int,
@@ -101,9 +103,9 @@ func BackfillPreviousEpisodes(
 		return nil
 	}
 
-	seasons := repository.NewSeasonRepository(db)
-	episodes := repository.NewEpisodeRepository(db)
-	events := repository.NewWatchEventRepository(db)
+	seasons := repository.NewSeasonRepository(tx)
+	episodes := repository.NewEpisodeWriter(tx)
+	events := repository.NewWatchEventRepository(tx)
 
 	var toMarkIDs []int64
 	var toEventTitleID = titleID
@@ -123,7 +125,7 @@ func BackfillPreviousEpisodes(
 		}
 
 		for epNum := 1; epNum <= si.EpisodeCount; epNum++ {
-			ep, err := episodes.GetOrCreate(season.ID, epNum)
+			ep, err := episodes.GetOrCreate(ctx, season.ID, epNum)
 			if err != nil {
 				continue
 			}
@@ -151,7 +153,7 @@ func BackfillPreviousEpisodes(
 		}
 
 		for epNum := 1; epNum < triggerEpisodeNum; epNum++ {
-			ep, err := episodes.GetOrCreate(season.ID, epNum)
+			ep, err := episodes.GetOrCreate(ctx, season.ID, epNum)
 			if err != nil {
 				continue
 			}
@@ -165,7 +167,7 @@ func BackfillPreviousEpisodes(
 		return nil
 	}
 
-	if err := episodes.BatchMarkWatched(toMarkIDs, watchedAt); err != nil {
+	if err := episodes.BatchMarkWatched(ctx, toMarkIDs, watchedAt); err != nil {
 		return err
 	}
 
