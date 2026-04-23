@@ -1,34 +1,22 @@
 # CLAUDE.md — Mandatory rules
 
-<!-- TEMPLATE:START — do not edit manually -->
+<!-- TEMPLATE:START — managed by sync-template-config, do not edit manually.
+     Add here: conventions shared across projects (coding standards, git rules,
+     language rules, approach, token optimization, recommended plugins, translations).
+     If unsure whether a rule belongs here or in PROJECT, ask the user before adding. -->
 
 ## Approach
-- Act over ask; read only files you'll edit.
-- Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md`.
+- Surface uncertainty: ask when unsure, name competing interpretations, flag simpler alternatives instead of picking silently. Read only files you'll edit.
+- Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update `docs/patterns.md` with anything future sessions would need Explore/Grep to rediscover.
 - CLAUDE.md and `docs/patterns.md` must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
 - Act on user instructions directly — no exploratory glob/grep when user names the target.
 - Don't verify existence of items already known from plan or memory.
 
 ## Plans
-
-### Format
-- **PO summary first**: 2-3 sentences max, non-technical, describing what changes for the user/product.
-- **Then phases**: phase N depends on N-1 output. Within each phase, mark tasks `[parallel]` or `[seq]`.
-- No prose — actionable instructions only. Each task: target files, method signatures/behavior, test criteria.
-- All architectural decisions made in plan. No "decide how to…" — Sonnet executes, doesn't architect.
-
-### Sonnet-readiness (per task)
-- Target files listed with expected changes
-- Input/output or behavior defined
-- Test criteria explicit (what to assert)
-
-### Execution model
-- Phase with independent tasks → `subagent-driven-development` (parallel Sonnet sub-agents)
-- Phase with dependencies → single sequential agent
-- Mechanical same-change × N → parallel sub-agents
-- One session per phase. Plan encodes execution — no orchestrator needed.
-- **Stop after plan creation.** Never start execution in the same session — present the plan, wait for approval, stop. Execution happens in a new session.
+- Path: `docs/plans/YYYY-MM-DD-<feature>.md` — or subfolder `docs/plans/YYYY-MM-DD-<feature>/` when split. Temporary, delete after merge. Never commit.
+- Generation: `/plan-split` only (wraps `writing-plans`; splits if ≥ 2 phases). Never call `writing-plans` directly.
+- Phase closure: `/phase-finish <path|N>` — runs validation conditions, typed-yes commit gate, handoff.
 
 ## Quality
 - Linters/formatters: before committing only, ONLY on modified files.
@@ -43,20 +31,37 @@
 - **Cheap models on mechanical subagents.** File search, simple refactor, mechanical lookup → `model: "haiku"` or `"sonnet"`.
 - **`gh --json field1,field2`** over MCP GitHub tools for simple queries. `minimal_output: true` on MCP list/search calls.
 
+## Coding Standards
+- `@Symfony` CS Fixer ruleset + [Symfony standards](https://symfony.com/doc/current/contributing/code/standards.html)
+- Backslash-prefix native functions: `\array_map()`, `\sprintf()`, `\count()`
+- Prefer `u()` (String component) over native string functions.
+- Yoda conditions: `null === $var` not `$var === null`.
+- Method order: `__construct` → public → protected → private (`setUp`/`tearDown` first in tests).
+- One-line args (except promoted constructors: one per line, trailing comma).
+- Existing files: fix only your changes.
+- PHPStan level 9 — never ignore/lower.
+- Alphabetical: constructor assignments, array keys, YAML keys.
+- No magic strings: use constants or enums for domain values reused across files.
+- DB queries: repositories only (`src/Repository/`), QueryBuilder only (no DQL). Never inject `EntityManagerInterface` for queries.
+- Doctrine migrations: always set `getDescription()` (French, concise).
+- **DTOs over arrays**: `readonly` DTO classes in `src/DTO/` or same namespace. `JsonSerializable` only for API/cache.
+
 ## Git
-- Format: `<type>(scope|branch-name): description` — types: `feat|fix|chore|refactor|docs`
-- French descriptions: 3rd-person imperative (`ajoute`, `corrige`, `supprime` — not infinitive).
-- Commit title = visible impact, not implementation detail. Technical details in body.
-  - `fix`: problem solved. BAD: `utilise LEFT JOIN` GOOD: `corrige l'absence de médias`
-  - `feat`: capability added. BAD: `ajoute MergeService` GOOD: `permet de fusionner des titres`
-- Skip `git diff` when you made the edits — diff only to discover changes you didn't make.
+- All commits go through `/commit` (`.claude/skills/commit/SKILL.md`) — the skill owns format, splitting, and safety checks.
 - Merges: `--no-ff`
+
+## Translations
+- No hardcoded user-facing text — always use translation keys.
+- `translations/messages.fr.yaml`: UI labels, titles, buttons, menus.
+- `translations/validators.fr.yaml`: `Assert\*` constraint `message:` params.
+- Key pattern: `app.<entity>.<context>.<purpose>` (e.g. `app.example.admin.fields.name.label`). Vendor keys go under their own namespace — never duplicate in app.
+- Twig: `{{ 'key'|trans }}`, with params: `{{ 'key'|trans({'%name%': val}) }}`
 
 ## Language
 Commits + docs/comments: French. Code identifiers: English. CLAUDE.md: English.
 
 ## Recommended Plugins
-`context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`.
+`php-lsp`, `context7`, `superpowers`, `pr-review-toolkit`, `commit-commands`, `hookify`, `code-simplifier`.
 
 <!-- TEMPLATE:END -->
 

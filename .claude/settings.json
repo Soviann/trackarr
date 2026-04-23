@@ -5,8 +5,20 @@
   },
   "permissions": {
     "allow": [
+      "Bash(ddev describe*)",
+      "Bash(ddev exec *)",
+      "Bash(ddev list*)",
+      "Bash(ddev status*)",
       "Bash(docker compose:*)",
       "Bash(echo:*)",
+      "Bash(gh api:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh run:*)",
       "Bash(gh:*)",
       "Bash(git:*)",
       "Bash(ls:*)",
@@ -17,7 +29,8 @@
       "Write",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__*",
       "mcp__plugin_context7_context7__query-docs",
-      "mcp__plugin_context7_context7__resolve-library-id"
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_playwright_playwright__*"
     ],
     "ask": [
       "Bash(gh issue close:*)",
@@ -44,17 +57,6 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "INPUT=$(cat); if [ \"$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // empty')\" = \"Explore\" ]; then SID=$(echo \"$INPUT\" | jq -r '.session_id // empty'); PROJ=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$PROJ/docs/patterns.md\" ]; then if [ ! -f \"/tmp/claude-patterns-$SID\" ]; then echo 'BLOCKED — Read docs/patterns.md first (it documents the codebase map and conventions). Only launch Explore if patterns.md does not cover your need; this block clears once patterns.md has been read this session.' >&2; exit 2; fi; else echo 'No docs/patterns.md found. After exploration, create one with the codebase map.'; fi; fi"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Read",
@@ -62,6 +64,27 @@
           {
             "type": "command",
             "command": "INPUT=$(cat); FP=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); case \"$FP\" in */docs/patterns.md) SID=$(echo \"$INPUT\" | jq -r '.session_id // empty'); touch \"/tmp/claude-patterns-$SID\" ;; esac"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); if [ \"$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // empty')\" = \"Explore\" ]; then SID=$(echo \"$INPUT\" | jq -r '.session_id // empty'); PROJ=\"${CLAUDE_PROJECT_DIR:-.}\"; if [ -f \"$PROJ/docs/patterns.md\" ]; then if [ ! -f \"/tmp/claude-patterns-$SID\" ]; then echo 'BLOCKED \u2014 Read docs/patterns.md first (it documents the codebase map and conventions). Only launch Explore if patterns.md does not cover your need; this block clears once patterns.md has been read this session.' >&2; exit 2; fi; else echo 'No docs/patterns.md found. After exploration, create one with the codebase map.'; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-plans-commit.sh"
           }
         ]
       }
@@ -74,14 +97,29 @@
             "command": "if [ -f .claude/session-handoff.md ]; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"A session handoff file exists at .claude/session-handoff.md from a previous session. Invoke the session-resume skill to read it and present it to the user.\"}}'; fi"
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Rappels CLAUDE.md apr\u00e8s compaction: (1) chemins relatifs \u00e0 la racine projet, (2) jamais commit docs/plans/, (3) DTOs readonly privil\u00e9gi\u00e9s sur arrays, (4) repositories only pour les requ\u00eates DB, (5) traductions via cl\u00e9s app.<entity>.<context>.<purpose>.\"}}'"
+          }
+        ]
       }
     ]
   },
   "sandbox": {
     "enabled": false,
-    "excludedCommands": ["docker *", "docker compose *", "make *"],
+    "excludedCommands": [
+      "docker *",
+      "docker compose *",
+      "make *"
+    ],
     "filesystem": {
-      "allowWrite": ["."]
+      "allowWrite": [
+        "."
+      ]
     }
   },
   "enabledPlugins": {

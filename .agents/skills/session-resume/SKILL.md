@@ -1,6 +1,7 @@
 ---
 name: session-resume
 description: Use at session start when .claude/session-handoff.md exists in the project — reads prior session state and asks the user how to proceed
+allowed-tools: Read Bash(git checkout *) Bash(rm .claude/session-handoff.md)
 ---
 
 # Session Resume

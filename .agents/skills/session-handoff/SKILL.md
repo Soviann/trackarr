@@ -1,6 +1,7 @@
 ---
 name: session-handoff
 description: Use when ending a session with unfinished work, when context is getting large, when the system warns about compression, or when the user asks to hand off
+allowed-tools: Read Write Bash(git branch *) Bash(git status *) Bash(git log *)
 ---
 
 # Session Handoff
@@ -85,7 +86,7 @@ If the user asks for a handoff AND something else (e.g., "write a handoff and sa
 ## Writing Guidelines
 
 - **Concise but complete** — fewer words per point, not fewer points
-- **File paths over descriptions** — `internal/handler/media.go:45` beats prose
+- **File paths over descriptions** — `src/Service/Foo.php:45` beats prose
 - **Don't duplicate git** — state and intent, not commit-by-commit replay
 - **No code snippets** — what and where, not how
 - **No project context** — the next session has CLAUDE.md and memory already
