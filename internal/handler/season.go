@@ -1,18 +1,20 @@
 package handler
 
 import (
+	"database/sql"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
 type SeasonHandler struct {
-	seasons *repository.SeasonRepository
+	db *sql.DB
 }
 
-func NewSeasonHandler(seasons *repository.SeasonRepository) *SeasonHandler {
-	return &SeasonHandler{seasons: seasons}
+func NewSeasonHandler(db *sql.DB) *SeasonHandler {
+	return &SeasonHandler{db: db}
 }
 
 func (h *SeasonHandler) UpdateRating(w http.ResponseWriter, r *http.Request) error {
@@ -28,7 +30,9 @@ func (h *SeasonHandler) UpdateRating(w http.ResponseWriter, r *http.Request) err
 		return httputil.BadRequest("Invalid request")
 	}
 
-	if err := h.seasons.UpdateRating(seasonID, body.Rating); err != nil {
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewSeasonWriter(tx).UpdateRating(r.Context(), seasonID, body.Rating)
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

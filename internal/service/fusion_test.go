@@ -25,8 +25,6 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 
 	titleRepo := repository.NewTitleRepository(db)
 	require.NotNil(t, titleRepo)
-	seasonRepo := repository.NewSeasonRepository(db)
-	require.NotNil(t, seasonRepo)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	require.NotNil(t, episodeRepo)
 	taskRepo := repository.NewTaskRepository(db)
@@ -44,8 +42,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	}, []model.TitleName{{Name: "Ore dake Level Up na Ken", Language: "ja", IsPrimary: true}})
 	require.NotEqual(t, int64(0), masterID)
 
-	s1, err := seasonRepo.GetOrCreate(masterID, 1)
-	require.NoError(t, err)
+	s1 := testutil.GetOrCreateSeason(t, db, masterID, 1)
 	require.NotNil(t, s1)
 	for i := 1; i <= 12; i++ {
 		ep := testutil.GetOrCreateEpisode(t, db, s1.ID, i)
@@ -62,7 +59,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Ore dake Level Up na Ken: Arise from the Shadow", Language: "ja", IsPrimary: true}})
 
-	s2Split, _ := seasonRepo.GetOrCreate(dupID, 1) // In Simkl, S2 is often its own S1
+	s2Split := testutil.GetOrCreateSeason(t, db, dupID, 1) // In Simkl, S2 is often its own S1
 	epS2 := testutil.GetOrCreateEpisode(t, db, s2Split.ID, 1)
 	_ = testutil.ToggleEpisodeWatched(t, db, epS2.ID)
 

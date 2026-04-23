@@ -70,7 +70,6 @@ func TestTitleRepository_GetByID_NotFound(t *testing.T) {
 func TestTitleRepository_List(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
-	seasonRepo := repository.NewSeasonRepository(db)
 
 	// Create test data
 	idA := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
@@ -79,7 +78,7 @@ func TestTitleRepository_List(t *testing.T) {
 
 	// Create episodes for "up to date" and "watching behind" tests
 	// Naruto: 1 season, 2 episodes, all watched → "up to date"
-	sN, _ := seasonRepo.GetOrCreate(idC, 1)
+	sN := testutil.GetOrCreateSeason(t, db, idC, 1)
 	eN1 := testutil.GetOrCreateEpisode(t, db, sN.ID, 1)
 	_ = testutil.ToggleEpisodeWatched(t, db, eN1.ID)
 	eN2 := testutil.GetOrCreateEpisode(t, db, sN.ID, 2)
@@ -87,7 +86,7 @@ func TestTitleRepository_List(t *testing.T) {
 
 	// Add a series "watching behind": series with unwatched episodes
 	idD := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "The Bear", Language: "en", IsPrimary: true}})
-	sD, _ := seasonRepo.GetOrCreate(idD, 1)
+	sD := testutil.GetOrCreateSeason(t, db, idD, 1)
 	_ = testutil.GetOrCreateEpisode(t, db, sD.ID, 1) // unwatched
 
 	_ = idA
@@ -576,7 +575,6 @@ func TestTitleRepository_List_SortByLastWatched(t *testing.T) {
 func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
-	seasonRepo := repository.NewSeasonRepository(db)
 
 	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
@@ -586,8 +584,7 @@ func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 	}, []model.TitleName{{Name: "MultiSeason Show", Language: "en", IsPrimary: true}})
 
 	for sn := 1; sn <= 3; sn++ {
-		s, err := seasonRepo.GetOrCreate(id, sn)
-		require.NoError(t, err)
+		s := testutil.GetOrCreateSeason(t, db, id, sn)
 		for ep := 1; ep <= 5; ep++ {
 			_ = testutil.GetOrCreateEpisode(t, db, s.ID, ep)
 		}

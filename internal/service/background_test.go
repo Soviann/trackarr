@@ -37,7 +37,7 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *sql.DB, 
 }
 
 func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
-	svc, db, titleRepo, seasonRepo, _ := setupBackgroundService(t)
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
 
 	// Create a series with status=watching, series_status=ended
 	ended := model.SeriesStatusEnded
@@ -50,9 +50,8 @@ func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
 	}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
 
 	// Create 1 season with 2 episodes, all watched
-	season, err := seasonRepo.GetOrCreate(titleID, 1)
-	require.NoError(t, err)
-	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	testutil.UpdateSeasonTotalEpisodes(t, db, season.ID, 2)
 
 	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 	ep2 := testutil.GetOrCreateEpisode(t, db, season.ID, 2)
@@ -86,7 +85,7 @@ func TestBackgroundService_SkipCompletedTitles(t *testing.T) {
 }
 
 func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
-	svc, db, titleRepo, seasonRepo, _ := setupBackgroundService(t)
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
 
 	ended := model.SeriesStatusEnded
 	titleID := testutil.CreateTitle(t, db, &model.Title{
@@ -97,9 +96,8 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 		SeriesStatus: &ended,
 	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
-	season, err := seasonRepo.GetOrCreate(titleID, 1)
-	require.NoError(t, err)
-	require.NoError(t, seasonRepo.UpdateTotalEpisodes(season.ID, 2))
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	testutil.UpdateSeasonTotalEpisodes(t, db, season.ID, 2)
 
 	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 2) // ep2 unwatched

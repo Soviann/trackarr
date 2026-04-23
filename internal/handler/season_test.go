@@ -10,7 +10,6 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
-	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,8 +20,7 @@ func setupSeasonHandler(t *testing.T) *handler.SeasonHandler {
 	require.NoError(t, err)
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
-	seasonRepo := repository.NewSeasonRepository(db)
-	return handler.NewSeasonHandler(seasonRepo)
+	return handler.NewSeasonHandler(db)
 }
 
 func TestSeasonHandler_UpdateRating_InvalidSeasonID(t *testing.T) {

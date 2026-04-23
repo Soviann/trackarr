@@ -130,7 +130,7 @@ func (s *PlexService) handlePlay(ctx context.Context, payload *plexwebhooks.Payl
 func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string) error {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
-	seasons := repository.NewSeasonRepository(tx)
+	seasons := repository.NewSeasonWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
 	events := repository.NewWatchEventRepository(tx)
 
@@ -141,7 +141,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		return nil
 	}
 
-	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
+	season, err := seasons.GetOrCreate(ctx, title.ID, meta.ParentIndex)
 	if err != nil {
 		return fmt.Errorf("get/create season: %w", err)
 	}
@@ -290,7 +290,7 @@ type autoCompleteRequest struct {
 func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
-	seasons := repository.NewSeasonRepository(tx)
+	seasons := repository.NewSeasonWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
 
 	grandparentKey := meta.GrandparentRatingKey
@@ -332,7 +332,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 		}
 	}
 
-	season, err := seasons.GetOrCreate(title.ID, meta.ParentIndex)
+	season, err := seasons.GetOrCreate(ctx, title.ID, meta.ParentIndex)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get/create season: %w", err)
 	}

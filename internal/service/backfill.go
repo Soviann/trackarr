@@ -103,7 +103,7 @@ func BackfillPreviousEpisodes(
 		return nil
 	}
 
-	seasons := repository.NewSeasonRepository(tx)
+	seasons := repository.NewSeasonWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
 	events := repository.NewWatchEventRepository(tx)
 
@@ -115,12 +115,12 @@ func BackfillPreviousEpisodes(
 		if si.Number >= triggerSeasonNum {
 			continue
 		}
-		season, err := seasons.GetOrCreate(titleID, si.Number)
+		season, err := seasons.GetOrCreate(ctx, titleID, si.Number)
 		if err != nil {
 			log.Printf("backfill: create season %d: %v", si.Number, err)
 			continue
 		}
-		if err := seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount); err != nil {
+		if err := seasons.UpdateTotalEpisodes(ctx, season.ID, si.EpisodeCount); err != nil {
 			log.Printf("backfill: update total episodes for season %d: %v", season.ID, err)
 		}
 
@@ -137,7 +137,7 @@ func BackfillPreviousEpisodes(
 
 	// Backfill current season (episodes before trigger)
 	if triggerEpisodeNum > 1 {
-		season, err := seasons.GetOrCreate(titleID, triggerSeasonNum)
+		season, err := seasons.GetOrCreate(ctx, titleID, triggerSeasonNum)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func BackfillPreviousEpisodes(
 		// Update total_episodes from TMDB if available
 		for _, si := range tmdbSeasons {
 			if si.Number == triggerSeasonNum {
-				if err := seasons.UpdateTotalEpisodes(season.ID, si.EpisodeCount); err != nil {
+				if err := seasons.UpdateTotalEpisodes(ctx, season.ID, si.EpisodeCount); err != nil {
 					log.Printf("backfill: update total episodes for season %d: %v", season.ID, err)
 				}
 				break

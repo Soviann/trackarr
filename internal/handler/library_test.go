@@ -31,15 +31,14 @@ func setupLibraryHandler(t *testing.T) (*handler.LibraryHandler, *sql.DB, *repos
 }
 
 func TestLibraryHandler_ContinueWatching(t *testing.T) {
-	h, db, _, seasonRepo, _ := setupLibraryHandler(t)
+	h, db, _, _, _ := setupLibraryHandler(t)
 
 	// Create a Watching title with one unwatched episode
 	watchingID := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Serie en cours", Language: "fr", IsPrimary: true}},
 	)
-	season, err := seasonRepo.Upsert(watchingID, 1, 3)
-	require.NoError(t, err)
+	season := testutil.UpsertSeason(t, db, watchingID, 1, 3)
 	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
 		{EpisodeNumber: 1, Name: "Ep1"},
 		{EpisodeNumber: 2, Name: "Ep2"},
@@ -53,7 +52,7 @@ func TestLibraryHandler_ContinueWatching(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/titles/continue-watching", nil)
-	err = h.ContinueWatching(w, req)
+	err := h.ContinueWatching(w, req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, w.Code)
 

@@ -1,11 +1,13 @@
 package service_test
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +33,7 @@ type testDeps struct {
 	importer *service.SimklImporter
 	tasks    *repository.TaskRepository
 	episodes *repository.EpisodeRepository
-	seasons  *repository.SeasonRepository
+	db       *sql.DB
 }
 
 func setupImporterWithDB(t *testing.T) testDeps {
@@ -43,16 +45,15 @@ func setupImporterWithDB(t *testing.T) testDeps {
 
 	taskRepo := repository.NewTaskRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
-	seasonRepo := repository.NewSeasonRepository(db)
 	importer := service.NewSimklImporter(
 		db,
 		repository.NewTitleRepository(db),
-		seasonRepo,
+		repository.NewSeasonRepository(db),
 		episodeRepo,
 		repository.NewWatchEventRepository(db),
 		service.WithTaskRepository(taskRepo),
 	)
-	return testDeps{importer: importer, tasks: taskRepo, episodes: episodeRepo, seasons: seasonRepo}
+	return testDeps{importer: importer, tasks: taskRepo, episodes: episodeRepo, db: db}
 }
 
 func TestSimklImport_Movie(t *testing.T) {
@@ -186,8 +187,7 @@ func TestSimklImport_BackfillsPreviousEpisodes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Season 1 should exist with episodes 1, 2, 3
-	season, err := deps.seasons.GetOrCreate(1, 1) // titleID=1, seasonNum=1
-	require.NoError(t, err)
+	season := testutil.GetOrCreateSeason(t, deps.db, 1, 1) // titleID=1, seasonNum=1
 
 	episodes, err := deps.episodes.GetBySeasonID(season.ID)
 	require.NoError(t, err)

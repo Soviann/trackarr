@@ -225,11 +225,11 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	// Import seasons/episodes inside a single transaction per title so a crash
 	// mid-import never leaves orphaned seasons/episodes or unmatched events.
 	if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
-		seasons := repository.NewSeasonRepository(tx)
+		seasons := repository.NewSeasonWriter(tx)
 		episodes := repository.NewEpisodeWriter(tx)
 		events := repository.NewWatchEventRepository(tx)
 		for _, simklSeason := range item.Seasons {
-			season, err := seasons.GetOrCreate(titleID, simklSeason.Number)
+			season, err := seasons.GetOrCreate(context.Background(), titleID, simklSeason.Number)
 			if err != nil {
 				continue
 			}

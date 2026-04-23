@@ -393,18 +393,16 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		s.downloadAniListCover(ctx, title)
 	}
 
-	// Sync seasons and episodes
+	// Sync seasons and episodes — season + its episodes share one transaction
+	// so a crash between season upsert and episode upsert cannot leave
+	// total_episodes out of sync with the actual episode rows.
 	for _, tmdbSeason := range details.Seasons {
 		if tmdbSeason.SeasonNumber == 0 {
 			continue // Skip specials
 		}
 
-		season, err := s.seasons.Upsert(title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
-		if err != nil {
-			continue
-		}
-
-		// Fetch individual episodes
+		// Fetch individual episodes outside the write transaction to keep
+		// TMDB HTTP latency off the sole write connection.
 		tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
 		if err != nil {
 			continue
@@ -418,7 +416,12 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 				AirDate:       ep.AirDate,
 			}
 		}
+
 		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
+			if err != nil {
+				return err
+			}
 			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
 		})
 

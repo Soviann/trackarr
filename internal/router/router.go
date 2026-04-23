@@ -72,7 +72,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc)
 	admin := handler.NewAdminHandler(taskRepo, titleRepo, settingRepo, bgSvc)
-	seasons := handler.NewSeasonHandler(seasonRepo)
+	seasons := handler.NewSeasonHandler(writeDB)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)

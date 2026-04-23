@@ -13,27 +13,23 @@ import (
 
 func TestSeasonRepository_GetOrCreate(t *testing.T) {
 	db := setupTestDB(t)
-	seasonRepo := repository.NewSeasonRepository(db)
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
-	s1, err := seasonRepo.GetOrCreate(titleID, 1)
-	require.NoError(t, err)
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	assert.Equal(t, 1, s1.SeasonNumber)
 
 	// Second call returns same season
-	s2, err := seasonRepo.GetOrCreate(titleID, 1)
-	require.NoError(t, err)
+	s2 := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	assert.Equal(t, s1.ID, s2.ID)
 }
 
 func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 	db := setupTestDB(t)
-	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
-	season, _ := seasonRepo.GetOrCreate(titleID, 1)
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 
 	// Toggle on
@@ -57,11 +53,10 @@ func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 
 func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 	db := setupTestDB(t)
-	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
-	season, _ := seasonRepo.GetOrCreate(titleID, 1)
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 	ep2 := testutil.GetOrCreateEpisode(t, db, season.ID, 2)
 
@@ -76,11 +71,10 @@ func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 
 func TestEpisodeRepository_BatchMarkWatched_PreservesFirstWatchedAt(t *testing.T) {
 	db := setupTestDB(t)
-	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
 	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
-	season, _ := seasonRepo.GetOrCreate(titleID, 1)
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
 
 	// First watch
