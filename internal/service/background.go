@@ -113,6 +113,11 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 	results := make([]RefreshResult, 0, len(titles))
 
 	for _, title := range titles {
+		if err := ctx.Err(); err != nil {
+			log.Printf("background: refresh cancelled: %v", err)
+			return results
+		}
+
 		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
 			continue
 		}
@@ -393,6 +398,10 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	// so a crash between season upsert and episode upsert cannot leave
 	// total_episodes out of sync with the actual episode rows.
 	for _, tmdbSeason := range details.Seasons {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+
 		if tmdbSeason.SeasonNumber == 0 {
 			continue // Skip specials
 		}
@@ -464,6 +473,11 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 
 	fetched := 0
 	for _, title := range titles {
+		if err := ctx.Err(); err != nil {
+			log.Printf("background: cover fetch cancelled: %v", err)
+			return fetched
+		}
+
 		if title.CoverURL != nil {
 			continue
 		}
