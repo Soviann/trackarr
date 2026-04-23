@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
@@ -246,33 +247,47 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	}
 
 	update := buildEnrichmentUpdate(result, payload)
-	if err := w.titles.Update(payload.TitleID, update); err != nil {
-		return err
-	}
 
-	w.recalcWatchtime(payload.TitleID, result.Runtime)
-
-	merged, err := w.resolveAnimeConflict(ctx, result, payload)
-	if err != nil {
-		return err
-	}
-	if merged {
-		return nil
-	}
-
-	if len(result.Names) > 0 {
-		if err := w.titles.ReplaceNames(payload.TitleID, result.Names); err != nil {
-			log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+	var genreList []string
+	if result.Genres != "" && w.genres != nil {
+		if err := json.Unmarshal([]byte(result.Genres), &genreList); err != nil {
+			log.Printf("enrichment: decode genres for title %d: %v", payload.TitleID, err)
+			genreList = nil
 		}
 	}
 
-	if result.Genres != "" && w.genres != nil {
-		var genreList []string
-		if err := json.Unmarshal([]byte(result.Genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := w.genres.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
+	err = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		titlesTx := repository.NewTitleRepository(tx)
+		genresTx := repository.NewGenreRepository(tx)
+
+		if err := titlesTx.Update(payload.TitleID, update); err != nil {
+			return err
+		}
+
+		recalcWatchtime(tx, payload.TitleID, result.Runtime)
+
+		if len(result.Names) > 0 {
+			if err := titlesTx.ReplaceNames(payload.TitleID, result.Names); err != nil {
+				log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+			}
+		}
+
+		if len(genreList) > 0 {
+			if err := genresTx.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
 				log.Printf("enrichment: save genres for title %d: %v", payload.TitleID, err)
 			}
 		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Merge runs outside the persistence tx: it opens its own tx and may
+	// delete the source title, so it must not nest inside another writer.
+	if _, err := w.resolveAnimeConflict(ctx, result, payload); err != nil {
+		return err
 	}
 
 	return nil
@@ -328,18 +343,21 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 }
 
 // recalcWatchtime refreshes total_watch_minutes when runtime was (re)learned.
+// Runs against the provided DBTX so it can share the caller's transaction.
 // Errors are logged and swallowed — watchtime is derived, never authoritative.
-func (w *TaskQueueWorker) recalcWatchtime(titleID int64, runtime *int) {
-	if runtime == nil || w.events == nil {
+func recalcWatchtime(db database.DBTX, titleID int64, runtime *int) {
+	if runtime == nil {
 		return
 	}
-	count, err := w.events.CountByTitleID(titleID)
+	events := repository.NewWatchEventRepository(db)
+	titles := repository.NewTitleRepository(db)
+	count, err := events.CountByTitleID(titleID)
 	if err != nil {
 		log.Printf("enrichment: count watch events for title %d: %v", titleID, err)
 		return
 	}
 	newTotal := count * *runtime
-	if err := w.titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+	if err := titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
 		log.Printf("enrichment: update total_watch_minutes for title %d: %v", titleID, err)
 	}
 }
