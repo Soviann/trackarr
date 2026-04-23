@@ -12,6 +12,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +34,7 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 
 	// 1. Create Master Title (Solo Leveling S1)
 	imdbID := "tt21209876"
-	masterID, err := titleRepo.Create(&model.Title{
+	masterID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		IsAnime:     true,
 		Year:        2024,
@@ -41,7 +42,6 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 		MatchStatus: model.MatchStatusConfirmed,
 		IMDBID:      &imdbID,
 	}, []model.TitleName{{Name: "Ore dake Level Up na Ken", Language: "ja", IsPrimary: true}})
-	require.NoError(t, err)
 	require.NotEqual(t, int64(0), masterID)
 
 	s1, err := seasonRepo.GetOrCreate(masterID, 1)
@@ -54,14 +54,13 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 
 	// 2. Create Duplicate Title (Solo Leveling S2 - Arise from the Shadow)
 	// Initially no IMDB ID (simulating Simkl import)
-	dupID, err := titleRepo.Create(&model.Title{
+	dupID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		IsAnime:     true,
 		Year:        2025,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Ore dake Level Up na Ken: Arise from the Shadow", Language: "ja", IsPrimary: true}})
-	require.NoError(t, err)
 
 	s2Split, _ := seasonRepo.GetOrCreate(dupID, 1) // In Simkl, S2 is often its own S1
 	epS2, _ := episodeRepo.GetOrCreate(s2Split.ID, 1)

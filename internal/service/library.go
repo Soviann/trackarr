@@ -67,10 +67,11 @@ type RatingPrompt struct {
 
 // ToggleEpisodeWatched toggles the watched status of an episode and logs a watch event.
 // Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
-func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, db database.DBTX, titleID, episodeID int64) (*model.Title, *RatingPrompt, error) {
-	titles := repository.NewTitleRepository(db)
-	episodes := repository.NewEpisodeRepository(db)
-	events := repository.NewWatchEventRepository(db)
+func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, titleID, episodeID int64) (*model.Title, *RatingPrompt, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	episodes := repository.NewEpisodeRepository(tx)
+	events := repository.NewWatchEventRepository(tx)
 
 	ep, err := episodes.ToggleWatched(episodeID)
 	if err != nil {
@@ -104,13 +105,13 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, db database.D
 		if newTotal < 0 {
 			newTotal = 0
 		}
-		_ = titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal})
+		_ = titlesW.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal})
 		title.TotalWatchMinutes = newTotal
 	}
 
 	var prompt *RatingPrompt
 	if ep.Watched && title != nil {
-		prompt = s.buildRatingPrompt(db, title)
+		prompt = s.buildRatingPrompt(tx, title)
 	}
 
 	return title, prompt, nil
@@ -118,10 +119,11 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, db database.D
 
 // MarkEpisodesWatched marks multiple episodes as watched and logs watch events.
 // Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
-func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
-	titles := repository.NewTitleRepository(db)
-	episodes := repository.NewEpisodeRepository(db)
-	events := repository.NewWatchEventRepository(db)
+func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	episodes := repository.NewEpisodeRepository(tx)
+	events := repository.NewWatchEventRepository(tx)
 
 	now := time.Now().UTC()
 	if err := episodes.BatchMarkWatched(episodeIDs, now); err != nil {
@@ -150,11 +152,11 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 	if title != nil {
 		// Increment total_watch_minutes by runtime × number of newly watched episodes.
 		newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)*len(episodeIDs)
-		if err := titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+		if err := titlesW.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
 			log.Printf("library: update total_watch_minutes for title %d: %v", titleID, err)
 		}
 		title.TotalWatchMinutes = newTotal
-		prompt = s.buildRatingPrompt(db, title)
+		prompt = s.buildRatingPrompt(tx, title)
 	}
 
 	return title, prompt, nil
@@ -162,9 +164,10 @@ func (s *LibraryService) MarkEpisodesWatched(db database.DBTX, titleID int64, ep
 
 // MarkMovieWatched marks a movie title as completed and logs a watch event.
 // Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
-func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, source model.WatchEventSource, rawPayload *string) (*RatingPrompt, error) {
-	titles := repository.NewTitleRepository(db)
-	events := repository.NewWatchEventRepository(db)
+func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, titleID int64, source model.WatchEventSource, rawPayload *string) (*RatingPrompt, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	events := repository.NewWatchEventRepository(tx)
 
 	// Fetch title first to get runtime for watchtime calculation.
 	title, err := titles.GetByID(titleID)
@@ -174,7 +177,7 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 
 	completedStatus := model.TitleStatusCompleted
 	newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)
-	if err := titles.Update(titleID, repository.TitleUpdate{Status: &completedStatus, TotalWatchMinutes: &newTotal}); err != nil {
+	if err := titlesW.Update(ctx, titleID, repository.TitleUpdate{Status: &completedStatus, TotalWatchMinutes: &newTotal}); err != nil {
 		return nil, err
 	}
 
@@ -185,7 +188,7 @@ func (s *LibraryService) MarkMovieWatched(db database.DBTX, titleID int64, sourc
 	})
 
 	title.TotalWatchMinutes = newTotal
-	return s.buildRatingPrompt(db, title), nil
+	return s.buildRatingPrompt(tx, title), nil
 }
 
 // SendRatingPrompt fires a rating-prompt push notification. Must be called
@@ -242,8 +245,10 @@ func (s *LibraryService) buildRatingPrompt(db database.DBTX, title *model.Title)
 	return nil
 }
 
-// CheckAutoComplete checks if a series should be marked as completed based on last watched episode.
-func (s *LibraryService) CheckAutoComplete(ctx context.Context, db database.DBTX, titleID int64, tmdbID int64, seasonNum, episodeNum int) error {
+// CheckAutoComplete checks if a series should be marked completed based on the
+// last watched episode. Runs AFTER the scrobble transaction commits (TMDB HTTP
+// out of the write path), so it takes the pool handle and opens its own tx.
+func (s *LibraryService) CheckAutoComplete(ctx context.Context, db *sql.DB, titleID int64, tmdbID int64, seasonNum, episodeNum int) error {
 	if s.pipeline == nil {
 		return nil
 	}
@@ -253,13 +258,14 @@ func (s *LibraryService) CheckAutoComplete(ctx context.Context, db database.DBTX
 	}
 
 	if completed, seriesStatus := checkSeriesCompleted(ctx, tmdbClient, tmdbID, seasonNum, episodeNum); completed {
-		titles := repository.NewTitleRepository(db)
 		completedStatus := model.TitleStatusCompleted
 		update := repository.TitleUpdate{Status: &completedStatus}
 		if seriesStatus != nil {
 			update.SeriesStatus = seriesStatus
 		}
-		return titles.Update(titleID, update)
+		return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).Update(ctx, titleID, update)
+		})
 	}
 
 	return nil

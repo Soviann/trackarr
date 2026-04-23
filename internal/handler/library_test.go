@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,11 +11,12 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupLibraryHandler(t *testing.T) (*handler.LibraryHandler, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
+func setupLibraryHandler(t *testing.T) (*handler.LibraryHandler, *sql.DB, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -25,18 +27,17 @@ func setupLibraryHandler(t *testing.T) (*handler.LibraryHandler, *repository.Tit
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	h := handler.NewLibraryHandler(titleRepo)
-	return h, titleRepo, seasonRepo, episodeRepo
+	return h, db, titleRepo, seasonRepo, episodeRepo
 }
 
 func TestLibraryHandler_ContinueWatching(t *testing.T) {
-	h, titleRepo, seasonRepo, episodeRepo := setupLibraryHandler(t)
+	h, db, _, seasonRepo, episodeRepo := setupLibraryHandler(t)
 
 	// Create a Watching title with one unwatched episode
-	watchingID, err := titleRepo.Create(
+	watchingID := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Serie en cours", Language: "fr", IsPrimary: true}},
 	)
-	require.NoError(t, err)
 	season, err := seasonRepo.Upsert(watchingID, 1, 3)
 	require.NoError(t, err)
 	require.NoError(t, episodeRepo.UpsertBatch(season.ID, []repository.EpisodeUpsert{
@@ -45,11 +46,10 @@ func TestLibraryHandler_ContinueWatching(t *testing.T) {
 	}))
 
 	// Create a Completed title — should not appear
-	_, err = titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Terminé", Language: "fr", IsPrimary: true}},
 	)
-	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/titles/continue-watching", nil)
@@ -63,12 +63,12 @@ func TestLibraryHandler_ContinueWatching(t *testing.T) {
 }
 
 func TestLibraryHandler_Upcoming(t *testing.T) {
-	h, titleRepo, _, _ := setupLibraryHandler(t)
+	h, db, _, _, _ := setupLibraryHandler(t)
 
 	// Create a Watching title with next_air_date in the future
 	futureDate := "2099-12-31"
 	futureEp := "S2 E1"
-	_, err := titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{
 			Type:           model.TitleTypeSeries,
 			Year:           2024,
@@ -79,18 +79,16 @@ func TestLibraryHandler_Upcoming(t *testing.T) {
 		},
 		[]model.TitleName{{Name: "À venir", Language: "fr", IsPrimary: true}},
 	)
-	require.NoError(t, err)
 
 	// Create a title without next_air_date — should not appear
-	_, err = titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Sans date", Language: "fr", IsPrimary: true}},
 	)
-	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/titles/upcoming", nil)
-	err = h.Upcoming(w, req)
+	err := h.Upcoming(w, req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, w.Code)
 

@@ -10,6 +10,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,13 +22,12 @@ func TestGenreHandler_List(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 
 	// Insert a title and some genres
-	titleRepo := repository.NewTitleRepository(db)
-	id1, _ := titleRepo.Create(&model.Title{
+	id1 := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Movie 1", Language: "en", IsPrimary: true}})
-	id2, _ := titleRepo.Create(&model.Title{
+	id2 := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,

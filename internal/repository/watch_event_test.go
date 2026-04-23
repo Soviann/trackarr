@@ -5,6 +5,7 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +13,6 @@ import (
 func TestWatchEventRepo_CountByTitleID(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewWatchEventRepository(db)
-	titleRepo := repository.NewTitleRepository(db)
 
 	runtime := 120
 	title := &model.Title{
@@ -22,8 +22,7 @@ func TestWatchEventRepo_CountByTitleID(t *testing.T) {
 		MatchStatus: model.MatchStatusConfirmed,
 		Runtime:     &runtime,
 	}
-	id, err := titleRepo.Create(title, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
+	id := testutil.CreateTitle(t, db, title, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	// No events yet
 	count, err := repo.CountByTitleID(id)

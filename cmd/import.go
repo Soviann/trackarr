@@ -58,12 +58,12 @@ func Import(args []string) error {
 	}
 
 	importer := service.NewSimklImporter(
+		db,
 		repository.NewTitleRepository(db),
 		repository.NewSeasonRepository(db),
 		repository.NewEpisodeRepository(db),
 		repository.NewWatchEventRepository(db),
 		service.WithTaskRepository(repository.NewTaskRepository(db)),
-		service.WithBackfillDeps(db),
 	)
 
 	if dryRun {

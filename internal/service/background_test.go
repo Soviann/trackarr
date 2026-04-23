@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,11 +12,12 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupBackgroundService(t *testing.T) (*service.BackgroundService, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
+func setupBackgroundService(t *testing.T) (*service.BackgroundService, *sql.DB, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -26,26 +28,26 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *reposito
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 
 	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
 	// No external API clients in tests — nil TMDB/AniList
-	svc := service.NewBackgroundService(titleRepo, nil, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, t.TempDir())
-	return svc, titleRepo, seasonRepo, episodeRepo
+	svc := service.NewBackgroundService(db, titleRepo, nil, seasonRepo, episodeRepo, taskRepo, settingRepo, nil, nil, pushSvc, t.TempDir())
+	return svc, db, titleRepo, seasonRepo, episodeRepo
 }
 
 func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
-	svc, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
+	svc, db, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
 
 	// Create a series with status=watching, series_status=ended
 	ended := model.SeriesStatusEnded
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:         model.TitleTypeSeries,
 		Year:         2023,
 		Status:       model.TitleStatusWatching,
 		MatchStatus:  model.MatchStatusConfirmed,
 		SeriesStatus: &ended,
 	}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Create 1 season with 2 episodes, all watched
 	season, err := seasonRepo.GetOrCreate(titleID, 1)
@@ -71,33 +73,31 @@ func TestBackgroundService_DetectCompletedSeries(t *testing.T) {
 }
 
 func TestBackgroundService_SkipCompletedTitles(t *testing.T) {
-	svc, titleRepo, _, _ := setupBackgroundService(t)
+	svc, db, _, _, _ := setupBackgroundService(t)
 
 	// Create a completed title
-	_, err := titleRepo.Create(&model.Title{
+	testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2024,
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	results := svc.RefreshTitles(context.Background())
 	assert.Empty(t, results)
 }
 
 func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
-	svc, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
+	svc, db, titleRepo, seasonRepo, episodeRepo := setupBackgroundService(t)
 
 	ended := model.SeriesStatusEnded
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:         model.TitleTypeSeries,
 		Year:         2023,
 		Status:       model.TitleStatusWatching,
 		MatchStatus:  model.MatchStatusConfirmed,
 		SeriesStatus: &ended,
 	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	season, err := seasonRepo.GetOrCreate(titleID, 1)
 	require.NoError(t, err)
@@ -135,9 +135,10 @@ func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 
 	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
-	svc := service.NewBackgroundService(titleRepo, nil, seasonRepo, episodeRepo, nil, settingRepo, nil, nil, pushSvc, dataDir)
+	svc := service.NewBackgroundService(db, titleRepo, nil, seasonRepo, episodeRepo, taskRepo, settingRepo, nil, nil, pushSvc, dataDir)
 
 	coversDir := filepath.Join(dataDir, "covers")
 	err = os.MkdirAll(coversDir, 0755)
@@ -158,23 +159,21 @@ func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	// Reference a123.jpg and z012.jpg in the DB
 	coverA := "a123.jpg"
 	coverZ := "z012.jpg"
-	_, err = titleRepo.Create(&model.Title{
+	testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2023,
 		Status:      model.TitleStatusPlanToWatch,
 		MatchStatus: model.MatchStatusConfirmed,
 		CoverURL:    &coverA,
 	}, []model.TitleName{{Name: "Movie A", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	_, err = titleRepo.Create(&model.Title{
+	testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2023,
 		Status:      model.TitleStatusPlanToWatch,
 		MatchStatus: model.MatchStatusConfirmed,
 		CoverURL:    &coverZ,
 	}, []model.TitleName{{Name: "Movie Z", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Run cleanup for Sunday
 	svc.CleanupUnusedCovers(context.Background(), time.Sunday)

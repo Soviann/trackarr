@@ -10,6 +10,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,13 +32,12 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	genres := repository.NewGenreRepository(db)
 	tasks := repository.NewTaskRepository(db)
 
-	id, err := titles.Create(&model.Title{
+	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2024,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: "Old Name", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Seed three watch events so recalcWatchtime has a non-zero multiplier.
 	for range 3 {
@@ -94,13 +94,12 @@ func TestHandleEnrichment_CtxCancelRollsBack(t *testing.T) {
 	tasks := repository.NewTaskRepository(db)
 
 	origName := "Keep Me Pristine"
-	id, err := titles.Create(&model.Title{
+	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2024,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: origName, Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
 	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)

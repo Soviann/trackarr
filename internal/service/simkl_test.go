@@ -18,6 +18,7 @@ func setupImporter(t *testing.T, opts ...service.SimklImporterOption) *service.S
 	t.Cleanup(func() { db.Close() })
 
 	return service.NewSimklImporter(
+		db,
 		repository.NewTitleRepository(db),
 		repository.NewSeasonRepository(db),
 		repository.NewEpisodeRepository(db),
@@ -44,12 +45,12 @@ func setupImporterWithDB(t *testing.T) testDeps {
 	episodeRepo := repository.NewEpisodeRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
 	importer := service.NewSimklImporter(
+		db,
 		repository.NewTitleRepository(db),
 		seasonRepo,
 		episodeRepo,
 		repository.NewWatchEventRepository(db),
 		service.WithTaskRepository(taskRepo),
-		service.WithBackfillDeps(db),
 	)
 	return testDeps{importer: importer, tasks: taskRepo, episodes: episodeRepo, seasons: seasonRepo}
 }

@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,12 +17,13 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleRepository) {
+func setupHandler(t *testing.T) (*handler.TitleHandler, *sql.DB, *repository.TitleRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -35,15 +37,15 @@ func setupHandler(t *testing.T) (*handler.TitleHandler, *repository.TitleReposit
 	taskRepo := repository.NewTaskRepository(db)
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
 	h := handler.NewTitleHandler(db, titleRepo, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, nil, titleSvc, nil)
-	return h, titleRepo
+	return h, db, titleRepo
 }
 
 func TestTitleHandler_List(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
 	imdb := "tt1234567"
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
 
 	t.Run("filter by status", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/titles?status=watching", nil)
@@ -69,7 +71,7 @@ func TestTitleHandler_List(t *testing.T) {
 }
 
 func TestTitleHandler_Resolve(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	// Since we can't easily mock the pipeline here without refactoring setupHandler
 	// and ResolveURL depends on real API calls, we expect a failure or we need to mock it.
@@ -81,7 +83,7 @@ func TestTitleHandler_Resolve(t *testing.T) {
 }
 
 func TestTitleHandler_Create(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"type":         "movie",
@@ -102,9 +104,9 @@ func TestTitleHandler_Create(t *testing.T) {
 }
 
 func TestTitleHandler_GetByID(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
-	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	r := chi.NewRouter()
 	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
@@ -120,7 +122,7 @@ func TestTitleHandler_GetByID(t *testing.T) {
 }
 
 func TestTitleHandler_GetByID_InvalidID(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	r := chi.NewRouter()
 	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
@@ -133,7 +135,7 @@ func TestTitleHandler_GetByID_InvalidID(t *testing.T) {
 }
 
 func TestTitleHandler_GetByID_NotFound(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	r := chi.NewRouter()
 	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
@@ -146,7 +148,7 @@ func TestTitleHandler_GetByID_NotFound(t *testing.T) {
 }
 
 func TestTitleHandler_Create_InvalidJSON(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader([]byte("not json")))
 	rr := httptest.NewRecorder()
@@ -159,9 +161,9 @@ func TestTitleHandler_Create_InvalidJSON(t *testing.T) {
 }
 
 func TestTitleHandler_Update(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
-	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
 	req := httptest.NewRequest("PUT", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader(body))
@@ -178,7 +180,7 @@ func TestTitleHandler_Update(t *testing.T) {
 }
 
 func TestTitleHandler_Update_InvalidID(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
 	req := httptest.NewRequest("PUT", "/api/titles/abc", bytes.NewReader(body))
@@ -192,9 +194,9 @@ func TestTitleHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestTitleHandler_Update_InvalidJSON(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
-	id, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	req := httptest.NewRequest("PUT", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader([]byte("{invalid")))
 	rr := httptest.NewRecorder()
@@ -207,10 +209,10 @@ func TestTitleHandler_Update_InvalidJSON(t *testing.T) {
 }
 
 func TestTitleHandler_List_WithSort(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
 
 	req := httptest.NewRequest("GET", "/api/titles?status=completed&sort=year&order=asc", nil)
 	rr := httptest.NewRecorder()
@@ -225,7 +227,7 @@ func TestTitleHandler_List_WithSort(t *testing.T) {
 }
 
 func TestTitleHandler_List_WithReleaseDateSort(t *testing.T) {
-	h, _ := setupHandler(t)
+	h, _, _ := setupHandler(t)
 
 	req := httptest.NewRequest("GET", "/api/titles?status=completed&sort=release_date&order=desc", nil)
 	rr := httptest.NewRecorder()
@@ -234,9 +236,9 @@ func TestTitleHandler_List_WithReleaseDateSort(t *testing.T) {
 }
 
 func TestTitleHandler_List_InvalidSortFallsBack(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
-	_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	req := httptest.NewRequest("GET", "/api/titles?status=watching&sort=bobby_tables&order=sideways", nil)
 	rr := httptest.NewRecorder()
@@ -249,10 +251,10 @@ func TestTitleHandler_List_InvalidSortFallsBack(t *testing.T) {
 }
 
 func TestTitleHandler_List_WithPagination(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
 	for i := 0; i < 5; i++ {
-		_, _ = titleRepo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+		testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
 	}
 
 	req := httptest.NewRequest("GET", "/api/titles?limit=2&offset=0", nil)
@@ -268,13 +270,12 @@ func TestTitleHandler_List_WithPagination(t *testing.T) {
 }
 
 func TestTitleHandler_Delete(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, titleRepo := setupHandler(t)
 
-	id, err := titleRepo.Create(
+	id := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "To Delete", Language: "en", IsPrimary: true}},
 	)
-	require.NoError(t, err)
 
 	router := chi.NewRouter()
 	router.Delete("/api/titles/{id}", httputil.WrapHandler(h.Delete))
@@ -286,18 +287,18 @@ func TestTitleHandler_Delete(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	// Verify deleted
-	_, err = titleRepo.GetByID(id)
+	_, err := titleRepo.GetByID(id)
 	assert.Error(t, err)
 }
 
 func TestTitleHandler_BatchDelete(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, titleRepo := setupHandler(t)
 
-	id1, _ := titleRepo.Create(
+	id1 := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Title 1", Language: "en", IsPrimary: true}},
 	)
-	id2, _ := titleRepo.Create(
+	id2 := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Title 2", Language: "en", IsPrimary: true}},
 	)
@@ -317,18 +318,18 @@ func TestTitleHandler_BatchDelete(t *testing.T) {
 }
 
 func TestTitleHandler_ReviewCount(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, _ := setupHandler(t)
 
 	// Insert titles with varying match_status
-	_, _ = titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview},
 		[]model.TitleName{{Name: "Pending Title", Language: "en", IsPrimary: true}},
 	)
-	_, _ = titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed},
 		[]model.TitleName{{Name: "Unconfirmed Title", Language: "en", IsPrimary: true}},
 	)
-	_, _ = titleRepo.Create(
+	testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2022, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Confirmed Title", Language: "en", IsPrimary: true}},
 	)
@@ -345,13 +346,13 @@ func TestTitleHandler_ReviewCount(t *testing.T) {
 }
 
 func TestTitleHandler_BatchStatus(t *testing.T) {
-	h, titleRepo := setupHandler(t)
+	h, db, titleRepo := setupHandler(t)
 
-	id1, _ := titleRepo.Create(
+	id1 := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Title A", Language: "en", IsPrimary: true}},
 	)
-	id2, _ := titleRepo.Create(
+	id2 := testutil.CreateTitle(t, db,
 		&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
 		[]model.TitleName{{Name: "Title B", Language: "en", IsPrimary: true}},
 	)

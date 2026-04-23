@@ -6,16 +6,16 @@ import (
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSeasonRepository_GetOrCreate(t *testing.T) {
 	db := setupTestDB(t)
-	titleRepo := repository.NewTitleRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
 
-	titleID, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	s1, err := seasonRepo.GetOrCreate(titleID, 1)
 	require.NoError(t, err)
@@ -29,11 +29,10 @@ func TestSeasonRepository_GetOrCreate(t *testing.T) {
 
 func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 	db := setupTestDB(t)
-	titleRepo := repository.NewTitleRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
-	titleID, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
 	ep, _ := episodeRepo.GetOrCreate(season.ID, 1)
 
@@ -54,11 +53,10 @@ func TestEpisodeRepository_ToggleWatched(t *testing.T) {
 
 func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 	db := setupTestDB(t)
-	titleRepo := repository.NewTitleRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
-	titleID, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
 	ep1, _ := episodeRepo.GetOrCreate(season.ID, 1)
 	ep2, _ := episodeRepo.GetOrCreate(season.ID, 2)
@@ -75,11 +73,10 @@ func TestEpisodeRepository_BatchMarkWatched(t *testing.T) {
 
 func TestEpisodeRepository_BatchMarkWatched_PreservesFirstWatchedAt(t *testing.T) {
 	db := setupTestDB(t)
-	titleRepo := repository.NewTitleRepository(db)
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
-	titleID, _ := titleRepo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	titleID := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 	season, _ := seasonRepo.GetOrCreate(titleID, 1)
 	ep, _ := episodeRepo.GetOrCreate(season.ID, 1)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,15 +26,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 // createTestTitle inserts a minimal title and returns it with its assigned ID.
 func createTestTitle(t *testing.T, db *sql.DB, titleType string, runtime int) *model.Title {
 	t.Helper()
-	repo := repository.NewTitleRepository(db)
 	title := &model.Title{
 		Type:        model.TitleType(titleType),
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 		Runtime:     &runtime,
 	}
-	id, err := repo.Create(title, []model.TitleName{{Name: "Test Title", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
+	id := testutil.CreateTitle(t, db, title, []model.TitleName{{Name: "Test Title", Language: "en", IsPrimary: true}})
 	title.ID = id
 	return title
 }
@@ -50,8 +49,7 @@ func TestTitleRepository_CreateAndGet(t *testing.T) {
 	}
 	names := []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}}
 
-	id, err := repo.Create(title, names)
-	require.NoError(t, err)
+	id := testutil.CreateTitle(t, db, title, names)
 	assert.Greater(t, id, int64(0))
 
 	got, err := repo.GetByID(id)
@@ -76,9 +74,9 @@ func TestTitleRepository_List(t *testing.T) {
 	episodeRepo := repository.NewEpisodeRepository(db)
 
 	// Create test data
-	idA, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
-	idB, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
-	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2022, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
+	idA := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+	idB := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "Shogun", Language: "en", IsPrimary: true}})
+	idC := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2022, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
 
 	// Create episodes for "up to date" and "watching behind" tests
 	// Naruto: 1 season, 2 episodes, all watched → "up to date"
@@ -89,7 +87,7 @@ func TestTitleRepository_List(t *testing.T) {
 	_, _ = episodeRepo.ToggleWatched(eN2.ID)
 
 	// Add a series "watching behind": series with unwatched episodes
-	idD, _ := repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "The Bear", Language: "en", IsPrimary: true}})
+	idD := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "The Bear", Language: "en", IsPrimary: true}})
 	sD, _ := seasonRepo.GetOrCreate(idD, 1)
 	_, _ = episodeRepo.GetOrCreate(sD.ID, 1) // unwatched
 
@@ -169,8 +167,8 @@ func TestTitleRepository_ListBySearch(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune: Part Two", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Oppenheimer", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Dune: Part Two", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Oppenheimer", Language: "en", IsPrimary: true}})
 
 	result, err := repo.List(repository.TitleFilter{Search: ptr("dune")})
 	require.NoError(t, err)
@@ -182,10 +180,9 @@ func TestTitleRepository_Update(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	id, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
-	err := repo.Update(id, repository.TitleUpdate{Status: ptr(model.TitleStatusCompleted), MyRating: ptr(8)})
-	require.NoError(t, err)
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{Status: ptr(model.TitleStatusCompleted), MyRating: ptr(8)})
 
 	got, _ := repo.GetByID(id)
 	assert.Equal(t, model.TitleStatusCompleted, got.Status)
@@ -196,11 +193,10 @@ func TestTitleRepository_UpdateNoFields(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	id, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	// Update with no fields should be a no-op
-	err := repo.Update(id, repository.TitleUpdate{})
-	require.NoError(t, err)
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{})
 
 	got, _ := repo.GetByID(id)
 	assert.Equal(t, model.TitleStatusWatching, got.Status)
@@ -213,7 +209,7 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 	imdb := "tt1234567"
 	tmdb := int64(12345)
 	anilist := int64(67890)
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	tests := []struct {
 		name      string
@@ -269,9 +265,9 @@ func TestTitleRepository_FindByExternalID_TypeFilter(t *testing.T) {
 
 	// Same TMDB ID for a movie and a series (real-world: TMDB 1891 = "The Empire Strikes Back" movie + "Rome" series)
 	tmdb := int64(1891)
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 1980, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "The Empire Strikes Back", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, Year: 2005, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "Rome", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2002, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 1980, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "The Empire Strikes Back", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2005, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb}, []model.TitleName{{Name: "Rome", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2002, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
 
 	movieType := model.TitleTypeMovie
 	seriesType := model.TitleTypeSeries
@@ -308,10 +304,10 @@ func TestTitleRepository_GetStatusCounts(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "D", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusPendingReview}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusUnconfirmed}, []model.TitleName{{Name: "D", Language: "en", IsPrimary: true}})
 
 	counts, err := repo.GetStatusCounts()
 	require.NoError(t, err)
@@ -323,8 +319,8 @@ func TestTitleRepository_List_SortByYear(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Old", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "New", Language: "en", IsPrimary: true}})
 
 	result, err := repo.List(repository.TitleFilter{
 		Status: ptr(model.TitleStatusCompleted),
@@ -342,8 +338,8 @@ func TestTitleRepository_List_SortByRating_NullsLast(t *testing.T) {
 	repo := repository.NewTitleRepository(db)
 
 	rating := 8
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, MyRating: &rating}, []model.TitleName{{Name: "Rated", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Unrated", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, MyRating: &rating}, []model.TitleName{{Name: "Rated", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Unrated", Language: "en", IsPrimary: true}})
 
 	result, err := repo.List(repository.TitleFilter{
 		Status: ptr(model.TitleStatusCompleted),
@@ -362,8 +358,8 @@ func TestTitleRepository_List_SortByReleaseDate(t *testing.T) {
 
 	rd1 := "2020-03-15"
 	rd2 := "2024-11-01"
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Old Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
 
 	result, err := repo.List(repository.TitleFilter{
 		Status: ptr(model.TitleStatusCompleted),
@@ -381,8 +377,8 @@ func TestTitleRepository_List_SortByReleaseDate_NullsLast(t *testing.T) {
 	repo := repository.NewTitleRepository(db)
 
 	rd := "2024-06-01"
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
 
 	result, err := repo.List(repository.TitleFilter{
 		Status: ptr(model.TitleStatusCompleted),
@@ -399,8 +395,8 @@ func TestTitleRepository_List_FilterByDecade(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2015, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2010s Movie", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2022, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2020s Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2015, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2010s Movie", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2022, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "2020s Movie", Language: "en", IsPrimary: true}})
 
 	decade := 2020
 	result, err := repo.List(repository.TitleFilter{
@@ -419,9 +415,9 @@ func TestTitleRepository_List_FilterByDateRange(t *testing.T) {
 	rd1 := "2023-01-15"
 	rd2 := "2024-06-20"
 	rd3 := "2025-01-01"
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Early", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "Mid", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2025, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd3}, []model.TitleName{{Name: "Late", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2023, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd1}, []model.TitleName{{Name: "Early", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd2}, []model.TitleName{{Name: "Mid", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2025, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd3}, []model.TitleName{{Name: "Late", Language: "en", IsPrimary: true}})
 
 	from := "2024-01-01"
 	to := "2024-12-31"
@@ -440,8 +436,8 @@ func TestTitleRepository_List_FilterByDateRange_ExcludeNoRelease(t *testing.T) {
 	repo := repository.NewTitleRepository(db)
 
 	rd := "2024-06-20"
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
-	_, _ = repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &rd}, []model.TitleName{{Name: "With Date", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "No Date", Language: "en", IsPrimary: true}})
 
 	from := "2024-01-01"
 	// IncludeNoRelease = true → include NULL release_date
@@ -484,8 +480,7 @@ func TestTitleRepository_MetadataRoundTrip(t *testing.T) {
 		Credits:     &credits,
 	}
 
-	id, err := repo.Create(title, []model.TitleName{{Name: "The Space Children", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
+	id := testutil.CreateTitle(t, db, title, []model.TitleName{{Name: "The Space Children", Language: "en", IsPrimary: true}})
 
 	// Insert genres via title_genres table
 	_, _ = db.Exec(`INSERT INTO title_genres (title_id, genre) VALUES (?, 'Science Fiction'), (?, 'Drama')`, id, id)
@@ -511,24 +506,22 @@ func TestTitleRepository_UpdateMetadata(t *testing.T) {
 		MatchStatus: model.MatchStatusConfirmed,
 	}
 
-	id, err := repo.Create(title, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
+	id := testutil.CreateTitle(t, db, title, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
 	overview := "Updated overview"
 	runtime := 120
 	tmdbRating := 7.5
 	credits := `[{"name":"Director","role":"Director"}]`
 
-	err = repo.Update(id, repository.TitleUpdate{
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
 		Overview:   &overview,
 		Runtime:    &runtime,
 		TMDBRating: &tmdbRating,
 		Credits:    &credits,
 	})
-	require.NoError(t, err)
 
 	// Genres now stored in title_genres
-	err = genreRepo.ReplaceForTitle(context.Background(), id, []string{"Action"})
+	err := genreRepo.ReplaceForTitle(context.Background(), id, []string{"Action"})
 	require.NoError(t, err)
 
 	got, err := repo.GetByID(id)
@@ -544,15 +537,15 @@ func TestTitleRepository_List_SortByLastWatched(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	idA, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
-	idB, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
-	idC, _ := repo.Create(&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
+	idA := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "A", Language: "en", IsPrimary: true}})
+	idB := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "B", Language: "en", IsPrimary: true}})
+	idC := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "C", Language: "en", IsPrimary: true}})
 
 	// Set last_watched_at in specific order: C (older), then A (newer), then B (not watched)
 	dateC, _ := time.Parse(time.RFC3339, "2024-01-01T10:00:00Z")
 	dateA, _ := time.Parse(time.RFC3339, "2024-01-02T10:00:00Z")
-	_ = repo.UpdateLastWatchedAt(idC, dateC)
-	_ = repo.UpdateLastWatchedAt(idA, dateA)
+	testutil.UpdateTitleLastWatchedAt(t, db, idC, dateC)
+	testutil.UpdateTitleLastWatchedAt(t, db, idA, dateA)
 	_ = idB // explicitly ignore idB as it has no events
 
 	// Sort DESC: A (newest), then C (older), then B (null)
@@ -587,13 +580,12 @@ func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 	seasonRepo := repository.NewSeasonRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
 
-	id, err := repo.Create(&model.Title{
+	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2020,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "MultiSeason Show", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	for sn := 1; sn <= 3; sn++ {
 		s, err := seasonRepo.GetOrCreate(id, sn)
@@ -617,22 +609,20 @@ func TestTitleRepository_List_PersonFilter(t *testing.T) {
 	repo := repository.NewTitleRepository(db)
 
 	credits := `[{"name":"John Doe","role":"Director"}]`
-	idA, err := repo.Create(&model.Title{
+	idA := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2024,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 		Credits:     &credits,
 	}, []model.TitleName{{Name: "Film A", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	_, err = repo.Create(&model.Title{
+	testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Year:        2023,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Film B", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	person := "John Doe"
 	result, err := repo.List(repository.TitleFilter{Person: &person})
@@ -645,20 +635,19 @@ func TestTitleRepository_Merge_TransfersMissingExternalIDs(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	destID, err := repo.Create(&model.Title{
+	destID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        1989,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Poirot (Simkl)", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	imdb := "tt0094525"
 	var tmdb int64 = 790
 	var tvdb int64 = 77623
 	var anilist int64 = 9999
 	plexKey := "19908"
-	sourceID, err := repo.Create(&model.Title{
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          1989,
 		Status:        model.TitleStatusWatching,
@@ -669,9 +658,8 @@ func TestTitleRepository_Merge_TransfersMissingExternalIDs(t *testing.T) {
 		AniListID:     &anilist,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Poirot (Plex)", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	require.NoError(t, repo.Merge(destID, sourceID, 0))
+	testutil.MergeTitles(t, db, destID, sourceID, 0)
 
 	got, err := repo.GetByID(destID)
 	require.NoError(t, err)
@@ -694,7 +682,7 @@ func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
 	destImdb := "tt-dest"
 	var destTmdb int64 = 111
 	destPlexKey := "dest-key"
-	destID, err := repo.Create(&model.Title{
+	destID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          1989,
 		Status:        model.TitleStatusWatching,
@@ -703,13 +691,12 @@ func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
 		TMDBID:        &destTmdb,
 		PlexRatingKey: &destPlexKey,
 	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	srcImdb := "tt-src"
 	var srcTmdb int64 = 222
 	var srcTvdb int64 = 333
 	srcPlexKey := "src-key"
-	sourceID, err := repo.Create(&model.Title{
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          1989,
 		Status:        model.TitleStatusWatching,
@@ -719,9 +706,8 @@ func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
 		TVDBID:        &srcTvdb,
 		PlexRatingKey: &srcPlexKey,
 	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	require.NoError(t, repo.Merge(destID, sourceID, 0))
+	testutil.MergeTitles(t, db, destID, sourceID, 0)
 
 	got, err := repo.GetByID(destID)
 	require.NoError(t, err)
@@ -741,23 +727,21 @@ func TestTitleRepository_Merge_DeletesSource(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
 
-	destID, err := repo.Create(&model.Title{
+	destID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	sourceID, err := repo.Create(&model.Title{
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	require.NoError(t, repo.Merge(destID, sourceID, 0))
+	testutil.MergeTitles(t, db, destID, sourceID, 0)
 
-	_, err = repo.GetByID(sourceID)
+	_, err := repo.GetByID(sourceID)
 	assert.Error(t, err)
 }
 

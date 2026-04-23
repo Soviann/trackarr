@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,11 +15,12 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepository) {
+func setupPlexService(t *testing.T) (*service.PlexService, *sql.DB, *repository.TitleRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -36,7 +38,7 @@ func setupPlexService(t *testing.T) (*service.PlexService, *repository.TitleRepo
 	backfillSvc := service.NewBackfillService(db, nil)
 	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, nil)
 	svc := service.NewPlexService(context.Background(), db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, nil, service.NewNoopNotifier(), titleSvc, libSvc)
-	return svc, titleRepo
+	return svc, db, titleRepo
 }
 
 func mustParseURL(raw string) *url.URL {
@@ -58,7 +60,7 @@ func TestParseGUIDs(t *testing.T) {
 }
 
 func TestPlexService_MovieScrobble(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, _, titleRepo := setupPlexService(t)
 
 	payload := &plexwebhooks.Payload{
 		Event: plexwebhooks.EventTypeScrobble,
@@ -83,7 +85,7 @@ func TestPlexService_MovieScrobble(t *testing.T) {
 }
 
 func TestPlexService_EpisodeScrobble(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, _, titleRepo := setupPlexService(t)
 
 	payload := &plexwebhooks.Payload{
 		Event: plexwebhooks.EventTypeScrobble,
@@ -116,7 +118,7 @@ func TestPlexService_EpisodeScrobble(t *testing.T) {
 }
 
 func TestPlexService_EpisodeScrobble_NoIDLeak(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, _, titleRepo := setupPlexService(t)
 
 	// Episode scrobble with episode-level GUIDs
 	payload := &plexwebhooks.Payload{
@@ -175,7 +177,7 @@ func newTMDBMock(t *testing.T, status string, seasons []struct {
 	return client
 }
 
-func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*service.PlexService, *repository.TitleRepository) {
+func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*service.PlexService, *sql.DB, *repository.TitleRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -194,7 +196,7 @@ func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*s
 	backfillSvc := service.NewBackfillService(db, tmdbClient)
 	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, pipeline)
 	svc := service.NewPlexService(context.Background(), db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, settingRepo, pipeline, service.NewNoopNotifier(), titleSvc, libSvc)
-	return svc, titleRepo
+	return svc, db, titleRepo
 }
 
 func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
@@ -206,12 +208,12 @@ func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
 		{SeasonNumber: 2, EpisodeCount: 10},
 	}
 	tmdbClient := newTMDBMock(t, "Ended", tmdbSeasons)
-	svc, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
+	svc, db, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
 
 	// Pre-create the series with a TMDB ID and plex rating key
 	tmdbID := int64(1399)
 	plexKey := "series1"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2008,
 		Status:        model.TitleStatusWatching,
@@ -219,7 +221,6 @@ func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
 		TMDBID:        &tmdbID,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Scrobble the last episode of the last season (S02E10)
 	payload := &plexwebhooks.Payload{
@@ -236,7 +237,7 @@ func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
 		},
 	}
 
-	err = svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -252,11 +253,11 @@ func TestPlexService_NoAutoCompleteForNonFinalEpisode(t *testing.T) {
 		{SeasonNumber: 2, EpisodeCount: 10},
 	}
 	tmdbClient := newTMDBMock(t, "Ended", tmdbSeasons)
-	svc, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
+	svc, db, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
 
 	tmdbID := int64(1399)
 	plexKey := "series2"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2008,
 		Status:        model.TitleStatusWatching,
@@ -264,7 +265,6 @@ func TestPlexService_NoAutoCompleteForNonFinalEpisode(t *testing.T) {
 		TMDBID:        &tmdbID,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Scrobble S02E05 — not the last episode
 	payload := &plexwebhooks.Payload{
@@ -281,7 +281,7 @@ func TestPlexService_NoAutoCompleteForNonFinalEpisode(t *testing.T) {
 		},
 	}
 
-	err = svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -296,11 +296,11 @@ func TestPlexService_NoAutoCompleteForReturningSeries(t *testing.T) {
 		{SeasonNumber: 1, EpisodeCount: 10},
 	}
 	tmdbClient := newTMDBMock(t, "Returning Series", tmdbSeasons)
-	svc, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
+	svc, db, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
 
 	tmdbID := int64(1399)
 	plexKey := "series3"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2020,
 		Status:        model.TitleStatusWatching,
@@ -308,7 +308,6 @@ func TestPlexService_NoAutoCompleteForReturningSeries(t *testing.T) {
 		TMDBID:        &tmdbID,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Ongoing Show", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Scrobble the last episode of the only season (S01E10) — but series is "Returning"
 	payload := &plexwebhooks.Payload{
@@ -325,7 +324,7 @@ func TestPlexService_NoAutoCompleteForReturningSeries(t *testing.T) {
 		},
 	}
 
-	err = svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -333,17 +332,16 @@ func TestPlexService_NoAutoCompleteForReturningSeries(t *testing.T) {
 }
 
 func TestPlexService_NoAutoCompleteWithoutTMDB(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, db, titleRepo := setupPlexService(t)
 
 	plexKey := "series4"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2008,
 		Status:        model.TitleStatusWatching,
 		MatchStatus:   model.MatchStatusConfirmed,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "No TMDB", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	payload := &plexwebhooks.Payload{
 		Event: plexwebhooks.EventTypeScrobble,
@@ -359,7 +357,7 @@ func TestPlexService_NoAutoCompleteWithoutTMDB(t *testing.T) {
 		},
 	}
 
-	err = svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessScrobble(payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -367,7 +365,7 @@ func TestPlexService_NoAutoCompleteWithoutTMDB(t *testing.T) {
 }
 
 func TestPlexService_IgnoresNonScrobble(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, _, titleRepo := setupPlexService(t)
 
 	payload := &plexwebhooks.Payload{
 		Event: plexwebhooks.EventTypePlay,
@@ -385,18 +383,17 @@ func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 }
 
 func TestHandleEpisodePlay_UnwatchedEpisode_MarksWatched(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
+	svc, db, titleRepo := setupPlexService(t)
 
 	// Pre-create a tracked series with a plex rating key
 	plexKey := "series1"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          2024,
 		Status:        model.TitleStatusWatching,
 		MatchStatus:   model.MatchStatusConfirmed,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// Send a media.play for an episode that has never been watched (catch-up).
 	payload := &plexwebhooks.Payload{
@@ -425,22 +422,17 @@ func TestHandleEpisodePlay_UnwatchedEpisode_MarksWatched(t *testing.T) {
 }
 
 func TestPlexService_PlayCreatesRewatchEvent(t *testing.T) {
-	svc, titleRepo := setupPlexService(t)
-	db, _, err := database.Open(":memory:")
-	// Use the service's own DB; grab the repo from titleRepo
-	_ = db
-	_ = err
+	svc, db, titleRepo := setupPlexService(t)
 
 	// Pre-create a tracked series
 	plexKey := "series-poirot"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          1989,
 		Status:        model.TitleStatusWatching,
 		MatchStatus:   model.MatchStatusConfirmed,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// First scrobble → marks the episode watched
 	scrobble := &plexwebhooks.Payload{
@@ -496,11 +488,11 @@ func TestPlexService_PlayNoAutoComplete(t *testing.T) {
 		{SeasonNumber: 1, EpisodeCount: 1},
 	}
 	tmdbClient := newTMDBMock(t, "Ended", tmdbSeasons)
-	svc, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
+	svc, db, titleRepo := setupPlexServiceWithTMDB(t, tmdbClient)
 
 	tmdbID := int64(1399)
 	plexKey := "series1"
-	titleID, err := titleRepo.Create(&model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:          model.TitleTypeSeries,
 		Year:          1989,
 		Status:        model.TitleStatusWatching,
@@ -508,7 +500,6 @@ func TestPlexService_PlayNoAutoComplete(t *testing.T) {
 		TMDBID:        &tmdbID,
 		PlexRatingKey: &plexKey,
 	}, []model.TitleName{{Name: "Poirot", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// First scrobble to mark the episode watched
 	scrobble := &plexwebhooks.Payload{

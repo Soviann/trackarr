@@ -47,7 +47,9 @@ After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres
 
 ### Repositories
 
-`internal/repository/` — All use `database.DBTX` interface (works with `*sql.DB` and `*sql.Tx`).
+`internal/repository/` — Read methods accept `database.DBTX` (pool or tx). Write methods live on typed writer structs (e.g. `TitleWriter`) that take `*sql.Tx` in their constructor; the compiler rejects any attempt to write outside a transaction. Callers wrap in `database.WithTxContext(ctx, pool, func(tx *sql.Tx) error { ... })` and build writers from `tx`.
+
+Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`, `MergeTitles`, …) which wrap a `TitleWriter` in a short tx — no test needs to repeat the boilerplate.
 
 | Repository | Key methods |
 |---|---|
@@ -65,7 +67,7 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 
 ### Database
 
-`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)`, `DBTX` interface. SQLite with WAL, `MaxOpenConns=1`.
+`internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)`, `WithTxContext(ctx, db, fn)`, `DBTX` (read contract: `Exec`/`Query`/`QueryRow`), `WriteDBTX` (write contract: `ExecContext`/`QueryContext`/`QueryRowContext` — only `*sql.Tx` satisfies it). SQLite with WAL, `MaxOpenConns=1`.
 
 ### Handlers
 

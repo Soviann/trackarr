@@ -123,12 +123,13 @@ func (s *PlexService) handlePlay(ctx context.Context, payload *plexwebhooks.Payl
 		return nil
 	}
 	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		return s.handleEpisodePlayInTx(tx, payload.Metadata, rawPayload)
+		return s.handleEpisodePlayInTx(ctx, tx, payload.Metadata, rawPayload)
 	})
 }
 
-func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string) error {
+func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string) error {
 	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonRepository(tx)
 	episodes := repository.NewEpisodeRepository(tx)
 	events := repository.NewWatchEventRepository(tx)
@@ -172,7 +173,7 @@ func (s *PlexService) handleEpisodePlayInTx(tx *sql.Tx, meta plexwebhooks.Metada
 		log.Printf("plex play: update episode last_watched_at for ep %d: %v", ep.ID, err)
 	}
 
-	if err := titles.UpdateLastWatchedAt(title.ID, now); err != nil {
+	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, now); err != nil {
 		log.Printf("plex play: update title last_watched_at for title %d: %v", title.ID, err)
 	}
 
@@ -186,7 +187,7 @@ func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metada
 	var ratingPrompt *RatingPrompt
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		prompt, err := s.processMovieInTx(tx, meta, ids, rawPayload)
+		prompt, err := s.processMovieInTx(ctx, tx, meta, ids, rawPayload)
 		if err != nil {
 			return err
 		}
@@ -200,8 +201,9 @@ func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metada
 	return nil
 }
 
-func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*RatingPrompt, error) {
+func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
 	var imdbID *string
 	var tmdbID *int64
 	ratingKey := meta.RatingKey
@@ -216,16 +218,16 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 	movieType := model.TitleTypeMovie
 	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, &movieType)
 	if err != nil {
-		titleID, err := s.titleSvc.CreateFromPlex(tx, meta.Title, meta.Year, ids, model.TitleTypeMovie, ratingKey, meta.GUIDExternal, model.TitleStatusCompleted)
+		titleID, err := s.titleSvc.CreateFromPlex(ctx, tx, meta.Title, meta.Year, ids, model.TitleTypeMovie, ratingKey, meta.GUIDExternal, model.TitleStatusCompleted)
 		if err != nil {
 			return nil, fmt.Errorf("create movie: %w", err)
 		}
 
-		prompt, err := s.libSvc.MarkMovieWatched(tx, titleID, model.WatchEventSourcePlex, &rawPayload)
+		prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, titleID, model.WatchEventSourcePlex, &rawPayload)
 		if err != nil {
 			return nil, err
 		}
-		if err := titles.UpdateLastWatchedAt(titleID, time.Now().UTC()); err != nil {
+		if err := titlesW.UpdateLastWatchedAt(ctx, titleID, time.Now().UTC()); err != nil {
 			return nil, err
 		}
 		return prompt, nil
@@ -235,11 +237,11 @@ func (s *PlexService) processMovieInTx(tx *sql.Tx, meta plexwebhooks.Metadata, i
 		s.triggerAsyncEnrichment(title.ID, meta.Title, meta.Year, title.Type, ids)
 	}
 
-	prompt, err := s.libSvc.MarkMovieWatched(tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
+	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
 	if err != nil {
 		return nil, err
 	}
-	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
+	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, time.Now().UTC()); err != nil {
 		return nil, err
 	}
 	return prompt, nil
@@ -255,7 +257,7 @@ func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Meta
 	var ratingPrompt *RatingPrompt
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		req, prompt, err := s.processEpisodeInTx(tx, meta, ids, rawPayload)
+		req, prompt, err := s.processEpisodeInTx(ctx, tx, meta, ids, rawPayload)
 		if err != nil {
 			return err
 		}
@@ -285,8 +287,9 @@ type autoCompleteRequest struct {
 	episodeNum int
 }
 
-func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, *RatingPrompt, error) {
+func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonRepository(tx)
 	episodes := repository.NewEpisodeRepository(tx)
 
@@ -308,7 +311,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 			seriesName = meta.Title
 		}
 
-		titleID, createErr := s.titleSvc.CreateFromPlex(tx, seriesName, meta.Year, ids, model.TitleTypeSeries, grandparentKey, meta.GUIDExternal, model.TitleStatusWatching)
+		titleID, createErr := s.titleSvc.CreateFromPlex(ctx, tx, seriesName, meta.Year, ids, model.TitleTypeSeries, grandparentKey, meta.GUIDExternal, model.TitleStatusWatching)
 		if createErr != nil {
 			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}
@@ -316,7 +319,7 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 	} else {
 		if title.Status != model.TitleStatusCompleted && title.Status != model.TitleStatusWatching {
 			watchingStatus := model.TitleStatusWatching
-			if updateErr := titles.Update(title.ID, repository.TitleUpdate{Status: &watchingStatus}); updateErr != nil {
+			if updateErr := titlesW.Update(ctx, title.ID, repository.TitleUpdate{Status: &watchingStatus}); updateErr != nil {
 				log.Printf("update status to watching: %v", updateErr)
 			}
 		}
@@ -339,12 +342,12 @@ func (s *PlexService) processEpisodeInTx(tx *sql.Tx, meta plexwebhooks.Metadata,
 		return nil, nil, fmt.Errorf("get/create episode: %w", err)
 	}
 
-	_, prompt, err := s.libSvc.MarkEpisodesWatched(tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload)
+	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := titles.UpdateLastWatchedAt(title.ID, time.Now().UTC()); err != nil {
+	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, time.Now().UTC()); err != nil {
 		log.Printf("plex: update last watched at for title %d: %v", title.ID, err)
 	}
 
@@ -469,7 +472,9 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 			update.IsAnime = &result.IsAnime
 		}
 
-		if err := s.titles.Update(titleID, update); err != nil {
+		if err := database.WithTxContext(enrichCtx, s.db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).Update(enrichCtx, titleID, update)
+		}); err != nil {
 			log.Printf("async enrichment update failed for title %d: %v", titleID, err)
 		} else {
 			log.Printf("async enrichment completed for title %d", titleID)

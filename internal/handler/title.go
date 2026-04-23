@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
@@ -241,8 +242,15 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		TVDBID:      body.TVDBID,
 	}
 
-	id, err := h.titles.Create(title, body.Names)
-	if err != nil {
+	var id int64
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		newID, createErr := repository.NewTitleWriter(tx).Create(r.Context(), title, body.Names)
+		if createErr != nil {
+			return createErr
+		}
+		id = newID
+		return nil
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
@@ -277,7 +285,9 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		IsAnime:     body.IsAnime,
 	}
 
-	if err := h.titles.Update(id, update); err != nil {
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(r.Context(), id, update)
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
@@ -307,7 +317,7 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("At least one ID is required")
 	}
 
-	if err := h.service.Rematch(h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
+	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
 		return httputil.InternalError("Failed to rematch", err)
 	}
 
@@ -378,7 +388,9 @@ func (h *TitleHandler) Delete(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return httputil.BadRequest("Invalid ID")
 	}
-	if err := h.titles.Delete(id); err != nil {
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Delete(r.Context(), id)
+	}); err != nil {
 		return fmt.Errorf("title: delete: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -396,7 +408,9 @@ func (h *TitleHandler) BatchDelete(w http.ResponseWriter, r *http.Request) error
 	if len(body.IDs) == 0 {
 		return httputil.BadRequest("ids is required")
 	}
-	if err := h.titles.BatchDelete(body.IDs); err != nil {
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchDelete(r.Context(), body.IDs)
+	}); err != nil {
 		return fmt.Errorf("title: batch delete: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -419,7 +433,9 @@ func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error
 	if !validStatuses[body.Status] {
 		return httputil.BadRequest("Invalid status")
 	}
-	if err := h.titles.BatchUpdateStatus(body.IDs, body.Status); err != nil {
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchUpdateStatus(r.Context(), body.IDs, body.Status)
+	}); err != nil {
 		return fmt.Errorf("title: batch status: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)

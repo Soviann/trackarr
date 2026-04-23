@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/service"
@@ -32,12 +33,22 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 		return httputil.BadRequest("Invalid episode ID")
 	}
 
-	title, prompt, err := h.service.ToggleEpisodeWatched(r.Context(), h.db, titleID, episodeID)
-	if err != nil {
+	var (
+		title  *model.Title
+		prompt *service.RatingPrompt
+	)
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		t, p, e := h.service.ToggleEpisodeWatched(r.Context(), tx, titleID, episodeID)
+		if e != nil {
+			return e
+		}
+		title, prompt = t, p
+		return nil
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
-	// h.db is not a transaction, so this push would not block a write tx;
-	// calling it post-response-write would be nicer but the existing order is fine.
+	// Prompt delivery runs after the tx commits so a slow webpush endpoint
+	// cannot tie up the sole write connection.
 	h.service.SendRatingPrompt(prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)
@@ -57,8 +68,18 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		return httputil.BadRequest("Invalid request")
 	}
 
-	title, prompt, err := h.service.MarkEpisodesWatched(h.db, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
-	if err != nil {
+	var (
+		title  *model.Title
+		prompt *service.RatingPrompt
+	)
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		t, p, e := h.service.MarkEpisodesWatched(r.Context(), tx, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
+		if e != nil {
+			return e
+		}
+		title, prompt = t, p
+		return nil
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 	h.service.SendRatingPrompt(prompt)

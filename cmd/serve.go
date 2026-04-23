@@ -96,7 +96,7 @@ func Serve(distFS embed.FS) error {
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
 	bgGenreRepo := repository.NewGenreRepository(writeDB)
-	bgSvc := service.NewBackgroundService(titleRepo, bgGenreRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
+	bgSvc := service.NewBackgroundService(writeDB, titleRepo, bgGenreRepo, seasonRepo, episodeRepo, taskRepo, settingRepo, tmdbClient, anilistClient, pushSvc, cfg.DataDir)
 	if tvdbClient != nil {
 		bgSvc.SetTVDB(tvdbClient)
 	}

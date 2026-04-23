@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -93,12 +95,12 @@ type ImportResult struct {
 }
 
 type SimklImporter struct {
+	db       *sql.DB // writes run through short per-item transactions
 	titles   *repository.TitleRepository
 	seasons  *repository.SeasonRepository
 	episodes *repository.EpisodeRepository
 	events   *repository.WatchEventRepository
 	tasks    *repository.TaskRepository // optional, enables enrichment enqueue
-	db       database.DBTX              // optional, enables episode backfill
 }
 
 type SimklImporterOption func(*SimklImporter)
@@ -107,12 +109,8 @@ func WithTaskRepository(tasks *repository.TaskRepository) SimklImporterOption {
 	return func(s *SimklImporter) { s.tasks = tasks }
 }
 
-func WithBackfillDeps(db database.DBTX) SimklImporterOption {
-	return func(s *SimklImporter) { s.db = db }
-}
-
-func NewSimklImporter(titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, opts ...SimklImporterOption) *SimklImporter {
-	s := &SimklImporter{titles: titles, seasons: seasons, episodes: episodes, events: events}
+func NewSimklImporter(db *sql.DB, titles *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, opts ...SimklImporterOption) *SimklImporter {
+	s := &SimklImporter{db: db, titles: titles, seasons: seasons, episodes: episodes, events: events}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -210,8 +208,15 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 
 	names := []model.TitleName{{Name: media.Title, Language: "en", IsPrimary: true}}
 
-	titleID, err := s.titles.Create(title, names)
-	if err != nil {
+	var titleID int64
+	if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+		id, createErr := repository.NewTitleWriter(tx).Create(context.Background(), title, names)
+		if createErr != nil {
+			return createErr
+		}
+		titleID = id
+		return nil
+	}); err != nil {
 		return fmt.Errorf("create title %q: %w", media.Title, err)
 	}
 
@@ -249,7 +254,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	}
 
 	// Backfill previous episodes
-	if s.db != nil && len(item.Seasons) > 0 {
+	if len(item.Seasons) > 0 {
 		maxSeason, maxEpisode := 0, 0
 		var latestWatchedAt time.Time
 		for _, ss := range item.Seasons {
@@ -277,7 +282,9 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	// Update last_watched_at if available
 	if item.LastWatchedAt != "" {
 		if parsedAt, err := time.Parse(time.RFC3339, item.LastWatchedAt); err == nil {
-			if err := s.titles.UpdateLastWatchedAt(titleID, parsedAt); err != nil {
+			if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+				return repository.NewTitleWriter(tx).UpdateLastWatchedAt(context.Background(), titleID, parsedAt)
+			}); err != nil {
 				log.Printf("simkl import: update last_watched_at for title %d: %v", titleID, err)
 			}
 		}

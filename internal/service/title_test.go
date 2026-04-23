@@ -13,6 +13,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,14 +29,13 @@ func TestTitleService_CreateFromPlex_DuplicateDetection(t *testing.T) {
 
 	// 1. Pre-existing title (e.g. from Simkl)
 	tmdbID := int64(119335)
-	existingID, err := titleRepo.Create(&model.Title{
+	existingID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2022,
 		Status:      model.TitleStatusCompleted,
 		TMDBID:      &tmdbID,
 		MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "In the Land of Leadale", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	// 2. Setup Pipeline mock
 	mux := http.NewServeMux()
@@ -54,8 +54,12 @@ func TestTitleService_CreateFromPlex_DuplicateDetection(t *testing.T) {
 	// 3. Create from Plex (matches existing TMDB ID)
 	ids := service.PlexExternalIDs{} // Empty IDs, let pipeline match
 	ratingKey := "plex-123"
-	newID, err := svc.CreateFromPlex(db, "In the Land of Leadale", 2022, ids, model.TitleTypeSeries, ratingKey, nil, model.TitleStatusWatching)
+	tx, err := db.Begin()
 	require.NoError(t, err)
+	defer tx.Rollback() //nolint:errcheck
+	newID, err := svc.CreateFromPlex(context.Background(), tx, "In the Land of Leadale", 2022, ids, model.TitleTypeSeries, ratingKey, nil, model.TitleStatusWatching)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
 
 	// Verify it returned the existing ID
 	assert.Equal(t, existingID, newID)
@@ -76,21 +80,19 @@ func TestMerge_OpensOwnTx(t *testing.T) {
 	taskRepo := repository.NewTaskRepository(db)
 	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
 
-	destID, err := titleRepo.Create(&model.Title{
+	destID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2020,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: "Dest Title", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	sourceID, err := titleRepo.Create(&model.Title{
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2021,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: "Source Title", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	err = svc.Merge(context.Background(), db, destID, sourceID, nil)
 	require.NoError(t, err)
@@ -110,21 +112,19 @@ func TestMerge_CancelledContext(t *testing.T) {
 	taskRepo := repository.NewTaskRepository(db)
 	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
 
-	sourceID, err := titleRepo.Create(&model.Title{
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2021,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: "Source Title", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
-	destID, err := titleRepo.Create(&model.Title{
+	destID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
 		Year:        2020,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusUnconfirmed,
 	}, []model.TitleName{{Name: "Dest Title", Language: "en", IsPrimary: true}})
-	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before calling Merge

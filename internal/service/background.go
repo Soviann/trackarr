@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,12 +10,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
 type BackgroundService struct {
+	writeDB  *sql.DB
 	titles   *repository.TitleRepository
 	genres   *repository.GenreRepository
 	seasons  *repository.SeasonRepository
@@ -30,6 +33,7 @@ type BackgroundService struct {
 }
 
 func NewBackgroundService(
+	writeDB *sql.DB,
 	titles *repository.TitleRepository,
 	genres *repository.GenreRepository,
 	seasons *repository.SeasonRepository,
@@ -42,6 +46,7 @@ func NewBackgroundService(
 	dataDir string,
 ) *BackgroundService {
 	return &BackgroundService{
+		writeDB:  writeDB,
 		titles:   titles,
 		genres:   genres,
 		seasons:  seasons,
@@ -54,6 +59,16 @@ func NewBackgroundService(
 		dataDir:  dataDir,
 		limiter:  NewAPILimiter(2, 1),
 	}
+}
+
+// updateTitle wraps a title update in its own short transaction. Each
+// background refresh step is persisted independently so a crash between
+// steps leaves the DB in a valid state: the refresh loop is idempotent and
+// re-runs what is still missing.
+func (s *BackgroundService) updateTitle(ctx context.Context, id int64, update repository.TitleUpdate) error {
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, id, update)
+	})
 }
 
 func (s *BackgroundService) coversDir() string {
@@ -136,7 +151,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 
 	// Step 1b: AniList cover fallback for titles without TMDB ID
 	if title.CoverURL == nil && title.TMDBID == nil && title.AniListID != nil {
-		s.downloadAniListCover(title)
+		s.downloadAniListCover(ctx, title)
 	}
 
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
@@ -150,7 +165,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 			hasUnwatched, err := s.titles.HasUnwatchedEpisodes(title.ID)
 			if err == nil && !hasUnwatched {
 				completed := model.TitleStatusCompleted
-				if err := s.titles.Update(title.ID, repository.TitleUpdate{Status: &completed}); err == nil {
+				if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &completed}); err == nil {
 					result.AutoCompleted = true
 					log.Printf("background: auto-completed %q", result.TitleName)
 				}
@@ -169,7 +184,7 @@ func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Ti
 	}
 }
 
-// logTitleUpdate logs an error from s.titles.Update if non-nil.
+// logTitleUpdate logs an error from a title update if non-nil.
 func logTitleUpdate(titleID int64, kind string, err error) {
 	if err != nil {
 		log.Printf("background: update %s for title %d: %v", kind, titleID, err)
@@ -245,7 +260,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 		}
 	}
 	if update.CoverURL != nil || update.Overview != nil {
-		logTitleUpdate(title.ID, "tvdb refresh", s.titles.Update(title.ID, update))
+		logTitleUpdate(title.ID, "tvdb refresh", s.updateTitle(ctx, title.ID, update))
 	}
 }
 
@@ -261,7 +276,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			logTitleUpdate(title.ID, "movie cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
 		}
 	}
@@ -279,7 +294,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	if rating != nil {
 		metaUpdate.TMDBRating = rating
 	}
-	logTitleUpdate(title.ID, "movie metadata", s.titles.Update(title.ID, metaUpdate))
+	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
 	// Persist genres to title_genres table
 	if genres != "" && s.genres != nil {
@@ -293,13 +308,13 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		s.downloadAniListCover(title)
+		s.downloadAniListCover(ctx, title)
 	}
 
 	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
 	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
 		tvdbID := details.ExternalIDs.TVDBID
-		logTitleUpdate(title.ID, "movie tvdb backfill", s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
+		logTitleUpdate(title.ID, "movie tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
 }
@@ -320,7 +335,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 			result.OldStatus = *title.SeriesStatus
 		}
 		result.NewStatus = *newStatus
-		logTitleUpdate(title.ID, "series status", s.titles.Update(title.ID, repository.TitleUpdate{SeriesStatus: newStatus}))
+		logTitleUpdate(title.ID, "series status", s.updateTitle(ctx, title.ID, repository.TitleUpdate{SeriesStatus: newStatus}))
 		title.SeriesStatus = newStatus
 
 		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
@@ -336,7 +351,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	if title.CoverURL == nil && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
 		if err == nil {
-			logTitleUpdate(title.ID, "series cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
 		}
 	}
@@ -361,7 +376,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		metaUpdate.NextAirDate = &airDate
 		metaUpdate.NextAirEpisode = &airEp
 	}
-	logTitleUpdate(title.ID, "series metadata", s.titles.Update(title.ID, metaUpdate))
+	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
 	// Persist genres to title_genres table
 	if genres != "" && s.genres != nil {
@@ -375,7 +390,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		s.downloadAniListCover(title)
+		s.downloadAniListCover(ctx, title)
 	}
 
 	// Sync seasons and episodes
@@ -411,7 +426,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
 	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
 		tvdbID := details.ExternalIDs.TVDBID
-		logTitleUpdate(title.ID, "series tvdb backfill", s.titles.Update(title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
+		logTitleUpdate(title.ID, "series tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
 }
@@ -474,7 +489,7 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 			if posterPath != nil && *posterPath != "" {
 				coverPath, err := s.tmdb.DownloadCover(*posterPath, s.coversDir())
 				if err == nil {
-					logTitleUpdate(title.ID, "missing cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+					logTitleUpdate(title.ID, "missing cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 					fetched++
 					_ = s.limiter.Wait(ctx)
 					continue
@@ -483,7 +498,7 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 		}
 
 		// Fallback: AniList
-		if title.AniListID != nil && s.downloadAniListCover(&title) {
+		if title.AniListID != nil && s.downloadAniListCover(ctx, &title) {
 			fetched++
 		}
 
@@ -495,12 +510,12 @@ func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
 
 // downloadAniListCover fetches and saves the cover from AniList for a title.
 // Returns true if the cover was successfully downloaded and saved.
-func (s *BackgroundService) downloadAniListCover(title *model.Title) bool {
+func (s *BackgroundService) downloadAniListCover(ctx context.Context, title *model.Title) bool {
 	if s.anilist == nil || title.AniListID == nil {
 		return false
 	}
 
-	details, err := s.anilist.GetAnimeDetails(context.Background(), *title.AniListID)
+	details, err := s.anilist.GetAnimeDetails(ctx, *title.AniListID)
 	if err != nil || details.CoverURL == "" {
 		return false
 	}
@@ -510,7 +525,7 @@ func (s *BackgroundService) downloadAniListCover(title *model.Title) bool {
 		return false
 	}
 
-	logTitleUpdate(title.ID, "anilist cover", s.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+	logTitleUpdate(title.ID, "anilist cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 	return true
 }
 

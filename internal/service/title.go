@@ -26,8 +26,11 @@ func NewTitleService(db *sql.DB, titles *repository.TitleRepository, tasks *repo
 }
 
 // CreateFromPlex constructs a new title from Plex metadata and starts matching.
-func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, ids PlexExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus) (int64, error) {
-	titles := repository.NewTitleRepository(db)
+// Caller owns the transaction so the create (or the "existing title found"
+// update-in-place branch) shares atomicity with the surrounding webhook work.
+func (s *TitleService) CreateFromPlex(ctx context.Context, tx *sql.Tx, title string, year int, ids PlexExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus) (int64, error) {
+	titles := repository.NewTitleRepository(tx)
+	writer := repository.NewTitleWriter(tx)
 	t := &model.Title{
 		Type:          titleType,
 		Year:          year,
@@ -38,7 +41,7 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 	var names []model.TitleName
 
 	if s.pipeline != nil {
-		result, err := s.pipeline.Run(context.Background(), matching.MatchInput{
+		result, err := s.pipeline.Run(ctx, matching.MatchInput{
 			Title:  title,
 			Year:   year,
 			Type:   titleType,
@@ -70,17 +73,16 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 			}
 			names = result.Names
 
-			// Check if title already exists by resolved IDs
+			// Title already exists under these external IDs: update the Plex key
+			// and return the existing ID so scrobbles converge on one record.
 			existing, err := titles.FindByExternalID(t.IMDBID, t.TMDBID, nil, t.AniListID, &t.Type)
 			if err == nil && existing != nil {
-				// Title already exists, update its Plex rating key and return its ID.
-				// Also update type/is_anime if they were refined by the pipeline.
 				update := repository.TitleUpdate{
 					PlexRatingKey: t.PlexRatingKey,
 					Type:          &t.Type,
 					IsAnime:       &t.IsAnime,
 				}
-				if err := titles.Update(existing.ID, update); err != nil {
+				if err := writer.Update(ctx, existing.ID, update); err != nil {
 					return 0, fmt.Errorf("update existing title with plex key: %w", err)
 				}
 				return existing.ID, nil
@@ -106,13 +108,13 @@ func (s *TitleService) CreateFromPlex(db database.DBTX, title string, year int, 
 		names = []model.TitleName{{Name: title, Language: "en", IsPrimary: true}}
 	}
 
-	return titles.Create(t, names)
+	return writer.Create(ctx, t, names)
 }
 
-// Rematch updates a title's external IDs and enqueues an enrichment task.
-func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64) error {
-	titles := repository.NewTitleRepository(db)
-	title, err := titles.GetByID(id)
+// Rematch updates a title's external IDs and enqueues an enrichment task. The
+// service owns the transaction because handlers call it with the pool handle.
+func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64) error {
+	title, err := s.titles.GetByID(id)
 	if err != nil {
 		return err
 	}
@@ -136,7 +138,9 @@ func (s *TitleService) Rematch(db database.DBTX, id int64, imdbID *string, tmdbI
 		update.TVDBID = tvdbID
 	}
 
-	if err := titles.Update(id, update); err != nil {
+	if err := database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, id, update)
+	}); err != nil {
 		return err
 	}
 
@@ -186,11 +190,10 @@ func (s *TitleService) ResolveURL(ctx context.Context, url string) (*matching.Ma
 }
 
 // Merge consolidates sourceID into destID. db must be the pool handle (*sql.DB),
-// never a *sql.Tx — the method opens its own transaction internally via
-// database.WithTxContext so that a cancelled ctx aborts the write immediately.
+// never a *sql.Tx — the method opens its own transaction via
+// database.WithTxContext so a cancelled ctx aborts the write immediately.
 func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID int64, explicitOffset *int) error {
-	titles := repository.NewTitleRepository(db)
-	source, err := titles.GetByID(sourceID)
+	source, err := s.titles.GetByID(sourceID)
 	if err != nil {
 		return err
 	}
@@ -200,7 +203,7 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 		seasonOffset = *explicitOffset
 	} else if source.IsAnime && s.pipeline != nil {
 		name := source.PrimaryName()
-		if ident, err := s.pipeline.IdentifyAnimeSeason(context.Background(), name, source.Year); err == nil && ident.IsSeason {
+		if ident, err := s.pipeline.IdentifyAnimeSeason(ctx, name, source.Year); err == nil && ident.IsSeason {
 			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, name)
 			seasonOffset = ident.SeasonNumber - 1
 		} else if err != nil {
@@ -209,6 +212,6 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 	}
 
 	return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		return repository.NewTitleRepository(tx).Merge(destID, sourceID, seasonOffset)
+		return repository.NewTitleWriter(tx).Merge(ctx, destID, sourceID, seasonOffset)
 	})
 }

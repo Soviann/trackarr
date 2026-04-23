@@ -257,17 +257,17 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	}
 
 	err = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
-		titlesTx := repository.NewTitleRepository(tx)
+		titlesTx := repository.NewTitleWriter(tx)
 		genresTx := repository.NewGenreRepository(tx)
 
-		if err := titlesTx.Update(payload.TitleID, update); err != nil {
+		if err := titlesTx.Update(ctx, payload.TitleID, update); err != nil {
 			return err
 		}
 
-		recalcWatchtime(tx, payload.TitleID, result.Runtime)
+		recalcWatchtime(ctx, tx, payload.TitleID, result.Runtime)
 
 		if len(result.Names) > 0 {
-			if err := titlesTx.ReplaceNames(payload.TitleID, result.Names); err != nil {
+			if err := titlesTx.ReplaceNames(ctx, payload.TitleID, result.Names); err != nil {
 				log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
 			}
 		}
@@ -343,21 +343,22 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 }
 
 // recalcWatchtime refreshes total_watch_minutes when runtime was (re)learned.
-// Runs against the provided DBTX so it can share the caller's transaction.
-// Errors are logged and swallowed — watchtime is derived, never authoritative.
-func recalcWatchtime(db database.DBTX, titleID int64, runtime *int) {
+// Runs against the caller's transaction so all enrichment writes commit or
+// roll back as one. Errors are logged and swallowed — watchtime is derived,
+// never authoritative.
+func recalcWatchtime(ctx context.Context, tx *sql.Tx, titleID int64, runtime *int) {
 	if runtime == nil {
 		return
 	}
-	events := repository.NewWatchEventRepository(db)
-	titles := repository.NewTitleRepository(db)
+	events := repository.NewWatchEventRepository(tx)
+	writer := repository.NewTitleWriter(tx)
 	count, err := events.CountByTitleID(titleID)
 	if err != nil {
 		log.Printf("enrichment: count watch events for title %d: %v", titleID, err)
 		return
 	}
 	newTotal := count * *runtime
-	if err := titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+	if err := writer.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
 		log.Printf("enrichment: update total_watch_minutes for title %d: %v", titleID, err)
 	}
 }
@@ -414,7 +415,9 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) er
 			if details.PosterPath != nil {
 				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
 				if err == nil {
-					_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					})
 					title.CoverURL = &coverPath
 				}
 			}
@@ -426,7 +429,9 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) er
 			if details.PosterPath != nil {
 				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
 				if err == nil {
-					_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+					})
 					title.CoverURL = &coverPath
 				}
 			}
@@ -471,7 +476,9 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 			if err != nil {
 				return err
 			}
-			_ = w.titles.Update(payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
+			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
+			})
 			return nil
 		}
 	}
@@ -487,7 +494,9 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 			if err != nil {
 				return fmt.Errorf("download anilist cover: %w", err)
 			}
-			_ = w.titles.Update(payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
+			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
+			})
 		}
 	}
 
@@ -509,7 +518,9 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 		return
 	}
 
-	_ = w.titles.Update(title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+	_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
+	})
 	title.CoverURL = &coverPath
 }
 
