@@ -245,6 +245,42 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 		return err
 	}
 
+	update := buildEnrichmentUpdate(result, payload)
+	if err := w.titles.Update(payload.TitleID, update); err != nil {
+		return err
+	}
+
+	w.recalcWatchtime(payload.TitleID, result.Runtime)
+
+	merged, err := w.resolveAnimeConflict(ctx, result, payload)
+	if err != nil {
+		return err
+	}
+	if merged {
+		return nil
+	}
+
+	if len(result.Names) > 0 {
+		if err := w.titles.ReplaceNames(payload.TitleID, result.Names); err != nil {
+			log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+		}
+	}
+
+	if result.Genres != "" && w.genres != nil {
+		var genreList []string
+		if err := json.Unmarshal([]byte(result.Genres), &genreList); err == nil && len(genreList) > 0 {
+			if err := w.genres.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
+				log.Printf("enrichment: save genres for title %d: %v", payload.TitleID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// buildEnrichmentUpdate translates a pipeline MatchResult into a TitleUpdate
+// diff. Pure: no side effects, safe to call outside a transaction.
+func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPayload) repository.TitleUpdate {
 	update := repository.TitleUpdate{
 		MatchStatus: &result.MatchStatus,
 		MatchSource: &result.MatchSource,
@@ -288,61 +324,51 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	if result.ReleaseDate != "" {
 		update.ReleaseDate = &result.ReleaseDate
 	}
+	return update
+}
 
-	if err := w.titles.Update(payload.TitleID, update); err != nil {
-		return err
+// recalcWatchtime refreshes total_watch_minutes when runtime was (re)learned.
+// Errors are logged and swallowed — watchtime is derived, never authoritative.
+func (w *TaskQueueWorker) recalcWatchtime(titleID int64, runtime *int) {
+	if runtime == nil || w.events == nil {
+		return
 	}
-
-	// ── Watchtime Recalculation ──
-	// When runtime is set or changed, recalculate total_watch_minutes from scratch.
-	if result.Runtime != nil && w.events != nil {
-		count, err := w.events.CountByTitleID(payload.TitleID)
-		if err != nil {
-			log.Printf("enrichment: count watch events for title %d: %v", payload.TitleID, err)
-		} else {
-			newTotal := count * *result.Runtime
-			if err := w.titles.Update(payload.TitleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
-				log.Printf("enrichment: update total_watch_minutes for title %d: %v", payload.TitleID, err)
-			}
-		}
+	count, err := w.events.CountByTitleID(titleID)
+	if err != nil {
+		log.Printf("enrichment: count watch events for title %d: %v", titleID, err)
+		return
 	}
+	newTotal := count * *runtime
+	if err := w.titles.Update(titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
+		log.Printf("enrichment: update total_watch_minutes for title %d: %v", titleID, err)
+	}
+}
 
-	// ── Consolidation Logic (Merge) ──
-	// If we have an IMDB ID and it's an anime, check if another title has the same IMDB ID.
-	if result.IMDBID != "" && result.IsAnime {
-		existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
-		if err == nil && existing != nil && existing.ID != payload.TitleID && existing.Type != model.TitleTypeMovie {
-			// CONFLICT! Same IMDB ID but different local titles.
-			log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
-
-			if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, nil); err != nil {
-				log.Printf("enrichment: merge failed: %v", err)
-			} else {
-				log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)
-				return nil // Task finished (source title deleted)
-			}
-		} else if err != nil && err != sql.ErrNoRows {
+// resolveAnimeConflict handles the IMDB-collision case where the pipeline
+// identifies an anime that already exists under another local title. Returns
+// merged=true when the source title has been consumed and the caller should
+// stop processing further enrichment writes.
+func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload) (bool, error) {
+	if result.IMDBID == "" || !result.IsAnime {
+		return false, nil
+	}
+	existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
+	if err != nil {
+		if err != sql.ErrNoRows {
 			log.Printf("enrichment: FindByExternalID error: %v", err)
 		}
+		return false, nil
 	}
-
-	if len(result.Names) > 0 {
-		if err := w.titles.ReplaceNames(payload.TitleID, result.Names); err != nil {
-			log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
-		}
+	if existing == nil || existing.ID == payload.TitleID || existing.Type == model.TitleTypeMovie {
+		return false, nil
 	}
-
-	// Persist genres to title_genres table
-	if result.Genres != "" && w.genres != nil {
-		var genreList []string
-		if err := json.Unmarshal([]byte(result.Genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := w.genres.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
-				log.Printf("enrichment: save genres for title %d: %v", payload.TitleID, err)
-			}
-		}
+	log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
+	if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, nil); err != nil {
+		log.Printf("enrichment: merge failed: %v", err)
+		return false, nil
 	}
-
-	return nil
+	log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)
+	return true, nil
 }
 
 func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) error {
