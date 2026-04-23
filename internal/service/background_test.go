@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -114,6 +115,32 @@ func TestBackgroundService_NilSafe(t *testing.T) {
 	var svc *service.BackgroundService
 	results := svc.RefreshTitles(context.Background())
 	assert.Nil(t, results)
+}
+
+func TestBackgroundService_RefreshCancelledContextStopsLoop(t *testing.T) {
+	svc, db, _, _, _ := setupBackgroundService(t)
+
+	for i := 0; i < 10; i++ {
+		testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2023,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	results := svc.RefreshTitles(ctx)
+	elapsed := time.Since(start)
+
+	assert.Less(t, elapsed, time.Second, "refresh should stop within 1s after cancel")
+	assert.Less(t, len(results), 10, "not all titles should be processed after cancel")
 }
 
 func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
