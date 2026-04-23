@@ -227,7 +227,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 	if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
 		seasons := repository.NewSeasonWriter(tx)
 		episodes := repository.NewEpisodeWriter(tx)
-		events := repository.NewWatchEventRepository(tx)
+		events := repository.NewWatchEventWriter(tx)
 		for _, simklSeason := range item.Seasons {
 			season, err := seasons.GetOrCreate(context.Background(), titleID, simklSeason.Number)
 			if err != nil {
@@ -250,7 +250,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 				if err := episodes.MarkWatched(context.Background(), ep.ID, watchedAt); err != nil {
 					log.Printf("simkl import: mark episode %d watched for title %d: %v", ep.ID, titleID, err)
 				}
-				_, _ = events.Create(&model.WatchEvent{
+				_, _ = events.Create(context.Background(), &model.WatchEvent{
 					TitleID:   titleID,
 					EpisodeID: &ep.ID,
 					Source:    model.WatchEventSourceManual,
@@ -303,10 +303,15 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 
 	// For movies, also log watch event for stats (now decoupled from last_watched_at trigger)
 	if titleType == model.TitleTypeMovie && item.LastWatchedAt != "" {
-		_, _ = s.events.Create(&model.WatchEvent{
-			TitleID: titleID,
-			Source:  model.WatchEventSourceManual,
-		})
+		if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
+			_, e := repository.NewWatchEventWriter(tx).Create(context.Background(), &model.WatchEvent{
+				TitleID: titleID,
+				Source:  model.WatchEventSourceManual,
+			})
+			return e
+		}); err != nil {
+			log.Printf("simkl import: movie watch event for title %d: %v", titleID, err)
+		}
 	}
 
 	result.Created++

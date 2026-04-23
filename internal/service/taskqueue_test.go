@@ -41,8 +41,7 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 
 	// Seed three watch events so recalcWatchtime has a non-zero multiplier.
 	for range 3 {
-		_, err := events.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
-		require.NoError(t, err)
+		testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
 	}
 
 	// Empty pipeline: TMDB/AniList/Gemini nil. Run() returns early on the

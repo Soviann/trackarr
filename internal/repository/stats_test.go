@@ -87,7 +87,6 @@ func TestStatsRepository_FunStats_Graveyard(t *testing.T) {
 
 func TestStatsRepository_FunStats_PlexVsManual(t *testing.T) {
 	db := setupTestDB(t)
-	eventRepo := repository.NewWatchEventRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
 	id := testutil.CreateTitle(t, db, &model.Title{
@@ -95,9 +94,9 @@ func TestStatsRepository_FunStats_PlexVsManual(t *testing.T) {
 		Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
-	_, _ = eventRepo.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourcePlex})
-	_, _ = eventRepo.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourcePlex})
-	_, _ = eventRepo.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourcePlex})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourcePlex})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
 
 	resp, err := statsRepo.GetAll()
 	require.NoError(t, err)

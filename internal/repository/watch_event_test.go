@@ -7,7 +7,6 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWatchEventRepo_CountByTitleID(t *testing.T) {
@@ -30,10 +29,8 @@ func TestWatchEventRepo_CountByTitleID(t *testing.T) {
 	assert.Equal(t, 0, count)
 
 	// Add two events
-	_, err = repo.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
-	require.NoError(t, err)
-	_, err = repo.Create(&model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
-	require.NoError(t, err)
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
 
 	count, err = repo.CountByTitleID(id)
 	assert.NoError(t, err)

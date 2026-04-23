@@ -132,7 +132,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
-	events := repository.NewWatchEventRepository(tx)
+	events := repository.NewWatchEventWriter(tx)
 
 	grandparentKey := meta.GrandparentRatingKey
 	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil)
@@ -160,7 +160,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		}
 	}
 
-	if _, err := events.Create(&model.WatchEvent{
+	if _, err := events.Create(ctx, &model.WatchEvent{
 		TitleID:     title.ID,
 		EpisodeID:   &ep.ID,
 		Source:      model.WatchEventSourcePlex,

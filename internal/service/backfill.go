@@ -105,7 +105,7 @@ func BackfillPreviousEpisodes(
 
 	seasons := repository.NewSeasonWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
-	events := repository.NewWatchEventRepository(tx)
+	events := repository.NewWatchEventWriter(tx)
 
 	var toMarkIDs []int64
 	var toEventTitleID = titleID
@@ -182,5 +182,5 @@ func BackfillPreviousEpisodes(
 		}
 	}
 
-	return events.BatchCreate(watchEvents)
+	return events.BatchCreate(ctx, watchEvents)
 }

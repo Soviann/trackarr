@@ -71,7 +71,7 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
-	events := repository.NewWatchEventRepository(tx)
+	events := repository.NewWatchEventWriter(tx)
 
 	ep, err := episodes.ToggleWatched(ctx, episodeID)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 	}
 
 	if ep.Watched {
-		_, _ = events.Create(&model.WatchEvent{
+		_, _ = events.Create(ctx, &model.WatchEvent{
 			TitleID:   titleID,
 			EpisodeID: &episodeID,
 			Source:    model.WatchEventSourceManual,
@@ -123,7 +123,7 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
-	events := repository.NewWatchEventRepository(tx)
+	events := repository.NewWatchEventWriter(tx)
 
 	now := time.Now().UTC()
 	if err := episodes.BatchMarkWatched(ctx, episodeIDs, now); err != nil {
@@ -140,7 +140,7 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 			PlexPayload: rawPayload,
 		}
 	}
-	if err := events.BatchCreate(watchEvents); err != nil {
+	if err := events.BatchCreate(ctx, watchEvents); err != nil {
 		log.Printf("library: batch create watch events for title %d: %v", titleID, err)
 	}
 
@@ -167,7 +167,7 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, titleID int64, source model.WatchEventSource, rawPayload *string) (*RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
-	events := repository.NewWatchEventRepository(tx)
+	events := repository.NewWatchEventWriter(tx)
 
 	// Fetch title first to get runtime for watchtime calculation.
 	title, err := titles.GetByID(titleID)
@@ -181,7 +181,7 @@ func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, title
 		return nil, err
 	}
 
-	_, _ = events.Create(&model.WatchEvent{
+	_, _ = events.Create(ctx, &model.WatchEvent{
 		TitleID:     titleID,
 		Source:      source,
 		PlexPayload: rawPayload,
