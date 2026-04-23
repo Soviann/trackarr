@@ -3,7 +3,9 @@
 ## [Unreleased]
 
 ### Fiabilité
-- Base de données : les écritures sur les titres (création, mise à jour, fusion, suppression) ne peuvent plus être lancées hors transaction par accident — le compilateur refuse désormais ce qui produisait auparavant des deadlocks SQLite ou des écritures perdues selon le chemin pris, et toutes les écritures propagent le contexte de la requête pour que l'abandon du client interrompe immédiatement le statement en cours
+- Base de données : les écritures sur les titres, saisons, épisodes et events de visionnage (création, mise à jour, fusion, suppression) ne peuvent plus être lancées hors transaction par accident — le compilateur refuse désormais ce qui produisait auparavant des deadlocks SQLite ou des écritures perdues selon le chemin pris, et toutes les écritures propagent le contexte de la requête pour que l'abandon du client interrompe immédiatement le statement en cours
+- Import Simkl : l'écriture des saisons, épisodes et events d'un titre se fait désormais dans une seule transaction par titre — un crash mid-import ne laisse plus d'épisodes sans event ou de `total_episodes` désynchronisé
+- Refresh TMDB : l'upsert d'une saison et de ses épisodes partage désormais une même transaction — un crash entre les deux ne peut plus laisser `total_episodes` en désaccord avec le nombre réel d'épisodes
 
 ### Performance
 - Enrichment : les quatre écritures de fin de tâche (métadonnées, watchtime, alias, genres) sont désormais regroupées dans une seule transaction — le verrou d'écriture SQLite n'est plus pris quatre fois par titre enrichi

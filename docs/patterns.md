@@ -47,16 +47,16 @@ After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres
 
 ### Repositories
 
-`internal/repository/` — Read methods accept `database.DBTX` (pool or tx). Write methods live on typed writer structs (e.g. `TitleWriter`) that take `*sql.Tx` in their constructor; the compiler rejects any attempt to write outside a transaction. Callers wrap in `database.WithTxContext(ctx, pool, func(tx *sql.Tx) error { ... })` and build writers from `tx`.
+`internal/repository/` — Read methods accept `database.DBTX` (pool or tx). Write methods live on typed writer structs (e.g. `TitleWriter`, `SeasonWriter`, `EpisodeWriter`, `WatchEventWriter`) that take `*sql.Tx` in their constructor; the compiler rejects any attempt to write outside a transaction. Callers wrap in `database.WithTxContext(ctx, pool, func(tx *sql.Tx) error { ... })` and build writers from `tx`.
 
-Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`, `MergeTitles`, …) which wrap a `TitleWriter` in a short tx — no test needs to repeat the boilerplate.
+Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`, `MergeTitles`, `GetOrCreateSeason`, `GetOrCreateEpisode`, `CreateWatchEvent`, …) which wrap the matching writer in a short tx — no test needs to repeat the boilerplate.
 
-| Repository | Key methods |
-|---|---|
-| TitleRepository | `List` (paginated, TitleFilter), `ListAll` (full, for jobs), `GetByID` (with episodes), search in `title_search.go` |
-| SeasonRepository | CRUD + season-level operations |
-| EpisodeRepository | CRUD + episode-level operations |
-| WatchEventRepository | `CountByTitleID` |
+| Repository | Reader (DBTX) | Writer (*sql.Tx, ctx) |
+|---|---|---|
+| Title | `List`, `ListAll`, `GetByID`, `FindByExternalID`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `Merge`, `Delete`, `BatchDelete`, `BatchUpdateStatus` |
+| Season | `GetByID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
+| Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
+| WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
 | SettingRepository | Key-value settings |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
 | ActivityRepository | `List` (paginated watch events) |
