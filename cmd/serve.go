@@ -90,7 +90,7 @@ func Serve(distFS embed.FS) error {
 
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
-		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+		pushSvc = service.NewPushService(writeDB, settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)

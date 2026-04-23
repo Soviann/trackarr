@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,11 +10,12 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *repository.SettingRepository) {
+func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *sql.DB) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -22,7 +24,7 @@ func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *repository.S
 
 	settings := repository.NewSettingRepository(db)
 	h := handler.NewSettingsHandler(settings, false)
-	return h, settings
+	return h, db
 }
 
 func TestSettingsHandler_Get_Empty(t *testing.T) {
@@ -41,8 +43,8 @@ func TestSettingsHandler_Get_Empty(t *testing.T) {
 }
 
 func TestSettingsHandler_Get_AniListConnected(t *testing.T) {
-	h, settings := setupSettingsHandler(t)
-	_ = settings.Set("anilist_token", "some-token")
+	h, db := setupSettingsHandler(t)
+	testutil.SetSetting(t, db, "anilist_token", "some-token")
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()
@@ -55,8 +57,8 @@ func TestSettingsHandler_Get_AniListConnected(t *testing.T) {
 }
 
 func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
-	h, settings := setupSettingsHandler(t)
-	_ = settings.Set("push_subscription", `{"endpoint":"https://push.example.com"}`)
+	h, db := setupSettingsHandler(t)
+	testutil.SetSetting(t, db, "push_subscription", `{"endpoint":"https://push.example.com"}`)
 
 	req := httptest.NewRequest("GET", "/api/settings", nil)
 	rr := httptest.NewRecorder()

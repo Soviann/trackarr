@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
 
@@ -20,22 +23,24 @@ var pushHTTPClient = &http.Client{Timeout: 5 * time.Second}
 // PushNotifier abstracts push notification operations.
 // Use NewNoopNotifier() when VAPID keys are not configured.
 type PushNotifier interface {
-	Subscribe(rawJSON string) error
-	Unsubscribe() error
+	Subscribe(ctx context.Context, rawJSON string) error
+	Unsubscribe(ctx context.Context) error
 	HasSubscription() bool
 	SendNotification(title, body, url string) error
 }
 
 // PushService implements PushNotifier with real web push notifications.
 type PushService struct {
+	writeDB    *sql.DB
 	settings   *repository.SettingRepository
 	publicKey  string
 	privateKey string
 	subject    string
 }
 
-func NewPushService(settings *repository.SettingRepository, publicKey, privateKey, subject string) *PushService {
+func NewPushService(writeDB *sql.DB, settings *repository.SettingRepository, publicKey, privateKey, subject string) *PushService {
 	return &PushService{
+		writeDB:    writeDB,
 		settings:   settings,
 		publicKey:  publicKey,
 		privateKey: privateKey,
@@ -53,7 +58,7 @@ type pushSubscription struct {
 	} `json:"keys"`
 }
 
-func (s *PushService) Subscribe(rawJSON string) error {
+func (s *PushService) Subscribe(ctx context.Context, rawJSON string) error {
 	var sub pushSubscription
 	if err := json.Unmarshal([]byte(rawJSON), &sub); err != nil {
 		return fmt.Errorf("invalid subscription JSON: %w", err)
@@ -61,11 +66,15 @@ func (s *PushService) Subscribe(rawJSON string) error {
 	if sub.Endpoint == "" {
 		return fmt.Errorf("subscription endpoint required")
 	}
-	return s.settings.Set(settingKeyPushSubscription, rawJSON)
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		return repository.NewSettingWriter(tx).Set(ctx, settingKeyPushSubscription, rawJSON)
+	})
 }
 
-func (s *PushService) Unsubscribe() error {
-	return s.settings.Delete(settingKeyPushSubscription)
+func (s *PushService) Unsubscribe(ctx context.Context) error {
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		return repository.NewSettingWriter(tx).Delete(ctx, settingKeyPushSubscription)
+	})
 }
 
 func (s *PushService) HasSubscription() bool {
@@ -117,7 +126,12 @@ func NewNoopNotifier() PushNotifier {
 	return noopNotifier{}
 }
 
-func (noopNotifier) Subscribe(string) error                { return fmt.Errorf("push notifications not configured") }
-func (noopNotifier) Unsubscribe() error                    { return fmt.Errorf("push notifications not configured") }
+func (noopNotifier) Subscribe(context.Context, string) error {
+	return fmt.Errorf("push notifications not configured")
+}
+
+func (noopNotifier) Unsubscribe(context.Context) error {
+	return fmt.Errorf("push notifications not configured")
+}
 func (noopNotifier) HasSubscription() bool                 { return false }
 func (noopNotifier) SendNotification(_, _, _ string) error { return nil }

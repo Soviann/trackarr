@@ -30,7 +30,7 @@ func setupBackgroundService(t *testing.T) (*service.BackgroundService, *sql.DB, 
 	settingRepo := repository.NewSettingRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 
-	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
+	pushSvc := service.NewPushService(db, settingRepo, "pub", "priv", "mailto:test@test.com")
 	// No external API clients in tests — nil TMDB/AniList
 	svc := service.NewBackgroundService(db, titleRepo, nil, seasonRepo, episodeRepo, taskRepo, settingRepo, nil, nil, pushSvc, t.TempDir())
 	return svc, db, titleRepo, seasonRepo, episodeRepo
@@ -131,7 +131,7 @@ func TestBackgroundService_CleanupUnusedCovers(t *testing.T) {
 	settingRepo := repository.NewSettingRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 
-	pushSvc := service.NewPushService(settingRepo, "pub", "priv", "mailto:test@test.com")
+	pushSvc := service.NewPushService(db, settingRepo, "pub", "priv", "mailto:test@test.com")
 	svc := service.NewBackgroundService(db, titleRepo, nil, seasonRepo, episodeRepo, taskRepo, settingRepo, nil, nil, pushSvc, dataDir)
 
 	coversDir := filepath.Join(dataDir, "covers")

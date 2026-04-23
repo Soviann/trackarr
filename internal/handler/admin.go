@@ -156,7 +156,9 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 			if !enabled {
 				val = "false"
 			}
-			if err := h.settings.Set(key, val); err != nil {
+			if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+				return repository.NewSettingWriter(tx).Set(r.Context(), key, val)
+			}); err != nil {
 				return httputil.InternalError("save notification pref", err)
 			}
 		}

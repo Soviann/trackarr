@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 )
@@ -15,12 +17,13 @@ const (
 )
 
 type AniListAuthHandler struct {
+	writeDB  *sql.DB
 	settings *repository.SettingRepository
 	clientID string
 }
 
-func NewAniListAuthHandler(settings *repository.SettingRepository, clientID string) *AniListAuthHandler {
-	return &AniListAuthHandler{settings: settings, clientID: clientID}
+func NewAniListAuthHandler(writeDB *sql.DB, settings *repository.SettingRepository, clientID string) *AniListAuthHandler {
+	return &AniListAuthHandler{writeDB: writeDB, settings: settings, clientID: clientID}
 }
 
 // Authorize redirects to AniList OAuth page (implicit grant).
@@ -43,7 +46,9 @@ func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) e
 		return httputil.BadRequest("Invalid token")
 	}
 
-	if err := h.settings.Set(settingKeyAniListToken, body.Token); err != nil {
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		return repository.NewSettingWriter(tx).Set(r.Context(), settingKeyAniListToken, body.Token)
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
@@ -53,7 +58,9 @@ func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) e
 
 // Disconnect removes the stored AniList token.
 func (h *AniListAuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) error {
-	if err := h.settings.Delete(settingKeyAniListToken); err != nil {
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		return repository.NewSettingWriter(tx).Delete(r.Context(), settingKeyAniListToken)
+	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

@@ -23,7 +23,7 @@ func setupPushHandler(t *testing.T) *handler.PushHandler {
 	t.Cleanup(func() { db.Close() })
 
 	settings := repository.NewSettingRepository(db)
-	pushSvc := service.NewPushService(settings, "pub", "priv", "mailto:test@test.com")
+	pushSvc := service.NewPushService(db, settings, "pub", "priv", "mailto:test@test.com")
 	return handler.NewPushHandler(pushSvc)
 }
 

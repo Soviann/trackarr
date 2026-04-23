@@ -41,7 +41,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	// Services
 	var pushSvc service.PushNotifier = service.NewNoopNotifier()
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
-		pushSvc = service.NewPushService(settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+		pushSvc = service.NewPushService(writeDB, settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
 	}
 
 	// Backfill service (optional — requires TMDB for full backfill)
@@ -76,7 +76,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
-	anilistAuth := handler.NewAniListAuthHandler(settingRepo, cfg.AniListClientID)
+	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
 	settings := handler.NewSettingsHandler(settingRepo, tvdbReady)
 	stats := handler.NewStatsHandler(statsRepo)

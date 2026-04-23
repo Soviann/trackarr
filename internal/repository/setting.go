@@ -6,6 +6,8 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 )
 
+// SettingRepository reads the settings key-value store. Writes live on
+// SettingWriter, which requires a *sql.Tx.
 type SettingRepository struct {
 	db database.DBTX
 }
@@ -21,20 +23,4 @@ func (r *SettingRepository) Get(key string) (string, error) {
 		return "", fmt.Errorf("get setting %s: %w", key, err)
 	}
 	return value, nil
-}
-
-func (r *SettingRepository) Set(key, value string) error {
-	_, err := r.db.Exec(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
-	if err != nil {
-		return fmt.Errorf("set setting %s: %w", key, err)
-	}
-	return nil
-}
-
-func (r *SettingRepository) Delete(key string) error {
-	_, err := r.db.Exec(`DELETE FROM settings WHERE key = ?`, key)
-	if err != nil {
-		return fmt.Errorf("delete setting %s: %w", key, err)
-	}
-	return nil
 }

@@ -22,7 +22,7 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Invalid request")
 	}
 
-	if err := h.push.Subscribe(string(body)); err != nil {
+	if err := h.push.Subscribe(r.Context(), string(body)); err != nil {
 		return httputil.BadRequest("Invalid subscription")
 	}
 
@@ -31,7 +31,7 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) error {
-	if err := h.push.Unsubscribe(); err != nil {
+	if err := h.push.Unsubscribe(r.Context()); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

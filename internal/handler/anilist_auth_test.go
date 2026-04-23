@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,11 +11,12 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupAniListHandler(t *testing.T) (*handler.AniListAuthHandler, *repository.SettingRepository) {
+func setupAniListHandler(t *testing.T) (*handler.AniListAuthHandler, *sql.DB, *repository.SettingRepository) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -22,12 +24,12 @@ func setupAniListHandler(t *testing.T) (*handler.AniListAuthHandler, *repository
 	t.Cleanup(func() { db.Close() })
 
 	settings := repository.NewSettingRepository(db)
-	h := handler.NewAniListAuthHandler(settings, "test-client-id")
-	return h, settings
+	h := handler.NewAniListAuthHandler(db, settings, "test-client-id")
+	return h, db, settings
 }
 
 func TestAniListAuth_Authorize(t *testing.T) {
-	h, _ := setupAniListHandler(t)
+	h, _, _ := setupAniListHandler(t)
 
 	req := httptest.NewRequest("GET", "/api/anilist/auth", nil)
 	rr := httptest.NewRecorder()
@@ -39,7 +41,7 @@ func TestAniListAuth_Authorize(t *testing.T) {
 }
 
 func TestAniListAuth_SaveToken(t *testing.T) {
-	h, settings := setupAniListHandler(t)
+	h, _, settings := setupAniListHandler(t)
 
 	req := httptest.NewRequest("POST", "/api/anilist/token", strings.NewReader(`{"token":"abc123"}`))
 	rr := httptest.NewRecorder()
@@ -53,7 +55,7 @@ func TestAniListAuth_SaveToken(t *testing.T) {
 }
 
 func TestAniListAuth_SaveToken_EmptyRejected(t *testing.T) {
-	h, _ := setupAniListHandler(t)
+	h, _, _ := setupAniListHandler(t)
 
 	req := httptest.NewRequest("POST", "/api/anilist/token", strings.NewReader(`{"token":""}`))
 	rr := httptest.NewRecorder()
@@ -66,8 +68,8 @@ func TestAniListAuth_SaveToken_EmptyRejected(t *testing.T) {
 }
 
 func TestAniListAuth_Disconnect(t *testing.T) {
-	h, settings := setupAniListHandler(t)
-	_ = settings.Set("anilist_token", "abc123")
+	h, db, settings := setupAniListHandler(t)
+	testutil.SetSetting(t, db, "anilist_token", "abc123")
 
 	req := httptest.NewRequest("DELETE", "/api/anilist/token", nil)
 	rr := httptest.NewRecorder()
@@ -86,7 +88,7 @@ func TestAniListAuth_AuthorizeNotConfigured(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 
 	settings := repository.NewSettingRepository(db)
-	h := handler.NewAniListAuthHandler(settings, "") // No client ID
+	h := handler.NewAniListAuthHandler(db, settings, "") // No client ID
 
 	req := httptest.NewRequest("GET", "/api/anilist/auth", nil)
 	rr := httptest.NewRecorder()

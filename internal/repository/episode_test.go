@@ -101,23 +101,20 @@ func TestSettingRepository_SetAndGet(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewSettingRepository(db)
 
-	err := repo.Set("test_key", "test_value")
-	require.NoError(t, err)
+	testutil.SetSetting(t, db, "test_key", "test_value")
 
 	val, err := repo.Get("test_key")
 	require.NoError(t, err)
 	assert.Equal(t, "test_value", val)
 
 	// Update
-	err = repo.Set("test_key", "new_value")
-	require.NoError(t, err)
+	testutil.SetSetting(t, db, "test_key", "new_value")
 
 	val, _ = repo.Get("test_key")
 	assert.Equal(t, "new_value", val)
 
 	// Delete
-	err = repo.Delete("test_key")
-	require.NoError(t, err)
+	testutil.DeleteSetting(t, db, "test_key")
 	_, err = repo.Get("test_key")
 	assert.Error(t, err)
 }
