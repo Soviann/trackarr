@@ -2,6 +2,22 @@
 
 > **For agentic workers:** Single session. Independent of other SRP plans.
 
+## Revision — 2026-04-23
+
+**Scope obsolete.** Pre-existing work (srp-01 / srp-02 / earlier refactors) already delivered the bulk of this plan:
+
+- **Task 1 (extract URL parser):** Already done — see `internal/service/matching/urls.go` (`ParseURL`, `ParseURLFull`, `ParsedURL` struct covering IMDB / AniList / TMDB / TVDB slugs). Tests: `TestParseURL`, `TestParseURLFull_TVDBSlugs`.
+- **Task 2 (service method for match-by-URL):** Already done — `TitleService.ResolveURL` (`internal/service/title.go:187`) delegates to `pipeline.ResolveURL` (`internal/service/matching/pipeline.go:202`).
+- **Task 3 (drop TMDBClient / AniListClient fields from handler):** Already done — `TitleHandler` no longer holds API clients, only repos + services.
+
+Only residual duplication: 2 inline regexes (`reIMDB`, `reAniList`) in `handler/title.go` used by the `List` handler's *local-DB search shortcut* when the user pastes an IMDB/AniList URL into the search box. This is not match-by-URL enrichment — it's a lookup in the existing library by external ID.
+
+**Actual change delivered (2026-04-23):** Replaced inline regexes with `matching.ParseURL`, extracted lookup into private `findTitleByURL` helper. Dropped `regexp` + `strconv` imports. Existing test `TestTitleHandler_List/search_by_IMDb_URL` covers the flow.
+
+No functional change. Next plan: `2026-04-22-srp-04-background-service-split.md`.
+
+---
+
 ## PO summary
 
 Removes direct coupling between the HTTP layer and external API clients. Future API swaps or additions touch only the service layer. No user-visible change.
