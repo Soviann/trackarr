@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	plexwebhooks "github.com/hekmon/plexwebhooks"
@@ -44,12 +43,11 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 }
 
 type PlexService struct {
-	ctx        context.Context
-	db         *sql.DB
-	pipeline   *matching.Pipeline // nil = skip matching, create with basic info
-	titleSvc   *TitleService
-	libSvc     *LibraryService
-	shutdownWG *sync.WaitGroup // optional — joined on shutdown so async enrichment can finish
+	ctx      context.Context
+	db       *sql.DB
+	pipeline *matching.Pipeline // nil = skip matching, create with basic info
+	titleSvc *TitleService
+	libSvc   *LibraryService
 }
 
 func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
@@ -60,16 +58,6 @@ func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline
 		titleSvc: titleSvc,
 		libSvc:   libSvc,
 	}
-}
-
-// SetShutdownWG registers a WaitGroup that triggerAsyncEnrichment goroutines
-// increment on start and decrement on exit, so Serve() can wait for in-flight
-// enrichment before closing the database.
-func (s *PlexService) SetShutdownWG(wg *sync.WaitGroup) {
-	if s == nil {
-		return
-	}
-	s.shutdownWG = wg
 }
 
 // ProcessWebhook handles all inbound Plex webhook events, routing by event type.
@@ -232,7 +220,7 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 	}
 
 	if needsEnrichment(title) {
-		s.triggerAsyncEnrichment(title.ID, meta.Title, meta.Year, title.Type, ids)
+		s.enqueueEnrichmentTx(ctx, tx, title.ID, meta.Title, meta.Year, title.Type, ids)
 	}
 
 	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
@@ -326,7 +314,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 			if seriesName == "" {
 				seriesName = meta.Title
 			}
-			s.triggerAsyncEnrichment(title.ID, seriesName, meta.Year, title.Type, ids)
+			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, meta.Year, title.Type, ids)
 		}
 	}
 
@@ -410,89 +398,21 @@ func needsEnrichment(title *model.Title) bool {
 	return title.TMDBID == nil && title.AniListID == nil
 }
 
-// triggerAsyncEnrichment runs the matching pipeline in a goroutine and updates the title.
-func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
+// enqueueEnrichmentTx inserts an enrichment task into the queue on the given
+// transaction. Replaces the previous goroutine-per-webhook "trigger" pattern
+// which spawned unbounded goroutines during large Plex scans: the task queue
+// already enforces a shared rate limiter, exponential retry and panic recovery,
+// and SQLite's single-writer model means the rafale of webhooks becomes a
+// backlog rather than hundreds of concurrent TMDB/AniList/Gemini calls.
+func (s *PlexService) enqueueEnrichmentTx(ctx context.Context, tx *sql.Tx, titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
 	if s.pipeline == nil {
 		return
 	}
-
-	if s.shutdownWG != nil {
-		s.shutdownWG.Add(1)
-	}
-	go func() {
-		if s.shutdownWG != nil {
-			defer s.shutdownWG.Done()
-		}
-		select {
-		case <-s.ctx.Done():
-			return
-		default:
-		}
-
-		enrichCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
-		defer cancel()
-
-		result, err := s.pipeline.Run(enrichCtx, matching.MatchInput{
-			Title:  titleName,
-			Year:   year,
-			Type:   titleType,
-			IMDBID: ids.IMDB,
-			TMDBID: ids.TMDB,
-			TVDBID: ids.TVDB,
-		})
-		if err != nil {
-			log.Printf("async enrichment failed for title %d: %v", titleID, err)
-			if matching.IsRetryableError(err) {
-				s.enqueueEnrichment(enrichCtx, titleID, titleName, year, titleType, false, ids)
-			}
-			return
-		}
-
-		update := repository.TitleUpdate{
-			MatchStatus:   &result.MatchStatus,
-			MatchSource:   &result.MatchSource,
-			OriginalTitle: &titleName,
-		}
-		if result.IMDBID != "" {
-			update.IMDBID = &result.IMDBID
-		}
-		if result.TMDBID != 0 {
-			update.TMDBID = &result.TMDBID
-		}
-		if result.TVDBID != 0 {
-			update.TVDBID = &result.TVDBID
-		}
-		if result.AniListID != 0 {
-			update.AniListID = &result.AniListID
-		}
-		if result.CoverFile != "" {
-			coverURL := "/covers/" + result.CoverFile
-			update.CoverURL = &coverURL
-		}
-		if result.TitleType != titleType {
-			update.Type = &result.TitleType
-		}
-		if result.IsAnime {
-			update.IsAnime = &result.IsAnime
-		}
-
-		if err := database.WithTxContext(enrichCtx, s.db, func(tx *sql.Tx) error {
-			return repository.NewTitleWriter(tx).Update(enrichCtx, titleID, update)
-		}); err != nil {
-			log.Printf("async enrichment update failed for title %d: %v", titleID, err)
-		} else {
-			log.Printf("async enrichment completed for title %d", titleID)
-		}
-	}()
-}
-
-func (s *PlexService) enqueueEnrichment(ctx context.Context, titleID int64, titleName string, year int, titleType model.TitleType, isAnime bool, ids PlexExternalIDs) {
 	payload, err := json.Marshal(EnrichmentPayload{
 		TitleID:   titleID,
 		TitleName: titleName,
 		Year:      year,
 		TitleType: titleType,
-		IsAnime:   isAnime,
 		IMDBID:    ids.IMDB,
 		TMDBID:    ids.TMDB,
 		TVDBID:    ids.TVDB,
@@ -502,10 +422,7 @@ func (s *PlexService) enqueueEnrichment(ctx context.Context, titleID int64, titl
 		return
 	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
-	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey)
-		return e
-	}); err != nil {
+	if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
 		log.Printf("enqueue enrichment for title %d: %v", titleID, err)
 	}
 }

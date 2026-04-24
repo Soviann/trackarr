@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"mime"
@@ -23,6 +24,13 @@ import (
 // would otherwise hold the sole writeDB connection indefinitely.
 const webhookProcessingTimeout = 30 * time.Second
 
+// webhookMaxBodyBytes caps the total payload size a Plex webhook can push. Real
+// webhook bodies are a few KB (JSON metadata + optional thumbnail part); 1 MiB
+// leaves headroom while preventing a malicious or misconfigured proxy from
+// OOM-ing us through the multipart branch, which previously read r.Body
+// unbounded. The fallback non-multipart branch already capped at 1 MiB.
+const webhookMaxBodyBytes int64 = 1 << 20
+
 type WebhookHandler struct {
 	plex   *service.PlexService
 	secret string
@@ -38,8 +46,14 @@ func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) erro
 		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, webhookMaxBodyBytes)
 	payload, rawPayload, err := extractPlexPayload(r)
 	if err != nil {
+		var mbErr *http.MaxBytesError
+		if errors.As(err, &mbErr) {
+			log.Printf("plex webhook: payload exceeds %d bytes", mbErr.Limit)
+			return httputil.NewAPIError(http.StatusRequestEntityTooLarge, "Payload too large")
+		}
 		log.Printf("plex webhook: %v", err)
 		return httputil.BadRequest("Invalid request")
 	}
@@ -72,8 +86,10 @@ func extractPlexPayload(r *http.Request) (*plexwebhooks.Payload, string, error) 
 		return payload, string(raw), nil
 	}
 
-	// Fallback: proxy may have altered Content-Type
-	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	// Fallback: proxy may have altered Content-Type. r.Body is already bounded
+	// by MaxBytesReader in HandlePlex, so ReadAll surfaces *http.MaxBytesError
+	// on overflow instead of silently truncating.
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, "", err
 	}
