@@ -35,20 +35,24 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 
 	var (
 		title  *model.Title
+		ep     *model.Episode
 		prompt *service.RatingPrompt
 	)
 	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		t, p, e := h.service.ToggleEpisodeWatched(r.Context(), tx, titleID, episodeID)
-		if e != nil {
-			return e
+		t, e, p, err := h.service.ToggleEpisodeWatched(r.Context(), tx, titleID, episodeID)
+		if err != nil {
+			return err
 		}
-		title, prompt = t, p
+		title, ep, prompt = t, e, p
 		return nil
 	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
-	// Prompt delivery runs after the tx commits so a slow webpush endpoint
-	// cannot tie up the sole write connection.
+	// Fire post-commit side effects sequentially AFTER the write tx releases
+	// the sole SQLite writer. Running either of these inside the tx would
+	// deadlock (backfill opens its own writeDB tx) or block the writer on
+	// unrelated HTTP I/O (webpush).
+	h.service.TriggerBackfillForEpisode(r.Context(), titleID, ep)
 	h.service.SendRatingPrompt(r.Context(), prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)

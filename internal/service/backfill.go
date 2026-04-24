@@ -13,6 +13,13 @@ import (
 )
 
 // BackfillService orchestrates episode backfill from the handler layer.
+//
+// DEADLOCK WARNING: BackfillForEpisode opens its own writeDB transaction.
+// Because writeDB runs with MaxOpenConns=1, invoking it from inside another
+// writeDB tx deadlocks until the caller's ctx cancels. Callers MUST fire
+// this AFTER their own transaction has committed — see
+// `LibraryService.TriggerBackfillForEpisode` for the post-commit entry point
+// used by the episode handler.
 type BackfillService struct {
 	db   *sql.DB
 	tmdb *matching.TMDBClient

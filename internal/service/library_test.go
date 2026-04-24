@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -30,9 +31,10 @@ func setupLibraryService(t *testing.T) (*service.LibraryService, *sql.DB) {
 	episodes := repository.NewEpisodeRepository(db)
 	events := repository.NewWatchEventRepository(db)
 	settings := repository.NewSettingRepository(db)
-	// nil backfill on purpose: BackfillForEpisode opens its own connection and
-	// would deadlock against our caller-owned write tx under MaxOpenConns=1.
-	libSvc := service.NewLibraryService(db, titles, seasons, episodes, events, settings, service.NewNoopNotifier(), nil, nil)
+	// Wire a real BackfillService — ToggleEpisodeWatched no longer nests its
+	// tx, so this exercises the post-commit backfill path without deadlocking.
+	backfill := service.NewBackfillService(db, nil)
+	libSvc := service.NewLibraryService(db, titles, seasons, episodes, events, settings, service.NewNoopNotifier(), backfill, nil)
 	return libSvc, db
 }
 
@@ -54,7 +56,7 @@ func TestToggleEpisodeWatched_EnqueuesAniListPushForSeason(t *testing.T) {
 
 	ctx := context.Background()
 	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		_, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
+		_, _, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
 		return err
 	}))
 
@@ -65,6 +67,33 @@ func TestToggleEpisodeWatched_EnqueuesAniListPushForSeason(t *testing.T) {
 	var payload service.AniListPushSeasonPayload
 	require.NoError(t, json.Unmarshal([]byte(tasks[0].Payload), &payload))
 	assert.Equal(t, seasonID, payload.SeasonID)
+}
+
+// TestToggleEpisodeWatched_DoesNotDeadlockAgainstBackfill guards against the
+// regression we fixed: BackfillService opens its own writeDB transaction, so
+// calling it inside ToggleEpisodeWatched's tx used to deadlock forever under
+// MaxOpenConns=1. If someone reintroduces the nested call, this test hangs
+// past its timeout — which pytest-style `-timeout` on go test cuts short.
+func TestToggleEpisodeWatched_DoesNotDeadlockAgainstBackfill(t *testing.T) {
+	libSvc, db := setupLibraryService(t)
+	titleID := testutil.InsertTitle(t, db, "JJK", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	// Mark episode 1 as present + toggling episode 2: backfill will try to
+	// mark episode 1 as watched during the post-commit trigger.
+	testutil.GetOrCreateEpisode(t, db, seasonID, 1)
+	ep2 := testutil.GetOrCreateEpisode(t, db, seasonID, 2)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		_, _, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep2.ID)
+		return err
+	}))
+	// Post-commit trigger: fires the backfill path that previously deadlocked
+	// when nested inside the tx. Must return within ctx; the 10s timeout
+	// aborts if the bug is reintroduced.
+	libSvc.TriggerBackfillForEpisode(ctx, titleID, ep2)
 }
 
 // Unwatching still enqueues: the derived status flips from CURRENT/COMPLETED
@@ -78,14 +107,14 @@ func TestToggleEpisodeUnwatched_EnqueuesAniListPush(t *testing.T) {
 	// First toggle: watched → 1 task enqueued.
 	ctx := context.Background()
 	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		_, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
+		_, _, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
 		return err
 	}))
 	require.Len(t, collectPendingTasks(t, db), 1)
 
 	// Second toggle: unwatched → another task enqueued.
 	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		_, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
+		_, _, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
 		return err
 	}))
 	tasks := collectPendingTasks(t, db)

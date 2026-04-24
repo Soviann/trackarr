@@ -68,8 +68,13 @@ type RatingPrompt struct {
 }
 
 // ToggleEpisodeWatched toggles the watched status of an episode and logs a watch event.
-// Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
-func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, titleID, episodeID int64) (*model.Title, *RatingPrompt, error) {
+//
+// Returns the toggled *model.Episode and a *RatingPrompt (or nils) so the
+// caller can fire two post-commit actions:
+//   - rating-prompt push (already-existing pattern).
+//   - backfill trigger via TriggerBackfillForEpisode — backfill opens its own
+//     writeDB tx, so running it inside this one deadlocks on MaxOpenConns=1.
+func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, titleID, episodeID int64) (*model.Title, *model.Episode, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
@@ -77,7 +82,7 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 
 	ep, err := episodes.ToggleWatched(ctx, episodeID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if ep.Watched {
@@ -86,15 +91,11 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 			EpisodeID: &episodeID,
 			Source:    model.WatchEventSourceManual,
 		})
-
-		if s.backfill != nil {
-			s.backfill.BackfillForEpisode(ctx, titleID, ep)
-		}
 	}
 
 	title, err := titles.GetByID(titleID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Update total_watch_minutes: increment if watched, decrement if unwatched.
@@ -120,7 +121,21 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 	// so the derived CURRENT/COMPLETED/PLANNING transition reaches the remote.
 	EnqueueAniListSeasonPush(ctx, tx, ep.SeasonID)
 
-	return title, prompt, nil
+	return title, ep, prompt, nil
+}
+
+// TriggerBackfillForEpisode is the post-commit half of ToggleEpisodeWatched:
+// fires previous-episode backfill only when watching forward (never on
+// unwatch). Safe to call with nil ep.
+//
+// Callers MUST invoke this after the write transaction has committed —
+// BackfillForEpisode opens its own writeDB tx and will deadlock if called
+// inside another one.
+func (s *LibraryService) TriggerBackfillForEpisode(ctx context.Context, titleID int64, ep *model.Episode) {
+	if s.backfill == nil || ep == nil || !ep.Watched {
+		return
+	}
+	s.backfill.BackfillForEpisode(ctx, titleID, ep)
 }
 
 // MarkEpisodesWatched marks multiple episodes as watched and logs watch events.
