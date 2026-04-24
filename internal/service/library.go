@@ -118,7 +118,7 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 
 	// Progress changed (watch or unwatch): push the new season state to AniList
 	// so the derived CURRENT/COMPLETED/PLANNING transition reaches the remote.
-	enqueueAniListSeasonPush(ctx, tx, ep.SeasonID)
+	EnqueueAniListSeasonPush(ctx, tx, ep.SeasonID)
 
 	return title, prompt, nil
 }
@@ -169,7 +169,7 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 	// single episode at a time, but manual batch-watch can span multiple
 	// seasons when the user catches up on backlogs.
 	for _, seasonID := range distinctSeasonIDs(ctx, tx, episodeIDs) {
-		enqueueAniListSeasonPush(ctx, tx, seasonID)
+		EnqueueAniListSeasonPush(ctx, tx, seasonID)
 	}
 
 	return title, prompt, nil
@@ -205,7 +205,7 @@ func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, title
 	// the AniList push here. PushMovieState short-circuits on non-AniList or
 	// non-anime titles, but pre-filtering avoids creating throwaway tasks.
 	if title.IsAnime && title.AniListID != nil && *title.AniListID != 0 {
-		enqueueAniListMoviePush(ctx, tx, titleID)
+		EnqueueAniListMoviePush(ctx, tx, titleID)
 	}
 	return s.buildRatingPrompt(tx, title), nil
 }
@@ -269,10 +269,10 @@ func (s *LibraryService) buildRatingPrompt(db database.DBTX, title *model.Title)
 	return nil
 }
 
-// enqueueAniListSeasonPush schedules a per-season AniList push within the
+// EnqueueAniListSeasonPush schedules a per-season AniList push within the
 // caller's transaction. Errors are logged and swallowed — the task queue is
 // a best-effort propagation layer, never the source of truth.
-func enqueueAniListSeasonPush(ctx context.Context, tx *sql.Tx, seasonID int64) {
+func EnqueueAniListSeasonPush(ctx context.Context, tx *sql.Tx, seasonID int64) {
 	payload, err := json.Marshal(AniListPushSeasonPayload{SeasonID: seasonID})
 	if err != nil {
 		log.Printf("library: marshal anilist push payload for season %d: %v", seasonID, err)
@@ -283,9 +283,9 @@ func enqueueAniListSeasonPush(ctx context.Context, tx *sql.Tx, seasonID int64) {
 	}
 }
 
-// enqueueAniListMoviePush schedules a per-movie AniList push (anime movies
+// EnqueueAniListMoviePush schedules a per-movie AniList push (anime movies
 // only — guard at the call site).
-func enqueueAniListMoviePush(ctx context.Context, tx *sql.Tx, titleID int64) {
+func EnqueueAniListMoviePush(ctx context.Context, tx *sql.Tx, titleID int64) {
 	payload, err := json.Marshal(AniListPushMoviePayload{TitleID: titleID})
 	if err != nil {
 		log.Printf("library: marshal anilist push payload for movie %d: %v", titleID, err)

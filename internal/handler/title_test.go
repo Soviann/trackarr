@@ -180,6 +180,161 @@ func TestTitleHandler_Update(t *testing.T) {
 	assert.Equal(t, model.TitleStatusCompleted, title.Status)
 }
 
+// TestTitleHandler_Update_StatusChange_EnqueuesSeasonPushes verifies that
+// changing a series status enqueues one push task per season regardless of
+// their watched-progress — status is the one signal AniList needs for every
+// season, whether COMPLETED, CURRENT, or PLANNING.
+func TestTitleHandler_Update_StatusChange_EnqueuesSeasonPushes(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	titleID := testutil.InsertTitle(t, db, "JJK", true)
+	s1 := testutil.InsertSeason(t, db, titleID, 1)
+	s2 := testutil.InsertSeason(t, db, titleID, 2)
+
+	body, _ := json.Marshal(map[string]any{"status": "dropped"})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 2)
+
+	seen := map[int64]bool{}
+	for _, task := range tasks {
+		assert.Equal(t, model.TaskTypeAniListPushSeason, task.TaskType)
+		var p service.AniListPushSeasonPayload
+		require.NoError(t, json.Unmarshal([]byte(task.Payload), &p))
+		seen[p.SeasonID] = true
+	}
+	assert.True(t, seen[s1], "s1 push missing")
+	assert.True(t, seen[s2], "s2 push missing")
+}
+
+// TestTitleHandler_Update_RatingOnly_SkipsNonEligibleSeasons verifies the
+// rating-only path: AniList rejects scores on CURRENT/PLANNING entries, so
+// the handler must filter seasons via ShouldPushRating. Only the COMPLETED
+// season receives a push.
+func TestTitleHandler_Update_RatingOnly_SkipsNonEligibleSeasons(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	titleID := testutil.InsertTitle(t, db, "JJK", true)
+	sCompleted := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.SetSeasonEpisodeCount(t, db, sCompleted, 12)
+	testutil.MarkEpisodesWatched(t, db, sCompleted, 12)
+
+	sCurrent := testutil.InsertSeason(t, db, titleID, 2)
+	testutil.SetSeasonEpisodeCount(t, db, sCurrent, 12)
+	testutil.MarkEpisodesWatched(t, db, sCurrent, 5)
+
+	body, _ := json.Marshal(map[string]any{"my_rating": 9})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1, "only the COMPLETED season should be pushed")
+
+	var p service.AniListPushSeasonPayload
+	require.NoError(t, json.Unmarshal([]byte(tasks[0].Payload), &p))
+	assert.Equal(t, sCompleted, p.SeasonID)
+}
+
+// TestTitleHandler_Update_MovieStatusChange_EnqueuesMoviePush exercises the
+// movie branch: no seasons, one movie push, gated by IsAnime + AniListID.
+func TestTitleHandler_Update_MovieStatusChange_EnqueuesMoviePush(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	titleID := testutil.InsertMovieTitle(t, db, "Your Name", 21519)
+
+	body, _ := json.Marshal(map[string]any{"status": "completed"})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeAniListPushMovie, tasks[0].TaskType)
+}
+
+// TestTitleHandler_Update_NoEffectiveChange_NoPush verifies the short-circuit
+// that prevents a re-PATCH of current values from spamming AniList.
+func TestTitleHandler_Update_NoEffectiveChange_NoPush(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	rating := 8
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     true,
+			Year:        2024,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+			MyRating:    &rating,
+		},
+		[]model.TitleName{{Name: "JJK", Language: "en", IsPrimary: true}},
+	)
+	testutil.InsertSeason(t, db, titleID, 1)
+
+	body, _ := json.Marshal(map[string]any{"status": "watching", "my_rating": 8})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+}
+
+// TestTitleHandler_Update_StatusAndRating_DedupesSeasonPushes guards against
+// the combined-PATCH case (status + rating together): status alone would
+// enqueue every season, and rating alone would enqueue eligible seasons
+// again — de-duping avoids two tasks for the same season.
+func TestTitleHandler_Update_StatusAndRating_DedupesSeasonPushes(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	titleID := testutil.InsertTitle(t, db, "JJK", true)
+	s1 := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.SetSeasonEpisodeCount(t, db, s1, 12)
+	testutil.MarkEpisodesWatched(t, db, s1, 12)
+
+	body, _ := json.Marshal(map[string]any{"status": "completed", "my_rating": 10})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1, "combined PATCH must not double-push the same season")
+}
+
 func TestTitleHandler_Update_InvalidID(t *testing.T) {
 	h, _, _ := setupHandler(t)
 
