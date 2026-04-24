@@ -1,7 +1,3 @@
-// Package testutil provides small helpers that wrap the compile-time-safe
-// tx-only writers in boilerplate-free forms for tests. Tests use the pool
-// handle directly and do not care about tx granularity, so wrapping each
-// write in a short transaction is fine.
 package testutil
 
 import (
@@ -15,6 +11,23 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/stretchr/testify/require"
 )
+
+// InsertTitle inserts a minimal series title with one primary English name and
+// returns its ID. Convenience wrapper around CreateTitle for tests that only
+// care about having *a* title+season to attach child rows to.
+func InsertTitle(t *testing.T, db *sql.DB, name string, isAnime bool) int64 {
+	t.Helper()
+	return CreateTitle(t, db,
+		&model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     isAnime,
+			Year:        2024,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: name, Language: "en", IsPrimary: true}},
+	)
+}
 
 // CreateTitle inserts a title+names and returns the new ID.
 func CreateTitle(t *testing.T, db *sql.DB, title *model.Title, names []model.TitleName) int64 {

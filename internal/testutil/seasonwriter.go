@@ -11,6 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// InsertSeason creates a season for (titleID, seasonNumber) and returns its
+// ID — convenience wrapper when only the ID is needed.
+func InsertSeason(t *testing.T, db *sql.DB, titleID int64, seasonNumber int) int64 {
+	t.Helper()
+	return GetOrCreateSeason(t, db, titleID, seasonNumber).ID
+}
+
 // GetOrCreateSeason returns (creating if needed) the season for a title+number.
 func GetOrCreateSeason(t *testing.T, db *sql.DB, titleID int64, seasonNumber int) *model.Season {
 	t.Helper()
