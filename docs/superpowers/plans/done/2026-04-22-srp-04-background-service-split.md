@@ -2,6 +2,28 @@
 
 > **For agentic workers:** Single session. Independent of other SRP plans.
 
+## Revision — 2026-04-24
+
+Plan adapté pour refléter le code réel :
+
+- **Nombre de champs :** 9 (non 12). Pas de `httpClient` ni `coverDir string` dédié — chaque client externe (TMDB / AniList / TVDB) possède son propre HTTP client et sa propre méthode `DownloadCover`. Le seul helper restant côté `BackgroundService` était `coversDir()` (concaténation `dataDir + "covers"`).
+- **Méthodes cibles abandonnées :** pas de `DownloadCover(ctx, titleID, url)`, `DeleteCover(titleID, filename)` ni `MigrateLegacyCovers(ctx)` — ces méthodes n'existaient pas, leur extraction aurait introduit une abstraction sans usager.
+- **Ce qui a effectivement été extrait dans `CoverService`** (`internal/service/cover.go`) :
+  - `FetchMissingCovers(ctx) int`
+  - `CleanupUnusedCovers(ctx, day)` + `processCoverBatch` + `coverDailyPrefixes` (renommé depuis `getDailyPrefixes`)
+  - `DownloadAniListCover(ctx, title) bool` (exporté depuis `downloadAniListCover`)
+  - `enqueueCoverOnRetryable` (privé)
+  - `Dir() string` (remplace `BackgroundService.coversDir()`)
+- **Appels inline `s.tmdb/tvdb/anilist.DownloadCover(...)` dans les méthodes de refresh :** conservés. Déjà 1-liners délégant aux clients API. Routent désormais `s.covers.Dir()` pour le chemin cible.
+- **Constructeur `NewBackgroundService` :** perd les paramètres `anilist` et `dataDir`, gagne `covers *CoverService`. Wiring fait dans `cmd/serve.go`.
+- **Tests :** `TestBackgroundService_CleanupUnusedCovers` migré vers `TestCoverService_CleanupUnusedCovers` dans `internal/service/cover_test.go`. `setupBackgroundService` construit un `CoverService` minimal (clients nil) pour les tests.
+
+**Gain mesuré :** `background.go` passe de 727 à 508 lignes ; `cover.go` fait ~280 lignes. Structure `BackgroundService` 9 → 8 champs (perd `anilist`, `dataDir`, gagne `covers`).
+
+Aucun changement fonctionnel, aucun impact utilisateur.
+
+---
+
 ## PO summary
 
 Separates the code that downloads cover images from the code that refreshes title metadata. Each piece becomes easier to read and to test. No user-visible change.
