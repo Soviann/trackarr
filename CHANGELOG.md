@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [v0.17.0] — 2026-04-24
+
+Release de hardening issue de l'audit 2026-04-24 (22 findings clos, 11 batches). Sécurité, fiabilité, UX : rien de visible pour un scrobble normal, mais les marges qui pouvaient dégénérer sous charge, attaque, outage externe ou crash UI sont désormais bornées.
+
 ### Fiabilité
 - Arrêt du serveur : les goroutines d'arrière-plan (ticker de rafraîchissement journalier, worker de la file de tâches, `/titles/{id}/refresh`) sont désormais suivies par un `sync.WaitGroup` partagé ; `Serve()` attend jusqu'à 10 s qu'elles terminent leur itération en cours **après** `http.Server.Shutdown` et **avant** de fermer la base — les transactions en vol ne rencontrent plus `database is closed` au redémarrage et les tâches ne restent plus bloquées en `status=running` à cause d'un SIGTERM mal placé
 - Webhooks Plex : un scan massif d'une bibliothèque ne lance plus des centaines de goroutines d'enrichment concurrentes qui saturent TMDB / AniList / Gemini — l'enrichment est désormais enfilé dans la task queue au sein même de la transaction du webhook, et la rafale devient un backlog consommé à cadence bornée par le rate-limiter partagé du worker (dedup key `enrichment:<titleID>` pour ignorer les répétitions)
