@@ -45,13 +45,6 @@ func (w *SeasonWriter) GetOrCreate(ctx context.Context, titleID int64, seasonNum
 	return &model.Season{ID: id, TitleID: titleID, SeasonNumber: seasonNumber}, nil
 }
 
-func (w *SeasonWriter) UpdateRating(ctx context.Context, id int64, rating int) error {
-	if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET my_rating = ? WHERE id = ?`, rating, id); err != nil {
-		return fmt.Errorf("update season rating: %w", err)
-	}
-	return nil
-}
-
 func (w *SeasonWriter) UpdateTotalEpisodes(ctx context.Context, id int64, total int) error {
 	if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET total_episodes = ? WHERE id = ?`, total, id); err != nil {
 		return fmt.Errorf("update total episodes: %w", err)

@@ -74,7 +74,6 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc)
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
-	seasons := handler.NewSeasonHandler(writeDB)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
@@ -134,8 +133,6 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
 			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
-
-			r.Patch("/titles/{titleID}/seasons/{seasonID}", httputil.WrapHandler(seasons.UpdateRating))
 
 			r.Post("/push/subscribe", httputil.WrapHandler(push.Subscribe))
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
