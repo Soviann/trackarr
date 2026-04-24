@@ -254,7 +254,7 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 
 		// Check if task just died (day 7 + last attempt)
 		if task.Day >= 7 && task.Attempts+1 >= task.MaxAttempts {
-			w.notifyDeadTask(task)
+			w.notifyDeadTask(ctx, task)
 		}
 
 		return
@@ -569,7 +569,7 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 	title.CoverURL = &coverPath
 }
 
-func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
+func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task) {
 	if !IsNotificationEnabled(w.settings, NotifDeadTask) {
 		return
 	}
@@ -581,11 +581,14 @@ func (w *TaskQueueWorker) notifyDeadTask(task model.Task) {
 		titleName = ep.TitleName
 	}
 
-	_ = w.push.SendNotification(
+	if err := w.push.SendNotification(
+		ctx,
 		"PlexTracker",
 		fmt.Sprintf("Task failed — Unable to process: %s", titleName),
 		"/admin/tasks",
-	)
+	); err != nil {
+		log.Printf("dead-task push failed for task %d: %v", task.ID, err)
+	}
 }
 
 // calculateNextRunAt computes the next retry time with exponential backoff + jitter.

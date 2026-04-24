@@ -351,11 +351,14 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		title.SeriesStatus = newStatus
 
 		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
-			_ = s.push.SendNotification(
+			if err := s.push.SendNotification(
+				ctx,
 				"PlexTracker",
 				fmt.Sprintf("%s — Series ended", title.PrimaryName()),
 				fmt.Sprintf("/title/%d", title.ID),
-			)
+			); err != nil {
+				log.Printf("series-ended push failed for title %d: %v", title.ID, err)
+			}
 		}
 	}
 

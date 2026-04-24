@@ -5,13 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
 // pushHTTPClient caps every outbound push request at 5 seconds. The default
@@ -26,7 +29,7 @@ type PushNotifier interface {
 	Subscribe(ctx context.Context, rawJSON string) error
 	Unsubscribe(ctx context.Context) error
 	HasSubscription() bool
-	SendNotification(title, body, url string) error
+	SendNotification(ctx context.Context, title, body, url string) error
 }
 
 // PushService implements PushNotifier with real web push notifications.
@@ -82,7 +85,7 @@ func (s *PushService) HasSubscription() bool {
 	return err == nil && val != ""
 }
 
-func (s *PushService) SendNotification(title, body, url string) error {
+func (s *PushService) SendNotification(ctx context.Context, title, body, url string) error {
 	raw, err := s.settings.Get(settingKeyPushSubscription)
 	if err != nil {
 		return nil // No subscription, silently skip
@@ -110,11 +113,35 @@ func (s *PushService) SendNotification(title, body, url string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
-		log.Printf("push notification failed: status %d", resp.StatusCode)
+	if resp.StatusCode < 300 {
+		return nil
 	}
 
-	return nil
+	// 404 Not Found / 410 Gone → subscription is permanently dead. Remove it so
+	// the next rating prompt / dead-task / series-ended notification doesn't
+	// burn another HTTP call against the same broken endpoint.
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
+		if err := s.Unsubscribe(ctx); err != nil {
+			log.Printf("push: status %d — removing dead subscription failed: %v", resp.StatusCode, err)
+		} else {
+			log.Printf("push: status %d — removed dead subscription", resp.StatusCode)
+		}
+		return nil
+	}
+
+	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	apiErr := &matching.APIError{
+		Service:    "push",
+		StatusCode: resp.StatusCode,
+		Body:       string(bodyBytes),
+	}
+	if ra := resp.Header.Get("Retry-After"); ra != "" {
+		if secs, err := strconv.Atoi(ra); err == nil {
+			apiErr.RetryAfter = time.Duration(secs) * time.Second
+		}
+	}
+	log.Printf("push notification failed: status %d", resp.StatusCode)
+	return apiErr
 }
 
 // noopNotifier silently ignores all push operations.
@@ -133,5 +160,7 @@ func (noopNotifier) Subscribe(context.Context, string) error {
 func (noopNotifier) Unsubscribe(context.Context) error {
 	return fmt.Errorf("push notifications not configured")
 }
-func (noopNotifier) HasSubscription() bool                 { return false }
-func (noopNotifier) SendNotification(_, _, _ string) error { return nil }
+func (noopNotifier) HasSubscription() bool { return false }
+func (noopNotifier) SendNotification(context.Context, string, string, string) error {
+	return nil
+}

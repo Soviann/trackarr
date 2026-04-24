@@ -193,12 +193,17 @@ func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, title
 
 // SendRatingPrompt fires a rating-prompt push notification. Must be called
 // AFTER any enclosing write transaction has committed so a slow push endpoint
-// cannot hold the sole SQLite write connection. Safe to call with nil.
-func (s *LibraryService) SendRatingPrompt(p *RatingPrompt) {
+// cannot hold the sole SQLite write connection. Safe to call with nil. The
+// ctx is only used to scope the Unsubscribe that runs when the push endpoint
+// reports the subscription as gone (410); push delivery itself is always
+// bounded by pushHTTPClient's 5s timeout.
+func (s *LibraryService) SendRatingPrompt(ctx context.Context, p *RatingPrompt) {
 	if p == nil || s.push == nil {
 		return
 	}
-	_ = s.push.SendNotification("PlexTracker", p.Message, fmt.Sprintf("/title/%d", p.TitleID))
+	if err := s.push.SendNotification(ctx, "PlexTracker", p.Message, fmt.Sprintf("/title/%d", p.TitleID)); err != nil {
+		log.Printf("rating prompt push failed: %v", err)
+	}
 }
 
 // buildRatingPrompt inspects a title and returns a RatingPrompt if a rating

@@ -78,7 +78,7 @@ func TestPushService_Subscribe_RequiresEndpoint(t *testing.T) {
 func TestNoopNotifier(t *testing.T) {
 	noop := service.NewNoopNotifier()
 	assert.False(t, noop.HasSubscription())
-	assert.NoError(t, noop.SendNotification("title", "body", ""))
+	assert.NoError(t, noop.SendNotification(context.Background(), "title", "body", ""))
 	assert.Error(t, noop.Subscribe(context.Background(), `{"endpoint":"https://example.com"}`))
 	assert.Error(t, noop.Unsubscribe(context.Background()))
 }

@@ -49,7 +49,7 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 	}
 	// Prompt delivery runs after the tx commits so a slow webpush endpoint
 	// cannot tie up the sole write connection.
-	h.service.SendRatingPrompt(prompt)
+	h.service.SendRatingPrompt(r.Context(), prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil
@@ -82,7 +82,7 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
-	h.service.SendRatingPrompt(prompt)
+	h.service.SendRatingPrompt(r.Context(), prompt)
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil

@@ -183,7 +183,7 @@ func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metada
 		return err
 	}
 
-	s.libSvc.SendRatingPrompt(ratingPrompt)
+	s.libSvc.SendRatingPrompt(ctx, ratingPrompt)
 	return nil
 }
 
@@ -254,7 +254,7 @@ func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Meta
 		return err
 	}
 
-	s.libSvc.SendRatingPrompt(ratingPrompt)
+	s.libSvc.SendRatingPrompt(ctx, ratingPrompt)
 
 	if autoCompleteCheck != nil {
 		if err := s.libSvc.CheckAutoComplete(ctx, s.db, autoCompleteCheck.titleID, autoCompleteCheck.tmdbID, autoCompleteCheck.seasonNum, autoCompleteCheck.episodeNum); err != nil {
