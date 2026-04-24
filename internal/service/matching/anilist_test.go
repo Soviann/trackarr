@@ -3,6 +3,7 @@ package matching
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -196,4 +197,64 @@ func TestAniListSearchResultDisplayTitle(t *testing.T) {
 
 	r.EnglishTitle = "Attack on Titan"
 	assert.Equal(t, "Attack on Titan", r.DisplayTitle())
+}
+
+func TestAniListSaveMediaListEntry_WithScoreAndProgress(t *testing.T) {
+	var captured string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		captured = string(body)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+		_, _ = w.Write([]byte(`{"data":{"SaveMediaListEntry":{"id":42}}}`))
+	}))
+	defer server.Close()
+
+	client := NewAniListClientWithURL(server.URL)
+	score := 9
+	err := client.SaveMediaListEntry(context.Background(), SaveMediaListEntryInput{
+		MediaID:  166240,
+		Status:   "COMPLETED",
+		Progress: 12,
+		Score:    &score,
+	}, "test-token")
+	require.NoError(t, err)
+	assert.Contains(t, captured, `"mediaId":166240`)
+	assert.Contains(t, captured, `"status":"COMPLETED"`)
+	assert.Contains(t, captured, `"progress":12`)
+	assert.Contains(t, captured, `"scoreRaw":90`)
+}
+
+func TestAniListSaveMediaListEntry_OmitsScoreWhenNil(t *testing.T) {
+	var captured string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		captured = string(body)
+		_, _ = w.Write([]byte(`{"data":{"SaveMediaListEntry":{"id":42}}}`))
+	}))
+	defer server.Close()
+
+	client := NewAniListClientWithURL(server.URL)
+	err := client.SaveMediaListEntry(context.Background(), SaveMediaListEntryInput{
+		MediaID:  166240,
+		Status:   "CURRENT",
+		Progress: 5,
+		Score:    nil,
+	}, "test-token")
+	require.NoError(t, err)
+	assert.NotContains(t, captured, `"scoreRaw"`)
+}
+
+func TestAniListSaveMediaListEntry_Returns401AsTokenInvalid(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"errors":[{"message":"invalid token"}]}`))
+	}))
+	defer server.Close()
+
+	client := NewAniListClientWithURL(server.URL)
+	err := client.SaveMediaListEntry(context.Background(), SaveMediaListEntryInput{
+		MediaID: 1, Status: "CURRENT",
+	}, "bad-token")
+	var tokenInvalid TokenInvalidError
+	assert.ErrorAs(t, err, &tokenInvalid)
 }
