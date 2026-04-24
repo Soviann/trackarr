@@ -76,7 +76,7 @@ func TestPlexService_MovieScrobble(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{"event":"media.scrobble"}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{"event":"media.scrobble"}`)
 	require.NoError(t, err)
 
 	result, _ := titleRepo.List(repository.TitleFilter{})
@@ -104,7 +104,7 @@ func TestPlexService_EpisodeScrobble(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	result, _ := titleRepo.List(repository.TitleFilter{})
@@ -138,7 +138,7 @@ func TestPlexService_EpisodeScrobble_NoIDLeak(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	result, _ := titleRepo.List(repository.TitleFilter{})
@@ -237,7 +237,7 @@ func TestPlexService_AutoCompleteEndedSeries(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -281,7 +281,7 @@ func TestPlexService_NoAutoCompleteForNonFinalEpisode(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -324,7 +324,7 @@ func TestPlexService_NoAutoCompleteForReturningSeries(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -357,7 +357,7 @@ func TestPlexService_NoAutoCompleteWithoutTMDB(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	title, _ := titleRepo.GetByID(titleID)
@@ -375,7 +375,7 @@ func TestPlexService_IgnoresNonScrobble(t *testing.T) {
 		},
 	}
 
-	err := svc.ProcessScrobble(payload, `{}`)
+	err := svc.ProcessWebhook(context.Background(), payload, `{}`)
 	require.NoError(t, err)
 
 	result, _ := titleRepo.List(repository.TitleFilter{})

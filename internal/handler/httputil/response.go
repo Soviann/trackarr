@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -9,5 +10,7 @@ import (
 func WriteJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("httputil.WriteJSON: encode: %v", err)
+	}
 }

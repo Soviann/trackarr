@@ -173,6 +173,25 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | `/admin/notifications` | AdminNotifications | `pages/AdminNotifications.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
 
+### localStorage persistence
+
+Pure UI preferences (e.g. `title-sort` in `store.ts:loadSort/saveSort`) can be stored raw — no staleness risk. Any future cache of server-sourced data MUST wrap the payload with a timestamp and enforce a TTL on read, otherwise a stale value will outlive any schema/semantic change:
+
+```ts
+type Cached<T> = { ts: number; v: T }
+const TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+function load<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const c: Cached<T> = JSON.parse(raw)
+    if (Date.now() - c.ts > TTL_MS) { localStorage.removeItem(key); return null }
+    return c.v
+  } catch { return null }
+}
+```
+
 ## Quality
 
 ### Linting

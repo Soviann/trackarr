@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -23,7 +24,7 @@ func JWTAuth(secret string) func(http.Handler) http.Handler {
 
 			token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
 				return []byte(secret), nil
-			}, jwt.WithValidMethods([]string{"HS256"}))
+			}, jwt.WithValidMethods([]string{"HS256"}), jwt.WithLeeway(30*time.Second))
 
 			if err != nil || !token.Valid {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)

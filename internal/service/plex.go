@@ -79,11 +79,6 @@ func (s *PlexService) ProcessWebhook(ctx context.Context, payload *plexwebhooks.
 	}
 }
 
-// ProcessScrobble is kept for backward compatibility with existing tests.
-func (s *PlexService) ProcessScrobble(payload *plexwebhooks.Payload, rawPayload string) error {
-	return s.ProcessWebhook(context.Background(), payload, rawPayload)
-}
-
 func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
 	meta := payload.Metadata
 	var ids PlexExternalIDs
