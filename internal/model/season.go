@@ -5,7 +5,6 @@ type Season struct {
 	TitleID       int64 `json:"title_id"`
 	SeasonNumber  int   `json:"season_number"`
 	TotalEpisodes *int  `json:"total_episodes"`
-	MyRating      *int  `json:"my_rating"`
 
 	// Listing counters (populated by loadTitleRelationsLight, omitted on detail)
 	EpisodeCount *int `json:"episode_count,omitempty"`

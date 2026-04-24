@@ -45,7 +45,7 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 	nameRows.Close()
 
 	// 2. Bulk load seasons
-	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE title_id IN (`+inClause+`) ORDER BY title_id, season_number`, args...)
+	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes FROM seasons WHERE title_id IN (`+inClause+`) ORDER BY title_id, season_number`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("get seasons bulk: %w", err)
 	}
@@ -57,7 +57,7 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 
 	for seasonRows.Next() {
 		var s model.Season
-		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating); err != nil {
+		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes); err != nil {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}
@@ -152,7 +152,7 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 
 	// 2. Bulk load seasons with counts
 	seasonRows, err := r.db.Query(`
-		SELECT s.id, s.title_id, s.season_number, s.total_episodes, s.my_rating,
+		SELECT s.id, s.title_id, s.season_number, s.total_episodes,
 			COUNT(e.id) AS episode_count,
 			SUM(CASE WHEN e.watched THEN 1 ELSE 0 END) AS watched_count
 		FROM seasons s
@@ -166,7 +166,7 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 	for seasonRows.Next() {
 		var s model.Season
 		var episodeCount, watchedCount int
-		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating, &episodeCount, &watchedCount); err != nil {
+		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &episodeCount, &watchedCount); err != nil {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season light: %w", err)
 		}

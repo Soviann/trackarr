@@ -114,14 +114,14 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	genreRows.Close()
 
 	// Load seasons
-	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE title_id = ? ORDER BY season_number`, id)
+	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes FROM seasons WHERE title_id = ? ORDER BY season_number`, id)
 	if err != nil {
 		return nil, fmt.Errorf("get seasons: %w", err)
 	}
 
 	for seasonRows.Next() {
 		var s model.Season
-		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating); err != nil {
+		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes); err != nil {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}

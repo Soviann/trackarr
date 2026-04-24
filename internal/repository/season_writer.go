@@ -26,9 +26,9 @@ func NewSeasonWriter(tx *sql.Tx) *SeasonWriter {
 func (w *SeasonWriter) GetOrCreate(ctx context.Context, titleID int64, seasonNumber int) (*model.Season, error) {
 	var s model.Season
 	err := w.tx.QueryRowContext(ctx,
-		`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE title_id = ? AND season_number = ?`,
+		`SELECT id, title_id, season_number, total_episodes FROM seasons WHERE title_id = ? AND season_number = ?`,
 		titleID, seasonNumber,
-	).Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating)
+	).Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes)
 	if err == nil {
 		return &s, nil
 	}
@@ -60,9 +60,9 @@ func (w *SeasonWriter) Upsert(ctx context.Context, titleID int64, seasonNumber, 
 		`INSERT INTO seasons (title_id, season_number, total_episodes)
 		 VALUES (?, ?, ?)
 		 ON CONFLICT(title_id, season_number) DO UPDATE SET total_episodes = excluded.total_episodes
-		 RETURNING id, title_id, season_number, total_episodes, my_rating`,
+		 RETURNING id, title_id, season_number, total_episodes`,
 		titleID, seasonNumber, totalEpisodes,
-	).Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating)
+	).Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes)
 	if err != nil {
 		return nil, fmt.Errorf("upsert season: %w", err)
 	}

@@ -17,8 +17,8 @@ func NewSeasonRepository(db database.DBTX) *SeasonRepository {
 
 func (r *SeasonRepository) GetByID(id int64) (*model.Season, error) {
 	var s model.Season
-	err := r.db.QueryRow(`SELECT id, title_id, season_number, total_episodes, my_rating FROM seasons WHERE id = ?`, id).
-		Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes, &s.MyRating)
+	err := r.db.QueryRow(`SELECT id, title_id, season_number, total_episodes FROM seasons WHERE id = ?`, id).
+		Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes)
 	if err != nil {
 		return nil, fmt.Errorf("get season: %w", err)
 	}
