@@ -2,25 +2,41 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 const maxTrackedIPs = 10_000
 
 type rateLimiter struct {
 	mu       sync.Mutex
-	attempts map[string][]time.Time
+	attempts *lru.Cache[string, []time.Time]
 	max      int
 	window   time.Duration
 }
 
 // RateLimit restricts requests per IP to max within the given window.
 // The ctx controls the lifetime of the background cleanup goroutine.
+//
+// The per-IP attempt map is backed by an LRU cache capped at maxTrackedIPs:
+// when the cap is hit, the least-recently-seen IP is evicted to make room
+// for a new one. This prevents a distributed attacker from filling the
+// table with throwaway IPs and starving legitimate users of a fresh slot
+// (previous behaviour rejected new IPs outright once the cap was reached).
 func RateLimit(ctx context.Context, max int, window time.Duration) func(http.Handler) http.Handler {
+	// lru.New only errors when size <= 0; maxTrackedIPs is a positive constant,
+	// so the error is unreachable in practice — guard anyway to survive a future edit.
+	cache, err := lru.New[string, []time.Time](maxTrackedIPs)
+	if err != nil {
+		log.Printf("ratelimit: LRU init failed (size=%d): %v", maxTrackedIPs, err)
+		return func(next http.Handler) http.Handler { return next }
+	}
 	rl := &rateLimiter{
-		attempts: make(map[string][]time.Time),
+		attempts: cache,
 		max:      max,
 		window:   window,
 	}
@@ -45,7 +61,7 @@ func (rl *rateLimiter) allow(ip string) bool {
 	now := time.Now()
 	cutoff := now.Add(-rl.window)
 
-	attempts := rl.attempts[ip]
+	attempts, _ := rl.attempts.Get(ip)
 	valid := attempts[:0]
 	for _, t := range attempts {
 		if t.After(cutoff) {
@@ -54,16 +70,11 @@ func (rl *rateLimiter) allow(ip string) bool {
 	}
 
 	if len(valid) >= rl.max {
-		rl.attempts[ip] = valid
+		rl.attempts.Add(ip, valid)
 		return false
 	}
 
-	// Cap map size to prevent unbounded memory growth under distributed attack.
-	if _, tracked := rl.attempts[ip]; !tracked && len(rl.attempts) >= maxTrackedIPs {
-		return false
-	}
-
-	rl.attempts[ip] = append(valid, now)
+	rl.attempts.Add(ip, append(valid, now))
 	return true
 }
 
@@ -79,7 +90,11 @@ func (rl *rateLimiter) cleanup(ctx context.Context, interval time.Duration) {
 		case <-ticker.C:
 			rl.mu.Lock()
 			cutoff := time.Now().Add(-rl.window)
-			for ip, attempts := range rl.attempts {
+			for _, ip := range rl.attempts.Keys() {
+				attempts, ok := rl.attempts.Peek(ip)
+				if !ok {
+					continue
+				}
 				valid := attempts[:0]
 				for _, t := range attempts {
 					if t.After(cutoff) {
@@ -87,9 +102,9 @@ func (rl *rateLimiter) cleanup(ctx context.Context, interval time.Duration) {
 					}
 				}
 				if len(valid) == 0 {
-					delete(rl.attempts, ip)
+					rl.attempts.Remove(ip)
 				} else {
-					rl.attempts[ip] = valid
+					rl.attempts.Add(ip, valid)
 				}
 			}
 			rl.mu.Unlock()

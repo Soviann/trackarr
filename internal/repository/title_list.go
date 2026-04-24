@@ -32,6 +32,21 @@ type TitleFilter struct {
 const DefaultPageSize = 50
 const MaxPageSize = 200
 
+// allowedSortColumns guards against SQL injection in the ORDER BY clause by
+// enforcing a hard whitelist of column names inside the repository itself,
+// independently from whatever the handler layer may validate. Any caller that
+// passes an unknown value gets the default ordering instead of a concatenated
+// column name.
+var allowedSortColumns = map[string]bool{
+	"updated_at":      true,
+	"original_title":  true,
+	"year":            true,
+	"my_rating":       true,
+	"created_at":      true,
+	"release_date":    true,
+	"last_watched_at": true,
+}
+
 // PaginatedResult wraps a list of titles with pagination metadata.
 type PaginatedResult struct {
 	Titles  []model.Title `json:"titles"`
@@ -168,7 +183,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 
 	// Build ORDER BY
 	orderBy := "t.updated_at DESC" // default
-	if filter.Sort != "" {
+	if filter.Sort != "" && allowedSortColumns[filter.Sort] {
 		dir := "DESC"
 		if filter.Order == "asc" {
 			dir = "ASC"
