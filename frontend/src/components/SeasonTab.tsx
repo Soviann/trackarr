@@ -40,9 +40,6 @@ export function SeasonTab({ season, active, onClick }: SeasonTabProps) {
         </svg>
       )}
       <span className={s.labelInactive}>S{season.season_number}</span>
-      {season.my_rating != null && (
-        <span className={s.rating}>��� {season.my_rating}</span>
-      )}
     </button>
   )
 }

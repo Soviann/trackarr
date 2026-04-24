@@ -62,7 +62,6 @@ export interface Season {
   title_id: number
   season_number: number
   total_episodes: number | null
-  my_rating: number | null
   episode_count?: number
   watched_count?: number
   episodes: Episode[]

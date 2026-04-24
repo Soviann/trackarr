@@ -22,7 +22,7 @@ function makeEpisode(watched: boolean): Episode {
 }
 
 function makeSeason(episodes: Episode[]): Season {
-  return { id: 1, title_id: 1, season_number: 1, total_episodes: null, my_rating: null, episodes }
+  return { id: 1, title_id: 1, season_number: 1, total_episodes: null, episodes }
 }
 
 describe('getName', () => {
