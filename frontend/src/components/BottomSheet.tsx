@@ -12,17 +12,34 @@ export function BottomSheet({ open, onClose, children }: BottomSheetProps) {
   const dragYRef = useRef(0)
   const startYRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
+  const prevOverflowRef = useRef<string | null>(null)
   // Stable ref to onClose so effects don't re-run when parent re-renders
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose })
 
-  // Enhancement 2 — Body scroll lock
+  // Enhancement 2 — Body scroll lock with unmount failsafe.
+  // The per-`open` effect handles the nominal open/close transition. The
+  // separate unmount-only effect guarantees the overflow is restored even
+  // if the sheet is torn down abruptly (parent error, hot-reload, crash in
+  // a child during commit) before the per-`open` cleanup fires.
   useEffect(() => {
     if (!open) return
-    const prev = document.body.style.overflow
+    prevOverflowRef.current = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return () => {
+      if (prevOverflowRef.current !== null) {
+        document.body.style.overflow = prevOverflowRef.current
+        prevOverflowRef.current = null
+      }
+    }
   }, [open])
+
+  useEffect(() => () => {
+    if (prevOverflowRef.current !== null) {
+      document.body.style.overflow = prevOverflowRef.current
+      prevOverflowRef.current = null
+    }
+  }, [])
 
   // Enhancement 1 — Android back button closes sheet
   useEffect(() => {

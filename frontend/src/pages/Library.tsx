@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'preact/hooks'
+import { useEffect, useState, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import { haptic, HAPTIC_SHORT } from '../utils/haptic'
@@ -100,17 +100,40 @@ export function Library(_props: { path?: string }) {
   // Strips state
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingTitle[] | null>(null)
   const [upcoming, setUpcoming] = useState<UpcomingTitle[] | null>(null)
+  const cwAbortRef = useRef<AbortController | null>(null)
+  const upAbortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => {
+    cwAbortRef.current?.abort()
+    upAbortRef.current?.abort()
+  }, [])
 
   const loadContinueWatching = useCallback(async () => {
     if (continueWatching !== null) return
-    const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching')
-    setContinueWatching(data)
+    cwAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    cwAbortRef.current = ctrl
+    try {
+      const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching', { signal: ctrl.signal })
+      if (!ctrl.signal.aborted) setContinueWatching(data)
+    } catch (err) {
+      if (ctrl.signal.aborted) return
+      throw err
+    }
   }, [continueWatching])
 
   const loadUpcoming = useCallback(async () => {
     if (upcoming !== null) return
-    const data = await apiFetch<UpcomingTitle[]>('/titles/upcoming')
-    setUpcoming(data)
+    upAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    upAbortRef.current = ctrl
+    try {
+      const data = await apiFetch<UpcomingTitle[]>('/titles/upcoming', { signal: ctrl.signal })
+      if (!ctrl.signal.aborted) setUpcoming(data)
+    } catch (err) {
+      if (ctrl.signal.aborted) return
+      throw err
+    }
   }, [upcoming])
 
   // Bulk selection state
