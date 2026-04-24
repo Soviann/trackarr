@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -22,9 +20,8 @@ type BackgroundService struct {
 	tvdb     *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
 	settings *repository.SettingRepository
 	tmdb     *matching.TMDBClient
-	anilist  *matching.AniListClient
+	covers   *CoverService
 	push     PushNotifier
-	dataDir  string
 	limiter  *APILimiter
 }
 
@@ -33,18 +30,16 @@ func NewBackgroundService(
 	titles *repository.TitleRepository,
 	settings *repository.SettingRepository,
 	tmdb *matching.TMDBClient,
-	anilist *matching.AniListClient,
+	covers *CoverService,
 	push PushNotifier,
-	dataDir string,
 ) *BackgroundService {
 	return &BackgroundService{
 		writeDB:  writeDB,
 		titles:   titles,
 		settings: settings,
 		tmdb:     tmdb,
-		anilist:  anilist,
+		covers:   covers,
 		push:     push,
-		dataDir:  dataDir,
 		limiter:  NewAPILimiter(2, 1),
 	}
 }
@@ -57,10 +52,6 @@ func (s *BackgroundService) updateTitle(ctx context.Context, id int64, update re
 	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTitleWriter(tx).Update(ctx, id, update)
 	})
-}
-
-func (s *BackgroundService) coversDir() string {
-	return filepath.Join(s.dataDir, "covers")
 }
 
 // SetTVDB injects the TVDB client (optional — called after construction if TVDB is configured).
@@ -144,7 +135,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 
 	// Step 1b: AniList cover fallback for titles without TMDB ID
 	if title.CoverURL == nil && title.TMDBID == nil && title.AniListID != nil {
-		s.downloadAniListCover(ctx, title)
+		s.covers.DownloadAniListCover(ctx, title)
 	}
 
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
@@ -202,7 +193,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			return
 		}
 		if title.CoverURL == nil && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
+			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
 		}
@@ -232,7 +223,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			return
 		}
 		if title.CoverURL == nil && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.coversDir()); err == nil {
+			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
 		}
@@ -271,7 +262,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
+		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
@@ -307,7 +298,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		s.downloadAniListCover(ctx, title)
+		s.covers.DownloadAniListCover(ctx, title)
 	}
 
 	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
@@ -348,7 +339,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.coversDir())
+		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			title.CoverURL = &coverPath
@@ -391,7 +382,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		s.downloadAniListCover(ctx, title)
+		s.covers.DownloadAniListCover(ctx, title)
 	}
 
 	// Sync seasons and episodes — season + its episodes share one transaction
@@ -458,92 +449,6 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 	return &status
 }
 
-// FetchMissingCovers downloads covers for all titles without a cover.
-// Tries TMDB first (if TMDB ID available), then falls back to AniList.
-func (s *BackgroundService) FetchMissingCovers(ctx context.Context) int {
-	if s == nil {
-		return 0
-	}
-
-	titles, err := s.titles.ListAll()
-	if err != nil {
-		log.Printf("background: list titles for covers: %v", err)
-		return 0
-	}
-
-	fetched := 0
-	for _, title := range titles {
-		if err := ctx.Err(); err != nil {
-			log.Printf("background: cover fetch cancelled: %v", err)
-			return fetched
-		}
-
-		if title.CoverURL != nil {
-			continue
-		}
-
-		// Try TMDB
-		if title.TMDBID != nil {
-			var posterPath *string
-			if title.Type == model.TitleTypeMovie {
-				details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
-				if err != nil {
-					s.enqueueCoverOnRetryable(ctx, title.ID, *title.TMDBID, title.AniListID, title.Type, err)
-				} else {
-					posterPath = details.PosterPath
-				}
-			} else {
-				details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
-				if err != nil {
-					s.enqueueCoverOnRetryable(ctx, title.ID, *title.TMDBID, title.AniListID, title.Type, err)
-				} else {
-					posterPath = details.PosterPath
-				}
-			}
-
-			if posterPath != nil && *posterPath != "" {
-				coverPath, err := s.tmdb.DownloadCover(*posterPath, s.coversDir())
-				if err == nil {
-					logTitleUpdate(title.ID, "missing cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
-					fetched++
-					_ = s.limiter.Wait(ctx)
-					continue
-				}
-			}
-		}
-
-		// Fallback: AniList
-		if title.AniListID != nil && s.downloadAniListCover(ctx, &title) {
-			fetched++
-		}
-
-		_ = s.limiter.Wait(ctx)
-	}
-
-	return fetched
-}
-
-// downloadAniListCover fetches and saves the cover from AniList for a title.
-// Returns true if the cover was successfully downloaded and saved.
-func (s *BackgroundService) downloadAniListCover(ctx context.Context, title *model.Title) bool {
-	if s.anilist == nil || title.AniListID == nil {
-		return false
-	}
-
-	details, err := s.anilist.GetAnimeDetails(ctx, *title.AniListID)
-	if err != nil || details.CoverURL == "" {
-		return false
-	}
-
-	coverPath, err := s.anilist.DownloadCover(details.CoverURL, s.coversDir())
-	if err != nil {
-		return false
-	}
-
-	logTitleUpdate(title.ID, "anilist cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
-	return true
-}
-
 // StartTicker launches the background refresh on a daily interval.
 func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Duration) {
 	if s == nil {
@@ -559,7 +464,7 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 		}
 
 		log.Println("background: fetching missing covers")
-		if n := s.FetchMissingCovers(ctx); n > 0 {
+		if n := s.covers.FetchMissingCovers(ctx); n > 0 {
 			log.Printf("background: fetched %d missing covers", n)
 		}
 		log.Println("background: starting initial refresh")
@@ -578,111 +483,10 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 
 				day := time.Now().Weekday()
 				log.Printf("background: starting unused covers cleanup for %s", day.String())
-				s.CleanupUnusedCovers(ctx, day)
+				s.covers.CleanupUnusedCovers(ctx, day)
 			}
 		}
 	}()
-}
-
-func getDailyPrefixes(day time.Weekday) []rune {
-	switch day {
-	case time.Sunday:
-		return []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'}
-	case time.Monday:
-		return []rune{'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r'}
-	case time.Tuesday:
-		return []rune{'s', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A'}
-	case time.Wednesday:
-		return []rune{'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'}
-	case time.Thursday:
-		return []rune{'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S'}
-	case time.Friday:
-		return []rune{'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1'}
-	case time.Saturday:
-		return []rune{'2', '3', '4', '5', '6', '7', '8', '9', '_', '-'}
-	default:
-		return nil
-	}
-}
-
-// CleanupUnusedCovers deletes orphaned cover files sharded by the starting character of the filename.
-func (s *BackgroundService) CleanupUnusedCovers(ctx context.Context, day time.Weekday) {
-	if s == nil || s.titles == nil {
-		return
-	}
-
-	prefixes := getDailyPrefixes(day)
-	if len(prefixes) == 0 {
-		return
-	}
-
-	prefixMap := make(map[rune]bool)
-	for _, p := range prefixes {
-		prefixMap[p] = true
-	}
-
-	coversDir := s.coversDir()
-	entries, err := os.ReadDir(coversDir)
-	if err != nil {
-		log.Printf("background: read covers dir: %v", err)
-		return
-	}
-
-	var batch []string
-	deleted := 0
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		if len(name) == 0 {
-			continue
-		}
-
-		firstChar := rune(name[0])
-		if !prefixMap[firstChar] {
-			continue
-		}
-
-		batch = append(batch, name)
-
-		if len(batch) >= 100 {
-			deleted += s.processCoverBatch(coversDir, batch)
-			batch = batch[:0]
-			_ = s.limiter.Wait(ctx)
-		}
-	}
-
-	if len(batch) > 0 {
-		deleted += s.processCoverBatch(coversDir, batch)
-	}
-
-	if deleted > 0 {
-		log.Printf("background: deleted %d unused covers for %s", deleted, day.String())
-	}
-}
-
-func (s *BackgroundService) processCoverBatch(coversDir string, batch []string) int {
-	used, err := s.titles.GetUsedCoversInBatch(batch)
-	if err != nil {
-		log.Printf("background: get used covers batch: %v", err)
-		return 0
-	}
-
-	deleted := 0
-	for _, name := range batch {
-		if !used[name] {
-			path := filepath.Join(coversDir, name)
-			if err := os.Remove(path); err != nil {
-				log.Printf("background: delete unused cover %s: %v", name, err)
-			} else {
-				deleted++
-			}
-		}
-	}
-	return deleted
 }
 
 func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, titleID int64, err error) {
@@ -700,27 +504,5 @@ func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, title
 		return e
 	}); enqErr != nil {
 		log.Printf("enqueue refresh for title %d: %v", titleID, enqErr)
-	}
-}
-
-func (s *BackgroundService) enqueueCoverOnRetryable(ctx context.Context, titleID, tmdbID int64, anilistID *int64, titleType model.TitleType, err error) {
-	if !matching.IsRetryableError(err) {
-		return
-	}
-	p := CoverFetchPayload{TitleID: titleID, TMDBID: tmdbID, TitleType: titleType}
-	if anilistID != nil {
-		p.AniListID = *anilistID
-	}
-	payload, marshalErr := json.Marshal(p)
-	if marshalErr != nil {
-		log.Printf("enqueue cover fetch for title %d: marshal payload: %v", titleID, marshalErr)
-		return
-	}
-	dedupKey := fmt.Sprintf("cover_fetch:%d", titleID)
-	if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeCoverFetch, string(payload), &dedupKey)
-		return e
-	}); enqErr != nil {
-		log.Printf("enqueue cover fetch for title %d: %v", titleID, enqErr)
 	}
 }
