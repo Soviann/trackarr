@@ -12,6 +12,13 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 )
 
+// googleAuthClient caps every outbound call to Google's tokeninfo endpoint at
+// 5 seconds. The default `http.Client` has no timeout; without this cap a
+// stalled upstream (Google outage, network blackhole) would pin each auth
+// handler goroutine until the rate limiter itself fills up, which is
+// indistinguishable from an attack against the login route.
+var googleAuthClient = &http.Client{Timeout: 5 * time.Second}
+
 type AuthHandler struct {
 	jwtSecret    string
 	allowedEmail string
@@ -45,9 +52,18 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		return httputil.BadRequest("Invalid request")
 	}
 
-	// Verify Google ID token via Google's tokeninfo endpoint
-	resp, err := http.Get(fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", body.Credential))
+	// Verify Google ID token via Google's tokeninfo endpoint. NewRequestWithContext
+	// ties the upstream call to the HTTP request so a client disconnect aborts
+	// the verify immediately, and googleAuthClient adds a hard 5s timeout on top.
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", body.Credential), nil)
+	if err != nil {
+		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
+	}
+	resp, err := googleAuthClient.Do(req)
 	if err != nil || resp.StatusCode != 200 {
+		if resp != nil {
+			resp.Body.Close()
+		}
 		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
 	}
 	defer resp.Body.Close()
