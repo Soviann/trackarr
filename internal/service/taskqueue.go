@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -55,6 +56,7 @@ type TaskQueueWorker struct {
 	pausedUntil time.Time
 	titleSvc    *TitleService
 	writeDB     *sql.DB
+	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so the worker loop can finish its poll
 }
 
 func NewTaskQueueWorker(
@@ -84,6 +86,16 @@ func NewTaskQueueWorker(
 	}
 }
 
+// SetShutdownWG registers a WaitGroup the worker loop increments on start and
+// decrements on exit, so Serve() can wait for any in-flight poll iteration
+// before closing the database.
+func (w *TaskQueueWorker) SetShutdownWG(wg *sync.WaitGroup) {
+	if w == nil {
+		return
+	}
+	w.shutdownWG = wg
+}
+
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
 func (w *TaskQueueWorker) Start(ctx context.Context) {
 	// Rescue stuck tasks from previous crashes
@@ -109,7 +121,13 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 		}
 	}
 
+	if w.shutdownWG != nil {
+		w.shutdownWG.Add(1)
+	}
 	go func() {
+		if w.shutdownWG != nil {
+			defer w.shutdownWG.Done()
+		}
 		for {
 			func() {
 				defer func() {

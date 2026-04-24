@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,7 +19,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline) *chi.Mux {
+func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline, shutdownWG *sync.WaitGroup) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
@@ -55,6 +56,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
 	plexSvc := service.NewPlexService(ctx, writeDB, pipeline, titleSvc, libSvc)
+	plexSvc.SetShutdownWG(shutdownWG)
 
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
@@ -66,6 +68,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// Handlers
 	titles := handler.NewTitleHandler(ctx, writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
+	titles.SetShutdownWG(shutdownWG)
 	library := handler.NewLibraryHandler(titleReadRepo)
 
 	// TMDB search handler (optional — requires TMDB key)

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fiabilité
+- Arrêt du serveur : les goroutines d'arrière-plan (ticker de rafraîchissement journalier, worker de la file de tâches, enrichment asynchrone des webhooks Plex, `/titles/{id}/refresh`) sont désormais suivies par un `sync.WaitGroup` partagé ; `Serve()` attend jusqu'à 10 s qu'elles terminent leur itération en cours **après** `http.Server.Shutdown` et **avant** de fermer la base — les transactions en vol ne rencontrent plus `database is closed` au redémarrage et les tâches ne restent plus bloquées en `status=running` à cause d'un SIGTERM mal placé
+
 ## [v0.16.5] — 2026-04-24
 
 ### Fiabilité

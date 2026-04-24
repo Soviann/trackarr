@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -28,6 +29,7 @@ type TitleHandler struct {
 	pipeline   *matching.Pipeline
 	service    *service.TitleService
 	bgSvc      *service.BackgroundService
+	shutdownWG *sync.WaitGroup // optional — joined on shutdown so fire-and-forget refresh can finish
 }
 
 func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
@@ -44,6 +46,16 @@ func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.T
 		service:    svc,
 		bgSvc:      bgSvc,
 	}
+}
+
+// SetShutdownWG registers a WaitGroup that RefreshOne goroutines increment on
+// start and decrement on exit, so Serve() can wait for in-flight refresh before
+// closing the database.
+func (h *TitleHandler) SetShutdownWG(wg *sync.WaitGroup) {
+	if h == nil {
+		return
+	}
+	h.shutdownWG = wg
 }
 
 var allowedSorts = map[string]bool{
@@ -377,9 +389,16 @@ func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error 
 	// Intentional fire-and-forget: 202 Accepted. The refresh runs in background
 	// with a 2-minute timeout; errors are logged. The caller does not wait for
 	// completion. Parent ctx is the server lifecycle so SIGTERM cancels the
-	// goroutine instead of leaking it until its own timeout.
+	// goroutine instead of leaking it until its own timeout. The shutdown WG
+	// ensures Serve() waits for the goroutine before closing the database.
 	ctx, cancel := context.WithTimeout(h.serverCtx, 2*time.Minute)
+	if h.shutdownWG != nil {
+		h.shutdownWG.Add(1)
+	}
 	go func() {
+		if h.shutdownWG != nil {
+			defer h.shutdownWG.Done()
+		}
 		defer cancel()
 		if err := h.bgSvc.RefreshByID(ctx, id); err != nil {
 			log.Printf("refresh title %d: %v", id, err)

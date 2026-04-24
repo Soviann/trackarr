@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -15,14 +16,15 @@ import (
 )
 
 type BackgroundService struct {
-	writeDB  *sql.DB
-	titles   *repository.TitleRepository
-	tvdb     *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
-	settings *repository.SettingRepository
-	tmdb     *matching.TMDBClient
-	covers   *CoverService
-	push     PushNotifier
-	limiter  *APILimiter
+	writeDB    *sql.DB
+	titles     *repository.TitleRepository
+	tvdb       *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
+	settings   *repository.SettingRepository
+	tmdb       *matching.TMDBClient
+	covers     *CoverService
+	push       PushNotifier
+	limiter    *APILimiter
+	shutdownWG *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration
 }
 
 func NewBackgroundService(
@@ -42,6 +44,16 @@ func NewBackgroundService(
 		push:     push,
 		limiter:  NewAPILimiter(2, 1),
 	}
+}
+
+// SetShutdownWG registers a WaitGroup the ticker goroutine increments on start
+// and decrements on exit, so Serve() can wait for the current iteration to
+// finish before closing the database.
+func (s *BackgroundService) SetShutdownWG(wg *sync.WaitGroup) {
+	if s == nil {
+		return
+	}
+	s.shutdownWG = wg
 }
 
 // updateTitle wraps a title update in its own short transaction. Each
@@ -455,7 +467,13 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 		return
 	}
 
+	if s.shutdownWG != nil {
+		s.shutdownWG.Add(1)
+	}
 	go func() {
+		if s.shutdownWG != nil {
+			defer s.shutdownWG.Done()
+		}
 		// Run once at startup after a short delay
 		select {
 		case <-ctx.Done():

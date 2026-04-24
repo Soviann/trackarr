@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	plexwebhooks "github.com/hekmon/plexwebhooks"
@@ -43,11 +44,12 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 }
 
 type PlexService struct {
-	ctx      context.Context
-	db       *sql.DB
-	pipeline *matching.Pipeline // nil = skip matching, create with basic info
-	titleSvc *TitleService
-	libSvc   *LibraryService
+	ctx        context.Context
+	db         *sql.DB
+	pipeline   *matching.Pipeline // nil = skip matching, create with basic info
+	titleSvc   *TitleService
+	libSvc     *LibraryService
+	shutdownWG *sync.WaitGroup // optional — joined on shutdown so async enrichment can finish
 }
 
 func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
@@ -58,6 +60,16 @@ func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline
 		titleSvc: titleSvc,
 		libSvc:   libSvc,
 	}
+}
+
+// SetShutdownWG registers a WaitGroup that triggerAsyncEnrichment goroutines
+// increment on start and decrement on exit, so Serve() can wait for in-flight
+// enrichment before closing the database.
+func (s *PlexService) SetShutdownWG(wg *sync.WaitGroup) {
+	if s == nil {
+		return
+	}
+	s.shutdownWG = wg
 }
 
 // ProcessWebhook handles all inbound Plex webhook events, routing by event type.
@@ -404,7 +416,13 @@ func (s *PlexService) triggerAsyncEnrichment(titleID int64, titleName string, ye
 		return
 	}
 
+	if s.shutdownWG != nil {
+		s.shutdownWG.Add(1)
+	}
 	go func() {
+		if s.shutdownWG != nil {
+			defer s.shutdownWG.Done()
+		}
 		select {
 		case <-s.ctx.Done():
 			return

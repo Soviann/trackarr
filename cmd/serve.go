@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -92,8 +93,16 @@ func Serve(distFS embed.FS) error {
 
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
+	// shutdownWG tracks background goroutines (ticker, task queue worker, async
+	// Plex enrichment, RefreshOne) so Serve() can wait for them to exit before
+	// closing the database. Without this, Shutdown returns while in-flight
+	// transactions are still running → "database is closed" errors and tasks
+	// left in status=running.
+	var shutdownWG sync.WaitGroup
+
 	coverSvc := service.NewCoverService(writeDB, titleRepo, tmdbClient, anilistClient, cfg.DataDir)
 	bgSvc := service.NewBackgroundService(writeDB, titleRepo, settingRepo, tmdbClient, coverSvc, pushSvc)
+	bgSvc.SetShutdownWG(&shutdownWG)
 	if tvdbClient != nil {
 		bgSvc.SetTVDB(tvdbClient)
 	}
@@ -101,10 +110,11 @@ func Serve(distFS embed.FS) error {
 		bgSvc.StartTicker(ctx, 24*time.Hour)
 	}
 
-	r := router.New(ctx, cfg, writeDB, readDB, distFS, bgSvc, pipeline)
+	r := router.New(ctx, cfg, writeDB, readDB, distFS, bgSvc, pipeline, &shutdownWG)
 
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc, writeDB)
+	worker.SetShutdownWG(&shutdownWG)
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(ctx)
 	}
@@ -133,6 +143,19 @@ func Serve(distFS embed.FS) error {
 		defer cancel()
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			log.Printf("server shutdown error: %v", err)
+		}
+		// Wait for background goroutines (ticker, task queue, async enrichment,
+		// RefreshOne) to finish before returning — otherwise the deferred
+		// writeDB/readDB.Close() races their in-flight transactions.
+		done := make(chan struct{})
+		go func() {
+			shutdownWG.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			log.Printf("shutdown: background goroutines did not finish within 10s, closing DB anyway")
 		}
 		return nil
 	}
