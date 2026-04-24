@@ -29,6 +29,36 @@ func InsertTitle(t *testing.T, db *sql.DB, name string, isAnime bool) int64 {
 	)
 }
 
+// InsertMovieTitle inserts a minimal anime movie title with an AniList ID
+// and returns its ID.
+func InsertMovieTitle(t *testing.T, db *sql.DB, name string, anilistID int64) int64 {
+	t.Helper()
+	return CreateTitle(t, db,
+		&model.Title{
+			Type:        model.TitleTypeMovie,
+			IsAnime:     true,
+			Year:        2024,
+			AniListID:   &anilistID,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: name, Language: "en", IsPrimary: true}},
+	)
+}
+
+// SetTitleStatus updates titles.status for the given id.
+func SetTitleStatus(t *testing.T, db *sql.DB, id int64, status string) {
+	t.Helper()
+	s := model.TitleStatus(status)
+	UpdateTitle(t, db, id, repository.TitleUpdate{Status: &s})
+}
+
+// SetTitleRating updates titles.my_rating for the given id.
+func SetTitleRating(t *testing.T, db *sql.DB, id int64, rating int) {
+	t.Helper()
+	UpdateTitle(t, db, id, repository.TitleUpdate{MyRating: &rating})
+}
+
 // CreateTitle inserts a title+names and returns the new ID.
 func CreateTitle(t *testing.T, db *sql.DB, title *model.Title, names []model.TitleName) int64 {
 	t.Helper()

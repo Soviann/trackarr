@@ -25,3 +25,10 @@ func DeleteSetting(t *testing.T, db *sql.DB, key string) {
 		return repository.NewSettingWriter(tx).Delete(context.Background(), key)
 	}))
 }
+
+// GetSetting reads the raw settings value; returns ("", error) when the key
+// does not exist (mirrors SettingRepository.Get).
+func GetSetting(t *testing.T, db *sql.DB, key string) (string, error) {
+	t.Helper()
+	return repository.NewSettingRepository(db).Get(key)
+}

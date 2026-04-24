@@ -49,3 +49,10 @@ func UpdateSeasonTotalEpisodes(t *testing.T, db *sql.DB, id int64, total int) {
 		return repository.NewSeasonWriter(tx).UpdateTotalEpisodes(context.Background(), id, total)
 	}))
 }
+
+// SetSeasonEpisodeCount is a shorter alias for UpdateSeasonTotalEpisodes used
+// by tests that set up season progress fixtures.
+func SetSeasonEpisodeCount(t *testing.T, db *sql.DB, id int64, total int) {
+	t.Helper()
+	UpdateSeasonTotalEpisodes(t, db, id, total)
+}

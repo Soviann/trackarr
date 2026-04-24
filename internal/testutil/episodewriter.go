@@ -70,3 +70,16 @@ func UpsertEpisodesBatch(t *testing.T, db *sql.DB, seasonID int64, entries []rep
 		return repository.NewEpisodeWriter(tx).UpsertBatch(context.Background(), seasonID, entries)
 	}))
 }
+
+// MarkEpisodesWatched creates count episodes (numbered 1..count) in the season
+// if missing, and flips watched=1 on all of them. Used by tests that fixture
+// season progress without caring about per-episode timestamps.
+func MarkEpisodesWatched(t *testing.T, db *sql.DB, seasonID int64, count int) {
+	t.Helper()
+	ids := make([]int64, 0, count)
+	for i := 1; i <= count; i++ {
+		ep := GetOrCreateEpisode(t, db, seasonID, i)
+		ids = append(ids, ep.ID)
+	}
+	BatchMarkEpisodesWatched(t, db, ids, time.Now())
+}

@@ -1,11 +1,25 @@
 package service_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/service/matching"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+type fakeAniListClient struct {
+	calls       []matching.SaveMediaListEntryInput
+	errToReturn error
+}
+
+func (f *fakeAniListClient) SaveMediaListEntry(_ context.Context, in matching.SaveMediaListEntryInput, _ string) error {
+	f.calls = append(f.calls, in)
+	return f.errToReturn
+}
 
 func TestDeriveSeasonState(t *testing.T) {
 	tests := []struct {
@@ -38,4 +52,103 @@ func TestShouldPushRating(t *testing.T) {
 	assert.True(t, service.ShouldPushRating("DROPPED"))
 	assert.False(t, service.ShouldPushRating("CURRENT"))
 	assert.False(t, service.ShouldPushRating("PLANNING"))
+}
+
+func TestPushSeasonState_CurrentSkipsRating(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Solo Leveling", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 2)
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 13)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 5)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "166240")
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetTitleRating(t, db, titleID, 9)
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	require.Len(t, fake.calls, 1)
+	assert.Equal(t, int64(166240), fake.calls[0].MediaID)
+	assert.Equal(t, "CURRENT", fake.calls[0].Status)
+	assert.Equal(t, 5, fake.calls[0].Progress)
+	assert.Nil(t, fake.calls[0].Score, "rating must not leak to a CURRENT season")
+}
+
+func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Solo Leveling", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 12)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 12)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "113415")
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetTitleRating(t, db, titleID, 8)
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	require.Len(t, fake.calls, 1)
+	assert.Equal(t, "COMPLETED", fake.calls[0].Status)
+	require.NotNil(t, fake.calls[0].Score)
+	assert.Equal(t, 8, *fake.calls[0].Score)
+}
+
+func TestPushSeasonState_SkipsWhenNoMapping(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Show", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+	assert.Empty(t, fake.calls)
+}
+
+func TestPushSeasonState_SkipsWhenTokenMissing(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Show", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+	assert.Empty(t, fake.calls)
+}
+
+func TestPushSeasonState_SkipsWhenTokenFlaggedInvalid(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Show", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+	testutil.SetSetting(t, db, "anilist_token_invalid", "true")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+	assert.Empty(t, fake.calls)
+}
+
+func TestPushSeasonState_On401FlagsTokenInvalid(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Show", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 12)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 12)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{errToReturn: matching.TokenInvalidError{}}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	got, _ := testutil.GetSetting(t, db, "anilist_token_invalid")
+	assert.Equal(t, "true", got)
 }

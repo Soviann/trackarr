@@ -6,6 +6,8 @@ package testutil
 
 import (
 	"database/sql"
+	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -21,4 +23,10 @@ func NewTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, database.Migrate(db))
 	t.Cleanup(func() { db.Close() })
 	return db
+}
+
+// NopLogger returns a slog.Logger that discards all output — useful to keep
+// test output clean when a service unconditionally logs.
+func NopLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
