@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,6 +13,8 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
+
+const deleteTasksBatchMaxIDs = 1000
 
 type AdminHandler struct {
 	serverCtx context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
@@ -117,8 +118,11 @@ func (h *AdminHandler) DeleteTasksBatch(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		IDs []int64 `json:"ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httputil.ReadJSON(r, &req, 1<<20); err != nil {
 		return httputil.BadRequest("Invalid JSON")
+	}
+	if len(req.IDs) > deleteTasksBatchMaxIDs {
+		return httputil.BadRequest(fmt.Sprintf("too many IDs (max %d)", deleteTasksBatchMaxIDs))
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
@@ -145,7 +149,7 @@ func (h *AdminHandler) GetNotificationPrefs(w http.ResponseWriter, r *http.Reque
 // UpdateNotificationPrefs updates notification preferences.
 func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request) error {
 	var prefs map[string]bool
-	if err := json.NewDecoder(r.Body).Decode(&prefs); err != nil {
+	if err := httputil.ReadJSON(r, &prefs, 1<<20); err != nil {
 		return httputil.BadRequest("Invalid JSON")
 	}
 

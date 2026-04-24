@@ -10,6 +10,7 @@
 
 ### Sécurité
 - Webhooks Plex : la branche multipart plafonne désormais le corps à 1 MiB via `http.MaxBytesReader` — un proxy défaillant ou une source hostile ne peut plus pousser une payload géante qui saturait la mémoire (le fallback non-multipart avait déjà ce cap, mais tronquait silencieusement au lieu de renvoyer 413)
+- Administration : `DELETE /admin/tasks/batch` et `POST /admin/notifications/prefs` plafonnent désormais le corps JSON à 1 MiB via `httputil.ReadJSON`, et la suppression par lot refuse les requêtes de plus de 1000 IDs avec un 400 explicite — un compte admin compromis ne peut plus déclencher un OOM en envoyant un payload géant ni forcer un `WHERE id IN (…)` monstrueux contre SQLite
 
 ### Performance
 - API externes : rafraîchissement journalier, récupération des couvertures manquantes et worker de la file de tâches partagent désormais un unique rate-limiter 2 rps / burst 1 contre TMDB + AniList au lieu de trois limiteurs indépendants qui pouvaient cumuler jusqu'à 6 rps en parallèle — l'intention du code (deux requêtes par seconde maximum) est enfin respectée, quel que soit le nombre de loops actifs simultanément
