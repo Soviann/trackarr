@@ -17,7 +17,9 @@
 ### Performance
 - API externes : rafraîchissement journalier, récupération des couvertures manquantes et worker de la file de tâches partagent désormais un unique rate-limiter 2 rps / burst 1 contre TMDB + AniList au lieu de trois limiteurs indépendants qui pouvaient cumuler jusqu'à 6 rps en parallèle — l'intention du code (deux requêtes par seconde maximum) est enfin respectée, quel que soit le nombre de loops actifs simultanément
 
-## [v0.16.5] — 2026-04-24
+### Interface
+- Bibliothèque : une erreur réseau pendant une action de masse (changement de statut, suppression) ne laisse plus l'UI dans un état irrécupérable — la sélection est préservée, la bannière d'erreur s'affiche, la drawer de confirmation reste ouverte pour retry, et les boutons sont désactivés pendant l'appel pour bloquer le double-submit. Le bouton « marquer cet épisode » des cartes devient également `disabled` pendant la requête au lieu de seulement changer de couleur, ce qui évite un double POST en cas de tap rapide
+- Bibliothèque : un changement de filtre ou de tri pendant le chargement d'une page suivante (`Load more`, recherche) ne pollue plus la liste avec des résultats périmés — le store discarde les réponses dont la génération ne correspond plus à l'état courant, sur le même pattern que la recherche. Un 401 reçu alors que l'utilisateur est déjà sur `/login` ne redirige plus en boucle
 
 ### Fiabilité
 - Arrêt du serveur : `make down` se termine désormais en ~2 s au lieu d'attendre le SIGKILL de Docker après 10 s — le rafraîchissement en arrière-plan propage l'annulation du contexte en tête de chaque boucle, les goroutines lancées par `/admin/refresh-all` et `/titles/{id}/refresh` sont rattachées au cycle de vie du serveur, et `http.Server.Shutdown` remplace `ListenAndServe` pour couper proprement les connexions en cours

@@ -1,10 +1,11 @@
+import { useState } from 'preact/hooks'
 import { BottomSheet } from './BottomSheet'
 import s from './ConfirmationDrawer.module.css'
 
 interface ConfirmationDrawerProps {
   open: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   title: string
   description?: string
   confirmText?: string
@@ -22,23 +23,37 @@ export function ConfirmationDrawer({
   cancelText = 'Cancel',
   isDangerous = false
 }: ConfirmationDrawerProps) {
+  const [pending, setPending] = useState(false)
+
+  const handleConfirm = async () => {
+    if (pending) return
+    setPending(true)
+    try {
+      await onConfirm()
+      onClose()
+    } catch (err) {
+      // Keep drawer open so user can retry or cancel explicitly
+      console.error('Confirm action failed:', err)
+    } finally {
+      setPending(false)
+    }
+  }
+
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className={s.content}>
         <div className={s.title}>{title}</div>
         {description && <div className={s.description}>{description}</div>}
         <div className={s.actions}>
-          <button className={s.cancelBtn} onClick={onClose}>
+          <button className={s.cancelBtn} onClick={onClose} disabled={pending}>
             {cancelText}
           </button>
           <button
             className={isDangerous ? s.confirmBtnDangerous : s.confirmBtn}
-            onClick={() => {
-              onConfirm()
-              onClose()
-            }}
+            onClick={handleConfirm}
+            disabled={pending}
           >
-            {confirmText}
+            {pending ? 'Working…' : confirmText}
           </button>
         </div>
       </div>

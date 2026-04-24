@@ -81,6 +81,7 @@ interface TitleState {
   error: string | null
   sort: SortState
   filter: TitleFilter
+  _fetchGen: number
   setFilter: (filter: Partial<TitleFilter>) => void
   setSort: (sort: SortState) => void
   fetchTitles: () => Promise<void>
@@ -98,14 +99,15 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   error: null,
   sort: loadSort(),
   filter: {},
+  _fetchGen: 0,
 
   setFilter: (filter) => {
-    set({ filter: { ...get().filter, ...filter }, titles: [] })
+    set({ filter: { ...get().filter, ...filter }, titles: [], _fetchGen: get()._fetchGen + 1 })
     get().fetchTitles()
   },
 
   setSort: (sort) => {
-    set({ sort, titles: [] })
+    set({ sort, titles: [], _fetchGen: get()._fetchGen + 1 })
     saveSort(sort)
     get().fetchTitles()
   },
@@ -113,10 +115,11 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   fetchTitles: async () => {
     const { titles } = get()
     const isFirstLoad = titles.length === 0
+    const gen = get()._fetchGen + 1
     if (isFirstLoad) {
-      set({ loading: true, error: null })
+      set({ loading: true, error: null, _fetchGen: gen })
     } else {
-      set({ error: null })
+      set({ error: null, _fetchGen: gen })
     }
     try {
       const f = get().filter
@@ -126,6 +129,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       params.set('offset', '0')
       const qs = params.toString()
       const result = await apiFetch<PaginatedResponse>(`/titles?${qs}`)
+      if (get()._fetchGen !== gen) return
       set({
         titles: result.titles,
         total: result.total,
@@ -134,20 +138,27 @@ export const useTitleStore = create<TitleState>((set, get) => ({
         loading: false,
       })
     } catch (e) {
+      if (get()._fetchGen !== gen) return
       set({ error: e instanceof Error ? e.message : 'Fetch failed', loading: false })
     }
   },
 
   loadMore: async () => {
-    const { titles, hasMore, loadingMore, filter } = get()
+    const { titles, hasMore, loadingMore, filter, _fetchGen } = get()
     if (!hasMore || loadingMore) return
+    const offset = titles.length
+    const gen = _fetchGen
     set({ loadingMore: true })
     try {
       const params = buildFilterParams(filter, filter.search ? undefined : get().sort)
       params.set('limit', String(PAGE_SIZE))
-      params.set('offset', String(titles.length))
+      params.set('offset', String(offset))
       const qs = params.toString()
       const result = await apiFetch<PaginatedResponse>(`/titles?${qs}`)
+      if (get()._fetchGen !== gen) {
+        set({ loadingMore: false })
+        return
+      }
       set((state) => ({
         titles: [...state.titles, ...result.titles],
         total: result.total,
@@ -155,6 +166,10 @@ export const useTitleStore = create<TitleState>((set, get) => ({
         loadingMore: false,
       }))
     } catch (e) {
+      if (get()._fetchGen !== gen) {
+        set({ loadingMore: false })
+        return
+      }
       set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
     }
   },
@@ -243,10 +258,12 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   loadMore: async (filter) => {
-    const { query, results, hasMore, loadingMore } = get()
+    const { query, results, hasMore, loadingMore, _searchGen } = get()
     const trimmed = query.trim()
     if (!trimmed || !hasMore || loadingMore) return
 
+    const offset = results.length
+    const gen = _searchGen
     set({ loadingMore: true })
     try {
       const params = new URLSearchParams()
@@ -265,16 +282,24 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       }
 
       params.set('limit', String(PAGE_SIZE))
-      params.set('offset', String(results.length))
-      
+      params.set('offset', String(offset))
+
       const result = await apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
-      set({
-        results: [...results, ...result.titles],
+      if (get()._searchGen !== gen) {
+        set({ loadingMore: false })
+        return
+      }
+      set((state) => ({
+        results: [...state.results, ...result.titles],
         total: result.total,
         hasMore: result.has_more,
         loadingMore: false,
-      })
+      }))
     } catch (e) {
+      if (get()._searchGen !== gen) {
+        set({ loadingMore: false })
+        return
+      }
       set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
     }
   },

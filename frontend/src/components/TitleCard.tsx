@@ -103,6 +103,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardP
         <button
           type="button"
           onClick={handleQuickMark}
+          disabled={toggling}
           aria-label={`Mark E${ne.episode} as watched`}
           className={clsx(s.badge, toggling ? s.badgeToggling : s.badgeDefault)}
         >

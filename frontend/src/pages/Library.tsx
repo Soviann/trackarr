@@ -118,6 +118,8 @@ export function Library(_props: { path?: string }) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [statusSheetOpen, setStatusSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [bulkPending, setBulkPending] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
 
   function toggleSelect(id: number) {
     setSelected(prev => {
@@ -138,23 +140,41 @@ export function Library(_props: { path?: string }) {
   }
 
   async function applyBulkStatus(status: string) {
-    await apiFetch('/api/titles/batch-status', {
-      method: 'POST',
-      body: JSON.stringify({ ids: [...selected], status }),
-    })
-    setStatusSheetOpen(false)
-    exitSelect()
-    invalidate()
+    if (bulkPending) return
+    setBulkPending(true)
+    setBulkError(null)
+    try {
+      await apiFetch('/api/titles/batch-status', {
+        method: 'POST',
+        body: JSON.stringify({ ids: [...selected], status }),
+      })
+      setStatusSheetOpen(false)
+      exitSelect()
+      invalidate()
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : 'Bulk status update failed')
+    } finally {
+      setBulkPending(false)
+    }
   }
 
   async function confirmBulkDelete() {
-    await apiFetch('/api/titles/batch-delete', {
-      method: 'POST',
-      body: JSON.stringify({ ids: [...selected] }),
-    })
-    setDeleteConfirmOpen(false)
-    exitSelect()
-    invalidate()
+    if (bulkPending) return
+    setBulkPending(true)
+    setBulkError(null)
+    try {
+      await apiFetch('/api/titles/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: [...selected] }),
+      })
+      exitSelect()
+      invalidate()
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : 'Bulk delete failed')
+      throw err
+    } finally {
+      setBulkPending(false)
+    }
   }
 
   // Initial fetch on mount
@@ -279,16 +299,35 @@ export function Library(_props: { path?: string }) {
       {selecting && selected.size > 0 && (
         <div className={s.actionBar}>
           <span className={s.actionBarLabel}>{selected.size} selected</span>
-          <button className={s.actionBtnStatus} onClick={() => setStatusSheetOpen(true)}>Status</button>
-          <button className={s.actionBtnDelete} onClick={() => setDeleteConfirmOpen(true)}>Delete</button>
+          <button
+            className={s.actionBtnStatus}
+            onClick={() => setStatusSheetOpen(true)}
+            disabled={bulkPending}
+          >
+            Status
+          </button>
+          <button
+            className={s.actionBtnDelete}
+            onClick={() => setDeleteConfirmOpen(true)}
+            disabled={bulkPending}
+          >
+            Delete
+          </button>
         </div>
       )}
 
+      {bulkError && <ErrorBanner message={bulkError} onDismiss={() => setBulkError(null)} />}
+
       {/* Status picker sheet */}
-      <BottomSheet open={statusSheetOpen} onClose={() => setStatusSheetOpen(false)}>
+      <BottomSheet open={statusSheetOpen} onClose={() => { if (!bulkPending) setStatusSheetOpen(false) }}>
         <div className={s.statusSheet}>
           {statusOptions.map(opt => (
-            <button key={opt.value} className={s.statusOption} onClick={() => applyBulkStatus(opt.value)}>
+            <button
+              key={opt.value}
+              className={s.statusOption}
+              onClick={() => applyBulkStatus(opt.value)}
+              disabled={bulkPending}
+            >
               {opt.label}
             </button>
           ))}
