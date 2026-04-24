@@ -22,7 +22,7 @@ func TestStatsRepository_Overview(t *testing.T) {
 	createTitle(t, db, "Breaking Bad", model.TitleTypeSeries, false, model.TitleStatusCompleted, ptr(9))
 	createTitle(t, db, "Naruto", model.TitleTypeSeries, true, model.TitleStatusWatching, nil)
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 3, resp.Overview.TotalTitles)
@@ -41,7 +41,7 @@ func TestStatsRepository_RatingDistribution(t *testing.T) {
 	createTitle(t, db, "B", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(7))
 	createTitle(t, db, "C", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(5))
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, resp.Ratings.Distribution[6]) // rating 7 at index 6
@@ -57,7 +57,7 @@ func TestStatsRepository_Breakdown(t *testing.T) {
 	createTitle(t, db, "B", model.TitleTypeSeries, false, model.TitleStatusCompleted, nil)
 	createTitle(t, db, "C", model.TitleTypeSeries, true, model.TitleStatusCompleted, nil)
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, resp.Breakdown.ByStatus["watching"])
@@ -72,7 +72,7 @@ func TestStatsRepository_FunStats_Graveyard(t *testing.T) {
 
 	createTitle(t, db, "Dropped Show", model.TitleTypeSeries, false, model.TitleStatusDropped, nil)
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	found := false
@@ -98,7 +98,7 @@ func TestStatsRepository_FunStats_PlexVsManual(t *testing.T) {
 	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourcePlex})
 	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: id, Source: model.WatchEventSourceManual})
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	found := false
@@ -119,7 +119,7 @@ func TestStatsRepository_YearSummary(t *testing.T) {
 	createTitle(t, db, "A", model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
 	createTitle(t, db, "B", model.TitleTypeSeries, false, model.TitleStatusWatching, nil)
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, resp.Year.TitlesAdded)
@@ -130,7 +130,7 @@ func TestStatsRepository_EmptyDatabase(t *testing.T) {
 	db := setupTestDB(t)
 	statsRepo := repository.NewStatsRepository(db)
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, resp.Overview.TotalTitles)
@@ -164,7 +164,7 @@ func TestStatsRepository_FunStats_LongestBinge(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	resp, err := statsRepo.GetAll()
+	resp, err := statsRepo.GetAll(context.Background())
 	require.NoError(t, err)
 
 	found := false

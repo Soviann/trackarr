@@ -16,7 +16,7 @@ func NewStatsHandler(stats *repository.StatsRepository) *StatsHandler {
 }
 
 func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	resp, err := h.stats.GetAll()
+	resp, err := h.stats.GetAll(r.Context())
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}

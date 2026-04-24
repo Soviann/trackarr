@@ -26,30 +26,28 @@ func NewStatsRepository(db database.DBTX) *StatsRepository {
 	return &StatsRepository{db: db}
 }
 
-func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
-	ctx := context.Background()
-
-	overview, err := r.overview()
+func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, error) {
+	overview, err := r.overview(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("stats overview: %w", err)
 	}
 
-	ratings, err := r.ratings()
+	ratings, err := r.ratings(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("stats ratings: %w", err)
 	}
 
-	breakdown, err := r.breakdown()
+	breakdown, err := r.breakdown(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("stats breakdown: %w", err)
 	}
 
-	funStats, err := r.funStats()
+	funStats, err := r.funStats(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("stats fun: %w", err)
 	}
 
-	yearSummary, err := r.yearSummary(time.Now().Year())
+	yearSummary, err := r.yearSummary(ctx, time.Now().Year())
 	if err != nil {
 		return nil, fmt.Errorf("stats year: %w", err)
 	}
@@ -89,10 +87,10 @@ func (r *StatsRepository) GetAll() (*model.StatsResponse, error) {
 	}, nil
 }
 
-func (r *StatsRepository) overview() (*model.StatsOverview, error) {
+func (r *StatsRepository) overview(ctx context.Context) (*model.StatsOverview, error) {
 	o := &model.StatsOverview{}
 
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
 		SELECT
 			COUNT(*),
 			COALESCE(SUM(CASE WHEN type = 'movie' THEN 1 ELSE 0 END), 0),
@@ -104,14 +102,14 @@ func (r *StatsRepository) overview() (*model.StatsOverview, error) {
 		return nil, fmt.Errorf("count titles: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1`).Scan(&o.EpisodesWatched)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM episodes WHERE watched = 1`).Scan(&o.EpisodesWatched)
 	if err != nil {
 		return nil, fmt.Errorf("count episodes: %w", err)
 	}
 
 	if o.TotalTitles > 0 {
 		var completed int
-		err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'completed'`).Scan(&completed)
+		err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE status = 'completed'`).Scan(&completed)
 		if err != nil {
 			return nil, fmt.Errorf("count completed: %w", err)
 		}
@@ -119,7 +117,7 @@ func (r *StatsRepository) overview() (*model.StatsOverview, error) {
 	}
 
 	var avgRating sql.NullFloat64
-	err = r.db.QueryRow(`SELECT AVG(my_rating) FROM titles WHERE my_rating IS NOT NULL`).Scan(&avgRating)
+	err = r.db.QueryRowContext(ctx, `SELECT AVG(my_rating) FROM titles WHERE my_rating IS NOT NULL`).Scan(&avgRating)
 	if err != nil {
 		return nil, fmt.Errorf("avg rating: %w", err)
 	}
@@ -130,12 +128,12 @@ func (r *StatsRepository) overview() (*model.StatsOverview, error) {
 	return o, nil
 }
 
-func (r *StatsRepository) ratings() (*model.StatsRatings, error) {
+func (r *StatsRepository) ratings(ctx context.Context) (*model.StatsRatings, error) {
 	s := &model.StatsRatings{
 		AverageByType: make(map[string]float64),
 	}
 
-	rows, err := r.db.Query(`SELECT my_rating, COUNT(*) FROM titles WHERE my_rating IS NOT NULL GROUP BY my_rating ORDER BY my_rating`)
+	rows, err := r.db.QueryContext(ctx, `SELECT my_rating, COUNT(*) FROM titles WHERE my_rating IS NOT NULL GROUP BY my_rating ORDER BY my_rating`)
 	if err != nil {
 		return nil, fmt.Errorf("rating distribution: %w", err)
 	}
@@ -168,7 +166,7 @@ func (r *StatsRepository) ratings() (*model.StatsRatings, error) {
 		}
 	}
 
-	typeRows, err := r.db.Query(`SELECT type, AVG(my_rating) FROM titles WHERE my_rating IS NOT NULL GROUP BY type`)
+	typeRows, err := r.db.QueryContext(ctx, `SELECT type, AVG(my_rating) FROM titles WHERE my_rating IS NOT NULL GROUP BY type`)
 	if err != nil {
 		return nil, fmt.Errorf("avg by type: %w", err)
 	}
@@ -186,13 +184,13 @@ func (r *StatsRepository) ratings() (*model.StatsRatings, error) {
 	return s, nil
 }
 
-func (r *StatsRepository) breakdown() (*model.StatsBreakdown, error) {
+func (r *StatsRepository) breakdown(ctx context.Context) (*model.StatsBreakdown, error) {
 	b := &model.StatsBreakdown{
 		ByStatus: make(map[string]int),
 		ByType:   make(map[string]int),
 	}
 
-	rows, err := r.db.Query(`
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT 'status' AS dim, status AS k, COUNT(*) FROM titles GROUP BY status
 		UNION ALL
 		SELECT 'type', type, COUNT(*) FROM titles GROUP BY type`)
@@ -218,13 +216,13 @@ func (r *StatsRepository) breakdown() (*model.StatsBreakdown, error) {
 	return b, nil
 }
 
-func (r *StatsRepository) funStats() ([]model.FunStat, error) {
+func (r *StatsRepository) funStats(ctx context.Context) ([]model.FunStat, error) {
 	var stats []model.FunStat
 
 	// 1. Longest binge — day with most episodes watched for a single title
 	var bingeCount int
 	var bingeTitle, bingeDate string
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name, DATE(e.first_watched_at) AS d
 		FROM episodes e
 		JOIN seasons s ON e.season_id = s.id
@@ -248,7 +246,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	// 2. Most loyal series — longest tracking duration
 	var loyalTitle string
 	var loyalDays int
-	err = r.db.QueryRow(`
+	err = r.db.QueryRowContext(ctx, `
 		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(t.created_at) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
@@ -271,7 +269,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	// 3. Speed completer — fastest completed title
 	var speedTitle string
 	var speedDays int
-	err = r.db.QueryRow(`
+	err = r.db.QueryRowContext(ctx, `
 		SELECT `+displayNameExpr+` AS name, CAST(julianday(MAX(e.first_watched_at)) - julianday(MIN(e.first_watched_at)) AS INTEGER) AS days
 		FROM titles t
 		JOIN seasons s ON s.title_id = t.id
@@ -298,7 +296,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 
 	// 4. Night owl / Early bird — hour distribution of watches
 	var nightCount, totalCount int
-	err = r.db.QueryRow(`
+	err = r.db.QueryRowContext(ctx, `
 		SELECT
 			COALESCE(SUM(CASE WHEN CAST(strftime('%H', first_watched_at) AS INTEGER) >= 20 OR CAST(strftime('%H', first_watched_at) AS INTEGER) < 6 THEN 1 ELSE 0 END), 0),
 			COUNT(*)
@@ -328,7 +326,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 
 	// 5. Plex vs Manual
 	var plexCount, manualCount int
-	err = r.db.QueryRow(`
+	err = r.db.QueryRowContext(ctx, `
 		SELECT
 			COALESCE(SUM(CASE WHEN source = 'plex' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN source = 'manual' THEN 1 ELSE 0 END), 0)
@@ -347,7 +345,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	}
 
 	// 6. Rating gap — avg rating by type (highest vs lowest)
-	typeRows, err := r.db.Query(`
+	typeRows, err := r.db.QueryContext(ctx, `
 		SELECT type, AVG(my_rating) AS avg_r, COUNT(*) AS cnt
 		FROM titles
 		WHERE my_rating IS NOT NULL
@@ -388,9 +386,9 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	// 7. Decade preference
 	var topDecade, topCount int
 	var totalForDecade int
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles`).Scan(&totalForDecade)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles`).Scan(&totalForDecade)
 	if err == nil && totalForDecade > 0 {
-		err = r.db.QueryRow(`
+		err = r.db.QueryRowContext(ctx, `
 			SELECT (year / 10) * 10 AS decade, COUNT(*) AS cnt
 			FROM titles
 			GROUP BY decade
@@ -411,7 +409,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 
 	// 8. The graveyard — dropped count
 	var droppedCount int
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'dropped'`).Scan(&droppedCount)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE status = 'dropped'`).Scan(&droppedCount)
 	if err == nil && droppedCount > 0 {
 		stats = append(stats, model.FunStat{
 			ID:     "graveyard",
@@ -424,11 +422,11 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 
 	// 9. Backlog pressure — plan_to_watch count + estimate
 	var backlogCount int
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'plan_to_watch'`).Scan(&backlogCount)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE status = 'plan_to_watch'`).Scan(&backlogCount)
 	if err == nil && backlogCount > 0 {
 		// Estimate: average episodes per day over the last 90 days
 		var recentEps int
-		err = r.db.QueryRow(`
+		err = r.db.QueryRowContext(ctx, `
 			SELECT COUNT(*) FROM episodes
 			WHERE watched = 1 AND first_watched_at IS NOT NULL
 			AND first_watched_at >= datetime('now', '-90 days')
@@ -438,7 +436,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 		if err == nil && recentEps > 0 {
 			// Count total episodes in plan_to_watch titles
 			var backlogEps int
-			err = r.db.QueryRow(`
+			err = r.db.QueryRowContext(ctx, `
 				SELECT COALESCE(SUM(s.total_episodes), 0)
 				FROM seasons s
 				JOIN titles t ON s.title_id = t.id
@@ -466,7 +464,7 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	// 10. Peak month — month with the most watched episodes
 	var peakMonth string
 	var peakCount int
-	err = r.db.QueryRow(`
+	err = r.db.QueryRowContext(ctx, `
 		SELECT strftime('%Y-%m', first_watched_at) AS m, COUNT(*) AS cnt
 		FROM episodes
 		WHERE watched = 1 AND first_watched_at IS NOT NULL
@@ -488,22 +486,22 @@ func (r *StatsRepository) funStats() ([]model.FunStat, error) {
 	return stats, nil
 }
 
-func (r *StatsRepository) yearSummary(year int) (*model.StatsYear, error) {
+func (r *StatsRepository) yearSummary(ctx context.Context, year int) (*model.StatsYear, error) {
 	y := &model.StatsYear{}
 	yearStart := fmt.Sprintf("%d-01-01", year)
 	yearEnd := fmt.Sprintf("%d-01-01", year+1)
 
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE created_at >= ? AND created_at < ?`, yearStart, yearEnd).Scan(&y.TitlesAdded)
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE created_at >= ? AND created_at < ?`, yearStart, yearEnd).Scan(&y.TitlesAdded)
 	if err != nil {
 		return nil, fmt.Errorf("titles added: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE watched = 1 AND first_watched_at >= ? AND first_watched_at < ?`, yearStart, yearEnd).Scan(&y.EpisodesWatched)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM episodes WHERE watched = 1 AND first_watched_at >= ? AND first_watched_at < ?`, yearStart, yearEnd).Scan(&y.EpisodesWatched)
 	if err != nil {
 		return nil, fmt.Errorf("eps watched year: %w", err)
 	}
 
-	err = r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE status = 'completed' AND updated_at >= ? AND updated_at < ?`, yearStart, yearEnd).Scan(&y.Completions)
+	err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE status = 'completed' AND updated_at >= ? AND updated_at < ?`, yearStart, yearEnd).Scan(&y.Completions)
 	if err != nil {
 		return nil, fmt.Errorf("completions year: %w", err)
 	}
@@ -513,9 +511,9 @@ func (r *StatsRepository) yearSummary(year int) (*model.StatsYear, error) {
 
 // TotalWatchMinutes returns the sum of total_watch_minutes across all titles.
 // Returns 0 gracefully if the column does not exist (soft dependency on watchtime plan).
-func (r *StatsRepository) TotalWatchMinutes(_ context.Context) (int, error) {
+func (r *StatsRepository) TotalWatchMinutes(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(total_watch_minutes), 0) FROM titles
 	`).Scan(&total)
 	if err != nil {
@@ -530,17 +528,17 @@ func (r *StatsRepository) TotalWatchMinutes(_ context.Context) (int, error) {
 
 // TopGenres returns the top N genres by title count.
 // Returns an empty slice gracefully if the title_genres table does not exist (soft dependency on search-filter plan).
-func (r *StatsRepository) TopGenres(_ context.Context, limit int) ([]GenreStat, error) {
+func (r *StatsRepository) TopGenres(ctx context.Context, limit int) ([]GenreStat, error) {
 	// Check table exists to handle soft dependency gracefully
 	var tableExists int
-	_ = r.db.QueryRow(`
+	_ = r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='title_genres'
 	`).Scan(&tableExists)
 	if tableExists == 0 {
 		return []GenreStat{}, nil
 	}
 
-	rows, err := r.db.Query(`
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT genre, COUNT(*) AS count
 		FROM title_genres
 		GROUP BY genre
@@ -564,8 +562,8 @@ func (r *StatsRepository) TopGenres(_ context.Context, limit int) ([]GenreStat, 
 }
 
 // CurrentStreak returns the number of consecutive calendar days (ending today or yesterday) with ≥1 watch event.
-func (r *StatsRepository) CurrentStreak(_ context.Context) (int, error) {
-	rows, err := r.db.Query(`
+func (r *StatsRepository) CurrentStreak(ctx context.Context) (int, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT DISTINCT DATE(created_at) AS day
 		FROM watch_events
 		ORDER BY day DESC
@@ -617,8 +615,8 @@ func computeCurrentStreak(days []string, now time.Time) int {
 }
 
 // BestStreak returns the longest ever consecutive watch streak.
-func (r *StatsRepository) BestStreak(_ context.Context) (int, error) {
-	rows, err := r.db.Query(`
+func (r *StatsRepository) BestStreak(ctx context.Context) (int, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT DISTINCT DATE(created_at) AS day
 		FROM watch_events
 		ORDER BY day ASC

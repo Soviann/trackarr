@@ -19,11 +19,22 @@ var migrationsFS embed.FS
 
 // DBTX is the common interface between *sql.DB and *sql.Tx.
 // Repositories accept this so they can operate inside a transaction.
+// The Context variants let callers propagate request cancellation down
+// to the driver, which is important for read-heavy endpoints (stats)
+// where a client disconnect should release the read-pool slot.
 type DBTX interface {
 	Exec(query string, args ...any) (sql.Result, error)
 	Query(query string, args ...any) (*sql.Rows, error)
 	QueryRow(query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
+
+var (
+	_ DBTX = (*sql.DB)(nil)
+	_ DBTX = (*sql.Tx)(nil)
+)
 
 // WriteDBTX is the contract for transactional write access. Only *sql.Tx
 // satisfies it in practice, which makes "pass a pool where a tx was expected"
