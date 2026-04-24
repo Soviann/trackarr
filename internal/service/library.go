@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -114,6 +116,10 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 		prompt = s.buildRatingPrompt(tx, title)
 	}
 
+	// Progress changed (watch or unwatch): push the new season state to AniList
+	// so the derived CURRENT/COMPLETED/PLANNING transition reaches the remote.
+	enqueueAniListSeasonPush(ctx, tx, ep.SeasonID)
+
 	return title, prompt, nil
 }
 
@@ -159,6 +165,13 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 		prompt = s.buildRatingPrompt(tx, title)
 	}
 
+	// Push one task per distinct season in the batch. Plex scrobbles pass a
+	// single episode at a time, but manual batch-watch can span multiple
+	// seasons when the user catches up on backlogs.
+	for _, seasonID := range distinctSeasonIDs(ctx, tx, episodeIDs) {
+		enqueueAniListSeasonPush(ctx, tx, seasonID)
+	}
+
 	return title, prompt, nil
 }
 
@@ -188,6 +201,12 @@ func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, title
 	})
 
 	title.TotalWatchMinutes = newTotal
+	// Webhook-driven movie scrobbles never hit the PATCH handler, so we enqueue
+	// the AniList push here. PushMovieState short-circuits on non-AniList or
+	// non-anime titles, but pre-filtering avoids creating throwaway tasks.
+	if title.IsAnime && title.AniListID != nil && *title.AniListID != 0 {
+		enqueueAniListMoviePush(ctx, tx, titleID)
+	}
 	return s.buildRatingPrompt(tx, title), nil
 }
 
@@ -248,6 +267,67 @@ func (s *LibraryService) buildRatingPrompt(db database.DBTX, title *model.Title)
 	}
 
 	return nil
+}
+
+// enqueueAniListSeasonPush schedules a per-season AniList push within the
+// caller's transaction. Errors are logged and swallowed — the task queue is
+// a best-effort propagation layer, never the source of truth.
+func enqueueAniListSeasonPush(ctx context.Context, tx *sql.Tx, seasonID int64) {
+	payload, err := json.Marshal(AniListPushSeasonPayload{SeasonID: seasonID})
+	if err != nil {
+		log.Printf("library: marshal anilist push payload for season %d: %v", seasonID, err)
+		return
+	}
+	if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeAniListPushSeason, string(payload), nil); err != nil {
+		log.Printf("library: enqueue anilist push for season %d: %v", seasonID, err)
+	}
+}
+
+// enqueueAniListMoviePush schedules a per-movie AniList push (anime movies
+// only — guard at the call site).
+func enqueueAniListMoviePush(ctx context.Context, tx *sql.Tx, titleID int64) {
+	payload, err := json.Marshal(AniListPushMoviePayload{TitleID: titleID})
+	if err != nil {
+		log.Printf("library: marshal anilist push payload for movie %d: %v", titleID, err)
+		return
+	}
+	if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeAniListPushMovie, string(payload), nil); err != nil {
+		log.Printf("library: enqueue anilist push for movie %d: %v", titleID, err)
+	}
+}
+
+// distinctSeasonIDs returns the distinct season_id values of the given
+// episodes. Batch watches can span multiple seasons (catch-up scenarios), so
+// we must emit one push task per season — enqueueing duplicates would be
+// wasted work.
+func distinctSeasonIDs(ctx context.Context, tx *sql.Tx, episodeIDs []int64) []int64 {
+	if len(episodeIDs) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(episodeIDs))
+	args := make([]any, len(episodeIDs))
+	for i, id := range episodeIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	query := fmt.Sprintf(`SELECT DISTINCT season_id FROM episodes WHERE id IN (%s)`, strings.Join(placeholders, ","))
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Printf("library: query distinct season ids: %v", err)
+		return nil
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			log.Printf("library: scan distinct season id: %v", err)
+			continue
+		}
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 // CheckAutoComplete checks if a series should be marked completed based on the
