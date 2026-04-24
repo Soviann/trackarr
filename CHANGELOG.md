@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.16.5] — 2026-04-24
+
 ### Fiabilité
 - Arrêt du serveur : `make down` se termine désormais en ~2 s au lieu d'attendre le SIGKILL de Docker après 10 s — le rafraîchissement en arrière-plan propage l'annulation du contexte en tête de chaque boucle, les goroutines lancées par `/admin/refresh-all` et `/titles/{id}/refresh` sont rattachées au cycle de vie du serveur, et `http.Server.Shutdown` remplace `ListenAndServe` pour couper proprement les connexions en cours
 - Base de données : les écritures sur les titres, saisons, épisodes, events de visionnage, genres, file de tâches et réglages (création, mise à jour, fusion, suppression, enqueue, completion, échec, save/delete de clé) ne peuvent plus être lancées hors transaction par accident — le compilateur refuse désormais ce qui produisait auparavant des deadlocks SQLite ou des écritures perdues selon le chemin pris, et toutes les écritures propagent le contexte de la requête pour que l'abandon du client interrompe immédiatement le statement en cours
