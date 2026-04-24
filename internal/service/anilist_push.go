@@ -106,6 +106,50 @@ func (s *AniListPushService) PushSeasonState(ctx context.Context, seasonID int64
 	}, token, "season_id", seasonID)
 }
 
+// PushMovieState pushes the current state of an anime movie to AniList using
+// titles.anilist_id directly (movies have no season mapping). Silently skips
+// when the title has no AniList ID, when there's no token, or when the token
+// is flagged invalid — same escape hatches as PushSeasonState.
+func (s *AniListPushService) PushMovieState(ctx context.Context, titleID int64) error {
+	token, skip, err := s.tokenOrSkip(ctx, "title_id", titleID)
+	if err != nil || skip {
+		return err
+	}
+
+	title, err := s.titles.GetByID(titleID)
+	if err != nil {
+		return err
+	}
+	if title.AniListID == nil || *title.AniListID == 0 {
+		s.log.Debug("anilist push skipped: movie has no AniList id", "title_id", titleID)
+		return nil
+	}
+
+	var status string
+	switch title.Status {
+	case "completed", "watching":
+		status = "COMPLETED"
+	case "dropped":
+		status = "DROPPED"
+	case "plan_to_watch":
+		status = "PLANNING"
+	default:
+		return nil
+	}
+
+	var score *int
+	if (status == "COMPLETED" || status == "DROPPED") && title.MyRating != nil {
+		score = title.MyRating
+	}
+
+	return s.send(ctx, matching.SaveMediaListEntryInput{
+		MediaID:  *title.AniListID,
+		Status:   status,
+		Progress: 1,
+		Score:    score,
+	}, token, "title_id", titleID)
+}
+
 // tokenOrSkip returns (token, false, nil) when the push should proceed, or
 // ("", true, nil) when the caller should silently skip (no token / token
 // flagged invalid). The logKey/logVal pair names the entity in skip logs.

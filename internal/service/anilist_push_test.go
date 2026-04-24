@@ -152,3 +152,47 @@ func TestPushSeasonState_On401FlagsTokenInvalid(t *testing.T) {
 	got, _ := testutil.GetSetting(t, db, "anilist_token_invalid")
 	assert.Equal(t, "true", got)
 }
+
+func TestPushMovieState_Watched(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertMovieTitle(t, db, "Your Name", 21519)
+	testutil.SetTitleStatus(t, db, titleID, "completed")
+	testutil.SetTitleRating(t, db, titleID, 10)
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushMovieState(context.Background(), titleID))
+
+	require.Len(t, fake.calls, 1)
+	assert.Equal(t, int64(21519), fake.calls[0].MediaID)
+	assert.Equal(t, "COMPLETED", fake.calls[0].Status)
+	require.NotNil(t, fake.calls[0].Score)
+	assert.Equal(t, 10, *fake.calls[0].Score)
+}
+
+func TestPushMovieState_Dropped(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertMovieTitle(t, db, "Some Movie", 99999)
+	testutil.SetTitleStatus(t, db, titleID, "dropped")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushMovieState(context.Background(), titleID))
+
+	require.Len(t, fake.calls, 1)
+	assert.Equal(t, "DROPPED", fake.calls[0].Status)
+}
+
+func TestPushMovieState_SkipsWhenNoAniListID(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Non-anime movie", false)
+	testutil.SetTitleStatus(t, db, titleID, "completed")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushMovieState(context.Background(), titleID))
+	assert.Empty(t, fake.calls)
+}
