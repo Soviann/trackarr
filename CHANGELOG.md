@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [v0.17.1] — 2026-04-24
+
+### Déploiement
+- Build Docker NAS : le contexte de build exclut désormais `data/` (la base SQLite live), `covers/`, `.git/`, `node_modules/` et autres artefacts locaux via un `.dockerignore` explicite — la release **v0.17.0** a échoué à se déployer sur le NAS parce que `COPY . .` du stage backend dépassait les 15 minutes à transférer plusieurs centaines de Mo inutiles. v0.17.1 embarque toutes les corrections de v0.17.0 et rétablit un déploiement qui tient en quelques minutes.
+
 ## [v0.17.0] — 2026-04-24
 
 Release de hardening issue de l'audit 2026-04-24 (22 findings clos, 11 batches). Sécurité, fiabilité, UX : rien de visible pour un scrobble normal, mais les marges qui pouvaient dégénérer sous charge, attaque, outage externe ou crash UI sont désormais bornées.
