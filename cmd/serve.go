@@ -100,9 +100,16 @@ func Serve(distFS embed.FS) error {
 	// left in status=running.
 	var shutdownWG sync.WaitGroup
 
+	// Shared external-API limiter: 2rps / burst 1 against TMDB+AniList, shared
+	// across background refresh, cover fetch and task queue worker so three
+	// independent loops don't burn 6rps in parallel.
+	externalAPILimiter := service.NewAPILimiter(2, 1)
+
 	coverSvc := service.NewCoverService(writeDB, titleRepo, tmdbClient, anilistClient, cfg.DataDir)
+	coverSvc.SetAPILimiter(externalAPILimiter)
 	bgSvc := service.NewBackgroundService(writeDB, titleRepo, settingRepo, tmdbClient, coverSvc, pushSvc)
 	bgSvc.SetShutdownWG(&shutdownWG)
+	bgSvc.SetAPILimiter(externalAPILimiter)
 	if tvdbClient != nil {
 		bgSvc.SetTVDB(tvdbClient)
 	}
@@ -115,6 +122,7 @@ func Serve(distFS embed.FS) error {
 	// Task queue worker
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc, writeDB)
 	worker.SetShutdownWG(&shutdownWG)
+	worker.SetAPILimiter(externalAPILimiter)
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(ctx)
 	}

@@ -51,6 +51,15 @@ func (c *CoverService) Dir() string {
 	return filepath.Join(c.dataDir, "covers")
 }
 
+// SetAPILimiter replaces the default limiter with a shared one so cover fetch
+// shares the 2rps budget with BackgroundService and TaskQueueWorker.
+func (c *CoverService) SetAPILimiter(limiter *APILimiter) {
+	if c == nil || limiter == nil {
+		return
+	}
+	c.limiter = limiter
+}
+
 func (c *CoverService) updateTitle(ctx context.Context, id int64, update repository.TitleUpdate) error {
 	return database.WithTxContext(ctx, c.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTitleWriter(tx).Update(ctx, id, update)

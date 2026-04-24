@@ -96,6 +96,15 @@ func (w *TaskQueueWorker) SetShutdownWG(wg *sync.WaitGroup) {
 	w.shutdownWG = wg
 }
 
+// SetAPILimiter replaces the default limiter with a shared one so task queue
+// processing shares the 2rps budget with BackgroundService and CoverService.
+func (w *TaskQueueWorker) SetAPILimiter(limiter *APILimiter) {
+	if w == nil || limiter == nil {
+		return
+	}
+	w.limiter = limiter
+}
+
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
 func (w *TaskQueueWorker) Start(ctx context.Context) {
 	// Rescue stuck tasks from previous crashes

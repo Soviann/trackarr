@@ -6,9 +6,13 @@
 - Arrêt du serveur : les goroutines d'arrière-plan (ticker de rafraîchissement journalier, worker de la file de tâches, `/titles/{id}/refresh`) sont désormais suivies par un `sync.WaitGroup` partagé ; `Serve()` attend jusqu'à 10 s qu'elles terminent leur itération en cours **après** `http.Server.Shutdown` et **avant** de fermer la base — les transactions en vol ne rencontrent plus `database is closed` au redémarrage et les tâches ne restent plus bloquées en `status=running` à cause d'un SIGTERM mal placé
 - Webhooks Plex : un scan massif d'une bibliothèque ne lance plus des centaines de goroutines d'enrichment concurrentes qui saturent TMDB / AniList / Gemini — l'enrichment est désormais enfilé dans la task queue au sein même de la transaction du webhook, et la rafale devient un backlog consommé à cadence bornée par le rate-limiter partagé du worker (dedup key `enrichment:<titleID>` pour ignorer les répétitions)
 - Statistiques : la page `/stats` respecte enfin l'annulation du client — les dix sous-requêtes (aperçu, notes, répartition, fun stats, bilan annuel, genres, streaks, watchtime) propagent désormais le contexte de la requête HTTP, et un onglet fermé pendant un calcul long libère immédiatement son slot sur la lecture de la base au lieu de le tenir jusqu'à la fin de l'agrégation
+- Rafraîchissement journalier : le ticker d'arrière-plan ne meurt plus silencieusement en cas de panic dans `RefreshTitles`, `FetchMissingCovers` ou `CleanupUnusedCovers` — une boucle externe redémarre la goroutine après 30 s de backoff sur le même pattern que le worker de la file de tâches, et le daemon ne peut plus se retrouver à tourner indéfiniment sans jamais réessayer la mise à jour des titres
 
 ### Sécurité
 - Webhooks Plex : la branche multipart plafonne désormais le corps à 1 MiB via `http.MaxBytesReader` — un proxy défaillant ou une source hostile ne peut plus pousser une payload géante qui saturait la mémoire (le fallback non-multipart avait déjà ce cap, mais tronquait silencieusement au lieu de renvoyer 413)
+
+### Performance
+- API externes : rafraîchissement journalier, récupération des couvertures manquantes et worker de la file de tâches partagent désormais un unique rate-limiter 2 rps / burst 1 contre TMDB + AniList au lieu de trois limiteurs indépendants qui pouvaient cumuler jusqu'à 6 rps en parallèle — l'intention du code (deux requêtes par seconde maximum) est enfin respectée, quel que soit le nombre de loops actifs simultanément
 
 ## [v0.16.5] — 2026-04-24
 

@@ -56,6 +56,16 @@ func (s *BackgroundService) SetShutdownWG(wg *sync.WaitGroup) {
 	s.shutdownWG = wg
 }
 
+// SetAPILimiter replaces the default limiter with a shared one so background
+// refresh, cover fetch and the task queue worker all share a single 2rps budget
+// against TMDB/AniList instead of 3 × 2rps competing in parallel.
+func (s *BackgroundService) SetAPILimiter(limiter *APILimiter) {
+	if s == nil || limiter == nil {
+		return
+	}
+	s.limiter = limiter
+}
+
 // updateTitle wraps a title update in its own short transaction. Each
 // background refresh step is persisted independently so a crash between
 // steps leaves the DB in a valid state: the refresh loop is idempotent and
@@ -474,34 +484,51 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 		if s.shutdownWG != nil {
 			defer s.shutdownWG.Done()
 		}
-		// Run once at startup after a short delay
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(30 * time.Second):
-		}
-
-		log.Println("background: fetching missing covers")
-		if n := s.covers.FetchMissingCovers(ctx); n > 0 {
-			log.Printf("background: fetched %d missing covers", n)
-		}
-		log.Println("background: starting initial refresh")
-		s.RefreshTitles(ctx)
-
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-
+		// Outer loop restarts the ticker after a panic so a single bad refresh
+		// iteration cannot silently kill the daily schedule. Mirrors the
+		// panic-recovery pattern used by TaskQueueWorker.Start.
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				log.Println("background: starting scheduled refresh")
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("background: panic in ticker loop: %v", r)
+						time.Sleep(30 * time.Second)
+					}
+				}()
+
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(30 * time.Second):
+				}
+
+				log.Println("background: fetching missing covers")
+				if n := s.covers.FetchMissingCovers(ctx); n > 0 {
+					log.Printf("background: fetched %d missing covers", n)
+				}
+				log.Println("background: starting initial refresh")
 				s.RefreshTitles(ctx)
 
-				day := time.Now().Weekday()
-				log.Printf("background: starting unused covers cleanup for %s", day.String())
-				s.covers.CleanupUnusedCovers(ctx, day)
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						log.Println("background: starting scheduled refresh")
+						s.RefreshTitles(ctx)
+
+						day := time.Now().Weekday()
+						log.Printf("background: starting unused covers cleanup for %s", day.String())
+						s.covers.CleanupUnusedCovers(ctx, day)
+					}
+				}
+			}()
+
+			if ctx.Err() != nil {
+				return
 			}
 		}
 	}()
