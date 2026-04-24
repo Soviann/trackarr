@@ -5,9 +5,11 @@ import "time"
 type TaskType string
 
 const (
-	TaskTypeEnrichment TaskType = "enrichment"
-	TaskTypeRefresh    TaskType = "refresh"
-	TaskTypeCoverFetch TaskType = "cover_fetch"
+	TaskTypeEnrichment        TaskType = "enrichment"
+	TaskTypeRefresh           TaskType = "refresh"
+	TaskTypeCoverFetch        TaskType = "cover_fetch"
+	TaskTypeAniListPushSeason TaskType = "anilist_push_season"
+	TaskTypeAniListPushMovie  TaskType = "anilist_push_movie"
 )
 
 type TaskStatus string

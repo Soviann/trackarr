@@ -42,6 +42,26 @@ type CoverFetchPayload struct {
 	TitleType model.TitleType `json:"title_type"`
 }
 
+// AniListPushSeasonPayload carries the season whose state must be pushed to
+// AniList. The push service re-derives status/progress/rating from the DB at
+// run time, so older queued jobs still send an up-to-date snapshot.
+type AniListPushSeasonPayload struct {
+	SeasonID int64 `json:"season_id"`
+}
+
+// AniListPushMoviePayload carries the anime movie title whose state must be
+// pushed to AniList. The push uses titles.anilist_id directly.
+type AniListPushMoviePayload struct {
+	TitleID int64 `json:"title_id"`
+}
+
+// AniListPusher is the subset of AniListPushService the worker depends on.
+// Kept narrow so tests can inject a fake without wiring the real HTTP client.
+type AniListPusher interface {
+	PushSeasonState(ctx context.Context, seasonID int64) error
+	PushMovieState(ctx context.Context, titleID int64) error
+}
+
 // TaskQueueWorker processes retryable tasks from the queue.
 type TaskQueueWorker struct {
 	tasks       *repository.TaskRepository
@@ -56,6 +76,7 @@ type TaskQueueWorker struct {
 	pausedUntil time.Time
 	titleSvc    *TitleService
 	writeDB     *sql.DB
+	anilistPush AniListPusher   // optional — configured via SetAniListPush when an AniList client is wired
 	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so the worker loop can finish its poll
 }
 
@@ -103,6 +124,16 @@ func (w *TaskQueueWorker) SetAPILimiter(limiter *APILimiter) {
 		return
 	}
 	w.limiter = limiter
+}
+
+// SetAniListPush wires the AniList push service so the worker can process
+// anilist_push_season / anilist_push_movie tasks. Left unset, those task
+// kinds fail fast with a descriptive error instead of silently dropping.
+func (w *TaskQueueWorker) SetAniListPush(push AniListPusher) {
+	if w == nil {
+		return
+	}
+	w.anilistPush = push
 }
 
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
@@ -217,6 +248,10 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		err = w.handleRefresh(ctx, task)
 	case model.TaskTypeCoverFetch:
 		err = w.handleCoverFetch(ctx, task)
+	case model.TaskTypeAniListPushSeason:
+		err = w.handleAniListPushSeason(ctx, task)
+	case model.TaskTypeAniListPushMovie:
+		err = w.handleAniListPushMovie(ctx, task)
 	default:
 		log.Printf("task queue: unknown task type %q for task %d", task.TaskType, task.ID)
 		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -567,6 +602,28 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 		return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 	})
 	title.CoverURL = &coverPath
+}
+
+func (w *TaskQueueWorker) handleAniListPushSeason(ctx context.Context, task model.Task) error {
+	var payload AniListPushSeasonPayload
+	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
+		return fmt.Errorf("decode anilist_push_season payload: %w", err)
+	}
+	if w.anilistPush == nil {
+		return fmt.Errorf("anilist push service not configured")
+	}
+	return w.anilistPush.PushSeasonState(ctx, payload.SeasonID)
+}
+
+func (w *TaskQueueWorker) handleAniListPushMovie(ctx context.Context, task model.Task) error {
+	var payload AniListPushMoviePayload
+	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
+		return fmt.Errorf("decode anilist_push_movie payload: %w", err)
+	}
+	if w.anilistPush == nil {
+		return fmt.Errorf("anilist push service not configured")
+	}
+	return w.anilistPush.PushMovieState(ctx, payload.TitleID)
 }
 
 func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task) {

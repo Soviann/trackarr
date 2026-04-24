@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -14,6 +15,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// fakeAniListPusher records PushSeasonState/PushMovieState invocations so
+// dispatch tests can assert the worker routes each task kind to the right
+// method with the payload decoded correctly.
+type fakeAniListPusher struct {
+	seasonCalls []int64
+	movieCalls  []int64
+	seasonErr   error
+	movieErr    error
+}
+
+func (f *fakeAniListPusher) PushSeasonState(_ context.Context, id int64) error {
+	f.seasonCalls = append(f.seasonCalls, id)
+	return f.seasonErr
+}
+
+func (f *fakeAniListPusher) PushMovieState(_ context.Context, id int64) error {
+	f.movieCalls = append(f.movieCalls, id)
+	return f.movieErr
+}
 
 // TestHandleEnrichment_PersistsAllFieldsInSingleTx drives handleEnrichment
 // against a real in-memory SQLite with a pre-populated watch_events count.
@@ -127,4 +148,101 @@ func TestHandleEnrichment_CtxCancelRollsBack(t *testing.T) {
 	task, err := tasks.GetByID(taskID)
 	require.NoError(t, err)
 	assert.NotEmpty(t, task.LastError, "task should record the cancellation error")
+}
+
+// TestProcessTask_AniListPushSeason_DispatchesToPusher verifies that the
+// worker decodes an anilist_push_season payload and routes it to
+// AniListPusher.PushSeasonState. A successful push deletes the task row
+// (Complete) so queue hygiene is part of the contract under test.
+func TestProcessTask_AniListPushSeason_DispatchesToPusher(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	fake := &fakeAniListPusher{}
+	worker.SetAniListPush(fake)
+
+	raw, err := json.Marshal(service.AniListPushSeasonPayload{SeasonID: 42})
+	require.NoError(t, err)
+	taskID := testutil.EnqueueTask(t, db, model.TaskTypeAniListPushSeason, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.Equal(t, []int64{42}, fake.seasonCalls)
+	assert.Empty(t, fake.movieCalls)
+
+	_, err = tasks.GetByID(taskID)
+	assert.Error(t, err, "successful task should be deleted after ProcessTask")
+}
+
+// TestProcessTask_AniListPushMovie_DispatchesToPusher mirrors the season
+// test for the movie variant: distinct task kind, distinct payload type,
+// distinct pusher method.
+func TestProcessTask_AniListPushMovie_DispatchesToPusher(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	fake := &fakeAniListPusher{}
+	worker.SetAniListPush(fake)
+
+	raw, err := json.Marshal(service.AniListPushMoviePayload{TitleID: 77})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeAniListPushMovie, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.Equal(t, []int64{77}, fake.movieCalls)
+	assert.Empty(t, fake.seasonCalls)
+}
+
+// TestProcessTask_AniListPushSeason_NoPusherFailsTask ensures a task for an
+// unconfigured worker fails gracefully (so the bookkeeper retries later)
+// instead of panicking on a nil interface deref.
+func TestProcessTask_AniListPushSeason_NoPusherFailsTask(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	// Deliberately no SetAniListPush — simulates a test env without AniList.
+
+	raw, err := json.Marshal(service.AniListPushSeasonPayload{SeasonID: 1})
+	require.NoError(t, err)
+	taskID := testutil.EnqueueTask(t, db, model.TaskTypeAniListPushSeason, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	task, err := tasks.GetByID(taskID)
+	require.NoError(t, err)
+	require.NotNil(t, task.LastError)
+	assert.Contains(t, *task.LastError, "anilist push service not configured",
+		fmt.Sprintf("got: %v", task.LastError))
 }
