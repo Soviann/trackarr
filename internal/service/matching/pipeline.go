@@ -31,24 +31,34 @@ const (
 	ConfidenceLow    = "low"
 )
 
-// Pipeline orchestrates the media matching process through Steps 1-5.
+// Pipeline orchestrates the media matching process through an ordered chain of
+// MatchStrategy steps. The first strategy to return matched=true wins.
 type Pipeline struct {
-	tmdb    *TMDBClient
-	tvdb    *TVDBClient
-	anilist *AniListClient
-	gemini  *GeminiClient
-	crossDB *CrossRefDB // may be nil if not loaded
-	dataDir string
+	tmdb       *TMDBClient
+	tvdb       *TVDBClient
+	anilist    *AniListClient
+	gemini     *GeminiClient
+	crossDB    *CrossRefDB // may be nil if not loaded
+	dataDir    string
+	strategies []MatchStrategy
 }
 
 func NewPipeline(tmdb *TMDBClient, anilist *AniListClient, gemini *GeminiClient, crossDB *CrossRefDB, dataDir string) *Pipeline {
-	return &Pipeline{
+	p := &Pipeline{
 		tmdb:    tmdb,
 		anilist: anilist,
 		gemini:  gemini,
 		crossDB: crossDB,
 		dataDir: dataDir,
 	}
+	p.strategies = []MatchStrategy{
+		&plexIDStrategy{p: p},
+		&crossRefStrategy{p: p},
+		&tmdbSearchStrategy{p: p},
+		&aniListSearchStrategy{p: p},
+		&geminiFuzzyStrategy{p: p},
+	}
+	return p
 }
 
 // SetTVDB injects the TVDB client into the pipeline.
@@ -96,106 +106,25 @@ type MatchInput struct {
 	IsAnime bool
 }
 
-// Run executes the full matching pipeline (steps 1-5).
-//
-// Graceful degradation: each pipeline client (TMDB, AniList, Gemini, CrossRefDB)
-// may be nil. When a client is nil, its step is skipped and the pipeline falls
-// through to the next step. If all steps fail, the title is created with
-// MatchStatusUnconfirmed and MatchSourceNone, using the original Plex title.
+// Run executes the matching pipeline by iterating over p.strategies in order.
+// Each strategy is self-contained: nil clients are handled inside Try (skipped
+// silently). The first strategy that returns matched=true wins; if every
+// strategy passes, the fallback is an unconfirmed result keyed on the input
+// title.
 func (p *Pipeline) Run(ctx context.Context, input MatchInput) (*MatchResult, error) {
-	result := &MatchResult{
-		IMDBID:    input.IMDBID,
-		TMDBID:    input.TMDBID,
-		TVDBID:    input.TVDBID,
-		AniListID: input.AniListID,
-		TitleType: input.Type,
-		IsAnime:   input.IsAnime,
-	}
-
-	// Step 1: Check Plex metadata IDs — if we have TMDB, IMDB or AniList, we're confirmed.
-	// result.TVDBID from input (if any) is forwarded to enrichFromIDs, which fetches TVDB data
-	// and runs conflict checks when both TMDB and TVDB IDs are present.
-	if result.TMDBID != 0 || result.IMDBID != "" || result.AniListID != 0 {
-		result.MatchStatus = model.MatchStatusConfirmed
-		result.MatchSource = MatchSourcePlexIDs
-		p.enrichFromIDs(ctx, result, input)
-		return result, nil
-	}
-
-	// Step 2: Cross-reference database lookup
-	if p.crossDB != nil {
-		crossIDs := p.crossDB.Lookup(ExternalIDs{
-			IMDB:      result.IMDBID,
-			TMDBMovie: result.TMDBID,
-			TMDBTV:    result.TMDBID,
-			TVDB:      result.TVDBID,
-		})
-		if crossIDs != nil {
-			mergeIDs(result, crossIDs)
-			if result.TMDBID != 0 || result.IMDBID != "" {
-				result.MatchStatus = model.MatchStatusConfirmed
-				result.MatchSource = MatchSourceCrossRef
-				p.enrichFromIDs(ctx, result, input)
-				return result, nil
-			}
+	for _, s := range p.strategies {
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-	}
-
-	// Step 3: TMDB API search
-	if p.tmdb != nil && input.Title != "" {
-		found := p.searchTMDB(ctx, input, result)
-		if found {
-			result.MatchSource = MatchSourceTMDBSearch
-			return p.verifyAndEnrich(ctx, input, result)
-		}
-	}
-
-	// Step 4: AniList search
-	if p.anilist != nil && input.Title != "" {
-		found := p.searchAniList(ctx, input, result)
-		if found {
-			result.MatchSource = MatchSourceAniListSearch
-			return p.verifyAndEnrich(ctx, input, result)
-		}
-	}
-
-	// Step 5 fallback: Gemini fuzzy resolution
-	if p.gemini != nil && input.Title != "" {
-		resolution, err := p.gemini.FuzzyResolve(ctx, PlexInfo{
-			Title: input.Title,
-			Year:  input.Year,
-			Type:  string(input.Type),
-		})
+		result, matched, err := s.Try(ctx, input)
 		if err != nil {
-			log.Printf("gemini fuzzy resolve failed: %v", err)
-		} else if resolution.CandidateTitle != "" {
-			// Try TMDB search with the resolved title
-			if p.tmdb != nil {
-				resolvedInput := MatchInput{
-					Title: resolution.CandidateTitle,
-					Year:  resolution.CandidateYear,
-					Type:  input.Type,
-				}
-				if p.searchTMDB(ctx, resolvedInput, result) {
-					result.MatchStatus = model.MatchStatusUnconfirmed
-					result.MatchSource = MatchSourceGeminiFuzzy
-					p.enrichFromIDs(ctx, result, input)
-					return result, nil
-				}
-			}
+			return nil, fmt.Errorf("%s: %w", s.Name(), err)
+		}
+		if matched {
+			return result, nil
 		}
 	}
-
-	// No match found
-	result.MatchStatus = model.MatchStatusUnconfirmed
-	result.MatchSource = MatchSourceNone
-	if result.TitleType == "" {
-		result.TitleType = model.TitleTypeMovie
-	}
-	if input.Title != "" {
-		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
-	}
-	return result, nil
+	return unmatchedResult(input), nil
 }
 
 // ResolveURL attempts to identify a title directly from an external URL.
