@@ -22,7 +22,8 @@ Update when adding routes, services, components, or commands.
 | PlexService | `internal/service/plex.go` | Webhook scrobble, delegates to TitleService + LibraryService |
 | TitleService | `internal/service/title.go` | Title logic (creation, rematching, URL resolution, merging) |
 | LibraryService | `internal/service/library.go` | User library (marking watched, auto-complete, rating, notifications) |
-| BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous) |
+| BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous). **Opens own writeDB tx — never call from inside another tx; fire post-commit via `LibraryService.TriggerBackfillForEpisode`.** |
+| AniListPushService | `internal/service/anilist_push.go` | Per-season / per-movie push of status, progress, score to AniList. Silently skips on missing token, missing season mapping, or 401 (flags token invalid). Enqueued via `TaskTypeAniListPushSeason` / `TaskTypeAniListPushMovie`. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
 | BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
@@ -57,7 +58,8 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | Season | `GetByID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
-| Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch` |
+| Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch`. Task kinds: `TaskTypeEnrichment`, `TaskTypeRefresh`, `TaskTypeCoverFetch`, `TaskTypeAniListPushSeason`, `TaskTypeAniListPushMovie`. |
+| SeasonExternalID | `Get`, `ListForTitle` | `Set`, `Delete` (maps `seasons.id → provider` ID, e.g. AniList media id per season; migration 020) |
 | Genre | `ListWithCounts` | `ReplaceForTitle` |
 | Setting | `Get` | `Set`, `Delete` |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
@@ -69,6 +71,8 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 ### Database
 
 `internal/database/` — `Open()`, `Migrate()`, `WithTx(db, fn)`, `WithTxContext(ctx, db, fn)`, `DBTX` (read contract: `Exec`/`Query`/`QueryRow`), `WriteDBTX` (write contract: `ExecContext`/`QueryContext`/`QueryRowContext` — only `*sql.Tx` satisfies it). SQLite with WAL, `MaxOpenConns=1`.
+
+**Nested-tx deadlock rule:** any method receiving `tx *sql.Tx` MUST NOT call another service that opens its own writeDB tx (directly or via a repo on the pool) — the inner `BeginTx` waits forever for the sole connection. Post-commit side effects (backfill, rating push, webpush) are returned to the caller and fired AFTER `WithTxContext` returns. See `LibraryService.TriggerBackfillForEpisode` / `SendRatingPrompt` for the pattern.
 
 ### Handlers
 

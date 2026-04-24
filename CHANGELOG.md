@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Synchronisation AniList
+- Visionnages, changements de statut et notes propagent désormais automatiquement vers AniList — chaque saison a sa propre entrée AniList, finir JJK S1 et démarrer S2 arrive proprement côté compte au lieu d'écraser S1. Les pushs passent par la task queue (nouveaux types `anilist_push_season` / `anilist_push_movie`) pour ne jamais bloquer la requête HTTP sur la latence AniList, et une note qui serait envoyée sur une saison encore en cours est filtrée côté émetteur (AniList refuse le score tant qu'il reste des épisodes à voir).
+
+### Fiabilité
+- Marquage manuel d'un épisode comme vu : le backfill des épisodes précédents n'est plus appelé à l'intérieur de la transaction d'écriture — il tournait dans sa propre transaction sur le pool writeDB (`MaxOpenConns=1`) et bloquait chaque clic de case à cocher ~3 min jusqu'à annulation par le navigateur. Un test garde-fou se met en timeout si la structure imbriquée réapparaît.
+
 ## [v0.17.1] — 2026-04-24
 
 ### Déploiement
