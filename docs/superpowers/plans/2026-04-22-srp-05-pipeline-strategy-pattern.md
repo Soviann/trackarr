@@ -2,6 +2,15 @@
 
 > **For agentic workers:** Single session. Benefits most after B2 is done (cleaner `Run` method to refactor).
 
+## Revision — 2026-04-24
+
+Scope ajusté après lecture du code :
+
+- **Task 1** : 7 tests de caractérisation déjà présents dans `pipeline_test.go` (Step1/2/3/4/NoMatch/IMDBConflict/NilClients). Seul `TestPipeline_Step5_GeminiFuzzy` manque (succès fuzzy → TMDB résolu). `TestRun_AniListForAnime` retiré : code actuel n'utilise pas `IsAnime` pour prioriser AniList sur TMDB (écriture de ce test serait un changement de comportement).
+- **Task 2** : stratégies dans le **même package** `internal/service/matching/` (fichiers `strategy_plexids.go`, `strategy_crossref.go`, etc.). Éviter sous-package `strategy/` qui exigerait d'exporter TMDBClient/AniListClient/GeminiClient/CrossRefDB.
+- **Architecture** : chaque stratégie porte `*Pipeline` pour réutiliser `enrichFromIDs` et `verifyAndEnrich`. Signature `Try(ctx, input) (*MatchResult, bool, error)` retourne un résultat complet (identification + enrichissement). `Run` devient une simple boucle for.
+- **Task 4** : tests par stratégie ciblent la logique d'identification (succès/miss/erreur de recherche) avec dépendances mockées minimalement — l'enrichissement reste couvert par les tests pipeline de Task 1.
+
 ## PO summary
 
 Makes the matching pipeline extensible: adding a new metadata source (or reordering for specific title types) becomes a three-line change instead of a nested if/else edit. No user-visible change.
