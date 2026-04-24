@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -84,7 +85,7 @@ func (s *BackfillService) BackfillForEpisode(ctx context.Context, titleID int64,
 	tmdbSeasons := fetchTMDBSeasons(ctx, s.tmdb, title.ID, title.TMDBID)
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		return BackfillPreviousEpisodes(ctx, tx, title.ID, tmdbSeasons, season.SeasonNumber, episode.Episode, time.Now().UTC())
+		return BackfillPreviousEpisodes(ctx, tx, title.ID, title.AniListID, tmdbSeasons, season.SeasonNumber, episode.Episode, time.Now().UTC())
 	}); err != nil {
 		log.Printf("backfill warning for title %d: %v", titleID, err)
 	}
@@ -93,13 +94,16 @@ func (s *BackfillService) BackfillForEpisode(ctx context.Context, titleID int64,
 // BackfillPreviousEpisodes creates and marks as watched all episodes before the
 // given season/episode number. Previous-season backfill requires prefetched
 // TMDB season data (see fetchTMDBSeasons); without it, only episodes in the
-// current season are backfilled. Must run inside a transaction: episode
-// writes are tx-only and the entire backfill (season upsert, episode upsert,
-// batch mark, watch events) must commit atomically.
+// current season are backfilled. When titleAniListID is non-nil and season 1
+// is created or reused, the AniList mapping is stamped on that season in
+// season_external_ids (first writer wins). Must run inside a transaction:
+// episode writes are tx-only and the entire backfill (season upsert, episode
+// upsert, batch mark, watch events) must commit atomically.
 func BackfillPreviousEpisodes(
 	ctx context.Context,
 	tx *sql.Tx,
 	titleID int64,
+	titleAniListID *int64,
 	tmdbSeasons []TMDBSeasonInfo,
 	triggerSeasonNum int,
 	triggerEpisodeNum int,
@@ -127,6 +131,9 @@ func BackfillPreviousEpisodes(
 			log.Printf("backfill: create season %d: %v", si.Number, err)
 			continue
 		}
+		if err := stampSeasonAniListID(ctx, tx, season, titleAniListID); err != nil {
+			return err
+		}
 		if err := seasons.UpdateTotalEpisodes(ctx, season.ID, si.EpisodeCount); err != nil {
 			log.Printf("backfill: update total episodes for season %d: %v", season.ID, err)
 		}
@@ -146,6 +153,9 @@ func BackfillPreviousEpisodes(
 	if triggerEpisodeNum > 1 {
 		season, err := seasons.GetOrCreate(ctx, titleID, triggerSeasonNum)
 		if err != nil {
+			return err
+		}
+		if err := stampSeasonAniListID(ctx, tx, season, titleAniListID); err != nil {
 			return err
 		}
 
@@ -190,4 +200,19 @@ func BackfillPreviousEpisodes(
 	}
 
 	return events.BatchCreate(ctx, watchEvents)
+}
+
+// stampSeasonAniListID writes the title's AniList mapping onto season 1 in
+// season_external_ids. Scoped to S1 because a title-level anilist_id only
+// describes the first season; later seasons require their own mapping
+// (assigned via the merge flow or the manual fix-match UI). The underlying
+// writer uses ON CONFLICT DO NOTHING so an existing mapping survives — the
+// backfill never overwrites a user-confirmed link.
+func stampSeasonAniListID(ctx context.Context, tx *sql.Tx, season *model.Season, titleAniListID *int64) error {
+	if titleAniListID == nil || *titleAniListID == 0 || season.SeasonNumber != 1 {
+		return nil
+	}
+	return repository.NewSeasonExternalIDWriter(tx).Stamp(
+		ctx, season.ID, repository.ProviderAniList, strconv.FormatInt(*titleAniListID, 10),
+	)
 }

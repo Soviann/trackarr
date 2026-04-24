@@ -282,7 +282,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 		}
 		if maxSeason > 0 && maxEpisode > 0 {
 			if err := database.WithTxContext(context.Background(), s.db, func(tx *sql.Tx) error {
-				return BackfillPreviousEpisodes(context.Background(), tx, titleID, nil, maxSeason, maxEpisode, latestWatchedAt)
+				return BackfillPreviousEpisodes(context.Background(), tx, titleID, title.AniListID, nil, maxSeason, maxEpisode, latestWatchedAt)
 			}); err != nil {
 				log.Printf("simkl import: backfill for title %d: %v", titleID, err)
 				result.Errors++

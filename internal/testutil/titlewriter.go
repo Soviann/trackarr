@@ -118,14 +118,23 @@ func ReplaceTitleNames(t *testing.T, db *sql.DB, id int64, names []model.TitleNa
 func MergeTitles(t *testing.T, db *sql.DB, destID, sourceID int64, seasonOffset int) {
 	t.Helper()
 	require.NoError(t, database.WithTx(db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset)
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0)
+	}))
+}
+
+// MergeTitlesWithAniList consolidates source into dest and stamps the given
+// AniList ID onto each moved/merged dest season.
+func MergeTitlesWithAniList(t *testing.T, db *sql.DB, destID, sourceID int64, seasonOffset int, aniListID int64) {
+	t.Helper()
+	require.NoError(t, database.WithTx(db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, aniListID)
 	}))
 }
 
 // MergeTitlesErr is the error-returning variant.
 func MergeTitlesErr(db *sql.DB, destID, sourceID int64, seasonOffset int) error {
 	return database.WithTx(db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset)
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0)
 	})
 }
 

@@ -227,6 +227,25 @@ func (p *Pipeline) IdentifyAnimeSeason(ctx context.Context, title string, year i
 	return p.gemini.IdentifyAnimeSeason(ctx, title, year)
 }
 
+// SearchAniListByName looks up the top AniList match for a name and returns
+// its ID (or 0 when the client is not configured or no result is returned).
+// Used by the anime-merge flow to recover a per-season AniList ID when the
+// source title lacks one. Errors propagate to the caller so a network blip
+// doesn't silently mask a missing mapping.
+func (p *Pipeline) SearchAniListByName(ctx context.Context, title string) (int64, error) {
+	if p.anilist == nil {
+		return 0, nil
+	}
+	results, err := p.anilist.SearchAnime(ctx, title)
+	if err != nil {
+		return 0, fmt.Errorf("search anilist by name: %w", err)
+	}
+	if len(results) == 0 {
+		return 0, nil
+	}
+	return results[0].ID, nil
+}
+
 func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result *MatchResult) (*MatchResult, error) {
 	if p.gemini != nil {
 		// Build candidate info from TMDB

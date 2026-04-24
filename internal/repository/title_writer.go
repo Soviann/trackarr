@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -198,8 +199,10 @@ func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []m
 // Merge consolidates sourceID into destID. Moves seasons (shifting their
 // number by seasonOffset), names, watch events, and external IDs before
 // deleting the source title. All steps share the caller's transaction so
-// a partial merge cannot leak to readers.
-func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonOffset int) error {
+// a partial merge cannot leak to readers. When aniListID is non-zero, the
+// moved/merged dest season is stamped with that AniList mapping in
+// season_external_ids (first writer wins — existing dest mappings are kept).
+func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonOffset int, aniListID int64) error {
 	// 1. Move seasons. Guards against UNIQUE(title_id, season_number) by
 	// merging colliding seasons instead of re-parenting blindly.
 	rows, err := w.tx.QueryContext(ctx, `SELECT id, season_number FROM seasons WHERE title_id = ?`, sourceID)
@@ -227,11 +230,13 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 	for _, m := range moves {
 		var targetSeasonID int64
 		err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, destID, m.newNum).Scan(&targetSeasonID)
+		var finalSeasonID int64
 		switch {
 		case err == sql.ErrNoRows:
 			if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id); err != nil {
 				return fmt.Errorf("move season %d: %w", m.id, err)
 			}
+			finalSeasonID = m.id
 		case err != nil:
 			return fmt.Errorf("check season collision %d: %w", m.id, err)
 		default:
@@ -247,6 +252,16 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 			}
 			if _, err := w.tx.ExecContext(ctx, `DELETE FROM seasons WHERE id = ?`, m.id); err != nil {
 				return fmt.Errorf("delete merged season %d: %w", m.id, err)
+			}
+			finalSeasonID = targetSeasonID
+		}
+
+		// Stamp the per-season AniList mapping once the dest season ID is known.
+		// First-writer-wins (Stamp does ON CONFLICT DO NOTHING) means a
+		// user-confirmed link on the dest is never clobbered by a later merge.
+		if aniListID != 0 {
+			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(aniListID, 10)); err != nil {
+				return err
 			}
 		}
 	}

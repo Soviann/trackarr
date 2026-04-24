@@ -714,6 +714,101 @@ func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
 	assert.Equal(t, srcTvdb, *got.TVDBID)
 }
 
+func TestTitleRepository_Merge_StampsAniListOnMovedSeason(t *testing.T) {
+	db := setupTestDB(t)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Jujutsu Kaisen", Language: "en", IsPrimary: true}})
+
+	// Dest S1 pre-exists with its own anilist mapping (backfill from migration 020).
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	testutil.InsertSeasonExternalID(t, db, destS1, "anilist", "113415")
+
+	// Source is an S2 sequel carrying AniList ID 145064.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Jujutsu Kaisen S2", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1) // source S1 will shift to dest S2
+
+	// seasonOffset = 1 → source S1 becomes dest S2; anilist ID 145064 is stamped on it.
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 1, 145064)
+
+	// Dest S1 mapping untouched.
+	got, err := testutil.GetSeasonExternalID(t, db, destS1, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "113415", got)
+
+	// Dest S2 now exists and carries 145064.
+	var destS2 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 2`, destID).Scan(&destS2))
+	got2, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "145064", got2)
+}
+
+func TestTitleRepository_Merge_KeepsExistingSeasonAniList(t *testing.T) {
+	db := setupTestDB(t)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Jujutsu Kaisen", Language: "en", IsPrimary: true}})
+
+	// Dest already has S2 with a user-confirmed mapping we must not overwrite.
+	destS2 := testutil.InsertSeason(t, db, destID, 2)
+	testutil.InsertSeasonExternalID(t, db, destS2, "anilist", "111")
+
+	// Source S1 would collide with dest S2 after offset 1.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 1, 999)
+
+	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "111", got, "first writer wins — dest mapping preserved")
+}
+
+func TestTitleRepository_Merge_NoAniListSkipsStamp(t *testing.T) {
+	db := setupTestDB(t)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	// aniListID = 0 → nothing to stamp.
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 0)
+
+	var destS1 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 1`, destID).Scan(&destS1))
+	got, err := testutil.GetSeasonExternalID(t, db, destS1, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "", got)
+}
+
 func TestTitleRepository_Merge_DeletesSource(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

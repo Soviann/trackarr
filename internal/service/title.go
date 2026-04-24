@@ -200,20 +200,38 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 		return err
 	}
 
+	sourceName := source.PrimaryName()
+
 	seasonOffset := 0
 	if explicitOffset != nil {
 		seasonOffset = *explicitOffset
 	} else if source.IsAnime && s.pipeline != nil {
-		name := source.PrimaryName()
-		if ident, err := s.pipeline.IdentifyAnimeSeason(ctx, name, source.Year); err == nil && ident.IsSeason {
-			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, name)
+		if ident, err := s.pipeline.IdentifyAnimeSeason(ctx, sourceName, source.Year); err == nil && ident.IsSeason {
+			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, sourceName)
 			seasonOffset = ident.SeasonNumber - 1
 		} else if err != nil {
-			log.Printf("fusion: Gemini season identification failed for %q: %v", name, err)
+			log.Printf("fusion: Gemini season identification failed for %q: %v", sourceName, err)
+		}
+	}
+
+	// Resolve the per-season AniList ID to stamp on the moved/merged dest
+	// season. Trust the source's existing mapping first; fall back to an
+	// AniList name search so a sequel imported without an ID still gets
+	// stamped. Both lookups are best-effort: a failure here must not abort
+	// the merge itself — the user can always fix the link afterwards.
+	var aniListID int64
+	if source.AniListID != nil {
+		aniListID = *source.AniListID
+	} else if source.IsAnime && s.pipeline != nil {
+		id, err := s.pipeline.SearchAniListByName(ctx, sourceName)
+		if err != nil {
+			log.Printf("fusion: AniList search failed for %q: %v", sourceName, err)
+		} else {
+			aniListID = id
 		}
 	}
 
 	return database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(ctx, destID, sourceID, seasonOffset)
+		return repository.NewTitleWriter(tx).Merge(ctx, destID, sourceID, seasonOffset, aniListID)
 	})
 }

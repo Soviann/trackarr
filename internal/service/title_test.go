@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -100,6 +101,110 @@ func TestMerge_OpensOwnTx(t *testing.T) {
 	// Source title must be deleted after merge.
 	_, err = titleRepo.GetByID(sourceID)
 	assert.True(t, errors.Is(err, sql.ErrNoRows), "expected sql.ErrNoRows, got: %v", err)
+}
+
+func TestMerge_StampsSourceAniListOnDestSeason(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Jujutsu Kaisen", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, destID, 1)
+
+	srcAniList := int64(145064)
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2023,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		AniListID:   &srcAniList,
+	}, []model.TitleName{{Name: "JJK S2", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	offset := 1
+	require.NoError(t, svc.Merge(context.Background(), db, destID, sourceID, &offset))
+
+	var destS2 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 2`, destID).Scan(&destS2))
+	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "145064", got)
+}
+
+func TestMerge_ReSearchesAniListWhenSourceLacksID(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	// Fake AniList endpoint returning a canned top result.
+	alServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"Page": map[string]any{
+					"media": []any{
+						map[string]any{
+							"id": 123,
+							"title": map[string]string{
+								"romaji":  "Sequel",
+								"english": "Sequel",
+							},
+							"format":     "TV",
+							"seasonYear": 2023,
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer alServer.Close()
+
+	alClient := matching.NewAniListClientWithURL(alServer.URL)
+	pipeline := matching.NewPipeline(nil, alClient, nil, nil, t.TempDir())
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Parent", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, destID, 1)
+
+	// Source has no AniList ID — service must re-query AniList.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2023,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Sequel", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	offset := 1
+	require.NoError(t, svc.Merge(context.Background(), db, destID, sourceID, &offset))
+
+	var destS2 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 2`, destID).Scan(&destS2))
+	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "123", got)
 }
 
 func TestMerge_CancelledContext(t *testing.T) {

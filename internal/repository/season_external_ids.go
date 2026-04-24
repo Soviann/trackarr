@@ -7,10 +7,15 @@ import (
 	"fmt"
 )
 
+// ProviderAniList is the canonical provider key for AniList media IDs in
+// season_external_ids.provider. Use this constant from any new SQL or repo
+// call so a future provider rename touches one place.
+const ProviderAniList = "anilist"
+
 // SeasonExternalIDRepository maps a season to provider-specific IDs (currently
-// AniList). Unlike SeasonWriter, writes here are single-statement upserts so
-// they run outside a caller-owned tx — batching multiple (season, provider)
-// pairs is not a use case we have.
+// AniList). The repository serves single-statement upserts on the connection
+// pool (handler-driven fix-match flows). For writes that must commit alongside
+// other rows in the same transaction, use SeasonExternalIDWriter instead.
 type SeasonExternalIDRepository struct {
 	db *sql.DB
 }
