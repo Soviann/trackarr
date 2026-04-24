@@ -310,6 +310,69 @@ func TestPipeline_NoMatch(t *testing.T) {
 	assert.Equal(t, "Some Obscure Title", result.Names[0].Name)
 }
 
+func TestPipeline_Step5_GeminiFuzzy(t *testing.T) {
+	dataDir := t.TempDir()
+
+	// TMDB: rejette le titre brut, accepte le titre résolu par Gemini
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		if query == "Fight Club" {
+			_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
+				Results: []TMDBSearchResult{
+					{ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15"},
+				},
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{})
+	})
+	tmdbMux.HandleFunc("/movie/550", func(w http.ResponseWriter, r *http.Request) {
+		poster := "/poster550.jpg"
+		_ = json.NewEncoder(w).Encode(TMDBMovieDetails{
+			ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15",
+			IMDBID: "tt0137523", PosterPath: &poster,
+			ExternalIDs: &struct {
+				IMDBID string `json:"imdb_id"`
+				TVDBID int64  `json:"tvdb_id"`
+			}{IMDBID: "tt0137523"},
+		})
+	})
+	tmdbMux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{})
+	})
+	tmdbMux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("cover"))
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	defer tmdbServer.Close()
+
+	tmdbClient := NewTMDBClient("key")
+	tmdbClient.baseURL = tmdbServer.URL
+
+	// Gemini: fuzzy renvoie "Fight Club" comme candidat
+	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(geminiOKResponse(`{"candidate_title": "Fight Club", "candidate_year": 1999, "confidence": "high", "reason": "typo"}`))
+	}))
+	defer geminiServer.Close()
+
+	geminiClient := NewGeminiClient([]string{"key"})
+	geminiClient.apiURL = geminiServer.URL
+
+	pipeline := NewPipeline(tmdbClient, nil, geminiClient, nil, dataDir)
+
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title: "FightClub",
+		Year:  1999,
+		Type:  model.TitleTypeMovie,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, MatchSourceGeminiFuzzy, result.MatchSource)
+	assert.Equal(t, model.MatchStatusUnconfirmed, result.MatchStatus)
+	assert.Equal(t, int64(550), result.TMDBID)
+	assert.Equal(t, "tt0137523", result.IMDBID)
+}
+
 func TestPipeline_Step2_CrossRef(t *testing.T) {
 	dataDir := t.TempDir()
 
