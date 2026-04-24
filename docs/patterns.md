@@ -59,7 +59,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
 | Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch`. Task kinds: `TaskTypeEnrichment`, `TaskTypeRefresh`, `TaskTypeCoverFetch`, `TaskTypeAniListPushSeason`, `TaskTypeAniListPushMovie`. |
-| SeasonExternalID | `Get`, `ListForTitle` | `Set`, `Delete` (maps `seasons.id → provider` ID, e.g. AniList media id per season; migration 020) |
+| SeasonExternalID | `Get`, `ListForTitle` | `Set`, `Delete` on pool (`SeasonExternalIDRepository`); `Stamp` on tx (`SeasonExternalIDWriter`) — `Stamp` is first-writer-wins (`ON CONFLICT DO NOTHING`) and is the entry point used by the merge flow (`TitleWriter.Merge`) and S1 backfill (`stampSeasonAniListID` in `backfill.go`); `Set` overwrites (used by Phase 7 fix-match). Provider key constant: `repository.ProviderAniList`. Migration 020. |
 | Genre | `ListWithCounts` | `ReplaceForTitle` |
 | Setting | `Get` | `Set`, `Delete` |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
