@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.18.0] — 2026-04-25
+
 ### Synchronisation AniList
 - Visionnages, changements de statut et notes propagent désormais automatiquement vers AniList — chaque saison a sa propre entrée AniList, finir JJK S1 et démarrer S2 arrive proprement côté compte au lieu d'écraser S1. Les pushs passent par la task queue (nouveaux types `anilist_push_season` / `anilist_push_movie`) pour ne jamais bloquer la requête HTTP sur la latence AniList, et une note qui serait envoyée sur une saison encore en cours est filtrée côté émetteur (AniList refuse le score tant qu'il reste des épisodes à voir).
 - Mapping par saison alimenté automatiquement : importer un anime à plusieurs saisons (ou fusionner une suite importée séparément) renseigne maintenant `season_external_ids` côté serveur — la saison 1 est cartographiée dès le backfill du premier épisode si le titre a un `anilist_id`, et la fusion d'un titre source vers une saison existante propage l'ID AniList du source (ou le re-recherche par nom si le source n'en a pas) sans jamais écraser un lien déjà confirmé. Conséquence visible : push AniList et UI par saison fonctionnent immédiatement après l'import, sans nécessiter de "Link entry" manuel pour les cas standards.
