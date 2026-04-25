@@ -169,7 +169,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                 <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save'}</span>
               </button>
               {season?.anilist_id && (
-                <button onClick={handleClearSeasonAniList} disabled={saving} className={s.manualToggle} style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
+                <button onClick={handleClearSeasonAniList} disabled={saving} className={s.removeMapping}>
                   Remove mapping
                 </button>
               )}
