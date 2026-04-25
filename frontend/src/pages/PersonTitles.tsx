@@ -33,7 +33,7 @@ export function PersonTitles({ name }: { path?: string; name?: string }) {
       {titles.length > 0 && (
         <div className={s.list}>
           {titles.map((t) => (
-            <TitleCard key={t.id} title={t} onUpdate={mutate} />
+            <TitleCard key={t.id} title={t} onUpdate={mutate} showSortCaption={false} />
           ))}
         </div>
       )}

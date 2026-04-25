@@ -2,7 +2,7 @@ import { memo } from 'preact/compat'
 import { useRef } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import type { Title } from '../types'
-import { getName, formatDate } from '../utils'
+import { getName, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
@@ -18,7 +18,8 @@ interface PosterCardProps {
 }
 
 export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress, overlay }: PosterCardProps) {
-  const isLastWatchedSort = useTitleStore(st => st.sort.field === 'last_watched_at')
+  const sortField = useTitleStore(st => st.sort.field)
+  const sortCaption = formatSortCaption(title, sortField)
   const name = getName(title)
 
   // Track whether a long-press just fired so we can swallow the
@@ -75,8 +76,8 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         </div>
         <div className={s.labelOverlay}>
           <div className={s.label}>{name}</div>
-          {isLastWatchedSort && title.last_watched_at && (
-            <div className={s.lastWatched}>Vu le {formatDate(title.last_watched_at)}</div>
+          {sortCaption && (
+            <div className={s.sortCaption}>{sortCaption}</div>
           )}
         </div>
         {overlay}

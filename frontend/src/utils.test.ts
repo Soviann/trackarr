@@ -67,7 +67,7 @@ describe('getName', () => {
 
 describe('getTypeLabel', () => {
   const cases: [TitleType, string][] = [
-    ['movie', 'Film'],
+    ['movie', 'Movie'],
     ['series', 'Series'],
   ]
   it.each(cases)('%s → %s', (input, expected) => {

@@ -1,4 +1,5 @@
 import { Title, TitleType, TitleStatus } from './types'
+import type { SortField } from './store'
 
 /** Returns the best display name for a title. Priority: fr → en → (x-romaji → ja when anime) → first. */
 export function getName(title: Title): string {
@@ -18,7 +19,7 @@ export function getName(title: Title): string {
 /** Returns the display label for a title type. */
 export function getTypeLabel(type: TitleType): string {
   switch (type) {
-    case 'movie': return 'Film'
+    case 'movie': return 'Movie'
     case 'series': return 'Series'
     default: return type
   }
@@ -73,6 +74,28 @@ export function formatDateTime(dateStr: string | null | undefined): string {
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return ''
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * Returns the value to surface on a card when the given sort is active,
+ * so the order is self-explanatory at a glance. Returns null when the value
+ * is missing or the sort doesn't warrant a caption (e.g. title sort).
+ */
+export function formatSortCaption(title: Title, sortField: SortField): string | null {
+  switch (sortField) {
+    case 'last_watched_at':
+      return title.last_watched_at ? `Watched ${formatDate(title.last_watched_at)}` : null
+    case 'updated_at':
+      return title.updated_at ? `Updated ${formatDate(title.updated_at)}` : null
+    case 'created_at':
+      return title.created_at ? `Added ${formatDate(title.created_at)}` : null
+    case 'release_date':
+      return title.year ? `Released ${title.year}` : null
+    case 'my_rating':
+      return title.my_rating != null ? `★ ${title.my_rating}/10` : null
+    case 'original_title':
+      return null
+  }
 }
 
 /** Returns the total watched episodes across all seasons. */

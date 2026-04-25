@@ -4,7 +4,7 @@ import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
-import { getName, getTypeLabel, formatDate } from '../utils'
+import { getName, getTypeLabel, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
@@ -14,6 +14,8 @@ import s from './TitleCard.module.css'
 interface TitleCardProps {
   title: Title
   onUpdate?: () => void
+  /** When false, the meta row falls back to type+year regardless of the active sort. */
+  showSortCaption?: boolean
 }
 
 function getProgress(title: Title) {
@@ -37,8 +39,9 @@ function getProgress(title: Title) {
   return { season: currentSeason, watched, total }
 }
 
-export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardProps) {
-  const isLastWatchedSort = useTitleStore(s => s.sort.field === 'last_watched_at')
+export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCaption = true }: TitleCardProps) {
+  const sortField = useTitleStore(s => s.sort.field)
+  const sortCaption = showSortCaption ? formatSortCaption(title, sortField) : null
   const [toggling, setToggling] = useState(false)
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
@@ -81,8 +84,8 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardP
       <div className={s.info}>
         <div className={s.name}>{name}</div>
         <div className={s.meta}>
-          {isLastWatchedSort && title.last_watched_at ? (
-            <span className={s.lastWatched}>Vu le {formatDate(title.last_watched_at)}</span>
+          {sortCaption ? (
+            <span className={s.sortCaption}>{sortCaption}</span>
           ) : (
             <>{typeLabel} · {title.year}</>
           )}

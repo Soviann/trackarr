@@ -42,7 +42,7 @@
   white-space: nowrap;
 }
 
-.lastWatched {
+.sortCaption {
   font-size: 8px;
   color: var(--color-accent-teal);
   margin-top: 1px;
