@@ -1,9 +1,11 @@
 import { route } from 'preact-router'
+import type { TitleType } from '../types'
 import s from './PosterStrip.module.css'
 import { CoverPlaceholder } from './CoverPlaceholder'
 
 interface PosterStripItem {
   id: number
+  type: TitleType
   cover_url: string | null
   name: string
   sublabel: string
@@ -30,7 +32,7 @@ export function PosterStrip({ items }: Props) {
           <div className={s.poster}>
             {item.cover_url
               ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" />
-              : <CoverPlaceholder />}
+              : <CoverPlaceholder type={item.type} />}
             {item.progressRatio !== undefined && (
               <div className={s.progressBar}>
                 <div className={s.progressFill} style={{ width: `${item.progressRatio * 100}%` }} />

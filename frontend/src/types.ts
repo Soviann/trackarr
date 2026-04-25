@@ -195,7 +195,7 @@ export interface StatsYear {
 
 export interface ContinueWatchingTitle {
   id: number
-  type: string
+  type: TitleType
   cover_url: string | null
   name: string
   next_air_episode: string | null
@@ -206,7 +206,7 @@ export interface ContinueWatchingTitle {
 
 export interface UpcomingTitle {
   id: number
-  type: string
+  type: TitleType
   cover_url: string | null
   name: string
   next_air_date: string

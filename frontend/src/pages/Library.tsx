@@ -241,7 +241,7 @@ export function Library(_props: { path?: string }) {
         {upcoming && (
           <PosterStrip items={upcoming.map(t => {
             const { label, variant } = airDateBadge(t.next_air_date)
-            return { id: t.id, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
+            return { id: t.id, type: t.type, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
           })} />
         )}
       </CollapsibleSection>
@@ -250,6 +250,7 @@ export function Library(_props: { path?: string }) {
         {continueWatching && (
           <PosterStrip items={continueWatching.map(t => ({
             id: t.id,
+            type: t.type,
             cover_url: t.cover_url,
             name: t.name,
             sublabel: t.next_air_episode ?? '',
