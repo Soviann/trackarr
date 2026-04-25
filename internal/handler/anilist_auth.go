@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	settingKeyAniListToken = "anilist_token"
-	anilistAuthorizeURL    = "https://anilist.co/api/v2/oauth/authorize"
+	settingKeyAniListToken        = "anilist_token"
+	settingKeyAniListTokenInvalid = "anilist_token_invalid"
+	anilistAuthorizeURL           = "https://anilist.co/api/v2/oauth/authorize"
 )
 
 type AniListAuthHandler struct {
@@ -47,7 +48,13 @@ func (h *AniListAuthHandler) SaveToken(w http.ResponseWriter, r *http.Request) e
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
-		return repository.NewSettingWriter(tx).Set(r.Context(), settingKeyAniListToken, body.Token)
+		writer := repository.NewSettingWriter(tx)
+		if err := writer.Set(r.Context(), settingKeyAniListToken, body.Token); err != nil {
+			return err
+		}
+		// Un nouveau token est par définition valide : efface tout drapeau
+		// d'invalidation laissé par un push 401.
+		return writer.Delete(r.Context(), settingKeyAniListTokenInvalid)
 	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}

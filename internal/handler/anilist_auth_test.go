@@ -54,6 +54,18 @@ func TestAniListAuth_SaveToken(t *testing.T) {
 	assert.Equal(t, "abc123", val)
 }
 
+func TestAniListAuth_SaveToken_ClearsInvalidFlag(t *testing.T) {
+	h, db, settings := setupAniListHandler(t)
+	testutil.SetSetting(t, db, "anilist_token_invalid", "true")
+
+	req := httptest.NewRequest("POST", "/api/anilist/token", strings.NewReader(`{"token":"xyz"}`))
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.SaveToken(rr, req))
+
+	got, _ := settings.Get("anilist_token_invalid")
+	assert.NotEqual(t, "true", got)
+}
+
 func TestAniListAuth_SaveToken_EmptyRejected(t *testing.T) {
 	h, _, _ := setupAniListHandler(t)
 
