@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
@@ -33,7 +33,14 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   const [manualImdb, setManualImdb] = useState('')
   const [manualAnilist, setManualAnilist] = useState('')
   const [manualTvdb, setManualTvdb] = useState('')
-  const [seasonAniListID, setSeasonAniListID] = useState(season?.anilist_id ?? '')
+  const [seasonAniListID, setSeasonAniListID] = useState('')
+
+  // Le composant reste monté entre les ouvertures : useState ne capte
+  // l'ID que lors du premier rendu (quand seasonID vaut undefined).
+  // Ce useEffect resynchronise la valeur à chaque changement de saison.
+  useEffect(() => {
+    setSeasonAniListID(season?.anilist_id ?? '')
+  }, [seasonID, season?.anilist_id])
   const doSearch = async (q: string, type: 'movie' | 'tv') => {
     if (!q.trim()) {
       setResults([])
