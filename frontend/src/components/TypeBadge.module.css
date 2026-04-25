@@ -1,0 +1,39 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.sizeMd {
+  width: 22px;
+  height: 22px;
+}
+
+.sizeSm {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.icon {
+  display: flex;
+}
+
+.iconMd {
+  width: 14px;
+  height: 14px;
+}
+
+.iconSm {
+  width: 11px;
+  height: 11px;
+}
+
+.icon > svg {
+  width: 100%;
+  height: 100%;
+}

@@ -8,6 +8,7 @@ import { getName, getTypeLabel, formatDate } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
+import { TypeBadge } from './TypeBadge'
 import s from './TitleCard.module.css'
 
 interface TitleCardProps {
@@ -71,6 +72,9 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate }: TitleCardP
         style={{ background: coverBackground(title.cover_url, title.type) }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="20px" />}
+        <div className={s.typeBadge}>
+          <TypeBadge type={title.type} size="sm" />
+        </div>
       </div>
 
       {/* Info */}

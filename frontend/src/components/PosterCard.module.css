@@ -21,6 +21,12 @@
   right: 6px;
 }
 
+.typeBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
 .labelOverlay {
   width: 100%;
   padding: 6px;

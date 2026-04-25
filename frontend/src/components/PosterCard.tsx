@@ -6,6 +6,7 @@ import { getName, formatDate } from '../utils'
 import { useTitleStore } from '../store'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
+import { TypeBadge } from './TypeBadge'
 import { useLongPress } from '../hooks/useLongPress'
 import s from './PosterCard.module.css'
 
@@ -66,6 +67,9 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         style={{ background: coverBackground(title.cover_url, title.type) }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} />}
+        <div className={s.typeBadge}>
+          <TypeBadge type={title.type} />
+        </div>
         <div className={s.statusBadge}>
           <StatusBadge status={title.status} />
         </div>
