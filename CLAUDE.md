@@ -1,8 +1,10 @@
 # CLAUDE.md — Mandatory rules
 
-<!-- TEMPLATE:START — managed by sync-template-config, do not edit manually.
-     Add here: conventions shared across projects (coding standards, git rules,
-     language rules, approach, token optimization, recommended plugins, translations).
+<!-- TEMPLATE:START — managed by sync-template-config.
+     Cross-project rules only: approach, plans process, quality, token optimization,
+     git workflow, language. Anything language- or framework-specific (linters,
+     naming, translation systems, DTO patterns, framework idioms, language-specific
+     plugins) belongs in the PROJECT block, not here.
      If unsure whether a rule belongs here or in PROJECT, ask the user before adding. -->
 
 ## Approach
@@ -14,7 +16,7 @@
 - Don't verify existence of items already known from plan or memory.
 
 ## Plans
-- Path: `docs/plans/YYYY-MM-DD-<feature>.md` — or subfolder `docs/plans/YYYY-MM-DD-<feature>/` when split. Temporary, delete after merge. Never commit.
+- Path defined per project (see PROJECT block). Plans are temporary unless the project rules say otherwise. Never commit unless the project explicitly retains them.
 - Generation: `/plan-split` only (wraps `writing-plans`; splits if ≥ 2 phases). Never call `writing-plans` directly.
 - Phase closure: `/phase-finish <path|N>` — runs validation conditions, typed-yes commit gate, handoff.
 
@@ -32,36 +34,19 @@
 - **`gh --json field1,field2`** over MCP GitHub tools for simple queries. `minimal_output: true` on MCP list/search calls.
 
 ## Coding Standards
-- `@Symfony` CS Fixer ruleset + [Symfony standards](https://symfony.com/doc/current/contributing/code/standards.html)
-- Backslash-prefix native functions: `\array_map()`, `\sprintf()`, `\count()`
-- Prefer `u()` (String component) over native string functions.
-- Yoda conditions: `null === $var` not `$var === null`.
-- Method order: `__construct` → public → protected → private (`setUp`/`tearDown` first in tests).
-- One-line args (except promoted constructors: one per line, trailing comma).
-- Existing files: fix only your changes.
-- PHPStan level 9 — never ignore/lower.
-- Alphabetical: constructor assignments, array keys, YAML keys.
-- No magic strings: use constants or enums for domain values reused across files.
-- DB queries: repositories only (`src/Repository/`), QueryBuilder only (no DQL). Never inject `EntityManagerInterface` for queries.
-- Doctrine migrations: always set `getDescription()` (French, concise).
-- **DTOs over arrays**: `readonly` DTO classes in `src/DTO/` or same namespace. `JsonSerializable` only for API/cache.
+- Existing files: fix only your changes — no drive-by reformatting.
+- No magic strings: constants or enums for domain values reused across files.
+- Language-specific rules (linters, naming, framework idioms, translation systems, DTO patterns) belong in the PROJECT block.
 
 ## Git
 - All commits go through `/commit` (`.claude/skills/commit/SKILL.md`) — the skill owns format, splitting, and safety checks.
 - Merges: `--no-ff`
 
-## Translations
-- No hardcoded user-facing text — always use translation keys.
-- `translations/messages.fr.yaml`: UI labels, titles, buttons, menus.
-- `translations/validators.fr.yaml`: `Assert\*` constraint `message:` params.
-- Key pattern: `app.<entity>.<context>.<purpose>` (e.g. `app.example.admin.fields.name.label`). Vendor keys go under their own namespace — never duplicate in app.
-- Twig: `{{ 'key'|trans }}`, with params: `{{ 'key'|trans({'%name%': val}) }}`
-
 ## Language
-Commits + docs/comments: French. Code identifiers: English. CLAUDE.md: English.
+LLM-destined files (CLAUDE.md, SKILL.md, plan/spec files, agent files): English. Everything else (commits, docs/comments, user-facing strings): per project preference (see PROJECT block).
 
 ## Recommended Plugins
-`php-lsp`, `context7`, `superpowers`, `pr-review-toolkit`, `commit-commands`, `hookify`, `code-simplifier`.
+`context7`, `superpowers`, `pr-review-toolkit`, `commit-commands`, `hookify`, `code-simplifier`.
 
 <!-- TEMPLATE:END -->
 
@@ -109,12 +94,12 @@ Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security).
 - Errors: `fmt.Errorf("context: %w", err)`. Tests: `testify/assert`, in-memory SQLite.
 
 ## Visual Verification
-After UI/UX changes, verify in-browser via Chrome DevTools MCP: login with `DEBUG_LOGIN*` from `.env.local`, confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation.
+After UI/UX changes, verify in-browser via `cmux browser surface:32 ...` against `http://localhost:8080` (already logged in, never open a new browser surface): confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation. The PWA service worker caches aggressively — append `?t=$(date +%s)` to the URL to bust the cache after a frontend change. Frontend changes need air to re-embed `frontend/dist`: touch `main.go` after `make test-front` to force a Go rebuild.
 
 ## Git
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
 
 ## Recommended Plugins
-`chrome-devtools-mcp`, `cc-skills-golang`.
+`cc-skills-golang`. Browser automation: cmux browser (no plugin needed; Chrome DevTools MCP is disabled).
 
 <!-- PROJECT:END -->
