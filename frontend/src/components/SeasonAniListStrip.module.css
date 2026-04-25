@@ -9,24 +9,24 @@
 }
 
 .stripMapped {
-  background: rgba(2, 169, 255, 0.06);
-  border: 1px solid rgba(2, 169, 255, 0.2);
+  background: color-mix(in srgb, var(--color-accent-anilist) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-anilist) 20%, transparent);
 }
 
 .stripUnmapped {
-  background: rgba(232, 169, 37, 0.08);
-  border: 1px dashed rgba(232, 169, 37, 0.45);
+  background: var(--wash-amber);
+  border: 1px dashed color-mix(in srgb, var(--color-accent-amber) 45%, transparent);
 }
 
 .label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  color: #02a9ff;
+  color: var(--color-accent-anilist);
 }
 
 .stripUnmapped .label {
-  color: #e8a925;
+  color: var(--color-accent-amber);
 }
 
 .entryName {
@@ -47,7 +47,7 @@
 .score {
   font-size: 11px;
   font-weight: 600;
-  color: #02a9ff;
+  color: var(--color-accent-anilist);
 }
 
 .editButton {
@@ -67,8 +67,8 @@
 }
 
 .linkButton {
-  background: rgba(232, 169, 37, 0.18);
-  color: #e8a925;
+  background: color-mix(in srgb, var(--color-accent-amber) 18%, transparent);
+  color: var(--color-accent-amber);
   border: none;
   border-radius: 12px;
   padding: 3px 8px;
@@ -78,5 +78,5 @@
 }
 
 .linkButton:hover {
-  background: rgba(232, 169, 37, 0.28);
+  background: color-mix(in srgb, var(--color-accent-amber) 28%, transparent);
 }
