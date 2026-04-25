@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"log/slog"
 	"net/http"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -16,11 +15,10 @@ import (
 // DELETE removes the mapping without enqueuing anything.
 type SeasonExternalHandler struct {
 	writeDB *sql.DB
-	log     *slog.Logger
 }
 
-func NewSeasonExternalHandler(writeDB *sql.DB, log *slog.Logger) *SeasonExternalHandler {
-	return &SeasonExternalHandler{writeDB: writeDB, log: log}
+func NewSeasonExternalHandler(writeDB *sql.DB) *SeasonExternalHandler {
+	return &SeasonExternalHandler{writeDB: writeDB}
 }
 
 // SetAniListID upserts the AniList ID for a season and enqueues a push task.
@@ -65,6 +63,8 @@ func (h *SeasonExternalHandler) ClearAniListID(w http.ResponseWriter, r *http.Re
 		return httputil.BadRequest("Invalid season ID")
 	}
 
+	// Pas de transaction : un DELETE seul n'a pas de side-effect à coordonner
+	// avec un enqueue (au contraire du PUT). Une exécution sur le pool suffit.
 	if err := repository.NewSeasonExternalIDRepository(h.writeDB).Delete(
 		r.Context(), seasonID, repository.ProviderAniList,
 	); err != nil {

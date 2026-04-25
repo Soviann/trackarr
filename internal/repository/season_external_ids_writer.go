@@ -35,6 +35,11 @@ func (w *SeasonExternalIDWriter) Stamp(ctx context.Context, seasonID int64, prov
 // Upsert inserts or replaces the (seasonID, provider) → externalID mapping.
 // Last writer wins — use for user-driven fix-match flows where the new value
 // must always take effect regardless of an existing row.
+//
+// L'instruction SQL doit rester identique à SeasonExternalIDRepository.Set :
+// les deux variantes (pool / tx) doivent produire exactement la même ligne.
+// Toute évolution de l'une (colonnes, ON CONFLICT) doit être répercutée à
+// l'autre.
 func (w *SeasonExternalIDWriter) Upsert(ctx context.Context, seasonID int64, provider, externalID string) error {
 	if _, err := w.tx.ExecContext(ctx, `
 		INSERT INTO season_external_ids (season_id, provider, external_id)

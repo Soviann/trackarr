@@ -30,7 +30,7 @@ func withSeasonParam(r *http.Request, seasonID int64) *http.Request {
 
 func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	h := handler.NewSeasonExternalHandler(db, testutil.NopLogger())
+	h := handler.NewSeasonExternalHandler(db)
 
 	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
@@ -60,7 +60,7 @@ func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
 
 func TestSetSeasonAniListID_RejectsEmpty(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	h := handler.NewSeasonExternalHandler(db, testutil.NopLogger())
+	h := handler.NewSeasonExternalHandler(db)
 
 	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
@@ -80,7 +80,7 @@ func TestSetSeasonAniListID_RejectsEmpty(t *testing.T) {
 
 func TestDeleteSeasonAniListID_RemovesMappingNoEnqueue(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	h := handler.NewSeasonExternalHandler(db, testutil.NopLogger())
+	h := handler.NewSeasonExternalHandler(db)
 
 	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
