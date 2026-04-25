@@ -31,3 +31,19 @@ func (w *SeasonExternalIDWriter) Stamp(ctx context.Context, seasonID int64, prov
 	}
 	return nil
 }
+
+// Upsert inserts or replaces the (seasonID, provider) → externalID mapping.
+// Last writer wins — use for user-driven fix-match flows where the new value
+// must always take effect regardless of an existing row.
+func (w *SeasonExternalIDWriter) Upsert(ctx context.Context, seasonID int64, provider, externalID string) error {
+	if _, err := w.tx.ExecContext(ctx, `
+		INSERT INTO season_external_ids (season_id, provider, external_id)
+		VALUES (?, ?, ?)
+		ON CONFLICT(season_id, provider) DO UPDATE SET
+		    external_id = excluded.external_id,
+		    updated_at  = CURRENT_TIMESTAMP
+	`, seasonID, provider, externalID); err != nil {
+		return fmt.Errorf("season_external_ids upsert: %w", err)
+	}
+	return nil
+}

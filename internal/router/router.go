@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -133,6 +134,10 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
 			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
+
+			seasonExternal := handler.NewSeasonExternalHandler(writeDB, slog.Default())
+			r.Put("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.SetAniListID))
+			r.Delete("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.ClearAniListID))
 
 			r.Post("/push/subscribe", httputil.WrapHandler(push.Subscribe))
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
