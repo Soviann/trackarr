@@ -38,6 +38,16 @@ export function AdminAniList({ path }: { path?: string }) {
           <h1 className={s.title}>AniList</h1>
         </div>
 
+        {settings?.anilist_token_invalid === true && (
+          <div className={s.reconnectBanner} role="alert">
+            <div>
+              <strong>AniList connection expired.</strong>
+              <p>Rating &amp; status sync is paused until you reconnect.</p>
+            </div>
+            <a className={s.reconnectButton} href="/api/anilist/auth">Reconnect</a>
+          </div>
+        )}
+
         {!settings && <div className={s.loading}>Loading...</div>}
 
         {settings && (

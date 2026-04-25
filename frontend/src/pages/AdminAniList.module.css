@@ -125,3 +125,50 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* TODO: introduce a semantic --color-error token in tokens.css; reusing --color-accent-coral for now. */
+.reconnectBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  background: var(--wash-coral);
+  border: 1px solid var(--color-accent-coral);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+}
+
+.reconnectBanner strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-accent-coral);
+}
+
+.reconnectBanner p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.reconnectButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-coral);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.reconnectButton:hover {
+  opacity: 0.9;
+}
