@@ -18,24 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Extract changelog for this version
-        id: changelog
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          NOTES=$(awk "/^## \\[$TAG\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md)
-          {
-            echo "notes<<EOF"
-            echo "$NOTES"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+        with:
+          fetch-depth: 0
 
       - name: Create GitHub Release
-        run: gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+        run: gh release create "$TAG" --title "$TAG" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
-          NOTES: ${{ steps.changelog.outputs.notes }}
 
   deploy:
     if: ${{ !failure() && !cancelled() }}
