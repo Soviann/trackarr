@@ -35,6 +35,7 @@ export interface Title {
   anilist_rating: number | null
   release_date: string | null
   last_watched_at?: string
+  last_refreshed_at?: string
   created_at: string
   updated_at: string
   names: TitleName[]

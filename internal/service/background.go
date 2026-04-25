@@ -109,6 +109,10 @@ type RefreshResult struct {
 	OldStatus     model.SeriesStatus
 	NewStatus     model.SeriesStatus
 	Error         error
+	// Refreshed is true when at least one external API (TMDB / TVDB / AniList)
+	// answered successfully for this title. Drives last_refreshed_at: we want
+	// it to stay frozen on network errors so a stale title is visible as such.
+	Refreshed bool
 }
 
 // RefreshTitles processes all non-completed titles.
@@ -183,7 +187,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
 	if s.tvdb != nil {
-		s.refreshFromTVDB(ctx, title)
+		s.refreshFromTVDB(ctx, title, &result)
 	}
 
 	// Step 1d: AniList per-season community score (anime only). Each mapped
@@ -191,7 +195,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 	// (unauthenticated) GraphQL endpoint. Errors are logged per season —
 	// one bad mapping never breaks the rest of the refresh.
 	if s.anilist != nil && title.IsAnime {
-		s.refreshAniListSeasonScores(ctx, title)
+		s.refreshAniListSeasonScores(ctx, title, &result)
 	}
 
 	// Step 2: Auto-complete if series ended and all episodes watched
@@ -205,6 +209,18 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 					log.Printf("background: auto-completed %q", result.TitleName)
 				}
 			}
+		}
+	}
+
+	// Step 3: stamp last_refreshed_at only if at least one external API
+	// actually answered. Network failures, rate limits, or "no external IDs"
+	// leave the timestamp frozen — that's the signal a user reads to decide
+	// whether a manual refresh might surface new episodes.
+	if result.Refreshed {
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).MarkRefreshed(ctx, title.ID, time.Now().UTC())
+		}); err != nil {
+			log.Printf("background: mark refreshed for title %d: %v", title.ID, err)
 		}
 	}
 
@@ -230,7 +246,7 @@ func logTitleUpdate(titleID int64, kind string, err error) {
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 // For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
 // For titles without a TMDB ID, overview and genres are also persisted from TVDB.
-func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title) {
+func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title, result *RefreshResult) {
 	if title.TVDBID == nil {
 		return
 	}
@@ -243,6 +259,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			log.Printf("background tvdb movie refresh %d: %v", title.ID, err)
 			return
 		}
+		result.Refreshed = true
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -273,6 +290,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 			log.Printf("background tvdb series refresh %d: %v", title.ID, err)
 			return
 		}
+		result.Refreshed = true
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -310,6 +328,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
 		return
 	}
+	result.Refreshed = true
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
@@ -367,6 +386,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
 		return
 	}
+	result.Refreshed = true
 
 	// Detect series status change
 	newStatus := mapTMDBSeriesStatus(details)
@@ -497,7 +517,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 // AniList traffic so the admin reconnect banner is the loudest signal until
 // the user acts on it. Errors are logged per mapping; one bad season cannot
 // break the others.
-func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *model.Title) {
+func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *model.Title, result *RefreshResult) {
 	if invalid, _ := s.settings.Get(settingAniListTokenInvalid); invalid == "true" {
 		return
 	}
@@ -528,6 +548,7 @@ func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, titl
 			_ = s.limiter.Wait(ctx)
 			continue
 		}
+		result.Refreshed = true
 
 		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 			return repository.NewSeasonWriter(tx).UpdateAniListAverageScore(ctx, seasonID, details.AverageScore)

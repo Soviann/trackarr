@@ -174,6 +174,18 @@ func (w *TitleWriter) UpdateLastWatchedAt(ctx context.Context, id int64, at time
 	return nil
 }
 
+// MarkRefreshed stamps last_refreshed_at without bumping updated_at, so the
+// "fresh meta sync" signal stays orthogonal to user-driven changes (a viewer
+// watching an episode must not move this timestamp, and a successful refresh
+// must not poison "updated_at DESC" lists with daily noise).
+func (w *TitleWriter) MarkRefreshed(ctx context.Context, id int64, at time.Time) error {
+	_, err := w.tx.ExecContext(ctx, `UPDATE titles SET last_refreshed_at = ? WHERE id = ?`, at, id)
+	if err != nil {
+		return fmt.Errorf("mark refreshed: %w", err)
+	}
+	return nil
+}
+
 // ReplaceNames wipes and re-inserts the names for a title. Must run in the
 // same transaction as the caller so readers never observe an empty set.
 func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []model.TitleName) error {

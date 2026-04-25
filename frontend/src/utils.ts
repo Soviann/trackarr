@@ -43,6 +43,38 @@ export function formatDate(dateStr: string | null | undefined): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/**
+ * Formats a date as a short relative label ("now", "5m ago", "in 3h", "Apr 5").
+ * Anything past 24h falls back to a day+month label — beyond that the absolute
+ * date is more useful than "32d ago". Callers needing the exact date should
+ * pair this with a tooltip via `formatDateTime`.
+ */
+export function formatRelativeTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diffMs = d.getTime() - now.getTime()
+  const absDiffMs = Math.abs(diffMs)
+
+  if (absDiffMs < 60_000) return 'now'
+  if (absDiffMs < 3_600_000) {
+    const mins = Math.round(absDiffMs / 60_000)
+    return diffMs > 0 ? `in ${mins}m` : `${mins}m ago`
+  }
+  if (absDiffMs < 86_400_000) {
+    const hours = Math.round(absDiffMs / 3_600_000)
+    return diffMs > 0 ? `in ${hours}h` : `${hours}h ago`
+  }
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+}
+
+/** Full date + time for tooltips. */
+export function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 /** Returns the total watched episodes across all seasons. */
 export function watchedCount(title: Title): number {
   return (title.seasons ?? []).reduce(

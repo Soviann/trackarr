@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatWatchtime } from '../utils'
+import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { SeasonAniListStrip } from '../components/SeasonAniListStrip'
@@ -277,6 +277,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             <span className={s.detailVal}>{formatWatchtime(title.total_watch_minutes)}</span>
           </div>
         )}
+        <div className={s.detailRow}>
+          <span className={s.detailKey}>Last refreshed</span>
+          <span
+            className={s.detailVal}
+            title={title.last_refreshed_at ? formatDateTime(title.last_refreshed_at) : undefined}
+          >
+            {title.last_refreshed_at ? formatRelativeTime(title.last_refreshed_at) : 'Never'}
+          </span>
+        </div>
         {title.match_source && (
           <div className={s.detailRow}>
             <span className={s.detailKey}>Match</span>
