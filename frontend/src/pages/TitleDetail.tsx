@@ -26,6 +26,18 @@ function getNextUnwatched(title: Title) {
   return null
 }
 
+function toggleEpisodeWatched(title: Title, episodeId: number): Title {
+  return {
+    ...title,
+    seasons: title.seasons.map((s) => ({
+      ...s,
+      episodes: (s.episodes ?? []).map((ep) =>
+        ep.id === episodeId ? { ...ep, watched: !ep.watched } : ep
+      ),
+    })),
+  }
+}
+
 function formatSeriesStatus(st: string | null) {
   if (!st) return ''
   return st.charAt(0).toUpperCase() + st.slice(1).replace('_', ' ')
@@ -43,7 +55,7 @@ function parseJSON<T>(json: string | null): T | null {
 }
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
-  const { data: title, loading, error, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
+  const { data: title, loading, error, mutate, setData } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -88,41 +100,49 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     await apiFetch(`/titles/${title.id}/refresh`, { method: 'POST' })
   }
 
-  const handleMarkNext = async () => {
-    if (!next) return
+  const handleEpisodeToggle = async (episodeId: number) => {
+    setData((prev) => prev ? toggleEpisodeWatched(prev, episodeId) : prev)
     try {
-      await apiFetch(`/titles/${title.id}/episodes/${next.episode.id}`, { method: 'PATCH' })
-      mutate()
+      const updated = await apiFetch<Title>(`/titles/${title.id}/episodes/${episodeId}`, { method: 'PATCH' })
+      setData(updated)
     } catch (e) {
-      setActionError('Failed to mark episode as watched')
+      setActionError('Failed to update episode')
+      mutate()
     }
   }
 
+  const handleMarkNext = async () => {
+    if (!next) return
+    await handleEpisodeToggle(next.episode.id)
+  }
+
   const handleSaveRating = async (rating: number) => {
+    setShowRating(false)
+    setData((prev) => prev ? { ...prev, my_rating: rating } : prev)
     try {
-      await apiFetch(`/titles/${title.id}`, {
+      const updated = await apiFetch<Title>(`/titles/${title.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ my_rating: rating }),
       })
-      setShowRating(false)
-      mutate()
+      setData(updated)
     } catch (e) {
       setActionError('Failed to save rating')
+      mutate()
     }
   }
 
   const handleSaveEdit = async (updates: { type?: string; status?: string }) => {
+    setShowEdit(false)
+    if (Object.keys(updates).length === 0) return
     try {
-      if (Object.keys(updates).length > 0) {
-        await apiFetch(`/titles/${title.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(updates),
-        })
-        mutate()
-      }
-      setShowEdit(false)
+      const updated = await apiFetch<Title>(`/titles/${title.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      })
+      setData(updated)
     } catch (e) {
       setActionError('Failed to save changes')
+      mutate()
     }
   }
 
@@ -325,7 +345,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           {[...(current.episodes ?? [])]
             .sort((a, b) => a.episode - b.episode)
             .map((ep) => (
-              <EpisodeRow key={ep.id} titleId={title.id} episode={ep} onToggle={mutate} />
+              <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
             ))}
         </div>
       )}

@@ -1,17 +1,15 @@
 import { useState } from 'preact/hooks'
 import clsx from 'clsx'
 import { colors } from '../theme'
-import { apiFetch } from '../api'
 import type { Episode } from '../types'
 import s from './EpisodeRow.module.css'
 
 interface EpisodeRowProps {
-  titleId: number
   episode: Episode
-  onToggle?: () => void
+  onToggle: (episodeId: number) => void | Promise<void>
 }
 
-export function EpisodeRow({ titleId, episode, onToggle }: EpisodeRowProps) {
+export function EpisodeRow({ episode, onToggle }: EpisodeRowProps) {
   const [toggling, setToggling] = useState(false)
 
   const handleToggle = async (e: Event) => {
@@ -19,8 +17,7 @@ export function EpisodeRow({ titleId, episode, onToggle }: EpisodeRowProps) {
     if (toggling) return
     setToggling(true)
     try {
-      await apiFetch(`/titles/${titleId}/episodes/${episode.id}`, { method: 'PATCH' })
-      onToggle?.()
+      await onToggle(episode.id)
     } finally {
       setToggling(false)
     }
