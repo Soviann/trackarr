@@ -15,6 +15,7 @@ import { Stats } from './pages/Stats'
 import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
+import { AdminAniList } from './pages/AdminAniList'
 import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
 import { updateBadge } from './utils/badge'
@@ -134,6 +135,7 @@ export function App() {
           <Validate path="/admin/validate" />
           <AdminTasks path="/admin/tasks" />
           <AdminNotifications path="/admin/notifications" />
+          <AdminAniList path="/admin/anilist" />
           <MatchReview path="/match-review" />
         </Router>
         {!hideNavbar && (
