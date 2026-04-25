@@ -73,7 +73,7 @@ Versioning: git history is sufficient. Don't version-number files. Keep immutabl
 `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
 
 ## Deploy
-`.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag. Hotfix: `gh workflow run deploy.yml`.
+`.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag (no CHANGELOG to maintain; release notes, when needed, come from `git log <prev-tag>..HEAD --oneline` or GitHub Releases auto-generation). Hotfix: `gh workflow run deploy.yml`.
 
 ## Environment
 `.env` (committed, defaults) + `.env.local` (gitignored, secrets). Keys: `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_EMAIL`, `JWT_SECRET`, `TMDB_API_KEY`, `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET`, `GEMINI_API_KEY`, `VAPID_*`.
