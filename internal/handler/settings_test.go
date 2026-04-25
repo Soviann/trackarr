@@ -69,3 +69,31 @@ func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, true, result["push_subscribed"])
 }
+
+func TestSettingsHandler_Get_ReportsTokenInvalid(t *testing.T) {
+	h, db := setupSettingsHandler(t)
+	testutil.SetSetting(t, db, "anilist_token", "abc")
+	testutil.SetSetting(t, db, "anilist_token_invalid", "true")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	var result map[string]interface{}
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.Equal(t, true, result["anilist_connected"])
+	assert.Equal(t, true, result["anilist_token_invalid"])
+}
+
+func TestSettingsHandler_Get_TokenValidFlagAbsent(t *testing.T) {
+	h, db := setupSettingsHandler(t)
+	testutil.SetSetting(t, db, "anilist_token", "abc")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	var result map[string]interface{}
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.Equal(t, false, result["anilist_token_invalid"])
+}
