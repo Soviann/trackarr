@@ -9,7 +9,7 @@ PlexTracker est une application personnelle de suivi de visionnage. Elle remplac
 - **Suivi automatique** : chaque film ou épisode terminé sur Plex est automatiquement enregistré via webhook
 - **Bibliothèque** : vue d'ensemble de tout ce qui est en cours, terminé, abandonné ou à regarder
 - **Progression** : savoir en un coup d'œil où on en est dans chaque série
-- **Notes** : noter les titres et saisons (1-10), avec liens vers IMDb et AniList
+- **Notes** : noter les titres (1-10), avec liens vers IMDb et synchronisation automatique vers AniList
 - **Import Simkl** : import initial de l'historique existant depuis un export Simkl
 
 ### Ce que PlexTracker ne fait PAS
@@ -66,7 +66,7 @@ L'écran principal affiche tous les titres organisés par statut.
   - **S02E06** : prochain épisode à regarder, tap pour marquer vu
   - **IMDb** : ouvre la page IMDb
   - **TVDB** : ouvre la page TheTVDB (quand un `tvdb_id` est connu)
-  - **AniList** : synchronise la note (anime uniquement)
+  - **AniList** : ouvre la fiche AniList (films et séries mono-saison ; masqué pour les séries multi-saisons — chaque saison a son propre lien dans le bandeau bleu de la saison active)
   - **Rate** : ouvre le prompt de notation
 
 ### Recherche
@@ -121,10 +121,9 @@ Le prompt de notation apparaît automatiquement quand :
 - Le statut est changé en "Abandonné" ou "Terminé"
 
 Options :
-- **Save rating** : enregistre la note localement
-- **Save & rate on IMDb** : enregistre et ouvre la page IMDb pour noter là-bas aussi
-- **Save & sync AniList** : enregistre et synchronise via l'API AniList (anime uniquement)
-- **Skip for now** : ferme sans noter
+- **Save rating** : enregistre la note. Pour un anime, la synchronisation vers AniList est automatique (note envoyée à toutes les saisons terminées ou abandonnées).
+- **IMDb · Save & rate** : enregistre et ouvre la page IMDb pour noter là-bas aussi (visible quand le titre a un `imdb_id`).
+- **Skip for now** : ferme sans noter.
 
 ### Stats
 
