@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -15,16 +17,25 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
+// aniListSeasonScoreClient is the subset of matching.AniListClient needed to
+// refresh per-season community scores. Narrowing the dependency keeps the
+// background service trivially testable without spinning up an httptest server.
+type aniListSeasonScoreClient interface {
+	GetAnimeDetails(ctx context.Context, anilistID int64) (*matching.AniListDetails, error)
+}
+
 type BackgroundService struct {
-	writeDB    *sql.DB
-	titles     *repository.TitleRepository
-	tvdb       *matching.TVDBClient // optional — nil if TVDB_API_KEY not set
-	settings   *repository.SettingRepository
-	tmdb       *matching.TMDBClient
-	covers     *CoverService
-	push       PushNotifier
-	limiter    *APILimiter
-	shutdownWG *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration
+	writeDB      *sql.DB
+	titles       *repository.TitleRepository
+	seasonExtIDs *repository.SeasonExternalIDRepository
+	tvdb         *matching.TVDBClient     // optional — nil if TVDB_API_KEY not set
+	anilist      aniListSeasonScoreClient // optional — nil disables per-season AniList score refresh
+	settings     *repository.SettingRepository
+	tmdb         *matching.TMDBClient
+	covers       *CoverService
+	push         PushNotifier
+	limiter      *APILimiter
+	shutdownWG   *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration
 }
 
 func NewBackgroundService(
@@ -36,13 +47,14 @@ func NewBackgroundService(
 	push PushNotifier,
 ) *BackgroundService {
 	return &BackgroundService{
-		writeDB:  writeDB,
-		titles:   titles,
-		settings: settings,
-		tmdb:     tmdb,
-		covers:   covers,
-		push:     push,
-		limiter:  NewAPILimiter(2, 1),
+		writeDB:      writeDB,
+		titles:       titles,
+		seasonExtIDs: repository.NewSeasonExternalIDRepository(writeDB),
+		settings:     settings,
+		tmdb:         tmdb,
+		covers:       covers,
+		push:         push,
+		limiter:      NewAPILimiter(2, 1),
 	}
 }
 
@@ -78,6 +90,16 @@ func (s *BackgroundService) updateTitle(ctx context.Context, id int64, update re
 
 // SetTVDB injects the TVDB client (optional — called after construction if TVDB is configured).
 func (s *BackgroundService) SetTVDB(tvdb *matching.TVDBClient) { s.tvdb = tvdb }
+
+// SetAniList injects the AniList client used by the daily refresh to fetch
+// per-season community scores. Optional — when nil the per-season AniList
+// score refresh step is skipped.
+func (s *BackgroundService) SetAniList(client aniListSeasonScoreClient) {
+	if s == nil {
+		return
+	}
+	s.anilist = client
+}
 
 // RefreshResult captures what happened for a single title during refresh.
 type RefreshResult struct {
@@ -163,6 +185,15 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
 	if s.tvdb != nil {
 		s.refreshFromTVDB(ctx, title)
+	}
+
+	// Step 1d: AniList per-season community score (anime only). Each mapped
+	// season produces one AniList Media-by-id call. 401 short-circuits the
+	// rest of this title's per-season fetches and flags the token invalid
+	// so subsequent titles in the run skip too. Other errors are logged
+	// and per-season — one bad mapping never breaks the rest of the refresh.
+	if s.anilist != nil && title.IsAnime {
+		s.refreshAniListSeasonScores(ctx, title)
 	}
 
 	// Step 2: Auto-complete if series ended and all episodes watched
@@ -454,6 +485,67 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		tvdbID := details.ExternalIDs.TVDBID
 		logTitleUpdate(title.ID, "series tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
+	}
+}
+
+// refreshAniListSeasonScores walks every season of the title that has an
+// AniList mapping and stores the current averageScore on
+// seasons.anilist_average_score.
+//
+// Skips silently when the AniList token is flagged invalid (the user must
+// reconnect via the admin page). On 401 mid-run, the flag is set and remaining
+// per-season calls for this title are aborted. Non-401 errors are logged and
+// processing continues with the next mapping — one broken mapping must not
+// block the whole title's refresh.
+func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *model.Title) {
+	if invalid, _ := s.settings.Get(settingAniListTokenInvalid); invalid == "true" {
+		return
+	}
+
+	mappings, err := s.seasonExtIDs.ListForTitle(ctx, title.ID, providerAniList)
+	if err != nil {
+		log.Printf("background anilist score: list mappings for title %d: %v", title.ID, err)
+		return
+	}
+	if len(mappings) == 0 {
+		return
+	}
+
+	for seasonID, externalID := range mappings {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+
+		anilistID, err := strconv.ParseInt(externalID, 10, 64)
+		if err != nil {
+			log.Printf("background anilist score: invalid mapping %q for season %d: %v", externalID, seasonID, err)
+			continue
+		}
+
+		details, err := s.anilist.GetAnimeDetails(ctx, anilistID)
+		if err != nil {
+			var tokenInvalid matching.TokenInvalidError
+			if errors.As(err, &tokenInvalid) {
+				log.Printf("background anilist score: token rejected, flagging invalid (title %d)", title.ID)
+				if flagErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+					return repository.NewSettingWriter(tx).Set(ctx, settingAniListTokenInvalid, "true")
+				}); flagErr != nil {
+					log.Printf("background anilist score: flag token invalid: %v", flagErr)
+				}
+				return
+			}
+			log.Printf("background anilist score: fetch %d: %v", anilistID, err)
+			_ = s.limiter.Wait(ctx)
+			continue
+		}
+
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewSeasonWriter(tx).UpdateAniListAverageScore(ctx, seasonID, details.AverageScore)
+		}); err != nil {
+			log.Printf("background anilist score: persist season %d: %v", seasonID, err)
+		}
+
+		_ = s.limiter.Wait(ctx)
 	}
 }
 

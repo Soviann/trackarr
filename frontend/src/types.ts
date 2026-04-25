@@ -69,6 +69,8 @@ export interface Season {
   title_id: number
   season_number: number
   total_episodes: number | null
+  anilist_id?: string | null
+  anilist_community_score?: number | null
   episode_count?: number
   watched_count?: number
   episodes: Episode[]

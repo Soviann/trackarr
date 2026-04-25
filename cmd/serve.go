@@ -114,6 +114,9 @@ func Serve(distFS embed.FS) error {
 	if tvdbClient != nil {
 		bgSvc.SetTVDB(tvdbClient)
 	}
+	if anilistClient != nil {
+		bgSvc.SetAniList(anilistClient)
+	}
 	if !cfg.DisableBackgroundTasks {
 		bgSvc.StartTicker(ctx, 24*time.Hour)
 	}

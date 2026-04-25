@@ -595,6 +595,37 @@ func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 	}
 }
 
+func TestTitleRepository_GetByID_HydratesAniListSeasonFields(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
+
+	// S1 has an AniList mapping AND a community score → both fields populated.
+	s1 := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.InsertSeasonExternalID(t, db, s1, "anilist", "113415")
+	_, err := db.Exec(`UPDATE seasons SET anilist_average_score = ? WHERE id = ?`, 86, s1)
+	require.NoError(t, err)
+
+	// S2 has no mapping → both fields nil (LEFT JOIN must not skip the row).
+	s2 := testutil.InsertSeason(t, db, titleID, 2)
+	_ = s2
+
+	got, err := repo.GetByID(titleID)
+	require.NoError(t, err)
+	require.Len(t, got.Seasons, 2)
+
+	// Season 1 — mapped + scored
+	require.NotNil(t, got.Seasons[0].AniListID)
+	assert.Equal(t, "113415", *got.Seasons[0].AniListID)
+	require.NotNil(t, got.Seasons[0].AniListAverageScore)
+	assert.Equal(t, 86, *got.Seasons[0].AniListAverageScore)
+
+	// Season 2 — unmapped, both fields stay nil
+	assert.Nil(t, got.Seasons[1].AniListID)
+	assert.Nil(t, got.Seasons[1].AniListAverageScore)
+}
+
 func TestTitleRepository_List_PersonFilter(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

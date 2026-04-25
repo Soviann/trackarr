@@ -113,15 +113,27 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	}
 	genreRows.Close()
 
-	// Load seasons
-	seasonRows, err := r.db.Query(`SELECT id, title_id, season_number, total_episodes FROM seasons WHERE title_id = ? ORDER BY season_number`, id)
+	// Load seasons. Detail path joins season_external_ids (anilist) and
+	// the per-season AniList score so the title detail UI can render the
+	// per-season info strip without an extra round-trip. The listing
+	// path (loadTitleRelationsLight) intentionally skips these fields.
+	seasonRows, err := r.db.Query(`
+		SELECT s.id, s.title_id, s.season_number, s.total_episodes,
+		       sei.external_id AS anilist_id,
+		       s.anilist_average_score
+		FROM seasons s
+		LEFT JOIN season_external_ids sei
+		       ON sei.season_id = s.id AND sei.provider = 'anilist'
+		WHERE s.title_id = ?
+		ORDER BY s.season_number`, id)
 	if err != nil {
 		return nil, fmt.Errorf("get seasons: %w", err)
 	}
 
 	for seasonRows.Next() {
 		var s model.Season
-		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes); err != nil {
+		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes,
+			&s.AniListID, &s.AniListAverageScore); err != nil {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}

@@ -52,6 +52,16 @@ func (w *SeasonWriter) UpdateTotalEpisodes(ctx context.Context, id int64, total 
 	return nil
 }
 
+// UpdateAniListAverageScore stores the per-season AniList community score
+// fetched by the daily refresh. NULL is allowed so the column can be cleared
+// when AniList no longer reports a score.
+func (w *SeasonWriter) UpdateAniListAverageScore(ctx context.Context, id int64, score *int) error {
+	if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET anilist_average_score = ? WHERE id = ?`, score, id); err != nil {
+		return fmt.Errorf("update anilist average score: %w", err)
+	}
+	return nil
+}
+
 // Upsert creates or updates a season, returning the season with its ID.
 // Collapses the GetOrCreate + UpdateTotalEpisodes pattern into one round-trip.
 func (w *SeasonWriter) Upsert(ctx context.Context, titleID int64, seasonNumber, totalEpisodes int) (*model.Season, error) {

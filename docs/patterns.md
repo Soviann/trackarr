@@ -25,7 +25,7 @@ Update when adding routes, services, components, or commands.
 | BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous). **Opens own writeDB tx — never call from inside another tx; fire post-commit via `LibraryService.TriggerBackfillForEpisode`.** |
 | AniListPushService | `internal/service/anilist_push.go` | Per-season / per-movie push of status, progress, score to AniList. Silently skips on missing token, missing season mapping, or 401 (flags token invalid). Enqueued via `TaskTypeAniListPushSeason` / `TaskTypeAniListPushMovie`. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
-| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers) |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-season AniList community score via `season_external_ids` mappings — 401 flags `anilist_token_invalid` and aborts remaining calls) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
