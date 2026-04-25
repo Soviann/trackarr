@@ -51,7 +51,7 @@ func (h *SeasonExternalHandler) SetAniListID(w http.ResponseWriter, r *http.Requ
 		return httputil.InternalError("Internal error", err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
@@ -71,6 +71,6 @@ func (h *SeasonExternalHandler) ClearAniListID(w http.ResponseWriter, r *http.Re
 		return httputil.InternalError("Internal error", err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

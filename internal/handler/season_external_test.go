@@ -42,7 +42,7 @@ func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
 
 	err := h.SetAniListID(rr, req)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	got, err := testutil.GetSeasonExternalID(t, db, seasonID, repository.ProviderAniList)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestDeleteSeasonAniListID_RemovesMappingNoEnqueue(t *testing.T) {
 
 	err := h.ClearAniListID(rr, req)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 
 	got, err := testutil.GetSeasonExternalID(t, db, seasonID, repository.ProviderAniList)
 	require.NoError(t, err)

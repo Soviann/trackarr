@@ -48,6 +48,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showRematch, setShowRematch] = useState(false)
+  const [rematchSeasonID, setRematchSeasonID] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -314,7 +315,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {current && title.type !== 'movie' && title.is_anime && (
         <SeasonAniListStrip
           season={current}
-          onEdit={() => setShowRematch(true)}
+          onEdit={() => setRematchSeasonID(current.id)}
         />
       )}
 
@@ -366,10 +367,11 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
 
       <RematchSheet
-        open={showRematch}
-        onClose={() => setShowRematch(false)}
+        open={showRematch || rematchSeasonID != null}
+        onClose={() => { setShowRematch(false); setRematchSeasonID(null) }}
         title={title}
-        onDone={mutate}
+        seasonID={rematchSeasonID ?? undefined}
+        onDone={() => { setRematchSeasonID(null); mutate() }}
       />
     </div>
   )
