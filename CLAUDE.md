@@ -60,9 +60,8 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 - Update `docs/patterns.md` when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
 
 ## Plans
-Location: `docs/superpowers/plans/` and `docs/superpowers/specs/`. Completed → `done/` subfolder. Move plan to `done/` before implementation is committed.
+Location: `docs/superpowers/plans/` (gitignored, local-only). Plans are throwaway working notes — never commit, no `done/` archive. Git history is the durable record.
 Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/plans/`, never to `~/.claude/` or any global path.
-Versioning: git history is sufficient. Don't version-number files. Keep immutable once approved — if scope changes, add `## Revision — YYYY-MM-DD` header. Name descriptively (`notification-push.md` not `plan-007.md`).
 
 ## Audits
 `docs/audits/YYYY-MM-DD.md` (active) → `docs/audits/done/` (completed). Work top-to-bottom by session; mark items done inline (strikethrough); update file then commit per session.
