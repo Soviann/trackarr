@@ -177,13 +177,39 @@ Tap sur la notification → ouvre le prompt de notation ou le détail du titre.
 
 ## AniList
 
-Pour les anime, PlexTracker peut se connecter à AniList pour synchroniser les notes.
+PlexTracker synchronise automatiquement votre activité avec AniList : note, statut, et progression par épisode. Aucune action manuelle requise après la connexion initiale.
 
-1. Aller dans les paramètres → "Connect AniList"
-2. Autoriser l'accès sur la page AniList
-3. Le token est stocké (~1 an de validité)
+### Connexion
 
-Ensuite, le bouton "Save & sync AniList" dans le prompt de notation ou le bouton AniList dans la barre d'actions envoie la note vers AniList.
+1. Paramètres → « Connecter AniList ».
+2. Autoriser l'accès sur la page AniList.
+3. Le token est conservé (~1 an de validité).
+
+### Synchronisation automatique
+
+Dès qu'un événement se produit dans PlexTracker, une mise à jour est envoyée à AniList :
+
+- **Épisode marqué vu/non-vu** → progression + statut (CURRENT, COMPLETED) de la saison concernée.
+- **Titre abandonné** → statut DROPPED pour chaque saison non terminée.
+- **Note du titre modifiée** → note envoyée aux saisons déjà terminées ou abandonnées (les saisons en cours ne reçoivent pas de note tant qu'elles ne sont pas clôturées).
+
+La synchronisation est **par saison**. AniList traite chaque saison comme une œuvre séparée : *Solo Leveling* S1 et *Solo Leveling S2 — Arise from the Shadow* sont deux entrées distinctes. PlexTracker envoie chaque saison à l'entrée AniList correspondante.
+
+### Associer une saison à une entrée AniList
+
+Pour la plupart des animes, le pipeline d'identification (Gemini AI) attribue automatiquement la bonne entrée AniList à chaque saison lors de l'import. Si une saison n'est pas mappée, un bandeau ambre « Not mapped for this season · Link entry » apparaît sur la saison active. Tapper « Link entry » ouvre un panneau de recherche AniList — sélectionner la bonne entrée et valider.
+
+Pour corriger une association, taper le crayon ✎ dans le bandeau bleu de la saison active.
+
+### Bouton AniList dans la barre d'actions
+
+- **Films** : bouton visible, ouvre la fiche AniList du film.
+- **Séries mono-saison** : bouton visible, ouvre la fiche de la saison unique.
+- **Séries multi-saisons** : bouton masqué — chaque saison a son propre lien dans le bandeau par saison.
+
+### Token expiré
+
+Si le token AniList expire, une bannière rouge apparaît dans les paramètres : « AniList connection expired. Rating & status sync is paused ». Cliquer sur « Reconnect » relance le flux OAuth et réactive la synchronisation.
 
 ---
 
