@@ -40,9 +40,11 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	titleReadRepo := repository.NewTitleRepository(readDB)
 
 	// Services
-	var pushSvc service.PushNotifier = service.NewNoopNotifier()
+	var pushSvc service.PushNotifier
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(writeDB, settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+	} else {
+		pushSvc = service.NewNoopNotifier()
 	}
 
 	// Backfill service (optional — requires TMDB for full backfill)

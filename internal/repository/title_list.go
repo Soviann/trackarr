@@ -187,8 +187,6 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		dir := "DESC"
 		if filter.Order == "asc" {
 			dir = "ASC"
-		} else if filter.Order == "desc" {
-			dir = "DESC"
 		}
 		col := "t." + filter.Sort
 		// NULLS LAST: for nullable columns, sort nulls to the end

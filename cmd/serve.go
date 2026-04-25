@@ -87,9 +87,11 @@ func Serve(distFS embed.FS) error {
 		log.Printf("warning: TVDB_API_KEY not set, TVDB enrichment disabled")
 	}
 
-	var pushSvc service.PushNotifier = service.NewNoopNotifier()
+	var pushSvc service.PushNotifier
 	if cfg.VAPIDPublicKey != "" && cfg.VAPIDPrivateKey != "" {
 		pushSvc = service.NewPushService(writeDB, settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+	} else {
+		pushSvc = service.NewNoopNotifier()
 	}
 
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
