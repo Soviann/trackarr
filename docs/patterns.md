@@ -46,6 +46,31 @@ Confidence: `ConfidenceHigh`/`Medium`/`Low` (constants in `pipeline.go`). Nil cl
 
 After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres: union; cover: TMDB > TVDB > AniList). TVDB URL resolution via `ParseURLFull()` → slug → numeric ID.
 
+### AniList per-season push
+
+**Data model.** `season_external_ids(season_id, provider, external_id)` stores per-provider external IDs per season. Accessed via `SeasonExternalIDRepository` (`Get`, `Set`, `Delete`, `ListForTitle`) and `SeasonExternalIDWriter` (`Stamp` — first-writer-wins). `titles.anilist_id` is retained for movies and title-level display but is no longer the canonical push target for multi-season anime.
+
+**Push service.** `service.AniListPushService` exposes `PushSeasonState(ctx, seasonID)` and `PushMovieState(ctx, titleID)`. Both derive state from DB, skip silently when no mapping / no token / token flagged invalid, and absorb HTTP 401 by setting `settings.anilist_token_invalid = 'true'`.
+
+**Status derivation** (`service.DeriveSeasonState`):
+- All episodes watched → `COMPLETED` (wins over dropped)
+- `title.status = dropped` + not fully watched → `DROPPED`
+- `watchedEpisodes > 0` but not all → `CURRENT`
+- `watchedEpisodes == 0` + `title.status = plan_to_watch` → `PLANNING`
+- otherwise → `CURRENT`
+
+**Rating guard** (`service.ShouldPushRating`): score is included in the mutation only when derived status is `COMPLETED` or `DROPPED`.
+
+**Triggers** (all via task queue `anilist_push_season` / `anilist_push_movie`):
+- Episode watched/unwatched → `LibraryService.MarkEpisodeWatched` enqueues.
+- Title status change → `TitleHandler.Patch` enqueues for every season.
+- Title rating change → `TitleHandler.Patch` enqueues for seasons whose derived status is `COMPLETED`/`DROPPED`.
+- Season AniList-ID set via `PUT /titles/{titleID}/seasons/{seasonID}/anilist` → handler enqueues immediately.
+
+**Token expiry.** `settings.anilist_token_invalid = 'true'` suppresses further pushes. The Settings screen surfaces a "Reconnect AniList" banner. Successful OAuth reconnect clears the flag (`anilist_auth.SaveToken` calls `settings.Delete("anilist_token_invalid")`).
+
+**UI (Concept B).** Active-season info strip between the progress line and the episode grid. Component: `frontend/src/components/SeasonAniListStrip.tsx`. Multi-season titles hide the title-level AniList tab in the action bar; movies and single-season titles keep it. Per-season fix-match via the pencil ✎ in the strip (or "Link entry" CTA on unmapped seasons) opens `RematchSheet` with `seasonID` context — saving calls `PUT /titles/{titleID}/seasons/{seasonID}/anilist`, removing calls `DELETE` on the same route.
+
 ### Repositories
 
 `internal/repository/` — Read methods accept `database.DBTX` (pool or tx). Write methods live on typed writer structs (e.g. `TitleWriter`, `SeasonWriter`, `EpisodeWriter`, `WatchEventWriter`) that take `*sql.Tx` in their constructor; the compiler rejects any attempt to write outside a transaction. Callers wrap in `database.WithTxContext(ctx, pool, func(tx *sql.Tx) error { ... })` and build writers from `tx`.
