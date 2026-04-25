@@ -10,15 +10,13 @@ interface RatingPromptProps {
   context?: string
   initialRating?: number | null
   hasImdb: boolean
-  hasAnilist: boolean
   onSave: (rating: number) => void
   onSaveAndImdb?: (rating: number) => void
-  onSaveAndAnilist?: (rating: number) => void
 }
 
 export function RatingPrompt({
   open, onClose, titleName, context, initialRating,
-  hasImdb, hasAnilist, onSave, onSaveAndImdb, onSaveAndAnilist,
+  hasImdb, onSave, onSaveAndImdb,
 }: RatingPromptProps) {
   const [rating, setRating] = useState(initialRating ?? 0)
 
@@ -74,15 +72,6 @@ export function RatingPrompt({
             >
               <span className={s.imdbLabel}>IMDb</span>
               <span className={s.externalSubLabel}>Save & rate</span>
-            </button>
-          )}
-          {hasAnilist && (
-            <button
-              onClick={() => { if (rating > 0) onSaveAndAnilist?.(rating) }}
-              className={s.externalButton}
-            >
-              <span className={s.anilistLabel}>AL</span>
-              <span className={s.externalSubLabel}>Save & sync</span>
             </button>
           )}
         </div>

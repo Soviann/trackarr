@@ -362,7 +362,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         titleName={name}
         initialRating={title.my_rating}
         hasImdb={!!title.imdb_id}
-        hasAnilist={title.is_anime}
         onSave={handleSaveRating}
         onSaveAndImdb={(rating) => {
           handleSaveRating(rating)
