@@ -68,3 +68,30 @@ export function formatWatchtime(minutes: number | null | undefined): string | nu
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
 }
+
+/**
+ * Builds an AniList media URL from an ID.
+ * Shared across pages/components to keep the URL shape consistent — Title.anilist_id is number,
+ * Season.anilist_id is string, both coerce cleanly via template literal.
+ */
+export function aniListMediaUrl(id: number | string): string {
+  return `https://anilist.co/anime/${id}`
+}
+
+/**
+ * Resolves the AniList URL to expose for a title, or null if no usable mapping exists.
+ * Movies use the title's anilist_id; single-season anime use the season's mapping (preferred
+ * over the title's, since AniList tracks each season as its own entry); multi-season anime
+ * resolve at season-level only and return null here.
+ */
+export function computeAniListUrl(title: Title): string | null {
+  if (!title.is_anime) return null
+  if (title.type === 'movie') {
+    return title.anilist_id ? aniListMediaUrl(title.anilist_id) : null
+  }
+  if (title.seasons.length === 1) {
+    const s1 = title.seasons[0]
+    return s1?.anilist_id ? aniListMediaUrl(s1.anilist_id) : null
+  }
+  return null
+}

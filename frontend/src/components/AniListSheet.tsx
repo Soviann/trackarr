@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import type { Title } from '../types'
-import { getName } from '../utils'
+import { aniListMediaUrl, getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
 import s from './AniListSheet.module.css'
 
@@ -40,7 +40,7 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
                   AniList ID: {title.anilist_id}
                 </div>
                 <a
-                  href={`https://anilist.co/anime/${title.anilist_id}`}
+                  href={aniListMediaUrl(title.anilist_id!)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={s.anilistLink}

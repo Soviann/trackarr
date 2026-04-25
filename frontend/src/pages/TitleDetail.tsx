@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { getName, getTypeLabel, getStatusLabel, formatDate, formatWatchtime } from '../utils'
+import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatWatchtime } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { SeasonAniListStrip } from '../components/SeasonAniListStrip'
@@ -40,18 +40,6 @@ function formatRuntime(minutes: number): string {
 function parseJSON<T>(json: string | null): T | null {
   if (!json) return null
   try { return JSON.parse(json) } catch { return null }
-}
-
-function computeAniListUrl(title: Title): string | null {
-  if (!title.is_anime) return null
-  if (title.type === 'movie') {
-    return title.anilist_id ? `https://anilist.co/anime/${title.anilist_id}/` : null
-  }
-  if (title.seasons.length === 1) {
-    const s1 = title.seasons[0]
-    return s1?.anilist_id ? `https://anilist.co/anime/${s1.anilist_id}/` : null
-  }
-  return null
 }
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {

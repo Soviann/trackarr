@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getName, getTypeLabel, getStatusLabel, formatDate, watchedCount, totalEpisodes } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, watchedCount, totalEpisodes } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -137,5 +137,51 @@ describe('totalEpisodes', () => {
 
   it('returns 0 for empty', () => {
     expect(totalEpisodes(makeTitle())).toBe(0)
+  })
+})
+
+describe('aniListMediaUrl', () => {
+  it('builds URL from numeric id', () => {
+    expect(aniListMediaUrl(12345)).toBe('https://anilist.co/anime/12345')
+  })
+
+  it('builds URL from string id', () => {
+    expect(aniListMediaUrl('98765')).toBe('https://anilist.co/anime/98765')
+  })
+})
+
+describe('computeAniListUrl', () => {
+  it('returns null for non-anime', () => {
+    const t = makeTitle({ is_anime: false, type: 'movie', anilist_id: 42 })
+    expect(computeAniListUrl(t)).toBeNull()
+  })
+
+  it('returns URL for anime movie with anilist_id', () => {
+    const t = makeTitle({ is_anime: true, type: 'movie', anilist_id: 42 })
+    expect(computeAniListUrl(t)).toBe('https://anilist.co/anime/42')
+  })
+
+  it('returns null for anime movie without anilist_id', () => {
+    const t = makeTitle({ is_anime: true, type: 'movie', anilist_id: null })
+    expect(computeAniListUrl(t)).toBeNull()
+  })
+
+  it('returns season URL for single-season anime with mapping (not title id)', () => {
+    const season: Season = { ...makeSeason([]), anilist_id: '999' }
+    const t = makeTitle({ is_anime: true, type: 'series', anilist_id: 1, seasons: [season] })
+    expect(computeAniListUrl(t)).toBe('https://anilist.co/anime/999')
+  })
+
+  it('returns null for single-season anime without season mapping', () => {
+    const season: Season = { ...makeSeason([]), anilist_id: null }
+    const t = makeTitle({ is_anime: true, type: 'series', anilist_id: 1, seasons: [season] })
+    expect(computeAniListUrl(t)).toBeNull()
+  })
+
+  it('returns null for multi-season anime', () => {
+    const s1: Season = { ...makeSeason([]), anilist_id: '111' }
+    const s2: Season = { ...makeSeason([]), id: 2, season_number: 2, anilist_id: '222' }
+    const t = makeTitle({ is_anime: true, type: 'series', seasons: [s1, s2] })
+    expect(computeAniListUrl(t)).toBeNull()
   })
 })
