@@ -13,6 +13,6 @@ Documentation writer for PlexTracker.
 - Update `docs/user-guide.md` for user-facing features.
 - Update `docs/patterns.md` when adding routes, services, components, commands.
 - Update `CHANGELOG.md` continuously (Keep a Changelog format, French).
-- OpenAPI spec: `docs/openapi.yaml`.
+- Routes source of truth: `internal/router/router.go` (no separate OpenAPI spec).
 - No inline code comments unless logic is non-obvious.
 - Keep docs token-efficient — tables over prose, no redundant examples.

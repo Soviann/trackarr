@@ -153,7 +153,7 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | POST | `/api/admin/refresh-all` | RefreshAll | Yes |
 | POST | `/api/client-errors` | Handle | Yes |
 
-Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
+Source of truth for routes: `internal/router/router.go`. Read handler files for request/response shapes.
 
 ## Frontend (Preact)
 
