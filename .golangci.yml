@@ -1,9 +1,10 @@
+version: "2"
+
 run:
   build-tags:
     - sqlite_fts5
 
 linters:
+  default: standard
   enable:
-    - errcheck
     - gocritic
-    - govet
