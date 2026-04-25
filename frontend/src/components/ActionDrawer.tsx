@@ -7,6 +7,7 @@ interface ActionDrawerProps {
   title: Title
   nextEpisode: Episode | null
   nextSeasonNumber?: number
+  aniListUrl?: string | null
   onMarkNext?: () => void
   onRate: () => void
   onEdit: () => void
@@ -16,7 +17,7 @@ interface ActionDrawerProps {
 }
 
 export function ActionDrawer({
-  title, nextEpisode, nextSeasonNumber,
+  title, nextEpisode, nextSeasonNumber, aniListUrl,
   onMarkNext, onRate, onEdit, onRematch, onMerge, onRefresh,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
@@ -73,7 +74,6 @@ export function ActionDrawer({
 
   const hasImdb = !!title.imdb_id
   const hasTvdb = !!title.tvdb_id
-  const hasAnilist = title.is_anime
   const hasSeries = title.type !== 'movie'
 
   return (
@@ -126,9 +126,9 @@ export function ActionDrawer({
               TVDB
             </a>
           )}
-          {hasAnilist && title.anilist_id && (
+          {aniListUrl && (
             <a
-              href={`https://anilist.co/anime/${title.anilist_id}`}
+              href={aniListUrl}
               target="_blank"
               rel="noopener noreferrer"
               className={s.anilist}

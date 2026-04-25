@@ -42,6 +42,18 @@ function parseJSON<T>(json: string | null): T | null {
   try { return JSON.parse(json) } catch { return null }
 }
 
+function computeAniListUrl(title: Title): string | null {
+  if (!title.is_anime) return null
+  if (title.type === 'movie') {
+    return title.anilist_id ? `https://anilist.co/anime/${title.anilist_id}/` : null
+  }
+  if (title.seasons.length === 1) {
+    const s1 = title.seasons[0]
+    return s1?.anilist_id ? `https://anilist.co/anime/${s1.anilist_id}/` : null
+  }
+  return null
+}
+
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate } = useApi<Title>(id ? `/titles/${id}` : null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
@@ -334,6 +346,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         title={title}
         nextEpisode={next?.episode ?? null}
         nextSeasonNumber={next?.season.season_number}
+        aniListUrl={computeAniListUrl(title)}
         onMarkNext={handleMarkNext}
         onRate={() => setShowRating(true)}
         onEdit={() => setShowEdit(true)}
