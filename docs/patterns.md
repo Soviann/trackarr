@@ -101,7 +101,7 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 
 ### Handlers
 
-`internal/handler/` — auth, title, episode, season, cover, webhook, push, anilist_auth, settings, stats, activity, history, tmdb, genre, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
+`internal/handler/` — auth, title, episode, season_external, cover, webhook, push, anilist_auth, settings, stats, activity, history, tmdb, genre, admin, client_errors, spa. DI via struct with repos. `internal/handler/httputil/` — WriteJSON, ReadJSON, ParseIDParam, ParseQueryInt, APIError, HandlerFunc (`func(w,r) error`), WrapHandler.
 
 ### Routes
 
@@ -121,15 +121,19 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | GET | `/api/titles/review-count` | ReviewCount | Yes |
 | POST | `/api/titles/batch-delete` | BatchDelete | Yes |
 | POST | `/api/titles/batch-status` | BatchStatus | Yes |
+| GET | `/api/titles/resolve` | Resolve | Yes |
 | GET | `/api/titles/{id}` | GetByID | Yes |
 | POST | `/api/titles` | Create | Yes |
 | PATCH | `/api/titles/{id}` | Update | Yes |
 | DELETE | `/api/titles/{id}` | Delete | Yes |
 | POST | `/api/titles/{id}/rematch` | Rematch | Yes |
+| POST | `/api/titles/{id}/merge` | Merge | Yes |
+| POST | `/api/titles/{id}/refresh` | RefreshOne | Yes |
 | GET | `/api/tmdb/search` | Search | Yes |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | BatchMarkWatched | Yes |
-| PATCH | `/api/titles/{titleID}/seasons/{seasonID}` | UpdateRating | Yes |
+| PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | SetAniListID | Yes |
+| DELETE | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | ClearAniListID | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
 | GET | `/api/stats` | Get | Yes |
@@ -139,11 +143,15 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
 | DELETE | `/api/anilist/token` | Disconnect | Yes |
+| GET | `/api/admin/counts` | Counts | Yes |
 | GET | `/api/admin/tasks` | ListTasks | Yes |
 | POST | `/api/admin/tasks/{id}/retry` | RetryTask | Yes |
 | DELETE | `/api/admin/tasks/{id}` | DeleteTask | Yes |
 | POST | `/api/admin/tasks/batch-delete` | DeleteTasksBatch | Yes |
+| GET | `/api/admin/notifications` | GetNotificationPrefs | Yes |
+| PUT | `/api/admin/notifications` | UpdateNotificationPrefs | Yes |
 | POST | `/api/admin/refresh-all` | RefreshAll | Yes |
+| POST | `/api/client-errors` | Handle | Yes |
 
 Full OpenAPI 3.0 spec: `docs/openapi.yaml`.
 
@@ -180,11 +188,15 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | RatingPrompt | `components/RatingPrompt.tsx` | 10-star rating with save/IMDb/AniList |
 | EditSheet | `components/EditSheet.tsx` | Edit type/status |
 | AniListSheet | `components/AniListSheet.tsx` | AniList match confirm/fix |
-| RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix match |
+| RematchSheet | `components/RematchSheet.tsx` | TMDB search + manual IDs to fix match (per-title or per-season AniList) |
 | MatchReviewCard | `components/MatchReviewCard.tsx` | Match review with ID chips + confirm/fix |
 | CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for missing covers |
 | CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header with lazy-load `onExpand` |
 | PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip |
+| SeasonAniListStrip | `components/SeasonAniListStrip.tsx` | Active-season AniList info strip (community score, link, fix-match pencil) |
+| ConfirmationDrawer | `components/ConfirmationDrawer.tsx` | Confirm/cancel drawer for destructive bulk actions |
+| ErrorBanner | `components/ErrorBanner.tsx` | Inline error banner with optional retry |
+| ErrorBoundary | `components/ErrorBoundary.tsx` | App-level React error boundary |
 
 ### Pages & Routes
 
@@ -196,10 +208,13 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | `/stats` | Stats | `pages/Stats.tsx` |
 | `/login` | Login | `pages/Login.tsx` |
 | `/title/:id` | TitleDetail | `pages/TitleDetail.tsx` |
+| `/person/:name` | PersonTitles | `pages/PersonTitles.tsx` |
 | `/admin` | Admin | `pages/Admin.tsx` |
 | `/admin/validate` | Validate | `pages/Validate.tsx` |
 | `/admin/tasks` | AdminTasks | `pages/AdminTasks.tsx` |
 | `/admin/notifications` | AdminNotifications | `pages/AdminNotifications.tsx` |
+| `/admin/anilist` | AdminAniList | `pages/AdminAniList.tsx` |
+| `/anilist/callback` | AnilistCallback | `pages/AnilistCallback.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
 
 ### localStorage persistence
