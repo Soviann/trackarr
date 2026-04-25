@@ -1,6 +1,6 @@
 ---
 name: maintain
-description: "Project maintenance: modernization (Go 1.24, SQLite), tech debt tracking, and CHANGELOG preparation. Use when preparing a release, auditing tech debt, drafting changelog entries from recent commits, or modernizing Go/SQLite code."
+description: "Project maintenance: modernization (Go 1.24, SQLite) and tech debt tracking. Use when auditing tech debt, modernizing Go/SQLite code, or checking that docs match implementation."
 ---
 
 # Maintain
@@ -20,12 +20,11 @@ Manual-trigger skill for project health and modernization.
 - Identify TODOs and temporary hacks.
 - Verify test coverage on recent modules (`make test`).
 - Ensure `docs/patterns.md` matches current implementation.
+- Ensure `docs/user-guide.md` reflects current user-facing behavior.
 
-## Release Prep (CHANGELOG)
+## Release Prep
 
-1. Analyze commits since last tag.
-2. Draft entries for sections: `Ajouté` (Added), `Corrigé` (Fixed), `Amélioré` (Improved).
-3. Ensure `docs/user-guide.md` reflects latest UX changes.
+Releases ship via `git tag v* && git push --tags`. There is no curated changelog — release notes, when needed, come from `git log <prev-tag>..HEAD --oneline` (conventional commits make this readable).
 
 ## Token Efficiency Rules
 

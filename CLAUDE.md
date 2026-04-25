@@ -72,9 +72,6 @@ Versioning: git history is sufficient. Don't version-number files. Keep immutabl
 
 `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
 
-## Changelog
-Update `CHANGELOG.md` after every meaningful change (feat, fix, perf, security). Add under `## [Unreleased]` as you go. Release = move Unreleased block to versioned heading + push `v*` tag.
-
 ## Deploy
 `.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag. Hotfix: `gh workflow run deploy.yml`.
 
