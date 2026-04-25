@@ -5,6 +5,7 @@ import { useApi } from '../hooks/useApi'
 import { getName, getTypeLabel, getStatusLabel, formatDate, formatWatchtime } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
+import { SeasonAniListStrip } from '../components/SeasonAniListStrip'
 import { EpisodeRow } from '../components/EpisodeRow'
 import { ActionDrawer } from '../components/ActionDrawer'
 import { RatingPrompt } from '../components/RatingPrompt'
@@ -307,6 +308,14 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             />
           ))}
         </div>
+      )}
+
+      {/* AniList strip for the active season */}
+      {current && title.type !== 'movie' && title.is_anime && (
+        <SeasonAniListStrip
+          season={current}
+          onEdit={() => setShowRematch(true)}
+        />
       )}
 
       {/* Episode list */}
