@@ -1,3 +1,10 @@
+export interface Settings {
+  anilist_connected: boolean
+  anilist_token_invalid: boolean
+  push_subscribed: boolean
+  tvdb_connected: boolean
+}
+
 export type TitleType = 'movie' | 'series'
 export type TitleStatus = 'watching' | 'completed' | 'dropped' | 'plan_to_watch'
 export type SeriesStatus = 'returning' | 'ended' | 'cancelled' | 'in_production'
