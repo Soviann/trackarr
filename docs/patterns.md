@@ -214,6 +214,7 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | `/admin/tasks` | AdminTasks | `pages/AdminTasks.tsx` |
 | `/admin/notifications` | AdminNotifications | `pages/AdminNotifications.tsx` |
 | `/admin/anilist` | AdminAniList | `pages/AdminAniList.tsx` |
+| `/admin/help` | Help | `pages/Help.tsx` (in-app FAQ) |
 | `/anilist/callback` | AnilistCallback | `pages/AnilistCallback.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
 

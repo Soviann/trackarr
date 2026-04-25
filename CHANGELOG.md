@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Interface
+- Page d'aide accessible depuis l'écran Admin (`/admin/help`) : 14 questions / réponses au format accordéon, regroupées en quatre sections (réparer un mauvais match, synchronisation AniList, navigation dans la bibliothèque, ajout & maintenance). Cible les comportements faciles à oublier au quotidien sans avoir besoin de revenir au guide hors-ligne — un accordéon fermé par défaut, déplié au tap, sans dépendance markdown supplémentaire dans le bundle.
+
+### Documentation
+- Tables des routes / handlers / composants / pages frontends de `docs/patterns.md` resynchronisées avec le code (9 routes ajoutées, l'endpoint `PATCH /seasons/{seasonID}` supprimé en v0.18.0 retiré, plusieurs pages et composants manquants listés). Le guide utilisateur `docs/user-guide.md` est aligné sur les changements v0.18.0 (note au niveau du titre uniquement, prompt de notation sans bouton AniList, action bar AniList ouvre la fiche au lieu de synchroniser).
+- Spec OpenAPI obsolète (`docs/openapi.yaml`) supprimée : elle dérivait sur ~20 routes par rapport au code et n'avait aucun consommateur externe ; pour un usage LLM, la table de routes de `patterns.md` + `internal/router/router.go` sont déjà l'index optimal en tokens.
+
 ## [v0.18.0] — 2026-04-25
 
 ### Synchronisation AniList
