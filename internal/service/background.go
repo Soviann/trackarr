@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -188,10 +187,9 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 	}
 
 	// Step 1d: AniList per-season community score (anime only). Each mapped
-	// season produces one AniList Media-by-id call. 401 short-circuits the
-	// rest of this title's per-season fetches and flags the token invalid
-	// so subsequent titles in the run skip too. Other errors are logged
-	// and per-season — one bad mapping never breaks the rest of the refresh.
+	// season produces one AniList Media-by-id call against the public
+	// (unauthenticated) GraphQL endpoint. Errors are logged per season —
+	// one bad mapping never breaks the rest of the refresh.
 	if s.anilist != nil && title.IsAnime {
 		s.refreshAniListSeasonScores(ctx, title)
 	}
@@ -492,11 +490,13 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 // AniList mapping and stores the current averageScore on
 // seasons.anilist_average_score.
 //
-// Skips silently when the AniList token is flagged invalid (the user must
-// reconnect via the admin page). On 401 mid-run, the flag is set and remaining
-// per-season calls for this title are aborted. Non-401 errors are logged and
-// processing continues with the next mapping — one broken mapping must not
-// block the whole title's refresh.
+// Uses AniList's public GraphQL endpoint (no auth) — token-invalid handling
+// is unnecessary on the call itself. The early-return on the
+// anilist_token_invalid flag still applies: when the user's authenticated
+// connection is broken (flagged by the push-sync path), we pause unrelated
+// AniList traffic so the admin reconnect banner is the loudest signal until
+// the user acts on it. Errors are logged per mapping; one bad season cannot
+// break the others.
 func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *model.Title) {
 	if invalid, _ := s.settings.Get(settingAniListTokenInvalid); invalid == "true" {
 		return
@@ -524,16 +524,6 @@ func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, titl
 
 		details, err := s.anilist.GetAnimeDetails(ctx, anilistID)
 		if err != nil {
-			var tokenInvalid matching.TokenInvalidError
-			if errors.As(err, &tokenInvalid) {
-				log.Printf("background anilist score: token rejected, flagging invalid (title %d)", title.ID)
-				if flagErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-					return repository.NewSettingWriter(tx).Set(ctx, settingAniListTokenInvalid, "true")
-				}); flagErr != nil {
-					log.Printf("background anilist score: flag token invalid: %v", flagErr)
-				}
-				return
-			}
 			log.Printf("background anilist score: fetch %d: %v", anilistID, err)
 			_ = s.limiter.Wait(ctx)
 			continue

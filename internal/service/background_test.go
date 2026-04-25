@@ -220,29 +220,6 @@ func TestBackgroundService_RefreshAniListScores_SkipsWhenTokenInvalid(t *testing
 	assert.Nil(t, readSeasonAniListScore(t, db, seasonID))
 }
 
-func TestBackgroundService_RefreshAniListScores_On401FlagsTokenAndAborts(t *testing.T) {
-	svc, db, _, _, _ := setupBackgroundService(t)
-
-	titleID := testutil.InsertTitle(t, db, "Anime", true)
-	s1 := testutil.InsertSeason(t, db, titleID, 1)
-	s2 := testutil.InsertSeason(t, db, titleID, 2)
-	testutil.InsertSeasonExternalID(t, db, s1, "anilist", "1")
-	testutil.InsertSeasonExternalID(t, db, s2, "anilist", "2")
-
-	fake := &fakeAniListSeasonScoreClient{
-		errByID:   map[int64]error{1: matching.TokenInvalidError{}, 2: matching.TokenInvalidError{}},
-		scoreByID: map[int64]int{},
-	}
-	svc.SetAniList(fake)
-
-	_ = svc.RefreshTitles(context.Background())
-
-	got, _ := testutil.GetSetting(t, db, "anilist_token_invalid")
-	assert.Equal(t, "true", got, "401 must flag the token invalid")
-	assert.Nil(t, readSeasonAniListScore(t, db, s1))
-	assert.Nil(t, readSeasonAniListScore(t, db, s2))
-}
-
 func TestBackgroundService_RefreshAniListScores_ContinuesOnTransientError(t *testing.T) {
 	svc, db, _, _, _ := setupBackgroundService(t)
 
