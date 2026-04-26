@@ -13,6 +13,7 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service/colorextract"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
@@ -66,6 +67,32 @@ func (c *CoverService) updateTitle(ctx context.Context, id int64, update reposit
 	})
 }
 
+// ExtractAndStoreAccent reads the freshly-saved cover from disk, runs the
+// histogram extractor, and persists the result on the title row. Best-effort
+// by design — any error is logged but never aborts the cover save.
+func (c *CoverService) ExtractAndStoreAccent(ctx context.Context, titleID int64, coverFilename string) {
+	if c == nil || coverFilename == "" {
+		return
+	}
+	path := filepath.Join(c.Dir(), coverFilename)
+	imgBytes, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("accent: read cover %s: %v", coverFilename, err)
+		return
+	}
+	hex, err := colorextract.ExtractAccent(imgBytes)
+	if err != nil {
+		log.Printf("accent: extract %s: %v", coverFilename, err)
+		return
+	}
+	if hex == "" {
+		return
+	}
+	if err := c.updateTitle(ctx, titleID, repository.TitleUpdate{AccentHex: &hex}); err != nil {
+		log.Printf("accent: persist %d: %v", titleID, err)
+	}
+}
+
 // FetchMissingCovers downloads covers for all titles without a cover.
 // Tries TMDB first (if TMDB ID available), then falls back to AniList.
 func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
@@ -113,6 +140,7 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 				coverPath, err := c.tmdb.DownloadCover(*posterPath, c.Dir())
 				if err == nil {
 					logTitleUpdate(title.ID, "missing cover", c.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+					c.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 					fetched++
 					_ = c.limiter.Wait(ctx)
 					continue
@@ -149,6 +177,7 @@ func (c *CoverService) DownloadAniListCover(ctx context.Context, title *model.Ti
 	}
 
 	logTitleUpdate(title.ID, "anilist cover", c.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+	c.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 	return true
 }
 

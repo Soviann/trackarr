@@ -318,6 +318,9 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 	}
 	if update.CoverURL != nil || update.Overview != nil {
 		logTitleUpdate(title.ID, "tvdb refresh", s.updateTitle(ctx, title.ID, update))
+		if update.CoverURL != nil {
+			s.covers.ExtractAndStoreAccent(ctx, title.ID, *update.CoverURL)
+		}
 	}
 }
 
@@ -335,6 +338,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 			title.CoverURL = &coverPath
 		}
 	}
@@ -416,6 +420,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
+			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 			title.CoverURL = &coverPath
 		}
 	}

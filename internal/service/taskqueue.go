@@ -77,6 +77,7 @@ type TaskQueueWorker struct {
 	titleSvc    *TitleService
 	writeDB     *sql.DB
 	anilistPush AniListPusher   // optional — configured via SetAniListPush when an AniList client is wired
+	covers      *CoverService   // optional — configured via SetCovers; drives accent extraction after every cover save
 	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so the worker loop can finish its poll
 }
 
@@ -134,6 +135,16 @@ func (w *TaskQueueWorker) SetAniListPush(push AniListPusher) {
 		return
 	}
 	w.anilistPush = push
+}
+
+// SetCovers wires the CoverService so the worker can run accent extraction
+// after each cover save. Optional — left unset, cover saves still succeed
+// but no accent is computed (tests rely on this nil-tolerance).
+func (w *TaskQueueWorker) SetCovers(covers *CoverService) {
+	if w == nil {
+		return
+	}
+	w.covers = covers
 }
 
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
@@ -370,6 +381,14 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 		return err
 	}
 
+	// Pipeline writes the cover file to disk and propagates only its filename
+	// via MatchResult.CoverFile — the actual UPDATE happened above. This is
+	// the single hook that covers the entire pipeline path (TMDB / TVDB /
+	// AniList cover branches in matching/pipeline.go).
+	if result.CoverFile != "" {
+		w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, result.CoverFile)
+	}
+
 	return nil
 }
 
@@ -498,6 +517,7 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) er
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 					})
+					w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 					title.CoverURL = &coverPath
 				}
 			}
@@ -512,6 +532,7 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) er
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 					})
+					w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 					title.CoverURL = &coverPath
 				}
 			}
@@ -559,6 +580,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 			})
+			w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
 			return nil
 		}
 	}
@@ -577,6 +599,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 			})
+			w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
 		}
 	}
 
@@ -601,6 +624,7 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 	_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 	})
+	w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
 	title.CoverURL = &coverPath
 }
 

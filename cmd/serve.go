@@ -129,6 +129,7 @@ func Serve(distFS embed.FS) error {
 	worker := service.NewTaskQueueWorker(taskRepo, titleRepo, pipeline, tmdbClient, anilistClient, pushSvc, settingRepo, cfg.DataDir, titleSvc, writeDB)
 	worker.SetShutdownWG(&shutdownWG)
 	worker.SetAPILimiter(externalAPILimiter)
+	worker.SetCovers(coverSvc)
 	// AniList push service: drives anilist_push_season / anilist_push_movie tasks.
 	// The same matching.AniListClient used for enrichment satisfies the narrow
 	// aniListPushClient interface — no adapter needed.
