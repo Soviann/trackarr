@@ -1,5 +1,23 @@
 .page {
   padding-bottom: 36px;
+  position: relative;
+}
+
+/* Atmospheric backdrop bleed behind the header */
+.backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 280px;
+  background-size: cover;
+  background-position: center top;
+  filter: blur(50px);
+  opacity: 0.18;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  z-index: 0;
 }
 
 /* Header */
@@ -8,6 +26,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .headerTitle {

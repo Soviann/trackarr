@@ -202,6 +202,13 @@ export function Library(_props: { path?: string }) {
 
   // Initial fetch on mount
   useEffect(() => { fetchTitles() }, [fetchTitles])
+  useEffect(() => { loadContinueWatching() }, [loadContinueWatching])
+
+  // Atmospheric backdrop: prefer first continue-watching cover, else first list cover
+  const backdropCover =
+    continueWatching?.find(t => t.cover_url)?.cover_url
+    ?? titles.find(t => t.cover_url)?.cover_url
+    ?? null
 
   const pendingCount = counts?.pending_review ?? 0
   const unconfirmedCount = counts?.unconfirmed ?? 0
@@ -219,6 +226,13 @@ export function Library(_props: { path?: string }) {
   return (
     <PullToRefresh onRefresh={invalidate}>
     <div className={s.page}>
+      {backdropCover && (
+        <div
+          className={s.backdrop}
+          style={{ backgroundImage: `url(/api/covers/${backdropCover})` }}
+          aria-hidden="true"
+        />
+      )}
       {/* Header */}
       <div className={s.header}>
         <div className={s.headerTitle}>Library</div>
