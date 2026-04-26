@@ -75,28 +75,25 @@ export function Stats({ path }: { path?: string }) {
 }
 
 function OverviewSection({ overview, watchtimeMinutes }: { overview: StatsResponse['overview']; watchtimeMinutes?: number }) {
-  const cards = [
-    { value: overview.total_titles.toLocaleString('en-US'), label: 'TITLES TRACKED' },
-    { value: overview.episodes_watched.toLocaleString('en-US'), label: 'EPISODES WATCHED' },
-    { value: `${Math.round(overview.completion_rate * 100)}%`, label: 'COMPLETED' },
-    { value: overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '\u2014', label: 'AVERAGE RATING' },
-    { value: formatWatchtime(watchtimeMinutes) ?? '\u2014', label: 'WATCH TIME' },
-  ]
-
   return (
     <section className={s.section}>
-      <div className={s.overviewGrid}>
-        {cards.map((card) => (
-          <div key={card.label} className={s.card}>
-            <div className={s.overviewValue}>{card.value}</div>
-            <div className={s.overviewLabel}>{card.label}</div>
-          </div>
-        ))}
-      </div>
-      <div className={s.overviewFooter}>
-        {overview.total_movies} movies · {overview.total_series} series · {overview.total_anime} anime
+      <div className={s.statGrid}>
+        <StatCard label="// TITLES TRACKED" value={overview.total_titles.toLocaleString('en-US')} />
+        <StatCard label="// EPISODES WATCHED" value={overview.episodes_watched.toLocaleString('en-US')} />
+        <StatCard label="// COMPLETED" value={`${Math.round(overview.completion_rate * 100)}%`} />
+        <StatCard label="// AVG RATING" value={overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '—'} />
+        <StatCard label="// WATCH TIME" value={formatWatchtime(watchtimeMinutes) ?? '—'} wide />
       </div>
     </section>
+  )
+}
+
+function StatCard({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`${s.statCard}${wide ? ` ${s.statCardWide}` : ''}`}>
+      <div className={s.statLabel}>{label}</div>
+      <div className={s.statValue}>{value}</div>
+    </div>
   )
 }
 

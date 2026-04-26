@@ -40,34 +40,42 @@
   text-align: center;
 }
 
-/* Overview */
-.overviewGrid {
+/* Overview — 5 stat cards */
+.statGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--space-md);
 }
 
-.overviewValue {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  text-shadow: 0 0 15px color-mix(in srgb, var(--color-accent-lavender) 30%, transparent);
+.statCard {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
-.overviewLabel {
-  font-size: 10px;
-  color: var(--color-accent-lavender);
-  font-weight: 600;
+.statCardWide {
+  grid-column: span 2;
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: var(--space-xs);
+  letter-spacing: 0.18em;
+  color: var(--accent);
 }
 
-.overviewFooter {
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  margin-top: 10px;
+.statValue {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 42px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
 }
 
 /* Ratings */
