@@ -180,39 +180,42 @@
 /* Genre filter */
 .genreOpRow {
   display: flex;
-  gap: 4px;
+  gap: var(--space-xs);
   padding: 2px var(--space-lg) 4px;
   align-items: center;
 }
 
 .opBtn {
-  font-size: 9px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-card);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
   background: var(--color-bg-surface);
   color: var(--color-text-muted);
-  font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .opBtnActive {
-  background: rgba(179, 157, 219, 0.18);
-  color: var(--color-accent-lavender);
-  border-color: var(--color-accent-lavender);
-  font-weight: 600;
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .clearGenresBtn {
-  font-size: 9px;
-  padding: 2px 8px;
-  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
   border: none;
   background: transparent;
-  color: var(--color-text-dimmed);
-  font-family: inherit;
+  color: var(--ink-mute);
   cursor: pointer;
   margin-left: auto;
   -webkit-tap-highlight-color: transparent;
@@ -227,31 +230,39 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
-  border-radius: 10px;
+  gap: var(--space-xs);
+  padding: 5px 8px;
+  border-radius: var(--radius-button);
   background: var(--color-bg-surface);
-  min-height: 26px;
+  border: 1px solid var(--color-border-subtle);
+  min-height: 32px;
   cursor: text;
+  transition: border-color 0.15s;
+}
+
+.genreAutocomplete:focus-within {
+  border-color: var(--accent);
 }
 
 .genreTag {
   display: flex;
   align-items: center;
   gap: 2px;
-  font-size: 9px;
-  padding: 1px 4px 1px 6px;
-  border-radius: 8px;
-  background: rgba(179, 157, 219, 0.18);
-  color: var(--color-accent-lavender);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 4px 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-wash);
+  color: var(--accent);
   white-space: nowrap;
 }
 
 .genreTagRemove {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
-  padding: 0 2px;
+  padding: 0 4px;
   border: none;
   background: none;
   color: inherit;
@@ -264,13 +275,17 @@
 .genreInput {
   flex: 1;
   min-width: 60px;
-  font-size: 9px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
   border: none;
   background: none;
-  color: #fff;
-  font-family: inherit;
+  color: var(--ink);
   outline: none;
   padding: 0;
+}
+
+.genreInput::placeholder {
+  color: var(--ink-mute);
 }
 
 .genreDropdown {
@@ -278,11 +293,11 @@
   left: var(--space-lg);
   right: var(--space-lg);
   top: 100%;
-  margin-top: 2px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-card);
-  border-radius: 8px;
-  max-height: 160px;
+  margin-top: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  max-height: 200px;
   overflow-y: auto;
   z-index: 10;
 }
@@ -291,18 +306,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 8px;
-  font-size: 9px;
-  color: var(--color-text-muted);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
 .genreDropdownItem:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-wash);
+  color: var(--accent);
 }
 
 .genreDropdownCount {
-  font-size: 8px;
-  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  color: var(--ink-mute);
 }
