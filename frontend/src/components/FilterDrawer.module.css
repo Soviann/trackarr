@@ -1,6 +1,7 @@
 .container {
-  background: var(--bg-elev);
+  background: var(--bg);
   border-radius: var(--radius-drawer) var(--radius-drawer) 0 0;
+  border-top: 1px solid var(--border);
   overflow: hidden;
   transition: transform 0.2s ease-out;
 }

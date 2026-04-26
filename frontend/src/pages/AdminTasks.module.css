@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-lg) var(--space-lg) 80px;
+  padding: var(--space-lg) var(--space-lg) 180px;
 }
 
 .header {
@@ -237,14 +237,13 @@
 
 .actionBar {
   position: fixed;
-  bottom: 0;
+  bottom: 89px;
   left: 0;
   right: 0;
   height: 72px;
   background: var(--bg-elev2);
   border-top: 1px solid var(--border-strong);
   padding: 0 var(--space-lg);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   display: flex;
   justify-content: space-between;
   align-items: center;

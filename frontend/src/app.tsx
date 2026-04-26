@@ -118,7 +118,7 @@ export function App() {
   const handleGenreOpChange = useCallback((op: 'AND' | 'OR') => {
     setFilter({ genre_op: op })
   }, [setFilter])
-  const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/admin/tasks')
+  const hideNavbar = currentPath.startsWith('/login')
   const pathname = currentPath.split('?')[0]
   const showDrawer = pathname === '/' || pathname === '/search'
 

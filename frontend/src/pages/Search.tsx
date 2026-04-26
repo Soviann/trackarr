@@ -275,16 +275,6 @@ export function Search({ path: _ }: { path?: string }) {
 
       {/* Search input */}
       <div className={s.searchBar}>
-        {!mergeSourceId && (
-          <button
-            className={clsx(s.tmdbToggle, searchOnTMDB && s.tmdbToggleOn)}
-            onClick={() => setSearchOnTMDB(v => !v)}
-            aria-pressed={searchOnTMDB}
-            title="Also search TMDB"
-          >
-            TMDB
-          </button>
-        )}
         <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.accent} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -308,6 +298,16 @@ export function Search({ path: _ }: { path?: string }) {
               >
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
+            </button>
+          )}
+          {!mergeSourceId && (
+            <button
+              className={clsx(s.tmdbToggle, searchOnTMDB && s.tmdbToggleOn)}
+              onClick={() => setSearchOnTMDB(v => !v)}
+              aria-pressed={searchOnTMDB}
+              title="Also search TMDB"
+            >
+              TMDB
             </button>
           )}
         </div>
