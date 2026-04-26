@@ -85,8 +85,9 @@ type tmdbSeasonResponse struct {
 }
 
 type TMDBTranslation struct {
-	ISO639 string `json:"iso_639_1"`
-	Data   struct {
+	ISO639  string `json:"iso_639_1"`
+	ISO3166 string `json:"iso_3166_1"`
+	Data    struct {
 		Title string `json:"title"` // movies
 		Name  string `json:"name"`  // TV shows
 	} `json:"data"`
@@ -123,6 +124,11 @@ func (c *TMDBClient) GetTVSeasonEpisodes(ctx context.Context, tmdbID int64, seas
 }
 
 // GetTitleNames returns multilingual names for a title (en, fr).
+// For French, only the strict fr-FR variant is accepted — other regional
+// variants (fr-CA, fr-BE, fr-CH, …) are ignored on purpose so the UI never
+// surfaces a Quebec/Belgian/Swiss title to a France-based user. When fr-FR
+// is missing, no "fr" entry is returned and the display layer falls back
+// to English.
 // mediaType should be "movie" or "tv".
 func (c *TMDBClient) GetTitleNames(ctx context.Context, tmdbID int64, mediaType string) (map[string]string, error) {
 	var resp tmdbTranslationsResponse
@@ -136,8 +142,16 @@ func (c *TMDBClient) GetTitleNames(ctx context.Context, tmdbID int64, mediaType 
 		if name == "" {
 			name = t.Data.Name
 		}
-		if name != "" && (t.ISO639 == "en" || t.ISO639 == "fr") {
-			names[t.ISO639] = name
+		if name == "" {
+			continue
+		}
+		switch t.ISO639 {
+		case "en":
+			names["en"] = name
+		case "fr":
+			if t.ISO3166 == "FR" {
+				names["fr"] = name
+			}
 		}
 	}
 	return names, nil

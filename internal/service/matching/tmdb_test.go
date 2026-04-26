@@ -80,18 +80,61 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 	mux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
 			Translations: []TMDBTranslation{
-				{ISO639: "en", Data: struct {
+				{ISO639: "en", ISO3166: "US", Data: struct {
 					Title string `json:"title"`
 					Name  string `json:"name"`
 				}{Title: "Fight Club"}},
-				{ISO639: "fr", Data: struct {
+				{ISO639: "fr", ISO3166: "FR", Data: struct {
 					Title string `json:"title"`
 					Name  string `json:"name"`
 				}{Title: "Fight Club"}},
-				{ISO639: "de", Data: struct {
+				{ISO639: "de", ISO3166: "DE", Data: struct {
 					Title string `json:"title"`
 					Name  string `json:"name"`
 				}{Title: "Fight Club"}},
+			},
+		})
+	})
+
+	// Movie 680 (Pulp Fiction): a real-world case where TMDB returns BOTH
+	// fr-FR and fr-CA with different titles — the canonical bug we want to
+	// guard against.
+	mux.HandleFunc("/movie/680/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+			Translations: []TMDBTranslation{
+				{ISO639: "en", ISO3166: "US", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Pulp Fiction"}},
+				{ISO639: "fr", ISO3166: "CA", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Fiction Pulpeuse"}},
+				{ISO639: "fr", ISO3166: "FR", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Pulp Fiction"}},
+			},
+		})
+	})
+
+	// Movie 681: only non-FR French variants present — the "fr" key must
+	// be absent so the display layer falls back to English.
+	mux.HandleFunc("/movie/681/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+			Translations: []TMDBTranslation{
+				{ISO639: "en", ISO3166: "US", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Some Movie"}},
+				{ISO639: "fr", ISO3166: "CA", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Quelque Film"}},
+				{ISO639: "fr", ISO3166: "BE", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Title: "Un Film Quelconque"}},
 			},
 		})
 	})
@@ -171,6 +214,28 @@ func TestTMDBGetTitleNames(t *testing.T) {
 	// German should be filtered out (only en/fr)
 	_, hasDE := names["de"]
 	assert.False(t, hasDE)
+}
+
+func TestTMDBGetTitleNamesPrefersFrFRoverFrCA(t *testing.T) {
+	_, client := newTestTMDBServer(t)
+
+	names, err := client.GetTitleNames(context.Background(), 680, "movie")
+	require.NoError(t, err)
+	assert.Equal(t, "Pulp Fiction", names["en"])
+	// fr-FR must win over fr-CA, regardless of TMDB array ordering.
+	assert.Equal(t, "Pulp Fiction", names["fr"])
+}
+
+func TestTMDBGetTitleNamesNoFrFRSkipsFrenchEntirely(t *testing.T) {
+	_, client := newTestTMDBServer(t)
+
+	names, err := client.GetTitleNames(context.Background(), 681, "movie")
+	require.NoError(t, err)
+	assert.Equal(t, "Some Movie", names["en"])
+	// No fr-FR available → no "fr" key at all, so the display layer
+	// will fall back to English instead of surfacing fr-CA or fr-BE.
+	_, hasFR := names["fr"]
+	assert.False(t, hasFR, "non-FR French variants must not be stored as fr")
 }
 
 func TestTMDBDownloadCover(t *testing.T) {
