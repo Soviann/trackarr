@@ -1,14 +1,14 @@
 import type { ComponentChildren } from 'preact'
 import clsx from 'clsx'
-import { colors, accentWash } from '../theme'
+import { colors } from '../theme'
 import s from './Navbar.module.css'
 
 const tabs = [
   {
     id: 'library',
-    label: 'Library',
+    label: 'LIB',
     path: '/',
-    color: colors.accentAmber,
+    color: colors.accent,
     icon: (c: string) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -19,9 +19,9 @@ const tabs = [
   },
   {
     id: 'search',
-    label: 'Search',
+    label: 'SCH',
     path: '/search',
-    color: colors.accentTeal,
+    color: colors.accent,
     icon: (c: string) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8" />
@@ -31,9 +31,9 @@ const tabs = [
   },
   {
     id: 'add',
-    label: 'Add',
+    label: 'ADD',
     path: '/add',
-    color: colors.accentGreen,
+    color: colors.accent,
     icon: (c: string) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -44,9 +44,9 @@ const tabs = [
   },
   {
     id: 'stats',
-    label: 'Stats',
+    label: 'STA',
     path: '/stats',
-    color: colors.accentLavender,
+    color: colors.accent,
     icon: (c: string) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -57,9 +57,9 @@ const tabs = [
   },
   {
     id: 'admin',
-    label: 'Admin',
+    label: 'ADM',
     path: '/admin',
-    color: colors.accentBlue,
+    color: colors.accent,
     icon: (c: string) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -84,22 +84,16 @@ export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
       <nav className={s.nav}>
       {tabs.map((tab) => {
         const active = activePath === tab.path
-        const iconColor = active ? tab.color : colors.textMuted
+        const iconColor = active ? tab.color : colors.inkDim
 
         return (
           <button
             key={tab.id}
             onClick={() => onNavigate(tab.path)}
             className={clsx(s.tab, active && s.tabActive)}
-            style={active ? {
-              '--tab-color': tab.color,
-              '--tab-wash': accentWash(tab.color),
-            } as Record<string, string> : undefined}
           >
             {tab.icon(iconColor)}
-            <span className={clsx(s.label, active && s.labelActive)}>
-              {tab.label}
-            </span>
+            <span className={s.label}>{tab.label}</span>
           </button>
         )
       })}
