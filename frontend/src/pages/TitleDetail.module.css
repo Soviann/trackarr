@@ -1,6 +1,26 @@
 .page {
   padding-bottom: 140px; /* space for drawer + navbar */
   position: relative;
+  /* Cover image + fade gradients stacked as multi-layer bg.
+     Cover URL provided inline via --cover-bg.
+     Stack order (top → bottom):
+       1. Vignette (radial darkening at edges)
+       2. Linear fade (transparent → bg from 55% downward)
+       3. Cover image (top 600px, scaled width-fit)
+       4. Solid bg fill */
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 30%,
+      transparent 0%,
+      transparent 50%,
+      rgba(26, 23, 20, 0.4) 80%,
+      rgba(26, 23, 20, 0.7) 100%) center top / 100% 600px no-repeat,
+    linear-gradient(to bottom,
+      transparent 0%,
+      transparent 55%,
+      rgba(26, 23, 20, 0.7) 85%,
+      var(--bg) 100%) center top / 100% 600px no-repeat,
+    var(--cover-bg, none) center top / 100% 600px no-repeat,
+    var(--bg);
 }
 
 .loading {
@@ -9,26 +29,10 @@
   color: var(--ink);
 }
 
-.heroBleed {
-  display: none;
-}
-
-/* Hero — pure visual, no text */
+/* Hero — pure spacer that holds the back button; cover bg shows through .page */
 .hero {
   position: relative;
-  height: 260px;
-  display: flex;
-  align-items: flex-end;
-  z-index: 1;
-}
-
-.heroFade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(transparent, var(--bg));
+  height: 350px;
 }
 
 .backBtn {
@@ -47,49 +51,34 @@
   padding: 0;
 }
 
-/* Identity zone */
+/* Identity zone — title + meta float over the cover image */
 .identity {
-  display: flex;
-  gap: 14px;
   padding: 0 var(--space-lg);
-  margin-top: -32px;
+  margin-top: -90px;
   position: relative;
-  z-index: 1;
-}
-
-.miniPoster {
-  width: 80px;
-  height: 120px;
-  border-radius: var(--radius-button);
-  flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
-  object-fit: cover;
-  border: 1px solid #2a2a2a;
-}
-
-.miniPosterPlaceholder {
-  composes: miniPoster;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.identityInfo {
-  flex: 1;
-  padding-top: 36px;
+  z-index: 2;
 }
 
 .identityTitle {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   color: #fff;
-  line-height: 1.2;
+  line-height: 1.1;
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 0 6px rgba(0, 0, 0, 0.85),
+    0 0 14px rgba(0, 0, 0, 0.6);
 }
 
 .identityMeta {
   font-size: var(--font-size-xs);
+  font-weight: 500;
   color: #fff;
-  margin-top: 3px;
+  margin-top: 6px;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 1),
+    0 0 4px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(0, 0, 0, 0.75);
 }
 
 .genrePills {
@@ -103,9 +92,11 @@
   font-size: var(--font-size-xs);
   padding: 3px 10px;
   border-radius: var(--radius-pill);
-  background: var(--bg-elev2);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #fff;
-  border: 1px solid #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Content cards */

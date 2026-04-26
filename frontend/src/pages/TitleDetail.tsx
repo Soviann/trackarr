@@ -133,29 +133,24 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   if (title.runtime) metaParts.push(formatRuntime(title.runtime))
   if (title.series_status) metaParts.push(formatSeriesStatus(title.series_status))
 
-  const accentStyle = title.accent_hex
-    ? {
-        ['--cover-accent' as any]: title.accent_hex,
-        ['--cover-accent-wash' as any]: hexToRgba(title.accent_hex, 0.10),
-      }
-    : undefined
+  const coverBg = title.cover_url
+    ? `url(/api/covers/${title.cover_url})`
+    : coverBackground(null, title.type)
+
+  const pageStyle = {
+    ['--cover-bg' as any]: coverBg,
+    ...(title.accent_hex && {
+      ['--cover-accent' as any]: title.accent_hex,
+      ['--cover-accent-wash' as any]: hexToRgba(title.accent_hex, 0.10),
+    }),
+  }
 
   return (
-    <div className={s.page} style={accentStyle}>
+    <div className={s.page} style={pageStyle}>
       {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
-      <div className={s.heroBleed} />
 
-      {/* Hero — pure visual */}
-      <div
-        className={s.hero}
-        style={{
-          background: title.cover_url
-            ? `url(/api/covers/${title.cover_url}) center top/cover`
-            : coverBackground(null, title.type),
-        }}
-      >
-        {!title.cover_url && <CoverPlaceholder type={title.type} iconSize="48px" />}
-        <div className={s.heroFade} />
+      {/* Hero — spacer, holds back button; cover image shows through .page background */}
+      <div className={s.hero}>
         <button onClick={() => history.back()} aria-label="Back" className={s.backBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
@@ -164,26 +159,17 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </button>
       </div>
 
-      {/* Identity zone */}
+      {/* Identity zone — title + meta float over the cover */}
       <div className={s.identity}>
-        {title.cover_url ? (
-          <img src={`/api/covers/${title.cover_url}`} alt="" role="presentation" className={s.miniPoster} width="80" height="120" />
-        ) : (
-          <div className={s.miniPosterPlaceholder} style={{ background: coverBackground(null, title.type) }}>
-            <CoverPlaceholder type={title.type} iconSize="24px" />
+        <div className={s.identityTitle}>{name}</div>
+        <div className={s.identityMeta}>{metaParts.join(' · ')}</div>
+        {genres && genres.length > 0 && (
+          <div className={s.genrePills}>
+            {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
           </div>
         )}
-        <div className={s.identityInfo}>
-          <div className={s.identityTitle}>{name}</div>
-          <div className={s.identityMeta}>{metaParts.join(' · ')}</div>
-          {genres && genres.length > 0 && (
-            <div className={s.genrePills}>
-              {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
-            </div>
-          )}
-          <div style={{ marginTop: '12px' }}>
-            <StatusBadge status={title.status} />
-          </div>
+        <div style={{ marginTop: '12px' }}>
+          <StatusBadge status={title.status} />
         </div>
       </div>
 
