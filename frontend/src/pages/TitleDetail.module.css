@@ -6,7 +6,7 @@
 .loading {
   padding: 40px var(--space-lg);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 /* Atmospheric backdrop bleed behind hero + identity zone — peaks below the hero so the
@@ -42,7 +42,7 @@
   left: 0;
   right: 0;
   height: 80px;
-  background: linear-gradient(transparent, var(--color-bg-primary));
+  background: linear-gradient(transparent, var(--bg));
 }
 
 .backBtn {
@@ -74,7 +74,7 @@
 .miniPoster {
   width: 80px;
   height: 120px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
   object-fit: cover;
@@ -116,8 +116,8 @@
 .genrePill {
   font-size: var(--font-size-xs);
   padding: 3px 10px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elev2);
   color: #fff;
   border: 1px solid #2a2a2a;
 }
@@ -125,10 +125,10 @@
 /* Content cards */
 .card {
   margin: 10px var(--space-lg);
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   border-radius: var(--radius-card);
   padding: var(--space-md) 14px;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--border);
   position: relative;
   z-index: 1;
 }
@@ -137,7 +137,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   margin-bottom: var(--space-sm);
 }
 
@@ -156,12 +156,12 @@
 
 .myRatingSuffix {
   font-size: 16px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }
 
 .noRating {
   font-size: 14px;
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
 }
 
 .extRatings {
@@ -181,12 +181,12 @@
 
 .extSource {
   font-size: 9px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   margin-top: 1px;
 }
 
 .tmdbColor { color: var(--cover-accent, var(--accent)); }
-.anilistColor { color: var(--color-accent-anilist); }
+.anilistColor { color: var(--brand-anilist); }
 
 /* Synopsis card */
 .synopsisText {
@@ -203,7 +203,7 @@
 }
 
 .synopsisToggle {
-  color: var(--color-accent-amber);
+  color: var(--accent);
   font-size: 12px;
   margin-top: var(--space-xs);
   cursor: pointer;
@@ -244,7 +244,7 @@
 .castPerson:hover {
   text-decoration-color: #fff;
 }
-.castRole { color: var(--color-text-secondary); font-size: var(--font-size-xs); }
+.castRole { color: var(--ink); font-size: var(--font-size-xs); }
 
 /* Details rows */
 .detailRow {
@@ -252,11 +252,11 @@
   justify-content: space-between;
   padding: 6px 0;
   font-size: 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 .detailRow:last-child { border-bottom: none; }
-.detailKey { color: var(--color-text-secondary); }
+.detailKey { color: var(--ink); }
 .detailVal { color: #fff; text-align: right; }
 
 /* Series-specific (unchanged pattern) */
@@ -273,13 +273,13 @@
 
 .progressBar {
   height: 100%;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   border-radius: 2px;
 }
 
 .progressLabel {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: var(--space-xs);
 }
 
@@ -312,8 +312,8 @@
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 6px;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
   border: none;
   cursor: pointer;
 }

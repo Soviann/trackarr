@@ -181,7 +181,7 @@ export function Search({ path: _ }: { path?: string }) {
                   </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     {mergeSourceId ? (
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke={colors.accentTeal} />
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke={colors.accent} />
                     ) : (
                       <polyline points="9 18 15 12 9 6" />
                     )}
@@ -286,7 +286,7 @@ export function Search({ path: _ }: { path?: string }) {
           </button>
         )}
         <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.accentTeal} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.accent} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
@@ -303,7 +303,7 @@ export function Search({ path: _ }: { path?: string }) {
           {query && (
             <button type="button" onClick={clear} aria-label="Clear search" className={s.clearBtn}>
               <svg
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted}
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim}
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               >
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

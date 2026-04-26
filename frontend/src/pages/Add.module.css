@@ -20,7 +20,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,7 +29,7 @@
 
 .emptyText {
   font-size: var(--font-size-sm);
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   line-height: 1.6;
 }
 
@@ -41,32 +41,32 @@
 
 .urlBadge {
   font-size: var(--font-size-xs);
-  color: var(--color-accent-green);
-  background: color-mix(in srgb, var(--color-accent-green) 12%, transparent);
+  color: var(--status-ok);
+  background: color-mix(in srgb, var(--status-ok) 12%, transparent);
   border-radius: 8px;
   padding: var(--space-sm) var(--space-md);
   font-weight: 500;
 }
 
 .searchHint {
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   font-size: var(--font-size-sm);
 }
 
 .inputBar {
   padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--border);
   position: fixed;
   bottom: 72px;
   left: 0;
   right: 0;
-  background: var(--color-bg-primary);
+  background: var(--bg);
   z-index: 99;
 }
 
 .inputWrapper {
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev2);
+  border-radius: var(--radius-button);
   padding: 10px 14px;
   display: flex;
   align-items: center;
@@ -77,7 +77,7 @@
 .input {
   flex: 1;
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: var(--ink);
   background: transparent;
   border: none;
   outline: none;
@@ -85,7 +85,7 @@
 }
 
 .goBtn {
-  background: var(--color-accent-green);
+  background: var(--status-ok);
   border: none;
   border-radius: 8px;
   padding: 6px 12px;

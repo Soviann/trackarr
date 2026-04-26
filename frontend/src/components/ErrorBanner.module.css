@@ -4,8 +4,8 @@
   justify-content: space-between;
   padding: 10px 14px;
   margin: 8px 12px;
-  background: var(--wash-coral);
-  border: 1px solid color-mix(in srgb, var(--color-accent-coral) 30%, transparent);
+  background: var(--accent-wash);
+  border: 1px solid color-mix(in srgb, var(--status-crit) 30%, transparent);
   border-radius: 8px;
   color: #fca5a5;
   font-size: 13px;
@@ -17,7 +17,7 @@
 
 .retryButton {
   background: none;
-  border: 1px solid color-mix(in srgb, var(--color-accent-coral) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-crit) 30%, transparent);
   color: #fca5a5;
   cursor: pointer;
   padding: 4px 10px;

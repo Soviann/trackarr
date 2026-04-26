@@ -6,7 +6,7 @@
 .title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin-bottom: var(--space-md);
   line-height: 1.4;
   text-align: center;
@@ -14,7 +14,7 @@
 
 .description {
   font-size: 15px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-bottom: var(--space-xl);
   line-height: 1.5;
   text-align: center;
@@ -28,7 +28,7 @@
 .cancelBtn, .confirmBtn, .confirmBtnDangerous {
   flex: 1;
   padding: 14px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -36,17 +36,17 @@
 }
 
 .cancelBtn {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-card);
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
 }
 
 .confirmBtn {
-  background: var(--color-accent-blue);
+  background: var(--accent);
   color: #fff;
 }
 
 .confirmBtnDangerous {
-  background: var(--color-accent-coral);
+  background: var(--status-crit);
   color: #fff;
 }

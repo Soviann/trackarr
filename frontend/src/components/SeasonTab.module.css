@@ -9,17 +9,17 @@
 }
 
 .tabActive {
-  background: var(--color-accent-amber);
+  background: var(--accent);
 }
 
 .tabInactive {
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
 }
 
 .labelActive {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-bg-primary);
+  color: var(--bg);
 }
 
 .countActive {

@@ -24,7 +24,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,7 +33,7 @@
 
 .emptyText {
   font-size: var(--font-size-sm);
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   line-height: 1.6;
 }
 
@@ -49,7 +49,7 @@
 
 .resultCountText {
   font-size: 10px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }
 
 .cardList {
@@ -63,17 +63,17 @@
   display: flex;
   gap: var(--space-md);
   align-items: center;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border-radius: var(--radius-button);
   padding: 10px var(--space-md);
-  border: 1px solid var(--color-border-card);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
 }
 
 .cardCover {
   width: 42px;
   height: 60px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -93,7 +93,7 @@
 .cardTitle {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -108,7 +108,7 @@
 
 .matchedName {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -116,8 +116,8 @@
 
 .matchedLang {
   font-size: 8px;
-  color: var(--color-text-muted);
-  background: var(--color-bg-surface);
+  color: var(--ink-dim);
+  background: var(--bg-elev2);
   border-radius: 3px;
   padding: 1px var(--space-xs);
   font-weight: 600;
@@ -127,7 +127,7 @@
 
 .cardMeta {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 3px;
 }
 
@@ -137,11 +137,11 @@
 }
 
 .loadMoreBtn {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   padding: 10px var(--space-xl);
-  color: var(--color-accent-teal);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -156,22 +156,22 @@
 .statusMessage {
   padding: 40px var(--space-lg);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 .searchBar {
   padding: var(--space-sm) var(--space-lg);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--border);
   position: fixed;
   bottom: 96px;
   left: 0;
   right: 0;
-  background: var(--color-bg-primary);
+  background: var(--bg);
   z-index: 99;
 }
 
 .searchInner {
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
   border-radius: 12px;
   padding: 10px 14px;
   display: flex;
@@ -190,7 +190,7 @@
 .searchInput {
   flex: 1;
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: var(--ink);
   background: transparent;
   border: none;
   outline: none;
@@ -210,19 +210,19 @@
 /* Merge Drawer */
 .mergeDrawer {
   padding: var(--space-xl);
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
 }
 
 .mergeTitle {
   font-size: var(--font-size-md);
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin-bottom: var(--space-md);
 }
 
 .mergeDesc {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   line-height: 1.5;
   margin-bottom: var(--space-xl);
 }
@@ -235,7 +235,7 @@
   display: block;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   margin-bottom: var(--space-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -243,18 +243,18 @@
 
 .seasonInput {
   width: 100%;
-  background: var(--color-bg-surface);
-  border: 1.5px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev2);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-button);
   padding: 12px;
   font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  color: var(--ink);
   outline: none;
   font-family: inherit;
 }
 
 .seasonInput:focus {
-  border-color: var(--color-accent-teal);
+  border-color: var(--accent);
 }
 
 .mergeError {
@@ -270,11 +270,11 @@
 
 .cancelBtn {
   flex: 1;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   padding: 14px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-weight: 600;
   cursor: pointer;
   font-size: 14px;
@@ -282,9 +282,9 @@
 
 .confirmBtn {
   flex: 2;
-  background: var(--color-accent-teal);
+  background: var(--accent);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   padding: 14px;
   color: #fff;
   font-weight: 700;
@@ -302,9 +302,9 @@
   flex-shrink: 0;
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
   font-size: 9px;
   font-weight: 700;
   font-family: inherit;
@@ -316,8 +316,8 @@
 
 .tmdbToggleOn {
   background: rgba(0, 188, 212, 0.15);
-  color: var(--color-accent-teal);
-  border-color: var(--color-accent-teal);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* TMDB results divider */
@@ -330,14 +330,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }
 
 .sectionDivider::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-border-subtle);
+  background: var(--border);
 }
 
 /* TMDB card variant — slightly dimmed */

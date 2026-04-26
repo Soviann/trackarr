@@ -12,9 +12,9 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-xl);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   text-align: center;
   max-width: 360px;
   width: 100%;
@@ -23,20 +23,20 @@
 .message {
   margin: 0;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 .title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .subtitle {
   margin: 0;
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 .link {
@@ -46,10 +46,10 @@
   justify-content: center;
   height: 40px;
   padding: 0 var(--space-lg);
-  background: var(--color-accent-anilist);
+  background: var(--brand-anilist);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   text-decoration: none;
 }

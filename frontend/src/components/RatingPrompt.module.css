@@ -6,7 +6,7 @@
 .contextText {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .titleWrapper {
@@ -16,7 +16,7 @@
 
 .titleName {
   font-size: 12px;
-  color: var(--color-accent-amber);
+  color: var(--accent);
   text-decoration: underline;
   text-decoration-color: rgba(232, 169, 37, 0.3);
   text-underline-offset: 2px;
@@ -26,13 +26,13 @@
   text-align: center;
   font-size: 32px;
   font-weight: 700;
-  color: var(--color-accent-amber);
+  color: var(--accent);
   padding: 0 0 8px;
 }
 
 .bigRatingSuffix {
   font-size: 16px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   font-weight: 400;
 }
 
@@ -51,7 +51,7 @@
 }
 
 .starActive {
-  color: var(--color-accent-amber);
+  color: var(--accent);
 }
 
 .buttons {
@@ -62,7 +62,7 @@
 }
 
 .saveButton {
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
   border-radius: 12px;
   padding: 13px;
   text-align: center;
@@ -71,18 +71,18 @@
 }
 
 .saveButtonActive {
-  background: var(--color-accent-amber);
+  background: var(--accent);
   cursor: pointer;
 }
 
 .saveButtonLabel {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }
 
 .saveButtonLabelActive {
-  color: var(--color-bg-primary);
+  color: var(--bg);
 }
 
 .externalButtons {
@@ -92,7 +92,7 @@
 
 .externalButton {
   flex: 1;
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
   border-radius: 12px;
   padding: 12px;
   text-align: center;
@@ -107,7 +107,7 @@
 .imdbLabel {
   font-size: 11px;
   font-weight: 800;
-  color: var(--color-accent-imdb);
+  color: var(--brand-imdb);
   font-family: Impact, system-ui;
 }
 
@@ -124,5 +124,5 @@
 
 .skipLabel {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }

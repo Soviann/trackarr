@@ -4,7 +4,7 @@
 
 .sectionLabel {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-weight: 600;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -30,9 +30,9 @@
   flex: 1;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 400;
   cursor: pointer;
@@ -40,23 +40,23 @@
 }
 
 .active.typeOption {
-  border-color: var(--color-accent-amber);
-  background: var(--wash-amber);
-  color: var(--color-accent-amber);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
   font-weight: 600;
 }
 
 .activeAnime.typeOption {
-  border-color: var(--color-accent-anilist);
+  border-color: var(--brand-anilist);
   background: var(--wash-anilist);
-  color: var(--color-accent-anilist);
+  color: var(--brand-anilist);
   font-weight: 600;
 }
 
 .divider {
   width: 1px;
   height: 24px;
-  background: var(--color-border-card);
+  background: var(--border-strong);
   align-self: center;
   margin: 0 4px;
 }
@@ -64,9 +64,9 @@
 .statusOption {
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
   font-size: 13px;
   font-weight: 400;
   cursor: pointer;
@@ -74,15 +74,15 @@
 }
 
 .active.statusOption {
-  border-color: var(--color-accent-amber);
-  background: var(--wash-amber);
-  color: var(--color-accent-amber);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
   font-weight: 600;
 }
 
 .saveButton {
   flex: 1;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   border-radius: 12px;
   padding: 13px;
   border: none;
@@ -93,7 +93,7 @@
 .saveButtonLabel {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-bg-primary);
+  color: var(--bg);
 }
 
 .actions {
@@ -104,10 +104,10 @@
 
 .cancelButton {
   flex: 1;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   border-radius: 12px;
   padding: 13px;
-  border: 1px solid var(--color-border-card);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
   text-align: center;
 }
@@ -115,5 +115,5 @@
 .cancelButtonLabel {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }

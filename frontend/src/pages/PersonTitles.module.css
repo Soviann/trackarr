@@ -40,5 +40,5 @@
 .centered {
   padding: 40px var(--space-lg);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }

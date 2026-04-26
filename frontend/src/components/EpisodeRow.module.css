@@ -3,13 +3,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   border-radius: 8px;
-  border: 1px solid var(--color-bg-surface);
+  border: 1px solid var(--bg-elev2);
 }
 
 .watched {
-  border-color: var(--color-border-card);
+  border-color: var(--border-strong);
 }
 
 .info {
@@ -22,13 +22,13 @@
 
 .episodeNumber {
   font-size: 12px;
-  color: var(--color-text-primary);
+  color: var(--ink);
   flex-shrink: 0;
 }
 
 .episodeName {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -36,7 +36,7 @@
 
 .airDate {
   font-size: 10px;
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -56,5 +56,5 @@
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  border: 1.5px solid var(--color-text-dimmed);
+  border: 1.5px solid var(--ink-mute);
 }

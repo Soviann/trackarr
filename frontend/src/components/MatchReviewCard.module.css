@@ -1,5 +1,5 @@
 .card {
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   border-radius: 12px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--status-color) 20%, transparent);
@@ -30,18 +30,18 @@
 .name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .meta {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
 .originalTitle {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 4px;
   font-style: italic;
 }
@@ -55,8 +55,8 @@
 
 .chip {
   font-size: 9px;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-surface);
+  color: var(--ink);
+  background: var(--bg-elev2);
   border-radius: 4px;
   padding: 2px 6px;
 }
@@ -78,18 +78,18 @@
   flex: 1;
   padding: 8px;
   border-radius: 8px;
-  background: var(--wash-green);
-  border: 1px solid color-mix(in srgb, var(--color-accent-green) 20%, transparent);
-  color: var(--color-accent-green);
+  background: var(--accent-wash);
+  border: 1px solid color-mix(in srgb, var(--status-ok) 20%, transparent);
+  color: var(--status-ok);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btnConfirm:disabled {
-  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-text-muted) 20%, transparent);
-  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--ink-dim) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ink-dim) 20%, transparent);
+  color: var(--ink-dim);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -98,9 +98,9 @@
   flex: 1;
   padding: 8px;
   border-radius: 8px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-card);
-  color: var(--color-text-secondary);
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;

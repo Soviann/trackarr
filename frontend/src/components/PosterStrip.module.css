@@ -20,7 +20,7 @@
   height: 140px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   position: relative;
 }
 
@@ -36,12 +36,12 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
 }
 
 .progressFill {
   height: 100%;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   border-radius: 0 2px 2px 0;
 }
 
@@ -55,10 +55,10 @@
   border-radius: 4px;
 }
 
-.badge_amber { background: var(--color-accent-amber); color: var(--color-bg-primary); }
-.badge_teal  { background: var(--color-accent-teal);  color: var(--color-bg-primary); }
-.badge_muted { background: var(--color-bg-card); color: var(--color-text-muted); }
-.badge_default { background: var(--color-bg-card); color: var(--color-text-secondary); }
+.badge_amber { background: var(--accent); color: var(--bg); }
+.badge_teal  { background: var(--accent);  color: var(--bg); }
+.badge_muted { background: var(--bg-elev); color: var(--ink-dim); }
+.badge_default { background: var(--bg-elev); color: var(--ink); }
 
 .info {
   padding: 5px 2px 0;
@@ -68,7 +68,7 @@
   display: block;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -77,6 +77,6 @@
 .ep {
   display: block;
   font-size: 9px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   margin-top: 1px;
 }

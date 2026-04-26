@@ -22,7 +22,7 @@
 
 /* Header */
 .header {
-  padding: var(--space-lg) var(--space-lg) var(--radius-md);
+  padding: var(--space-lg) var(--space-lg) var(--radius-button);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -80,7 +80,7 @@
 .centered {
   padding: 40px var(--space-lg);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 /* Counter — mono [ NNN / total ] */
@@ -96,7 +96,7 @@
 
 /* TitleList */
 .titleList {
-  padding: 0 var(--space-lg) var(--radius-sm);
+  padding: 0 var(--space-lg) 8px;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -121,20 +121,20 @@
 }
 
 .banner {
-  background: var(--wash-coral);
+  background: var(--accent-wash);
   border: 1px solid rgba(235, 87, 87, 0.2);
-  border-radius: var(--radius-md);
-  padding: var(--radius-md) var(--space-md);
+  border-radius: var(--radius-button);
+  padding: var(--radius-button) var(--space-md);
   display: flex;
   align-items: center;
-  gap: var(--radius-md);
+  gap: var(--radius-button);
 }
 
 .bannerBadge {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--color-accent-coral);
+  background: var(--status-crit);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,14 +153,14 @@
 
 .bannerTitle {
   font-size: 12px;
-  color: var(--color-text-primary);
+  color: var(--ink);
   font-weight: 500;
 }
 
 .bannerSub {
   font-size: 10px;
-  color: var(--color-text-secondary);
-  margin-left: var(--radius-sm);
+  color: var(--ink);
+  margin-left: 8px;
 }
 
 /* LoadMoreButton */
@@ -170,11 +170,11 @@
 }
 
 .loadMoreBtn {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
-  padding: var(--radius-md) var(--space-xl);
-  color: var(--color-accent-teal);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  padding: var(--radius-button) var(--space-xl);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
@@ -190,15 +190,15 @@
 }
 
 /* Bulk selection */
-.selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--color-border-subtle); }
-.selectAllBtn { font-size: 12px; font-weight: 600; color: var(--color-accent-amber); background: none; border: none; cursor: pointer; }
-.selectCount { font-size: 12px; color: var(--color-text-muted); }
-.cancelBtn { font-size: 12px; font-weight: 600; color: var(--color-text-muted); background: none; border: none; cursor: pointer; }
-.actionBar { position: fixed; bottom: 56px; left: 0; right: 0; background: var(--color-bg-surface); border-top: 1px solid var(--color-border-subtle); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 10; }
-.actionBarLabel { flex: 1; font-size: 12px; color: var(--color-text-muted); }
-.actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--color-accent-teal) 20%, transparent); color: var(--color-accent-teal); border: none; cursor: pointer; }
-.actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--color-accent-coral) 20%, transparent); color: var(--color-accent-coral); border: none; cursor: pointer; }
+.selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.selectAllBtn { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; }
+.selectCount { font-size: 12px; color: var(--ink-dim); }
+.cancelBtn { font-size: 12px; font-weight: 600; color: var(--ink-dim); background: none; border: none; cursor: pointer; }
+.actionBar { position: fixed; bottom: 56px; left: 0; right: 0; background: var(--bg-elev2); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+.actionBarLabel { flex: 1; font-size: 12px; color: var(--ink-dim); }
+.actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: none; cursor: pointer; }
+.actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--status-crit) 20%, transparent); color: var(--status-crit); border: none; cursor: pointer; }
 .checkbox { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; z-index: 1; pointer-events: none; }
-.checked { background: var(--color-accent-amber); border-color: var(--color-accent-amber); }
+.checked { background: var(--accent); border-color: var(--accent); }
 .statusSheet { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.statusOption { padding: 12px 16px; background: var(--color-bg-card); border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; text-align: left; }
+.statusOption { padding: 12px 16px; background: var(--bg-elev); border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--ink); cursor: pointer; text-align: left; }

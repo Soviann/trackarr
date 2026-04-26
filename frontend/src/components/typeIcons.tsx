@@ -6,7 +6,7 @@ export type TypeIconKey = TitleType | 'anime' | 'unknown'
 
 export const typeIconConfig: Record<TypeIconKey, { color: string; icon: JSX.Element }> = {
   movie: {
-    color: colors.accentBlue,
+    color: colors.accent,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" />
@@ -17,7 +17,7 @@ export const typeIconConfig: Record<TypeIconKey, { color: string; icon: JSX.Elem
     ),
   },
   series: {
-    color: colors.accentTeal,
+    color: colors.accent,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
@@ -26,7 +26,7 @@ export const typeIconConfig: Record<TypeIconKey, { color: string; icon: JSX.Elem
     ),
   },
   anime: {
-    color: colors.accentLavender,
+    color: colors.accent,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -34,7 +34,7 @@ export const typeIconConfig: Record<TypeIconKey, { color: string; icon: JSX.Elem
     ),
   },
   unknown: {
-    color: colors.textMuted,
+    color: colors.inkDim,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10" />

@@ -5,12 +5,12 @@
 .heading {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin-bottom: 12px;
 }
 
 .matchCard {
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
   border-radius: 10px;
   padding: 12px;
   display: flex;
@@ -19,7 +19,7 @@
 }
 
 .coverFallback {
-  background: linear-gradient(135deg, var(--color-bg-card), var(--color-bg-surface));
+  background: linear-gradient(135deg, var(--bg-elev), var(--bg-elev2));
 }
 
 .cover {
@@ -32,18 +32,18 @@
 .titleName {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .titleId {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
 .anilistLink {
   font-size: 10px;
-  color: var(--color-accent-anilist);
+  color: var(--brand-anilist);
   margin-top: 4px;
   display: block;
 }
@@ -57,13 +57,13 @@
 }
 
 .confirmed {
-  background: var(--wash-green);
-  color: var(--color-accent-green);
+  background: var(--accent-wash);
+  color: var(--status-ok);
 }
 
 .pending {
-  background: var(--wash-amber);
-  color: var(--color-accent-amber);
+  background: var(--accent-wash);
+  color: var(--accent);
 }
 
 .actions {
@@ -73,7 +73,7 @@
 
 .btnConfirm {
   flex: 1;
-  background: var(--color-accent-anilist);
+  background: var(--brand-anilist);
   border-radius: 12px;
   padding: 13px;
   border: none;
@@ -89,7 +89,7 @@
 
 .btnWrong {
   flex: 1;
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
   border-radius: 12px;
   padding: 13px;
   border: none;
@@ -100,12 +100,12 @@
 .btnWrongLabel {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .empty {
   text-align: center;
   padding: 20px 0;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-size: 13px;
 }

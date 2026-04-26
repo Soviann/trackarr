@@ -23,25 +23,6 @@ export const colors = {
   statusOk: '#4CAF50',
   statusWarn: '#E8A925',
   statusCrit: '#EB5757',
-
-  // Legacy aliases — removed in Phase 8 task 8.3.
-  bgPrimary: '#1a1714',
-  bgCard: '#25201a',
-  bgSurface: '#312a22',
-  borderSubtle: '#2c2620',
-  borderCard: '#3a3127',
-  textPrimary: '#ebe5d9',
-  textSecondary: '#ebe5d9',
-  textMuted: '#a09484',
-  textDimmed: '#6a5e50',
-  accentAmber: '#d4ad7a',
-  accentTeal: '#d4ad7a',
-  accentGreen: '#4CAF50',
-  accentLavender: '#d4ad7a',
-  accentCoral: '#EB5757',
-  accentBlue: '#d4ad7a',
-  accentImdb: '#F5C518',
-  accentAnilist: '#02A9FF',
 } as const
 
 export const accentWash = (hex: string) => `${hex}1A` // ~10% opacity
@@ -56,8 +37,6 @@ export const radius = {
   pill: '999px',
   drawer: '22px',
   button: '12px',
-  // legacy aliases
-  sm: '8px', md: '12px', lg: '14px', full: '9999px',
 } as const
 
 export const fontSize = {

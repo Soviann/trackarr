@@ -9,24 +9,24 @@
 }
 
 .stripMapped {
-  background: color-mix(in srgb, var(--color-accent-anilist) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent-anilist) 20%, transparent);
+  background: color-mix(in srgb, var(--brand-anilist) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-anilist) 20%, transparent);
 }
 
 .stripUnmapped {
-  background: var(--wash-amber);
-  border: 1px dashed color-mix(in srgb, var(--color-accent-amber) 45%, transparent);
+  background: var(--accent-wash);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  color: var(--color-accent-anilist);
+  color: var(--brand-anilist);
 }
 
 .stripUnmapped .label {
-  color: var(--color-accent-amber);
+  color: var(--accent);
 }
 
 .entryName {
@@ -47,7 +47,7 @@
 .score {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-accent-anilist);
+  color: var(--brand-anilist);
 }
 
 .editButton {
@@ -67,8 +67,8 @@
 }
 
 .linkButton {
-  background: color-mix(in srgb, var(--color-accent-amber) 18%, transparent);
-  color: var(--color-accent-amber);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
   border: none;
   border-radius: 12px;
   padding: 3px 8px;
@@ -78,5 +78,5 @@
 }
 
 .linkButton:hover {
-  background: color-mix(in srgb, var(--color-accent-amber) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }

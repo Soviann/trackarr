@@ -12,16 +12,16 @@
 }
 
 .completed {
-  color: var(--color-bg-primary);
-  background: var(--color-accent-green);
+  color: var(--bg);
+  background: var(--status-ok);
 }
 
 .dropped {
-  color: var(--color-accent-coral);
-  background: var(--wash-coral);
+  color: var(--status-crit);
+  background: var(--accent-wash);
 }
 
 .planToWatch {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-surface);
+  color: var(--ink);
+  background: var(--bg-elev2);
 }

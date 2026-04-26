@@ -2,10 +2,10 @@
   display: flex;
   gap: var(--space-md);
   align-items: center;
-  background: var(--color-bg-card);
+  background: var(--bg-elev);
   border-radius: var(--space-md);
-  padding: var(--radius-md);
-  border: 1px solid var(--color-border-card);
+  padding: var(--radius-button);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
   text-decoration: none;
   color: inherit;
@@ -14,7 +14,7 @@
 .cover {
   width: 48px;
   height: 68px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -34,7 +34,7 @@
 .name {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -42,7 +42,7 @@
 
 .meta {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
   display: flex;
   align-items: center;
@@ -54,7 +54,7 @@
 }
 
 .sortCaption {
-  color: var(--color-accent-teal);
+  color: var(--accent);
 }
 
 .progressTrack {
@@ -67,13 +67,13 @@
 
 .progressFill {
   height: 100%;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   border-radius: 2px;
 }
 
 .progressLabel {
   font-size: 9px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
@@ -91,16 +91,16 @@
 }
 
 .badgeDefault {
-  background: var(--color-accent-amber);
+  background: var(--accent);
 }
 
 .badgeToggling {
-  background: var(--color-text-muted);
+  background: var(--ink-dim);
 }
 
 .badgeLabel {
   font-weight: 700;
-  color: var(--color-bg-primary);
+  color: var(--bg);
 }
 
 .badgeLabelSmall {

@@ -12,9 +12,9 @@
   flex: 1;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
@@ -22,7 +22,7 @@
 }
 
 .searchInput:focus {
-  border-color: var(--color-accent-amber);
+  border-color: var(--accent);
 }
 
 .searchBtn {
@@ -30,9 +30,9 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-accent-amber);
-  color: var(--color-bg-primary);
+  border: 1px solid var(--border-strong);
+  background: var(--accent);
+  color: var(--bg);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -54,9 +54,9 @@
   flex: 1;
   padding: 8px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 400;
   cursor: pointer;
@@ -64,9 +64,9 @@
 }
 
 .typeBtn.active {
-  border-color: var(--color-accent-amber);
-  background: var(--wash-amber);
-  color: var(--color-accent-amber);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -81,7 +81,7 @@
 
 .status {
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-size: 13px;
   padding: 16px 0;
 }
@@ -91,15 +91,15 @@
   gap: 10px;
   padding: 8px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
   cursor: pointer;
   text-align: left;
   align-items: center;
 }
 
 .resultCard:hover {
-  border-color: var(--color-accent-amber);
+  border-color: var(--accent);
 }
 
 .resultCard:disabled {
@@ -113,7 +113,7 @@
   flex-shrink: 0;
   border-radius: 6px;
   overflow: hidden;
-  background: var(--color-bg-primary);
+  background: var(--bg);
 }
 
 .poster img {
@@ -128,7 +128,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   font-size: 16px;
 }
 
@@ -139,7 +139,7 @@
 .resultTitle {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -147,14 +147,14 @@
 
 .resultYear {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
 .manualToggle {
   background: none;
   border: none;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-size: 12px;
   cursor: pointer;
   padding: 8px 0;
@@ -171,7 +171,7 @@
 
 .fieldLabel {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -183,20 +183,20 @@
 .fieldInput {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
   font-size: 13px;
   outline: none;
 }
 
 .fieldInput:focus {
-  border-color: var(--color-accent-amber);
+  border-color: var(--accent);
 }
 
 .saveButton {
   width: 100%;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   border-radius: 12px;
   padding: 13px;
   border: none;
@@ -213,12 +213,12 @@
 .saveButtonLabel {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-bg-primary);
+  color: var(--bg);
 }
 
 .removeMapping {
   composes: manualToggle;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 8px;
   text-align: center;
 }

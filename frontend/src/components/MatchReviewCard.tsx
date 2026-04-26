@@ -21,8 +21,8 @@ const matchSourceLabels: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  unconfirmed: 'var(--color-accent-coral)',
-  default: 'var(--color-accent-amber)',
+  unconfirmed: 'var(--status-crit)',
+  default: 'var(--accent)',
 }
 
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {

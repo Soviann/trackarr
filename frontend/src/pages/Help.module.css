@@ -5,13 +5,13 @@
 .title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin: 0 0 var(--space-xs);
 }
 
 .subtitle {
   font-size: 13px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   margin: 0 0 var(--space-xl);
 }
 
@@ -24,7 +24,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   margin: 0 0 var(--space-sm);
 }
 
@@ -35,9 +35,9 @@
 }
 
 .item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   overflow: hidden;
 }
 
@@ -52,7 +52,7 @@
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .question {
@@ -66,7 +66,7 @@
   flex-shrink: 0;
   font-size: 20px;
   line-height: 1;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   transition: transform 0.18s ease;
 }
 
@@ -78,13 +78,13 @@
   padding: 0 var(--space-lg) var(--space-md);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--color-text-secondary);
-  border-top: 1px solid var(--color-border-subtle);
+  color: var(--ink);
+  border-top: 1px solid var(--border);
   padding-top: var(--space-md);
 }
 
 .answer strong {
-  color: var(--color-text-primary);
+  color: var(--ink);
   font-weight: 600;
 }
 

@@ -6,7 +6,7 @@
   min-height: 100vh;
   padding: 32px;
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 .emoticon {
@@ -17,7 +17,7 @@
 .title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin-bottom: 8px;
 }
 
@@ -29,9 +29,9 @@
 .reloadButton {
   padding: 10px 24px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-accent-teal) 30%, transparent);
-  background: color-mix(in srgb, var(--color-accent-teal) 10%, transparent);
-  color: var(--color-accent-teal);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
