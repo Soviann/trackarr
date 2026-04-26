@@ -10,8 +10,8 @@ import { useTitleStore } from '../store'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { CollapsibleSection } from '../components/CollapsibleSection'
 import { PosterStrip } from '../components/PosterStrip'
+import { SectionRow } from '../components/SectionRow'
 import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -205,9 +205,16 @@ export function Library(_props: { path?: string }) {
   // Initial fetch on mount
   useEffect(() => { fetchTitles() }, [fetchTitles])
   useEffect(() => { loadContinueWatching() }, [loadContinueWatching])
+  useEffect(() => { loadUpcoming() }, [loadUpcoming])
 
   // Stats strip: at-a-glance figures pulled from /api/stats.
   const { data: stats } = useApi<StatsResponse>('/stats')
+
+  // Section expand state — toggled by SectionRow click.
+  // Routes for /upcoming and /continue-watching don't exist yet,
+  // so the click expands a PosterStrip below the row in-place.
+  const [upcomingOpen, setUpcomingOpen] = useState(false)
+  const [cwOpen, setCwOpen] = useState(false)
 
   // Atmospheric backdrop: prefer first continue-watching cover, else first list cover
   const backdropCover =
@@ -265,28 +272,45 @@ export function Library(_props: { path?: string }) {
         <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
       </div>
 
-      {/* Collapsible strips */}
-      <CollapsibleSection title="Coming up" count={upcoming?.length} onExpand={loadUpcoming}>
-        {upcoming && (
-          <PosterStrip items={upcoming.map(t => {
-            const { label, variant } = airDateBadge(t.next_air_date)
-            return { id: t.id, type: t.type, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
-          })} />
+      {/* Section rows */}
+      <div className={s.sectionRows}>
+        {upcoming && upcoming.length > 0 && (
+          <>
+            <SectionRow
+              label="// COMING UP"
+              subText={`${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`}
+              posters={upcoming}
+              onClick={() => setUpcomingOpen(o => !o)}
+            />
+            {upcomingOpen && (
+              <PosterStrip items={upcoming.map(t => {
+                const { label, variant } = airDateBadge(t.next_air_date)
+                return { id: t.id, type: t.type, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
+              })} />
+            )}
+          </>
         )}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Continue Watching" count={continueWatching?.length} onExpand={loadContinueWatching}>
-        {continueWatching && (
-          <PosterStrip items={continueWatching.map(t => ({
-            id: t.id,
-            type: t.type,
-            cover_url: t.cover_url,
-            name: t.name,
-            sublabel: t.next_air_episode ?? '',
-            progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
-          }))} />
+        {continueWatching && continueWatching.length > 0 && (
+          <>
+            <SectionRow
+              label="// CONTINUE WATCHING"
+              subText={`${continueWatching.length} in progress`}
+              posters={continueWatching}
+              onClick={() => setCwOpen(o => !o)}
+            />
+            {cwOpen && (
+              <PosterStrip items={continueWatching.map(t => ({
+                id: t.id,
+                type: t.type,
+                cover_url: t.cover_url,
+                name: t.name,
+                sublabel: t.next_air_episode ?? '',
+                progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
+              }))} />
+            )}
+          </>
         )}
-      </CollapsibleSection>
+      </div>
 
       {selecting && (
         <div className={s.selectAllRow}>

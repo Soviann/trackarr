@@ -66,6 +66,16 @@
   color: var(--ink-mute);
 }
 
+/* Section rows — gives them breathing room above the grid */
+.sectionRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
 /* States */
 .centered {
   padding: 40px var(--space-lg);
