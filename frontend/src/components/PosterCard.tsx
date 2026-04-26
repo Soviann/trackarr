@@ -15,9 +15,10 @@ interface PosterCardProps {
   onClick?: (e: MouseEvent) => void
   onLongPress?: () => void
   overlay?: ComponentChildren
+  selecting?: boolean
 }
 
-export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress, overlay }: PosterCardProps) {
+export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress, overlay, selecting }: PosterCardProps) {
   const sortField = useTitleStore(st => st.sort.field)
   const sortCaption = formatSortCaption(title, sortField)
   const name = getName(title)
@@ -68,7 +69,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         style={{ background: coverBackground(title.cover_url, title.type) }}
       >
         {!title.cover_url && <CoverPlaceholder type={title.type} />}
-        <div className={s.typeBadge}>
+        <div className={`${s.typeBadge}${selecting ? ` ${s.typeBadgeShifted}` : ''}`}>
           <TypeBadge type={title.type} />
         </div>
         <div className={s.statusBadge}>

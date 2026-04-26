@@ -354,6 +354,7 @@ export function Library(_props: { path?: string }) {
                     setSelecting(true)
                     toggleSelect(t.id)
                   }}
+                  selecting={selecting}
                   overlay={selecting && (
                     <div className={`${s.checkbox} ${selected.has(t.id) ? s.checked : ''}`}>
                       {selected.has(t.id) && '✓'}

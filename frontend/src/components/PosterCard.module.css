@@ -36,6 +36,11 @@
   -webkit-backdrop-filter: blur(6px);
   border-radius: 6px;
   z-index: 2;
+  transition: top 0.15s ease;
+}
+
+.typeBadgeShifted {
+  top: 34px;
 }
 
 .labelOverlay {
