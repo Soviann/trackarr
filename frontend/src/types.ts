@@ -133,6 +133,9 @@ export interface StatsResponse {
     best: number
   }
   total_watch_minutes: number
+  watched_this_year: number
+  avg_rating_this_year: number
+  minutes_this_week: number
 }
 
 export interface ActivityEvent {

@@ -72,6 +72,17 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 		return nil, fmt.Errorf("stats total watch minutes: %w", err)
 	}
 
+	now := time.Now()
+	watchedThisYear, avgRatingThisYear, err := r.libraryStripYear(ctx, now.Year())
+	if err != nil {
+		return nil, fmt.Errorf("stats library strip year: %w", err)
+	}
+
+	minutesThisWeek, err := r.MinutesSince(ctx, now.AddDate(0, 0, -7))
+	if err != nil {
+		return nil, fmt.Errorf("stats minutes this week: %w", err)
+	}
+
 	return &model.StatsResponse{
 		Overview:  *overview,
 		Ratings:   *ratings,
@@ -84,7 +95,59 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 			Best:    bestStreak,
 		},
 		TotalWatchMinutes: totalWatchMinutes,
+		WatchedThisYear:   watchedThisYear,
+		AvgRatingThisYear: avgRatingThisYear,
+		MinutesThisWeek:   minutesThisWeek,
 	}, nil
+}
+
+// libraryStripYear returns (count of titles last-watched in the given year, avg my_rating among them).
+// Average is rounded to one decimal; 0 when no rated title qualifies.
+func (r *StatsRepository) libraryStripYear(ctx context.Context, year int) (int, float64, error) {
+	yearStart := fmt.Sprintf("%d-01-01", year)
+	yearEnd := fmt.Sprintf("%d-01-01", year+1)
+
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM titles
+		WHERE last_watched_at >= ? AND last_watched_at < ?
+	`, yearStart, yearEnd).Scan(&count)
+	if err != nil {
+		return 0, 0, fmt.Errorf("watched this year: %w", err)
+	}
+
+	var avg sql.NullFloat64
+	err = r.db.QueryRowContext(ctx, `
+		SELECT AVG(my_rating) FROM titles
+		WHERE last_watched_at >= ? AND last_watched_at < ?
+		  AND my_rating IS NOT NULL
+	`, yearStart, yearEnd).Scan(&avg)
+	if err != nil {
+		return 0, 0, fmt.Errorf("avg rating this year: %w", err)
+	}
+
+	rounded := 0.0
+	if avg.Valid {
+		rounded = math.Round(avg.Float64*10) / 10
+	}
+	return count, rounded, nil
+}
+
+// MinutesSince returns the sum of title runtimes attached to watch events
+// since the given timestamp. Episodes inherit the parent title's runtime
+// (PlexTracker's existing watchtime convention).
+func (r *StatsRepository) MinutesSince(ctx context.Context, since time.Time) (int, error) {
+	var total int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(t.runtime), 0)
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND t.runtime IS NOT NULL
+	`, since.UTC().Format("2006-01-02 15:04:05")).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("minutes since: %w", err)
+	}
+	return total, nil
 }
 
 func (r *StatsRepository) overview(ctx context.Context) (*model.StatsOverview, error) {

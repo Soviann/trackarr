@@ -43,6 +43,29 @@
   padding: var(--space-xs);
 }
 
+/* Stats strip — at-a-glance figures under the header */
+.statsStrip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+}
+
+.statsStripYear {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.statsStripDot {
+  color: var(--ink-mute);
+}
+
 /* States */
 .centered {
   padding: 40px var(--space-lg);

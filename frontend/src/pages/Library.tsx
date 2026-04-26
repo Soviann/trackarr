@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import { useApi } from '../hooks/useApi'
 import { haptic, HAPTIC_SHORT } from '../utils/haptic'
-import type { Title, ContinueWatchingTitle, UpcomingTitle } from '../types'
+import { formatWatchtimeShort } from '../utils'
+import type { Title, ContinueWatchingTitle, UpcomingTitle, StatsResponse } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
 import { TitleCard } from '../components/TitleCard'
@@ -204,6 +206,9 @@ export function Library(_props: { path?: string }) {
   useEffect(() => { fetchTitles() }, [fetchTitles])
   useEffect(() => { loadContinueWatching() }, [loadContinueWatching])
 
+  // Stats strip: at-a-glance figures pulled from /api/stats.
+  const { data: stats } = useApi<StatsResponse>('/stats')
+
   // Atmospheric backdrop: prefer first continue-watching cover, else first list cover
   const backdropCover =
     continueWatching?.find(t => t.cover_url)?.cover_url
@@ -249,6 +254,16 @@ export function Library(_props: { path?: string }) {
       </div>
 
       {error && <ErrorBanner message={error} onRetry={invalidate} />}
+
+      <div className={s.statsStrip}>
+        <span className={s.statsStripYear}>{new Date().getFullYear()}</span>
+        <span className={s.statsStripDot}>·</span>
+        <span>{stats?.watched_this_year ?? 0} watched</span>
+        <span className={s.statsStripDot}>·</span>
+        <span>★ {stats?.avg_rating_this_year ? stats.avg_rating_this_year.toFixed(1) : '—'} avg</span>
+        <span className={s.statsStripDot}>·</span>
+        <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
+      </div>
 
       {/* Collapsible strips */}
       <CollapsibleSection title="Coming up" count={upcoming?.length} onExpand={loadUpcoming}>

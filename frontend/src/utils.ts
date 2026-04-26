@@ -125,6 +125,17 @@ export function formatWatchtime(minutes: number | null | undefined): string | nu
 }
 
 /**
+ * Compact watchtime for tight strips (e.g. Library stats line). Always returns
+ * a non-empty string — `0m` for zero — so the strip never shows a hole.
+ * Drops the minutes once we cross the hour mark to keep glance-readable.
+ */
+export function formatWatchtimeShort(minutes: number | null | undefined): string {
+  const total = Math.max(0, Math.round(minutes ?? 0))
+  if (total < 60) return `${total}m`
+  return `${Math.floor(total / 60)}h`
+}
+
+/**
  * Builds an AniList media URL from an ID.
  * Shared across pages/components to keep the URL shape consistent — Title.anilist_id is number,
  * Season.anilist_id is string, both coerce cleanly via template literal.

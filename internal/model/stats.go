@@ -10,6 +10,10 @@ type StatsResponse struct {
 	Genres            interface{}    `json:"genres"`
 	Streaks           StatsStreaks   `json:"streaks"`
 	TotalWatchMinutes int            `json:"total_watch_minutes"`
+	// Library strip — compact at-a-glance figures.
+	WatchedThisYear   int     `json:"watched_this_year"`
+	AvgRatingThisYear float64 `json:"avg_rating_this_year"`
+	MinutesThisWeek   int     `json:"minutes_this_week"`
 }
 
 // StatsStreaks holds current and best consecutive watch day streaks.
