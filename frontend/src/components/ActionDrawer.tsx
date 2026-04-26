@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import clsx from 'clsx'
-import type { Title, Episode } from '../types'
+import type { Title } from '../types'
 import s from './ActionDrawer.module.css'
 
 interface ActionDrawerProps {
   title: Title
-  nextEpisode: Episode | null
-  nextSeasonNumber?: number
   aniListUrl?: string | null
-  onMarkNext?: () => void
   onRate: () => void
   onEdit: () => void
   onRematch: () => void
@@ -17,10 +14,11 @@ interface ActionDrawerProps {
 }
 
 export function ActionDrawer({
-  title, nextEpisode, nextSeasonNumber, aniListUrl,
-  onMarkNext, onRate, onEdit, onRematch, onMerge, onRefresh,
+  title, aniListUrl,
+  onRate, onEdit, onRematch, onMerge, onRefresh,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -67,14 +65,21 @@ export function ActionDrawer({
     if (!open || touchStartY.current === null) return
     if (dragY > 100) {
       setOpen(false)
+      setMoreOpen(false)
     }
     setDragY(0)
     touchStartY.current = null
   }
 
+  const toggleOpen = () => {
+    const next = !open
+    setOpen(next)
+    if (!next) setMoreOpen(false)
+  }
+
   const hasImdb = !!title.imdb_id
   const hasTvdb = !!title.tvdb_id
-  const hasSeries = title.type !== 'movie'
+  const hasExternal = hasImdb || hasTvdb || !!aniListUrl
 
   return (
     <div
@@ -87,76 +92,79 @@ export function ActionDrawer({
       <button
         type="button"
         className={s.handle}
-        onClick={() => setOpen(!open)}
+        onClick={toggleOpen}
         aria-expanded={open}
+        aria-label={open ? 'Close actions' : 'Open actions'}
       >
         <div className={s.handleBar} />
         <span className={s.handleText}>Actions</span>
-        <span className={clsx(s.chevron, open && s.chevronOpen)}>&#9650;</span>
       </button>
 
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
-        <div className={clsx(s.sectionLabel, s.sectionLabelFirst)}>Quick actions</div>
-        <div className={s.actionRow}>
-          {hasSeries && nextEpisode && (
-            <button onClick={onMarkNext} className={s.markNext}>
-              ✓ S{String(nextSeasonNumber ?? 1).padStart(2, '0')}E{String(nextEpisode.episode).padStart(2, '0')}
-            </button>
-          )}
-          <button onClick={onRate} className={s.rate}>
-            ★ Rate
+        <div className={s.buttonRow}>
+          <button onClick={onRate} className={s.btnPrimary}>★ Rate</button>
+          <button onClick={onEdit} className={s.btnGhost}>Edit</button>
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className={clsx(s.btnGhost, moreOpen && s.btnGhostActive)}
+            aria-expanded={moreOpen}
+          >
+            More
           </button>
-          {hasImdb && (
-            <a
-              href={`https://www.imdb.com/title/${title.imdb_id}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.imdb}
-            >
-              IMDb
-            </a>
-          )}
-          {hasTvdb && (
-            <a
-              href={`https://thetvdb.com/dereferrer/${title.type === 'movie' ? 'movie' : 'series'}/${title.tvdb_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.tvdb}
-            >
-              TVDB
-            </a>
-          )}
-          {aniListUrl && (
-            <a
-              href={aniListUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.anilist}
-            >
-              AniList
-            </a>
-          )}
         </div>
 
-        <div className={s.sectionLabel}>Manage</div>
-        <div className={s.actionRow}>
-          <button onClick={onEdit} className={s.manage}>
-            Edit
-          </button>
-          <button onClick={onRematch} className={s.manage}>
-            Fix match
-          </button>
-          <button onClick={onMerge} className={s.manage}>
-            Merge
-          </button>
-          <button
-            onClick={handleRefreshClick}
-            disabled={refreshState !== 'idle'}
-            className={refreshState === 'success' ? s.manageSuccess : refreshState === 'error' ? s.manageError : s.manage}
-          >
-            {refreshState === 'loading' ? '...' : refreshState === 'success' ? '✓ Done' : refreshState === 'error' ? '✗ Failed' : 'Refresh'}
-          </button>
-        </div>
+        {hasExternal && (
+          <div className={s.externalRow}>
+            {hasImdb && (
+              <a
+                href={`https://www.imdb.com/title/${title.imdb_id}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={s.extImdb}
+              >
+                IMDb
+              </a>
+            )}
+            {hasTvdb && (
+              <a
+                href={`https://thetvdb.com/dereferrer/${title.type === 'movie' ? 'movie' : 'series'}/${title.tvdb_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={s.extTvdb}
+              >
+                TVDB
+              </a>
+            )}
+            {aniListUrl && (
+              <a
+                href={aniListUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={s.extAnilist}
+              >
+                AniList
+              </a>
+            )}
+          </div>
+        )}
+
+        {moreOpen && (
+          <div className={s.moreSheet}>
+            <button onClick={onRematch} className={s.moreBtn}>Rematch</button>
+            <button onClick={onMerge} className={s.moreBtn}>Merge</button>
+            <button
+              onClick={handleRefreshClick}
+              disabled={refreshState !== 'idle'}
+              className={clsx(
+                s.moreBtn,
+                refreshState === 'success' && s.moreBtnSuccess,
+                refreshState === 'error' && s.moreBtnError,
+              )}
+            >
+              {refreshState === 'loading' ? '...' : refreshState === 'success' ? '✓ Done' : refreshState === 'error' ? '✗ Failed' : 'Refresh'}
+            </button>
+          </div>
+        )}
 
         <div className={s.bottomPad} />
       </div>

@@ -17,15 +17,6 @@ import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholde
 import { TitleHistory } from '../components/TitleHistory'
 import s from './TitleDetail.module.css'
 
-function getNextUnwatched(title: Title) {
-  for (const season of [...(title.seasons ?? [])].sort((a, b) => a.season_number - b.season_number)) {
-    for (const ep of [...(season.episodes ?? [])].sort((a, b) => a.episode - b.episode)) {
-      if (!ep.watched) return { season, episode: ep }
-    }
-  }
-  return null
-}
-
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
   return {
     ...title,
@@ -69,10 +60,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     () => [...(title?.seasons ?? [])].sort((a, b) => a.season_number - b.season_number),
     [title?.id, title?.seasons]
   )
-  const next = useMemo(
-    () => title ? getNextUnwatched(title) : null,
-    [title?.id, title?.seasons]
-  )
 
   if (loading || !title) {
     return (
@@ -109,11 +96,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       setActionError('Failed to update episode')
       mutate()
     }
-  }
-
-  const handleMarkNext = async () => {
-    if (!next) return
-    await handleEpisodeToggle(next.episode.id)
   }
 
   const handleSaveRating = async (rating: number) => {
@@ -362,10 +344,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Action drawer */}
       <ActionDrawer
         title={title}
-        nextEpisode={next?.episode ?? null}
-        nextSeasonNumber={next?.season.season_number}
         aniListUrl={computeAniListUrl(title)}
-        onMarkNext={handleMarkNext}
         onRate={() => setShowRating(true)}
         onEdit={() => setShowEdit(true)}
         onRematch={() => setShowRematch(true)}
