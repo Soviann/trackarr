@@ -10,7 +10,6 @@ import { useTitleStore } from '../store'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { PosterStrip } from '../components/PosterStrip'
 import { SectionRow } from '../components/SectionRow'
 import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
@@ -73,17 +72,6 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
       </button>
     </div>
   )
-}
-
-function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'teal' | 'muted' } {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const air = new Date(dateStr)
-  air.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
-  if (diffDays === 0) return { label: 'Today', variant: 'amber' }
-  if (diffDays <= 6) return { label: air.toLocaleDateString('en-US', { weekday: 'short' }), variant: 'teal' }
-  return { label: `in ${diffDays}d`, variant: 'muted' }
 }
 
 export function Library(_props: { path?: string }) {
@@ -210,12 +198,6 @@ export function Library(_props: { path?: string }) {
   // Stats strip: at-a-glance figures pulled from /api/stats.
   const { data: stats } = useApi<StatsResponse>('/stats')
 
-  // Section expand state — toggled by SectionRow click.
-  // Routes for /upcoming and /continue-watching don't exist yet,
-  // so the click expands a PosterStrip below the row in-place.
-  const [upcomingOpen, setUpcomingOpen] = useState(false)
-  const [cwOpen, setCwOpen] = useState(false)
-
   // Atmospheric backdrop: prefer first continue-watching cover, else first list cover
   const backdropCover =
     continueWatching?.find(t => t.cover_url)?.cover_url
@@ -272,43 +254,23 @@ export function Library(_props: { path?: string }) {
         <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
       </div>
 
-      {/* Section rows */}
+      {/* Section rows — tap to open the matching preset library view */}
       <div className={s.sectionRows}>
         {upcoming && upcoming.length > 0 && (
-          <>
-            <SectionRow
-              label="// COMING UP"
-              subText={`${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`}
-              posters={upcoming}
-              onClick={() => setUpcomingOpen(o => !o)}
-            />
-            {upcomingOpen && (
-              <PosterStrip items={upcoming.map(t => {
-                const { label, variant } = airDateBadge(t.next_air_date)
-                return { id: t.id, type: t.type, cover_url: t.cover_url, name: t.name, sublabel: label, sublabelVariant: variant }
-              })} />
-            )}
-          </>
+          <SectionRow
+            label="// COMING UP"
+            subText={`${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`}
+            posters={upcoming}
+            onClick={() => route('/coming-up')}
+          />
         )}
         {continueWatching && continueWatching.length > 0 && (
-          <>
-            <SectionRow
-              label="// CONTINUE WATCHING"
-              subText={`${continueWatching.length} in progress`}
-              posters={continueWatching}
-              onClick={() => setCwOpen(o => !o)}
-            />
-            {cwOpen && (
-              <PosterStrip items={continueWatching.map(t => ({
-                id: t.id,
-                type: t.type,
-                cover_url: t.cover_url,
-                name: t.name,
-                sublabel: t.next_air_episode ?? '',
-                progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
-              }))} />
-            )}
-          </>
+          <SectionRow
+            label="// CONTINUE WATCHING"
+            subText={`${continueWatching.length} in progress`}
+            posters={continueWatching}
+            onClick={() => route('/continue-watching')}
+          />
         )}
       </div>
 

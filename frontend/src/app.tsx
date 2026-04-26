@@ -5,6 +5,8 @@ import clsx from 'clsx'
 import { Navbar } from './components/Navbar'
 import { FilterDrawer } from './components/FilterDrawer'
 import { Library } from './pages/Library'
+import { ComingUp } from './pages/ComingUp'
+import { ContinueWatching } from './pages/ContinueWatching'
 import { TitleDetail } from './pages/TitleDetail'
 import { Search } from './pages/Search'
 import { Add } from './pages/Add'
@@ -127,6 +129,8 @@ export function App() {
       <div className={clsx(s.root, !hideNavbar && s.withNavbar)}>
         <Router onChange={handleRoute}>
           <Library path="/" />
+          <ComingUp path="/coming-up" />
+          <ContinueWatching path="/continue-watching" />
           <Search path="/search" />
           <Add path="/add" />
           <Stats path="/stats" />

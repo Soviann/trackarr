@@ -55,6 +55,8 @@ L'écran principal affiche tous les titres organisés par statut.
 
 **Bannière de revue** : si des titres ont un match à vérifier, une bannière rouge apparaît sous le titre "Library" avec le nombre de titres concernés.
 
+**Coming Up / Continue Watching** : sous le bandeau de stats, deux lignes — `// COMING UP` et `// CONTINUE WATCHING` — affichent un aperçu de 3 posters et le nombre de titres concernés. Taper sur une ligne ouvre une vue dédiée plein écran (grille 3 colonnes) : Coming Up affiche les titres qui sortent bientôt avec un badge de date (`Today`, `Mon`, `in 12d`…), Continue Watching affiche les séries en cours avec leur barre de progression et le prochain épisode. Flèche retour en haut à gauche pour revenir à la bibliothèque.
+
 ### Détail d'un titre
 
 - **Couverture** en haut avec dégradé, bouton retour et bouton édition

@@ -192,7 +192,8 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | MatchReviewCard | `components/MatchReviewCard.tsx` | Match review with ID chips + confirm/fix |
 | CoverPlaceholder | `components/CoverPlaceholder.tsx` | Type-colored gradient + icon for missing covers |
 | CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header with lazy-load `onExpand` |
-| PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip |
+| PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip (delegates card to `PosterTile`) |
+| PosterTile | `components/PosterTile.tsx` | Compact poster card with optional progress bar / badge / sublabel — used in strips and preset library grids |
 | SeasonAniListStrip | `components/SeasonAniListStrip.tsx` | Active-season AniList info strip (community score, link, fix-match pencil) |
 | ConfirmationDrawer | `components/ConfirmationDrawer.tsx` | Confirm/cancel drawer for destructive bulk actions |
 | ErrorBanner | `components/ErrorBanner.tsx` | Inline error banner with optional retry |
@@ -203,6 +204,8 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 | Route | Page | File |
 |---|---|---|
 | `/` | Library | `pages/Library.tsx` |
+| `/coming-up` | ComingUp | `pages/ComingUp.tsx` (preset library: upcoming titles, full grid) |
+| `/continue-watching` | ContinueWatching | `pages/ContinueWatching.tsx` (preset library: in-progress titles, full grid) |
 | `/search` | Search | `pages/Search.tsx` |
 | `/add` | Add | `pages/Add.tsx` |
 | `/stats` | Stats | `pages/Stats.tsx` |
