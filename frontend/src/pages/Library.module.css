@@ -83,18 +83,15 @@
   color: var(--color-text-secondary);
 }
 
-/* Counter */
+/* Counter — mono [ NNN / total ] */
 .counter {
-  padding: var(--space-md) var(--space-lg) var(--space-sm);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.counterText {
-  font-size: 10px;
-  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+  padding: var(--space-sm) var(--space-lg);
+  position: relative;
+  z-index: 1;
 }
 
 /* TitleList */

@@ -336,9 +336,7 @@ export function Library(_props: { path?: string }) {
 
           {total > 0 && (
             <div className={s.counter}>
-              <span className={s.counterText}>
-                {titles.length} / {total} titles
-              </span>
+              [ {String(titles.length).padStart(3, '0')} / {String(total).padStart(3, '0')} ]
             </div>
           )}
 
