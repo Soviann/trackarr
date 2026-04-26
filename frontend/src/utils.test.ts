@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, watchedCount, totalEpisodes } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, hexToRgba, watchedCount, totalEpisodes } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
   return {
-    id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, imdb_id: null, anilist_id: null,
+    id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, accent_hex: null, imdb_id: null, anilist_id: null,
     tmdb_id: null, tvdb_id: null, my_rating: null, status: 'watching', series_status: null,
     match_status: 'confirmed', original_title: null, match_source: null, names: [], seasons: [],
     overview: null, genres: null, runtime: null, tmdb_rating: null, credits: null,
@@ -137,6 +137,19 @@ describe('totalEpisodes', () => {
 
   it('returns 0 for empty', () => {
     expect(totalEpisodes(makeTitle())).toBe(0)
+  })
+})
+
+describe('hexToRgba', () => {
+  it('converts well-formed hex', () => {
+    expect(hexToRgba('#d4ad7a', 0.10)).toBe('rgba(212, 173, 122, 0.1)')
+  })
+
+  it('returns empty for invalid input', () => {
+    expect(hexToRgba(null, 0.1)).toBe('')
+    expect(hexToRgba(undefined, 0.1)).toBe('')
+    expect(hexToRgba('#xyz', 0.1)).toBe('')
+    expect(hexToRgba('d4ad7a', 0.1)).toBe('')
   })
 })
 

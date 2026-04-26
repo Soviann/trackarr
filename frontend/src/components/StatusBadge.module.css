@@ -7,8 +7,8 @@
 }
 
 .watching {
-  color: var(--color-bg-primary);
-  background: var(--color-accent-amber);
+  color: var(--bg);
+  background: var(--cover-accent, var(--accent));
 }
 
 .completed {

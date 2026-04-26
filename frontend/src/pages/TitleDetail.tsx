@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime } from '../utils'
+import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
 import { SeasonTab } from '../components/SeasonTab'
 import { SeasonAniListStrip } from '../components/SeasonAniListStrip'
@@ -133,8 +133,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   if (title.runtime) metaParts.push(formatRuntime(title.runtime))
   if (title.series_status) metaParts.push(formatSeriesStatus(title.series_status))
 
+  const accentStyle = title.accent_hex
+    ? {
+        ['--cover-accent' as any]: title.accent_hex,
+        ['--cover-accent-wash' as any]: hexToRgba(title.accent_hex, 0.10),
+      }
+    : undefined
+
   return (
-    <div className={s.page}>
+    <div className={s.page} style={accentStyle}>
       {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
       {/* Hero — pure visual */}
       <div

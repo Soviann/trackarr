@@ -16,6 +16,7 @@ export interface Title {
   is_anime: boolean
   year: number
   cover_url: string | null
+  accent_hex: string | null
   imdb_id: string | null
   anilist_id: number | null
   tmdb_id: number | null

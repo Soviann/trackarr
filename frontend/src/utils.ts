@@ -1,6 +1,13 @@
 import { Title, TitleType, TitleStatus } from './types'
 import type { SortField } from './store'
 
+/** Convert "#RRGGBB" to "rgba(R, G, B, alpha)". Returns empty string for invalid input. */
+export function hexToRgba(hex: string | null | undefined, alpha: number): string {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return ''
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`
+}
+
 /** Returns the best display name for a title. Priority: fr → en → (x-romaji → ja when anime) → first. */
 export function getName(title: Title): string {
   if (!title.names || title.names.length === 0) return '(untitled)'

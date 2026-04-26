@@ -128,7 +128,7 @@
 .myRating {
   font-size: 28px;
   font-weight: 700;
-  color: var(--color-accent-amber);
+  color: var(--cover-accent, var(--accent));
   line-height: 1;
 }
 
@@ -163,7 +163,7 @@
   margin-top: 1px;
 }
 
-.tmdbColor { color: var(--color-accent-teal); }
+.tmdbColor { color: var(--cover-accent, var(--accent)); }
 .anilistColor { color: var(--color-accent-anilist); }
 
 /* Synopsis card */
