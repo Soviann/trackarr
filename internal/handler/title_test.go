@@ -108,6 +108,8 @@ func TestTitleHandler_GetByID(t *testing.T) {
 	h, db, _ := setupHandler(t)
 
 	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+	accent := "#d4ad7a"
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{AccentHex: &accent})
 
 	r := chi.NewRouter()
 	r.Get("/api/titles/{id}", httputil.WrapHandler(h.GetByID))
@@ -117,9 +119,19 @@ func TestTitleHandler_GetByID(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+
+	body := rr.Body.Bytes()
 	var title model.Title
-	_ = json.NewDecoder(rr.Body).Decode(&title)
+	require.NoError(t, json.Unmarshal(body, &title))
 	assert.Equal(t, "Test", title.PrimaryName())
+	require.NotNil(t, title.AccentHex)
+	assert.Equal(t, accent, *title.AccentHex)
+
+	// JSON contract: the field is exposed under the snake_case key the frontend
+	// reads, not just via the Go struct.
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(body, &raw))
+	assert.Equal(t, accent, raw["accent_hex"])
 }
 
 func TestTitleHandler_GetByID_InvalidID(t *testing.T) {
