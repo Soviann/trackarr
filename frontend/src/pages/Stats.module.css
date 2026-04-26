@@ -23,21 +23,53 @@
   padding: 0 var(--space-lg) 0;
 }
 
-.sectionLabel {
-  font-size: 10px;
-  color: var(--color-accent-lavender);
+.sectionHeader {
+  margin: 0;
+  padding-bottom: var(--space-sm);
+  font-family: var(--font-mono);
   font-weight: 600;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  letter-spacing: 0.18em;
+  color: var(--accent);
 }
 
-.card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: 12px;
-  padding: var(--space-lg);
-  text-align: center;
+/* Shared bar (genres + ratings) */
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.barLabel {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--ink);
+  min-width: 90px;
+}
+
+.barTrack {
+  flex: 1;
+  height: 12px;
+  background: var(--bg-elev2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+}
+
+.barValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  min-width: 40px;
+  text-align: right;
 }
 
 /* Overview — 5 stat cards */
@@ -79,148 +111,12 @@
 }
 
 /* Ratings */
-.ratingsCard {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: 12px;
-  padding: 14px var(--space-lg);
-}
-
-.ratingRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.ratingRow:not(:last-child) {
-  margin-bottom: 6px;
-}
-
-.ratingLabel {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  width: 18px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.ratingTrack {
-  flex: 1;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--color-bg-surface);
-  overflow: hidden;
-}
-
-.ratingBar {
-  height: 100%;
-  background: var(--color-accent-lavender);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-  box-shadow: 0 0 4px var(--color-accent-lavender), 0 0 10px color-mix(in srgb, var(--color-accent-lavender) 20%, transparent);
-}
-
-.ratingCount {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  width: 22px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
 .ratingInsight {
-  color: var(--color-text-secondary);
+  color: var(--ink-dim);
   font-size: 12px;
   margin-top: 10px;
   text-align: center;
   font-style: italic;
-}
-
-/* Breakdown / Donut */
-.breakdownGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.donutCard {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: 12px;
-  padding: 14px;
-  text-align: center;
-}
-
-.donutTitle {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.donutRing {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  margin: 0 auto;
-  position: relative;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-}
-
-.donutRing::after {
-  content: '';
-  position: absolute;
-  top: -2px; left: -2px; right: -2px; bottom: -2px;
-  border-radius: 50%;
-  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-lavender) 25%, transparent);
-  pointer-events: none;
-}
-
-.donutCenter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.donutLegend {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.legendItem {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: var(--font-size-xs);
-}
-
-.legendDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.legendLabel {
-  color: var(--color-text-secondary);
-}
-
-.legendCount {
-  color: var(--color-text-muted);
 }
 
 /* Fun stats */
@@ -295,14 +191,6 @@
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
-
-/* Genre bars */
-.genreBars { display: flex; flex-direction: column; gap: 7px; }
-.genreBarRow { display: flex; align-items: center; gap: 8px; }
-.genreBarName { font-size: 11px; color: var(--color-text-muted); width: 90px; flex: 0 0 90px; text-align: right; }
-.genreBarTrack { flex: 1; height: 14px; background: var(--color-bg-surface); border-radius: 4px; overflow: hidden; }
-.genreBarFill { height: 100%; background: var(--color-accent-lavender); border-radius: 4px; }
-.genreBarCount { font-size: 11px; color: var(--color-text-muted); width: 32px; text-align: right; }
 
 /* Streak cards */
 .streakRow { display: flex; gap: 8px; }

@@ -1,37 +1,10 @@
 import { useState, useEffect } from 'preact/hooks'
-import { colors } from '../theme'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { formatWatchtime } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
 import type { StatsResponse, FunStat, ActivityEvent } from '../types'
 import s from './Stats.module.css'
-
-const statusColors: Record<string, string> = {
-  watching: colors.accentAmber,
-  completed: colors.accentGreen,
-  dropped: colors.accentCoral,
-  plan_to_watch: colors.textDimmed,
-}
-
-const typeColors: Record<string, string> = {
-  movie: colors.accentBlue,
-  series: colors.accentTeal,
-  anime: colors.accentLavender,
-}
-
-const statusLabels: Record<string, string> = {
-  watching: 'Watching',
-  completed: 'Completed',
-  dropped: 'Dropped',
-  plan_to_watch: 'Plan to watch',
-}
-
-const typeLabels: Record<string, string> = {
-  movie: 'Movies',
-  series: 'Series',
-  anime: 'Anime',
-}
 
 const funStatIcons: Record<string, string> = {
   flame: '\u{1F525}',
@@ -65,7 +38,6 @@ export function Stats({ path }: { path?: string }) {
       <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} />
       <GenreSection genres={data.genres ?? []} />
       <RatingsSection ratings={data.ratings} />
-      <BreakdownSection breakdown={data.breakdown} />
       <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} />
       {data.fun_stats.length > 0 && <FunStatsSection stats={data.fun_stats} />}
       <YearSection year={data.year_summary} />
@@ -103,96 +75,25 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
   return (
     <section className={s.section}>
       <SectionLabel>Ratings</SectionLabel>
-      <div className={s.ratingsCard}>
-        {[...ratings.distribution].reverse().map((count, i) => {
-          const rating = 10 - i
-          return (
-            <div key={rating} className={s.ratingRow}>
-              <span className={s.ratingLabel}>{rating}</span>
-              <div className={s.ratingTrack}>
-                <div
-                  className={s.ratingBar}
-                  style={{ width: count > 0 ? `${Math.max((count / max) * 100, 4)}%` : '0%' }}
-                />
-              </div>
-              <span className={s.ratingCount}>{count > 0 ? count : ''}</span>
+      {[...ratings.distribution].reverse().map((count, i) => {
+        const rating = 10 - i
+        return (
+          <div key={rating} className={s.barRow}>
+            <span className={s.barLabel}>{rating}</span>
+            <div className={s.barTrack}>
+              <div
+                className={s.barFill}
+                style={{ width: count > 0 ? `${Math.max((count / max) * 100, 4)}%` : '0%' }}
+              />
             </div>
-          )
-        })}
-      </div>
+            <span className={s.barValue}>{count > 0 ? count : ''}</span>
+          </div>
+        )
+      })}
       {ratings.insight && (
         <div className={s.ratingInsight}>{ratings.insight}</div>
       )}
     </section>
-  )
-}
-
-function BreakdownSection({ breakdown }: { breakdown: StatsResponse['breakdown'] }) {
-  return (
-    <section className={s.section}>
-      <SectionLabel>Library</SectionLabel>
-      <div className={s.breakdownGrid}>
-        <DonutChart
-          data={breakdown.by_status}
-          colorMap={statusColors}
-          labelMap={statusLabels}
-          title="By status"
-        />
-        <DonutChart
-          data={breakdown.by_type}
-          colorMap={typeColors}
-          labelMap={typeLabels}
-          title="By type"
-        />
-      </div>
-    </section>
-  )
-}
-
-function DonutChart({
-  data,
-  colorMap,
-  labelMap,
-  title,
-}: {
-  data: Record<string, number>
-  colorMap: Record<string, string>
-  labelMap: Record<string, string>
-  title: string
-}) {
-  const entries = Object.entries(data).filter(([, v]) => v > 0)
-  const total = entries.reduce((sum, [, v]) => sum + v, 0)
-
-  if (total === 0) return null
-
-  // Build conic-gradient stops
-  let angle = 0
-  const stops: string[] = []
-  for (const [key, count] of entries) {
-    const color = colorMap[key] || colors.textMuted
-    const deg = (count / total) * 360
-    stops.push(`${color} ${angle}deg ${angle + deg}deg`)
-    angle += deg
-  }
-
-  const gradient = `conic-gradient(${stops.join(', ')})`
-
-  return (
-    <div className={s.donutCard}>
-      <div className={s.donutTitle}>{title}</div>
-      <div className={s.donutRing} style={{ background: gradient }}>
-        <div className={s.donutCenter}>{total}</div>
-      </div>
-      <div className={s.donutLegend}>
-        {entries.map(([key, count]) => (
-          <div key={key} className={s.legendItem}>
-            <span className={s.legendDot} style={{ background: colorMap[key] || colors.textMuted }} />
-            <span className={s.legendLabel}>{labelMap[key] || key}</span>
-            <span className={s.legendCount}>{count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -222,20 +123,18 @@ function GenreSection({ genres }: { genres: StatsResponse['genres'] }) {
   return (
     <section className={s.section}>
       <SectionLabel>Top Genres</SectionLabel>
-      <div className={s.genreBars}>
-        {genres.map(g => (
-          <div key={g.genre} className={s.genreBarRow}>
-            <span className={s.genreBarName}>{g.genre}</span>
-            <div className={s.genreBarTrack}>
-              <div
-                className={s.genreBarFill}
-                style={{ width: `${(g.count / max) * 100}%` }}
-              />
-            </div>
-            <span className={s.genreBarCount}>{g.count}</span>
+      {genres.map(g => (
+        <div key={g.genre} className={s.barRow}>
+          <span className={s.barLabel}>{g.genre}</span>
+          <div className={s.barTrack}>
+            <div
+              className={s.barFill}
+              style={{ width: `${(g.count / max) * 100}%` }}
+            />
           </div>
-        ))}
-      </div>
+          <span className={s.barValue}>{g.count}</span>
+        </div>
+      ))}
     </section>
   )
 }
@@ -412,5 +311,5 @@ function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return <div className={s.sectionLabel}>{children}</div>
+  return <h2 className={s.sectionHeader}>{`// ${children.toUpperCase()}`}</h2>
 }
