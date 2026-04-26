@@ -52,3 +52,23 @@
   color: var(--ink-mute);
   flex-shrink: 0;
 }
+
+/* Skeleton state — visible while data loads so the row reserves its space. */
+.subSkeleton {
+  width: 60%;
+  max-width: 180px;
+  height: 1em;
+  border-radius: 4px;
+  background: var(--bg-elev2);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.miniPosterSkeleton {
+  background-image: none;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}

@@ -110,6 +110,20 @@
   gap: var(--space-sm);
 }
 
+/* Skeleton tile — same footprint as PosterCard so the grid doesn't shift on load. */
+.skeletonTile {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  background: var(--bg-elev);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+
 /* MatchReviewBanner */
 .bannerWrapper {
   padding: 0 var(--space-lg) var(--space-md);

@@ -254,22 +254,27 @@ export function Library(_props: { path?: string }) {
         <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
       </div>
 
-      {/* Section rows — tap to open the matching preset library view */}
+      {/* Section rows — render skeletons during load so the grid below doesn't shift.
+          Once loaded, the row is hidden if its list is empty. */}
       <div className={s.sectionRows}>
-        {upcoming && upcoming.length > 0 && (
+        {(upcoming === null || upcoming.length > 0) && (
           <SectionRow
             label="// COMING UP"
-            subText={`${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`}
-            posters={upcoming}
+            subText={upcoming
+              ? `${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`
+              : undefined}
+            posters={upcoming ?? undefined}
             onClick={() => route('/coming-up')}
+            loading={upcoming === null}
           />
         )}
-        {continueWatching && continueWatching.length > 0 && (
+        {(continueWatching === null || continueWatching.length > 0) && (
           <SectionRow
             label="// CONTINUE WATCHING"
-            subText={`${continueWatching.length} in progress`}
-            posters={continueWatching}
+            subText={continueWatching ? `${continueWatching.length} in progress` : undefined}
+            posters={continueWatching ?? undefined}
             onClick={() => route('/continue-watching')}
+            loading={continueWatching === null}
           />
         )}
       </div>
@@ -283,7 +288,11 @@ export function Library(_props: { path?: string }) {
       )}
 
       {loading && titles.length === 0 && (
-        <div className={s.centered}>Loading...</div>
+        <div className={s.posterGrid} aria-busy="true" aria-label="Loading library">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className={s.skeletonTile} aria-hidden="true" />
+          ))}
+        </div>
       )}
 
       {!loading && titles.length === 0 && (

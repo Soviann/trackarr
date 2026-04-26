@@ -55,6 +55,14 @@ export function ContinueWatching(_props: { path?: string }) {
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
+      {items === null && (
+        <div className={s.grid} aria-busy="true" aria-label="Loading continue watching">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className={s.skeletonTile} aria-hidden="true" />
+          ))}
+        </div>
+      )}
+
       {items && items.length === 0 && (
         <div className={s.empty}>Nothing in progress.</div>
       )}

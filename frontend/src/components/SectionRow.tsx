@@ -3,31 +3,46 @@ import type { Title } from '../types'
 
 interface SectionRowProps {
   label: string
-  subText: string
-  posters: Pick<Title, 'id' | 'cover_url' | 'type'>[]
+  subText?: string
+  posters?: Pick<Title, 'id' | 'cover_url' | 'type'>[]
   onClick: () => void
+  /** When true, shows skeleton placeholders for subText and peek posters. */
+  loading?: boolean
 }
 
-export function SectionRow({ label, subText, posters, onClick }: SectionRowProps) {
-  const peek = posters.slice(0, 3)
+const PEEK_PLACEHOLDERS = [0, 1, 2]
+
+export function SectionRow({ label, subText, posters, onClick, loading }: SectionRowProps) {
+  const peek = posters?.slice(0, 3) ?? []
   return (
-    <button type="button" className={s.row} onClick={onClick}>
+    <button type="button" className={s.row} onClick={onClick} aria-busy={loading || undefined}>
       <div className={s.text}>
         <div className={s.label}>{label}</div>
-        <div className={s.sub}>{subText}</div>
+        {loading
+          ? <div className={`${s.sub} ${s.subSkeleton}`} aria-hidden="true" />
+          : <div className={s.sub}>{subText}</div>}
       </div>
       <div className={s.peek}>
-        {peek.map((p, i) => (
-          <div
-            key={p.id}
-            className={s.miniPoster}
-            style={{
-              backgroundImage: p.cover_url ? `url(/api/covers/${p.cover_url})` : undefined,
-              transform: `translateX(${i * -8}px)`,
-              zIndex: peek.length - i,
-            }}
-          />
-        ))}
+        {loading
+          ? PEEK_PLACEHOLDERS.map(i => (
+              <div
+                key={i}
+                className={`${s.miniPoster} ${s.miniPosterSkeleton}`}
+                style={{ transform: `translateX(${i * -8}px)`, zIndex: PEEK_PLACEHOLDERS.length - i }}
+                aria-hidden="true"
+              />
+            ))
+          : peek.map((p, i) => (
+              <div
+                key={p.id}
+                className={s.miniPoster}
+                style={{
+                  backgroundImage: p.cover_url ? `url(/api/covers/${p.cover_url})` : undefined,
+                  transform: `translateX(${i * -8}px)`,
+                  zIndex: peek.length - i,
+                }}
+              />
+            ))}
       </div>
       <svg className={s.chev} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6" />
