@@ -118,29 +118,36 @@
   margin-left: 2px;
 }
 
-.select {
-  font-size: 9px;
-  padding: 3px 6px;
-  border-radius: 10px;
-  border: none;
+.select,
+.dateInput {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  height: 30px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--color-border-subtle);
   background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  font-family: inherit;
+  color: var(--ink);
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
   -webkit-appearance: none;
   appearance: none;
 }
 
 .dateInput {
-  font-size: 9px;
-  padding: 3px 6px;
-  border-radius: 10px;
-  border: none;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  font-family: inherit;
   min-width: 0;
   flex: 1;
+}
+
+.select:focus,
+.dateInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--accent-wash);
 }
 
 .dateInput::-webkit-calendar-picker-indicator {
@@ -151,16 +158,19 @@
 .toggleLabel {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  color: var(--color-text-muted);
+  gap: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
   cursor: pointer;
 }
 
 .toggleLabel input[type="checkbox"] {
   width: 12px;
   height: 12px;
-  accent-color: var(--color-accent-teal);
+  accent-color: var(--accent);
 }
 
 .bottomPad {
