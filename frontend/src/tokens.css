@@ -1,38 +1,34 @@
 :root {
-  /* Colors — backgrounds */
-  --color-bg-primary: #0D0D0D;
-  --color-bg-card: #161616;
-  --color-bg-surface: #1E1E1E;
+  /* Backgrounds — warm near-black */
+  --bg: #1a1714;
+  --bg-elev: #25201a;
+  --bg-elev2: #312a22;
 
-  /* Colors — borders */
-  --color-border-subtle: #1A1A1A;
-  --color-border-card: #222222;
+  /* Text — warm cream */
+  --ink: #ebe5d9;
+  --ink-dim: #a09484;
+  --ink-mute: #6a5e50;
 
-  /* Colors — text */
-  --color-text-primary: #F0F0F0;
-  --color-text-secondary: #E0E0E0;
-  --color-text-muted: #D0D0D0;
-  --color-text-dimmed: #C0C0C0;
+  /* Borders */
+  --border: #2c2620;
+  --border-strong: #3a3127;
 
-  /* Colors — accents */
-  --color-accent-amber: #E8A925;
-  --color-accent-teal: #38BDB0;
-  --color-accent-green: #4CAF50;
-  --color-accent-lavender: #00F2FF;
-  --color-accent-coral: #EB5757;
-  --color-accent-blue: #5B9CF6;
-  --color-accent-imdb: #F5C518;
-  --color-accent-anilist: #02A9FF;
+  /* Accent — Vault default (aged paper / warm tan) */
+  --accent: #d4ad7a;
+  --accent-wash: rgba(212, 173, 122, 0.10);
+  --accent-dim: #7a6044;
 
-  /* Wash variants (~12% opacity) */
-  --wash-amber: #E8A9251F;
-  --wash-teal: #38BDB01F;
-  --wash-green: #4CAF501F;
-  --wash-coral: #EB57571F;
-  --wash-blue: #5B9CF61F;
-  --wash-lavender: #00F2FF1F;
+  /* Brand-only — for dedicated badges/logos, never decorative */
+  --brand-imdb: #F5C518;
+  --brand-tmdb: #01b4e4;
+  --brand-anilist: #02A9FF;
 
-  /* Spacing */
+  /* Functional status colors (badges only) */
+  --status-ok: #4CAF50;
+  --status-warn: #E8A925;
+  --status-crit: #EB5757;
+
+  /* Spacing (unchanged scale) */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
@@ -40,16 +36,52 @@
   --space-xl: 24px;
   --space-xxl: 32px;
 
-  /* Border radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
+  /* Radii — Vault (Cinéthèque-style rounding) */
+  --radius-card: 14px;
+  --radius-poster: 10px;
+  --radius-pill: 999px;
+  --radius-drawer: 22px;
+  --radius-button: 12px;
 
-  /* Font sizes */
+  /* Font sizes (unchanged scale) */
   --font-size-xs: 11px;
   --font-size-sm: 13px;
   --font-size-md: 15px;
   --font-size-lg: 18px;
   --font-size-xl: 22px;
+
+  /* Font families */
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+
+  /* ── Legacy shims kept ONLY to not crash existing styles during sweep ── */
+  /* Every CSS module that consumes these MUST be migrated, but the page
+     should still render meanwhile. Removed in Phase 8 task 8.3. */
+  --color-bg-primary: var(--bg);
+  --color-bg-card: var(--bg-elev);
+  --color-bg-surface: var(--bg-elev2);
+  --color-border-subtle: var(--border);
+  --color-border-card: var(--border-strong);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink);
+  --color-text-muted: var(--ink-dim);
+  --color-text-dimmed: var(--ink-mute);
+  --color-accent-amber: var(--accent);
+  --color-accent-teal: var(--accent);
+  --color-accent-green: var(--status-ok);
+  --color-accent-lavender: var(--accent);
+  --color-accent-coral: var(--status-crit);
+  --color-accent-blue: var(--accent);
+  --color-accent-imdb: var(--brand-imdb);
+  --color-accent-anilist: var(--brand-anilist);
+  --wash-amber: var(--accent-wash);
+  --wash-teal: var(--accent-wash);
+  --wash-green: var(--accent-wash);
+  --wash-coral: var(--accent-wash);
+  --wash-blue: var(--accent-wash);
+  --wash-lavender: var(--accent-wash);
+  --radius-sm: 8px;
+  --radius-md: var(--radius-button);
+  --radius-lg: var(--radius-card);
+  --radius-full: var(--radius-pill);
 }
