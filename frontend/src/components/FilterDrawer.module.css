@@ -1,4 +1,7 @@
 .container {
+  background: var(--bg-elev);
+  border-radius: var(--radius-drawer) var(--radius-drawer) 0 0;
+  overflow: hidden;
   transition: transform 0.2s ease-out;
 }
 
@@ -6,31 +9,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 0 4px;
+  gap: var(--space-sm);
+  padding: 10px 0 6px;
   cursor: pointer;
-  border-top: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-primary);
   -webkit-tap-highlight-color: transparent;
 }
 
 .handleBar {
-  width: 28px;
-  height: 3px;
+  width: 32px;
+  height: 4px;
   border-radius: 2px;
-  background: #888;
+  background: var(--ink-mute);
 }
 
 .handleText {
-  font-size: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-dimmed);
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
 }
 
 .chevron {
-  font-size: 8px;
-  color: var(--color-text-dimmed);
+  font-size: 9px;
+  color: var(--ink-mute);
   transition: transform 0.2s;
 }
 
@@ -57,7 +59,6 @@
 
 .drawer {
   overflow: hidden;
-  background: var(--color-bg-primary);
   transition: max-height 0.25s ease, opacity 0.2s ease;
 }
 
@@ -98,11 +99,11 @@
   letter-spacing: 0.08em;
   padding: 5px 10px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--border);
   white-space: nowrap;
   cursor: pointer;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -129,8 +130,8 @@
   height: 30px;
   padding: 0 var(--space-sm);
   border-radius: var(--radius-button);
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-surface);
+  border: 1px solid var(--border);
+  background: var(--bg-elev2);
   color: var(--ink);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -192,9 +193,9 @@
   letter-spacing: 0.08em;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
+  border: 1px solid var(--border);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -233,8 +234,8 @@
   gap: var(--space-xs);
   padding: 5px 8px;
   border-radius: var(--radius-button);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
   min-height: 32px;
   cursor: text;
   transition: border-color 0.15s;
