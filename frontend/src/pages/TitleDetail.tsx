@@ -143,6 +143,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   return (
     <div className={s.page} style={accentStyle}>
       {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
+      {title.cover_url && (
+        <div
+          className={s.heroBleed}
+          style={{ backgroundImage: `url(/api/covers/${title.cover_url})` }}
+        />
+      )}
       {/* Hero — pure visual */}
       <div
         className={s.hero}

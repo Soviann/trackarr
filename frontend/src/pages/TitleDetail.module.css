@@ -1,5 +1,6 @@
 .page {
   padding-bottom: 140px; /* space for drawer + navbar */
+  position: relative;
 }
 
 .loading {
@@ -8,12 +9,31 @@
   color: var(--color-text-secondary);
 }
 
+/* Atmospheric backdrop bleed behind hero + identity zone — peaks below the hero so the
+   crisp cover stays untouched and the identity zone gets a soft warm halo. */
+.heroBleed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 420px;
+  background-size: cover;
+  background-position: center top;
+  filter: blur(50px);
+  opacity: 0.18;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 55%, black 75%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 55%, black 75%, transparent 100%);
+  z-index: 0;
+}
+
 /* Hero — pure visual, no text */
 .hero {
   position: relative;
   height: 260px;
   display: flex;
   align-items: flex-end;
+  z-index: 1;
 }
 
 .heroFade {
@@ -106,9 +126,11 @@
 .card {
   margin: 10px var(--space-lg);
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   padding: var(--space-md) 14px;
   border: 1px solid var(--color-border-subtle);
+  position: relative;
+  z-index: 1;
 }
 
 .cardLabel {
