@@ -179,7 +179,7 @@ export function AdminTasks({ path }: { path?: string }) {
               </svg>
             </button>
             <h1 className={s.title}>
-              Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--color-text-secondary)', marginLeft: '8px'}}>({total})</span>
+              Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--ink)', marginLeft: '8px'}}>({total})</span>
             </h1>
           </div>
           <button 

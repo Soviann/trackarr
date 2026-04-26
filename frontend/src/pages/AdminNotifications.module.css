@@ -25,13 +25,13 @@
 .title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin: 0;
 }
 
 .loading {
   padding: var(--space-xl);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   text-align: center;
 }
 
@@ -47,9 +47,9 @@
   justify-content: space-between;
   gap: var(--space-lg);
   padding: var(--space-lg);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
 }
 
 .itemInfo {
@@ -60,12 +60,12 @@
 .itemLabel {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .itemDesc {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
@@ -83,11 +83,11 @@
 }
 
 .toggleOn {
-  background: var(--color-accent-teal);
+  background: var(--accent);
 }
 
 .toggleOff {
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
 }
 
 .toggleOn:disabled, .toggleOff:disabled {

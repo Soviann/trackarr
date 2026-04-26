@@ -25,13 +25,13 @@
 .title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin: 0;
 }
 
 .loading {
   padding: var(--space-xl);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   text-align: center;
 }
 
@@ -47,9 +47,9 @@
   justify-content: space-between;
   gap: var(--space-lg);
   padding: var(--space-lg);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
 }
 
 .itemInfo {
@@ -60,12 +60,12 @@
 .itemLabel {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .itemDesc {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
@@ -74,18 +74,18 @@
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
 .statusOn {
-  color: var(--color-accent-anilist);
+  color: var(--brand-anilist);
   background: rgba(2, 169, 255, 0.12);
 }
 
 .statusOff {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-surface);
+  color: var(--ink);
+  background: var(--bg-elev2);
 }
 
 .actions {
@@ -102,7 +102,7 @@
   height: 44px;
   padding: 0 var(--space-lg);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -110,14 +110,14 @@
 }
 
 .primaryBtn {
-  background: var(--color-accent-anilist);
+  background: var(--brand-anilist);
   color: #fff;
 }
 
 .dangerBtn {
-  background: var(--color-bg-surface);
-  color: var(--color-accent-coral);
-  border: 1px solid var(--color-border-card);
+  background: var(--bg-elev2);
+  color: var(--status-crit);
+  border: 1px solid var(--border-strong);
 }
 
 .primaryBtn:disabled,
@@ -126,7 +126,6 @@
   cursor: not-allowed;
 }
 
-/* TODO: introduce a semantic --color-error token in tokens.css; reusing --color-accent-coral for now. */
 .reconnectBanner {
   display: flex;
   align-items: center;
@@ -134,23 +133,23 @@
   gap: var(--space-lg);
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
-  background: var(--wash-coral);
-  border: 1px solid var(--color-accent-coral);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
+  background: var(--accent-wash);
+  border: 1px solid var(--status-crit);
+  border-radius: var(--radius-button);
+  color: var(--ink);
 }
 
 .reconnectBanner strong {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-accent-coral);
+  color: var(--status-crit);
 }
 
 .reconnectBanner p {
   margin: 4px 0 0;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
 }
 
 .reconnectButton {
@@ -159,8 +158,8 @@
   justify-content: center;
   height: 40px;
   padding: 0 var(--space-lg);
-  border-radius: var(--radius-md);
-  background: var(--color-accent-coral);
+  border-radius: var(--radius-button);
+  background: var(--status-crit);
   color: #fff;
   font-size: 14px;
   font-weight: 600;

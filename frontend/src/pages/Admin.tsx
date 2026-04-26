@@ -17,7 +17,7 @@ const cards = [
     label: 'Validations',
     description: 'Titles pending validation',
     path: '/admin/validate',
-    color: colors.accentAmber,
+    color: colors.accent,
     countKey: 'pending_validations' as const,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -31,7 +31,7 @@ const cards = [
     label: 'Tasks',
     description: 'Queue and errors',
     path: '/admin/tasks',
-    color: colors.accentCoral,
+    color: colors.statusCrit,
     countKey: 'dead_tasks' as const,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -44,7 +44,7 @@ const cards = [
     label: 'Notifications',
     description: 'Manage preferences',
     path: '/admin/notifications',
-    color: colors.accentBlue,
+    color: colors.accent,
     countKey: null,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -58,7 +58,7 @@ const cards = [
     label: 'AniList',
     description: 'Connection & sync status',
     path: '/admin/anilist',
-    color: colors.accentAnilist,
+    color: colors.brandAnilist,
     countKey: null,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -72,7 +72,7 @@ const cards = [
     label: 'Help',
     description: 'How does this app work?',
     path: '/admin/help',
-    color: colors.accentLavender,
+    color: colors.accent,
     countKey: null,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

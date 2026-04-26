@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-primary);
+  background: var(--bg);
   padding: var(--space-xxl);
 }
 
@@ -23,12 +23,12 @@
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .subtitle {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 6px;
 }
 
@@ -46,22 +46,22 @@
 
 .devLabel {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   text-align: center;
 }
 
 .devInput {
   padding: var(--space-sm) var(--space-md);
   border-radius: 8px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev);
+  color: var(--ink);
   font-size: var(--font-size-sm);
 }
 
 .devError {
   font-size: var(--font-size-xs);
-  color: #e74c3c;
+  color: var(--status-crit);
   text-align: center;
 }
 
@@ -69,7 +69,7 @@
   padding: var(--space-sm) var(--space-md);
   border-radius: 8px;
   border: none;
-  background: var(--color-accent-amber);
+  background: var(--accent);
   color: #000;
   font-weight: 600;
   font-size: var(--font-size-sm);
@@ -78,7 +78,7 @@
 
 .footer {
   font-size: var(--font-size-xs);
-  color: var(--color-text-dimmed);
+  color: var(--ink-mute);
   margin-top: var(--space-lg);
   text-align: center;
 }

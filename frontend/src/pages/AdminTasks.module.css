@@ -31,7 +31,7 @@
 .title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin: 0;
 }
 
@@ -42,11 +42,11 @@
 }
 
 .filterBtn {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  color: var(--color-text-secondary);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   padding: 6px 14px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -54,24 +54,24 @@
 }
 
 .filterBtn[data-active="true"] {
-  background: var(--color-accent-teal);
+  background: var(--accent);
   color: #000;
   border-color: transparent;
 }
 
 .selectToggleBtn {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  color: var(--color-text-secondary);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .selectToggleBtn[data-active="true"] {
-  background: var(--color-accent-amber);
+  background: var(--accent);
   color: #000;
   border-color: transparent;
 }
@@ -85,10 +85,10 @@
 
 .selectionBtn {
   background: transparent;
-  border: 1px solid var(--color-border-card);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -96,7 +96,7 @@
 
 .loading, .empty {
   padding: var(--space-xl);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   text-align: center;
   font-size: 14px;
 }
@@ -109,9 +109,9 @@
 }
 
 .taskCard {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   padding: var(--space-md);
   display: flex;
   gap: var(--space-md);
@@ -121,8 +121,8 @@
 }
 
 .taskCardSelected {
-  border-color: var(--color-accent-teal);
-  background: rgba(56, 189, 176, 0.05);
+  border-color: var(--accent);
+  background: var(--accent-wash);
 }
 
 .checkboxContainer {
@@ -133,18 +133,18 @@
 .customCheckbox {
   width: 22px;
   height: 22px;
-  border: 2px solid var(--color-text-dimmed);
+  border: 2px solid var(--ink-mute);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  background: var(--color-bg-surface);
+  background: var(--bg-elev2);
 }
 
 .customCheckboxChecked {
-  background: var(--color-accent-teal);
-  border-color: var(--color-accent-teal);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .taskContent {
@@ -161,7 +161,7 @@
 
 .taskType {
   font-size: 10px;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -170,7 +170,7 @@
 .badgePending {
   font-size: 10px;
   background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text-secondary);
+  color: var(--ink);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -178,8 +178,8 @@
 
 .badgeDead {
   font-size: 10px;
-  background: rgba(255, 107, 107, 0.15);
-  color: var(--color-accent-coral);
+  background: var(--accent-wash);
+  color: var(--status-crit);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -188,18 +188,18 @@
 .taskTitle {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .taskMeta {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 4px;
 }
 
 .taskError {
   font-size: 11px;
-  color: var(--color-accent-coral);
+  color: var(--status-crit);
   margin-top: 4px;
   word-break: break-word;
 }
@@ -212,7 +212,7 @@
 
 .retryBtn, .deleteBtn {
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -220,7 +220,7 @@
 }
 
 .retryBtn {
-  background: var(--color-accent-teal);
+  background: var(--accent);
   color: #000;
 }
 
@@ -231,8 +231,8 @@
 
 .deleteBtn {
   background: transparent;
-  color: var(--color-text-secondary);
-  border-color: var(--color-border-card);
+  color: var(--ink);
+  border-color: var(--border-strong);
 }
 
 .actionBar {
@@ -241,9 +241,8 @@
   left: 0;
   right: 0;
   height: 72px;
-  background: #1E1E1E; /* Solid surface color fallback */
-  background-color: var(--color-bg-surface);
-  border-top: 1px solid var(--color-border-card);
+  background: var(--bg-elev2);
+  border-top: 1px solid var(--border-strong);
   padding: 0 var(--space-lg);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   display: flex;
@@ -256,15 +255,15 @@
 .actionText {
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--ink);
 }
 
 .batchDeleteBtn {
-  background: var(--color-accent-coral);
+  background: var(--status-crit);
   color: #fff;
   border: none;
   padding: 10px 20px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-button);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;

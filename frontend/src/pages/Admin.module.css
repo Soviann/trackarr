@@ -5,7 +5,7 @@
 .title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ink);
   margin: 0 0 var(--space-xl);
 }
 
@@ -20,9 +20,9 @@
   align-items: center;
   gap: var(--space-lg);
   padding: var(--space-lg);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   cursor: pointer;
   text-align: left;
   width: 100%;
@@ -47,7 +47,7 @@
 .cardLabel {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -55,7 +55,7 @@
 
 .cardDesc {
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
 
@@ -75,7 +75,7 @@
 
 .cardArrow {
   flex-shrink: 0;
-  color: var(--color-text-muted);
+  color: var(--ink-dim);
 }
 
 .actions {
@@ -90,9 +90,9 @@
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
   cursor: pointer;
   width: 100%;
   text-align: left;
@@ -106,18 +106,18 @@
 
 .actionIcon {
   flex-shrink: 0;
-  color: var(--color-accent-teal);
+  color: var(--accent);
   display: flex;
 }
 
 .actionLabel {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ink);
 }
 
 .actionDesc {
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--ink);
   margin-top: 2px;
 }
