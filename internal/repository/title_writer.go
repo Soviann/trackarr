@@ -148,6 +148,10 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `next_air_episode = ?`)
 		args = append(args, *update.NextAirEpisode)
 	}
+	if update.AccentHex != nil {
+		sets = append(sets, `accent_hex = ?`)
+		args = append(args, *update.AccentHex)
+	}
 
 	if len(sets) == 0 {
 		return nil

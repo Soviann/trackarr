@@ -65,6 +65,7 @@ type Title struct {
 	FirstWatchedAt    *time.Time    `json:"first_watched_at,omitempty"`
 	LastWatchedAt     *time.Time    `json:"last_watched_at,omitempty"`
 	LastRefreshedAt   *time.Time    `json:"last_refreshed_at,omitempty"`
+	AccentHex         *string       `json:"accent_hex,omitempty"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`
 
