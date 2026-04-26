@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import clsx from 'clsx'
 import type { TitleStatus, TitleType, SeriesStatus, GenreCount } from '../types'
 import type { SortField, SortOrder, SortState } from '../store'
-import { colors, accentWash } from '../theme'
 import { apiFetch } from '../api'
 import s from './FilterDrawer.module.css'
 
@@ -39,19 +38,19 @@ interface FilterDrawerProps {
   onGenreOpChange: (op: 'AND' | 'OR') => void
 }
 
-const statusFilters: { id: StatusFilter; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.accentTeal },
-  { id: 'plan_to_watch', label: 'Plan', color: colors.accentLavender },
-  { id: 'watching', label: 'Watching', color: colors.accentAmber },
-  { id: 'up_to_date', label: 'Caught up', color: colors.accentBlue },
-  { id: 'completed', label: 'Completed', color: colors.accentGreen },
-  { id: 'dropped', label: 'Dropped', color: colors.accentCoral },
+const statusFilters: { id: StatusFilter; label: string }[] = [
+  { id: null, label: 'All' },
+  { id: 'plan_to_watch', label: 'Plan' },
+  { id: 'watching', label: 'Watching' },
+  { id: 'up_to_date', label: 'Caught up' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'dropped', label: 'Dropped' },
 ]
 
-const typeFilters: { id: TypeFilter; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.accentTeal },
-  { id: 'movie', label: 'Movie', color: colors.accentAmber },
-  { id: 'series', label: 'Series', color: colors.accentLavender },
+const typeFilters: { id: TypeFilter; label: string }[] = [
+  { id: null, label: 'All' },
+  { id: 'movie', label: 'Movie' },
+  { id: 'series', label: 'Series' },
 ]
 
 const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[] = [
@@ -63,12 +62,12 @@ const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[
   { field: 'last_watched_at', label: 'Last watched', defaultOrder: 'desc' },
 ]
 
-const seriesStatusFilters: { id: SeriesStatusFilter; label: string; color: string }[] = [
-  { id: null, label: 'All', color: colors.accentTeal },
-  { id: 'returning', label: 'Returning', color: colors.accentGreen },
-  { id: 'ended', label: 'Ended', color: colors.textSecondary },
-  { id: 'cancelled', label: 'Cancelled', color: colors.accentCoral },
-  { id: 'in_production', label: 'In prod.', color: colors.accentTeal },
+const seriesStatusFilters: { id: SeriesStatusFilter; label: string }[] = [
+  { id: null, label: 'All' },
+  { id: 'returning', label: 'Returning' },
+  { id: 'ended', label: 'Ended' },
+  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'in_production', label: 'In prod.' },
 ]
 
 const decadeOptions = [
@@ -79,14 +78,13 @@ const decadeOptions = [
 ]
 
 function Chip<T>({ filter, active, onClick }: {
-  filter: { id: T; label: string; color: string }
+  filter: { id: T; label: string }
   active: boolean
   onClick: () => void
 }) {
   return (
     <button
       className={clsx(s.chip, active && s.chipActive)}
-      style={active ? { background: accentWash(filter.color), color: filter.color } : undefined}
       onClick={onClick}
     >
       {filter.label}
@@ -167,32 +165,32 @@ export function FilterDrawer({
     }
   }
 
-  // Build active tags for collapsed state
-  const activeTags: { label: string; color: string }[] = []
+  // Build active tags for collapsed state — single tan accent across all tags
+  const activeTags: string[] = []
   const activeSort = sortOptions.find((o) => o.field === sort.field)
   if (!isSearchActive && activeSort && sort.field !== 'release_date') {
-    activeTags.push({ label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`, color: colors.accentTeal })
+    activeTags.push(`${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`)
   }
   const activeStatus = statusFilters.find((f) => f.id === status)
-  if (status !== null) activeTags.push({ label: activeStatus?.label ?? '', color: activeStatus?.color ?? '' })
-  if (isAnime) activeTags.push({ label: 'Anime', color: colors.accentAnilist })
+  if (status !== null && activeStatus) activeTags.push(activeStatus.label)
+  if (isAnime) activeTags.push('Anime')
   const activeType = typeFilters.find((f) => f.id === type)
-  if (type !== null) activeTags.push({ label: activeType?.label ?? '', color: activeType?.color ?? '' })
+  if (type !== null && activeType) activeTags.push(activeType.label)
   if (showSeriesStatus && seriesStatus !== null) {
     const activeSeries = seriesStatusFilters.find((f) => f.id === seriesStatus)
-    activeTags.push({ label: activeSeries?.label ?? '', color: activeSeries?.color ?? '' })
+    if (activeSeries) activeTags.push(activeSeries.label)
   }
   if (decade) {
-    const decadeLabel = decadeOptions.find((o) => o.value === decade)?.label ?? decade
-    activeTags.push({ label: decadeLabel, color: colors.accentTeal })
+    activeTags.push(decadeOptions.find((o) => o.value === decade)?.label ?? decade)
   } else if (releaseFrom || releaseTo) {
-    const tag = releaseFrom && releaseTo
-      ? `${releaseFrom.slice(0, 7)} → ${releaseTo.slice(0, 7)}`
-      : releaseFrom ? `≥ ${releaseFrom}` : `≤ ${releaseTo}`
-    activeTags.push({ label: tag, color: colors.accentTeal })
+    activeTags.push(
+      releaseFrom && releaseTo
+        ? `${releaseFrom.slice(0, 7)} → ${releaseTo.slice(0, 7)}`
+        : releaseFrom ? `≥ ${releaseFrom}` : `≤ ${releaseTo}`,
+    )
   }
   if (selectedGenres.length > 0) {
-    activeTags.push({ label: `${selectedGenres.length} genre${selectedGenres.length > 1 ? 's' : ''}`, color: colors.accentLavender })
+    activeTags.push(`${selectedGenres.length} genre${selectedGenres.length > 1 ? 's' : ''}`)
   }
 
   return (
@@ -211,13 +209,7 @@ export function FilterDrawer({
         {!open && activeTags.length > 0 && (
           <div className={s.activeTags}>
             {activeTags.map((tag) => (
-              <span
-                key={tag.label}
-                className={s.activeTag}
-                style={{ background: accentWash(tag.color), color: tag.color }}
-              >
-                {tag.label}
-              </span>
+              <span key={tag} className={s.activeTag}>{tag}</span>
             ))}
           </div>
         )}
@@ -235,7 +227,6 @@ export function FilterDrawer({
                   <button
                     key={opt.field}
                     className={clsx(s.chip, active && s.chipActive)}
-                    style={active ? { background: accentWash(colors.accentTeal), color: colors.accentTeal } : undefined}
                     onClick={() => handleSortClick(opt)}
                   >
                     {opt.label}
@@ -263,7 +254,7 @@ export function FilterDrawer({
             <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
           ))}
           <Chip
-            filter={{ id: true, label: 'Anime', color: colors.accentAnilist }}
+            filter={{ id: true, label: 'Anime' }}
             active={isAnime}
             onClick={() => onIsAnimeChange(!isAnime)}
           />
