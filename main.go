@@ -14,7 +14,7 @@ var distFS embed.FS
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: plextracker <serve|import|migrate>")
+		fmt.Println("Usage: plextracker <serve|import|migrate|backfill-accents>")
 		os.Exit(1)
 	}
 
@@ -26,6 +26,8 @@ func main() {
 		err = cmd.Import(os.Args[2:])
 	case "migrate":
 		fmt.Println("Migrate not yet implemented")
+	case "backfill-accents":
+		err = cmd.BackfillAccents(os.Args[2:])
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
 		os.Exit(1)

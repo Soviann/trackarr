@@ -6,7 +6,7 @@ DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
 .PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate
-.PHONY: import import-dry db-reset
+.PHONY: import import-dry db-reset backfill-accents
 .PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-logs
 
 # SSH helper: sources NAS_* from .env.local and runs a command over SSH
@@ -60,6 +60,9 @@ import: ## Import Simkl backup locally (BACKUP_FILE=path)
 
 import-dry: ## Dry-run Simkl import locally (BACKUP_FILE=path)
 	$(EXEC) ./tmp/plextracker import --dry-run $(BACKUP_FILE)
+
+backfill-accents: ## Backfill accent_hex sur tous les titres avec cover (idempotent sauf FORCE=1)
+	$(EXEC) ./tmp/plextracker backfill-accents $(if $(FORCE),--force,)
 
 db-reset: ## Reset la BDD locale (supprime + restart pour re-migrer)
 	$(EXEC) sh -c 'rm -f $${DATA_DIR}/plextracker.db'
