@@ -4,8 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -17,16 +21,25 @@ import (
 const deleteTasksBatchMaxIDs = 1000
 
 type AdminHandler struct {
-	serverCtx context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
-	writeDB   *sql.DB
-	tasks     *repository.TaskRepository
-	titles    *repository.TitleRepository
-	settings  *repository.SettingRepository
-	bgSvc     *service.BackgroundService
+	serverCtx  context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
+	writeDB    *sql.DB
+	tasks      *repository.TaskRepository
+	titles     *repository.TitleRepository
+	settings   *repository.SettingRepository
+	bgSvc      *service.BackgroundService
+	shutdownWG *sync.WaitGroup // optional — joined on shutdown so RefreshAll goroutine can finish
 }
 
 func NewAdminHandler(serverCtx context.Context, writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
 	return &AdminHandler{serverCtx: serverCtx, writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
+}
+
+// SetShutdownWG registers a WaitGroup that RefreshAll goroutines increment on
+// dispatch and decrement on completion. cmd/serve.go waits on the same WG
+// before closing the database, so the bulk refresh can finish in-flight writes
+// instead of being killed mid-transaction.
+func (h *AdminHandler) SetShutdownWG(wg *sync.WaitGroup) {
+	h.shutdownWG = wg
 }
 
 // Counts returns aggregate counts for the admin hub badges.
@@ -174,12 +187,36 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 }
 
 // RefreshAll triggers a background refresh on all titles (including completed/dropped).
+//
+// Intentional fire-and-forget: 202 Accepted. Mirrors TitleHandler.RefreshOne —
+// parent ctx is the server lifecycle so SIGTERM cancels the goroutine, the
+// shutdown WG ensures Serve() waits for in-flight writes before closing the
+// database, and a recover() prevents a TMDB-side panic from killing the goroutine
+// silently. The 30-minute cap is generous for libraries up to a few thousand
+// titles given the shared 2 rps API limiter; overrunning means the admin can
+// re-trigger after investigation.
 func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error {
 	if h.bgSvc == nil {
 		return httputil.InternalError("refresh all", fmt.Errorf("background service not available"))
 	}
 
-	go h.bgSvc.RefreshAllTitles(h.serverCtx)
+	ctx, cancel := context.WithTimeout(h.serverCtx, 30*time.Minute)
+	if h.shutdownWG != nil {
+		h.shutdownWG.Add(1)
+	}
+	go func() {
+		if h.shutdownWG != nil {
+			defer h.shutdownWG.Done()
+		}
+		defer cancel()
+		defer func() {
+			if rec := recover(); rec != nil {
+				stack := debug.Stack()
+				log.Printf("admin: refresh all panicked: %v\n%s", rec, stack)
+			}
+		}()
+		h.bgSvc.RefreshAllTitles(ctx)
+	}()
 
 	w.WriteHeader(http.StatusAccepted)
 	return nil
