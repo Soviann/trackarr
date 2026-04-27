@@ -39,14 +39,14 @@
 - Language-specific rules (linters, naming, framework idioms, translation systems, DTO patterns) belong in the PROJECT block.
 
 ## Git
-- All commits go through `/commit` (`.claude/skills/commit/SKILL.md`) — the skill owns format, splitting, and safety checks.
+- All commits go through `/commit` (commit-conventions plugin from soviann-tools) — the skill owns format, splitting, and safety checks.
 - Merges: `--no-ff`
 
 ## Language
 LLM-destined files (CLAUDE.md, SKILL.md, plan/spec files, agent files): English. Everything else (commits, docs/comments, user-facing strings): per project preference (see PROJECT block).
 
 ## Recommended Plugins
-`context7`, `superpowers`, `pr-review-toolkit`, `commit-commands`, `hookify`, `code-simplifier`.
+`soviann-tools/*` (commit-conventions, parsing-decisions, phased-development, session-continuity, soviann-conventions) — default workflow. Plus: `context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`.
 
 <!-- TEMPLATE:END -->
 
