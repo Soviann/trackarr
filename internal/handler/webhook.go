@@ -15,8 +15,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
-	"github.com/nicolasvasse/plextracker/internal/service"
 )
+
+// plexProcessor is the seam between the handler and PlexService — keeps the
+// handler test-stubbable without dragging the full service surface into the
+// test target. *service.PlexService satisfies it.
+type plexProcessor interface {
+	ProcessWebhook(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error
+}
 
 // webhookProcessingTimeout caps how long a single Plex webhook may run.
 // Plex itself retries aggressively and our payloads only touch SQLite + optional
@@ -32,11 +38,11 @@ const webhookProcessingTimeout = 30 * time.Second
 const webhookMaxBodyBytes int64 = 1 << 20
 
 type WebhookHandler struct {
-	plex   *service.PlexService
+	plex   plexProcessor
 	secret string
 }
 
-func NewWebhookHandler(plex *service.PlexService, secret string) *WebhookHandler {
+func NewWebhookHandler(plex plexProcessor, secret string) *WebhookHandler {
 	return &WebhookHandler{plex: plex, secret: secret}
 }
 
