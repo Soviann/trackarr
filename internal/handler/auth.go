@@ -19,6 +19,9 @@ import (
 // indistinguishable from an attack against the login route.
 var googleAuthClient = &http.Client{Timeout: 5 * time.Second}
 
+// googleTokenInfoURL is overridden by tests to point at a httptest.Server.
+var googleTokenInfoURL = "https://oauth2.googleapis.com/tokeninfo"
+
 type AuthHandler struct {
 	jwtSecret    string
 	allowedEmail string
@@ -55,7 +58,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	// Verify Google ID token via Google's tokeninfo endpoint. NewRequestWithContext
 	// ties the upstream call to the HTTP request so a client disconnect aborts
 	// the verify immediately, and googleAuthClient adds a hard 5s timeout on top.
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", body.Credential), nil)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("%s?id_token=%s", googleTokenInfoURL, body.Credential), nil)
 	if err != nil {
 		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
 	}
