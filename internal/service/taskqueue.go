@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand/v2"
 	"path/filepath"
@@ -64,6 +64,7 @@ type AniListPusher interface {
 
 // TaskQueueWorker processes retryable tasks from the queue.
 type TaskQueueWorker struct {
+	log         *slog.Logger
 	tasks       *repository.TaskRepository
 	titles      *repository.TitleRepository
 	pipeline    *matching.Pipeline
@@ -94,6 +95,7 @@ func NewTaskQueueWorker(
 	writeDB *sql.DB,
 ) *TaskQueueWorker {
 	return &TaskQueueWorker{
+		log:      slog.With("worker", "taskqueue"),
 		tasks:    tasks,
 		titles:   titles,
 		pipeline: pipeline,
@@ -153,7 +155,7 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTaskWriter(tx).ResetRunning(ctx)
 	}); err != nil {
-		log.Printf("task queue: reset running tasks: %v", err)
+		w.log.Error("reset running tasks at startup", "err", err)
 	}
 
 	// Log queue state at startup
@@ -164,10 +166,10 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 			total += c
 		}
 		if total > 0 {
-			log.Printf("task queue: %d pending, %d sleeping, %d dead",
-				counts[model.TaskStatusPending]+counts[model.TaskStatusRunning],
-				counts[model.TaskStatusSleeping],
-				counts[model.TaskStatusDead],
+			w.log.Info("queue state at startup",
+				"pending", counts[model.TaskStatusPending]+counts[model.TaskStatusRunning],
+				"sleeping", counts[model.TaskStatusSleeping],
+				"dead", counts[model.TaskStatusDead],
 			)
 		}
 	}
@@ -183,7 +185,7 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("task queue: panic in worker loop: %v", r)
+						w.log.Error("panic in worker loop", "panic", r)
 						time.Sleep(30 * time.Second)
 					}
 				}()
@@ -211,7 +213,7 @@ func (w *TaskQueueWorker) Start(ctx context.Context) {
 func (w *TaskQueueWorker) processDueTasks(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("task queue: panic in processDueTasks: %v", r)
+			w.log.Error("panic in processDueTasks", "panic", r)
 		}
 	}()
 
@@ -225,7 +227,7 @@ func (w *TaskQueueWorker) processDueTasks(ctx context.Context) {
 		tasks, e = repository.NewTaskWriter(tx).FetchDue(ctx, 10)
 		return e
 	}); err != nil {
-		log.Printf("task queue: fetch due: %v", err)
+		w.log.Error("fetch due tasks", "err", err)
 		return
 	}
 
@@ -241,9 +243,13 @@ func (w *TaskQueueWorker) processDueTasks(ctx context.Context) {
 }
 
 func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
+	logger := w.log.With(
+		"taskID", task.ID,
+		"type", task.TaskType,
+	)
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("task queue: panic processing task %d: %v", task.ID, r)
+			logger.Error("panic processing task", "panic", r)
 			_ = database.WithTxContext(context.Background(), w.writeDB, func(tx *sql.Tx) error {
 				return repository.NewTaskWriter(tx).Fail(context.Background(), task.ID, fmt.Sprintf("panic: %v", r), time.Now().Add(time.Hour))
 			})
@@ -254,17 +260,17 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 
 	switch task.TaskType {
 	case model.TaskTypeEnrichment:
-		err = w.handleEnrichment(ctx, task)
+		err = w.handleEnrichment(ctx, task, logger)
 	case model.TaskTypeRefresh:
-		err = w.handleRefresh(ctx, task)
+		err = w.handleRefresh(ctx, task, logger)
 	case model.TaskTypeCoverFetch:
-		err = w.handleCoverFetch(ctx, task)
+		err = w.handleCoverFetch(ctx, task, logger)
 	case model.TaskTypeAniListPushSeason:
-		err = w.handleAniListPushSeason(ctx, task)
+		err = w.handleAniListPushSeason(ctx, task, logger)
 	case model.TaskTypeAniListPushMovie:
-		err = w.handleAniListPushMovie(ctx, task)
+		err = w.handleAniListPushMovie(ctx, task, logger)
 	default:
-		log.Printf("task queue: unknown task type %q for task %d", task.TaskType, task.ID)
+		logger.Warn("unknown task type", "taskType", task.TaskType)
 		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_ = database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
 			return repository.NewTaskWriter(tx).Delete(bookkeepCtx, task.ID)
@@ -283,7 +289,7 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 				pauseDuration = retryAfter
 			}
 			w.pausedUntil = time.Now().Add(pauseDuration)
-			log.Printf("task queue: rate limit hit, pausing worker until %s", w.pausedUntil.Format("15:04:05"))
+			logger.Warn("rate limit hit, pausing worker", "until", w.pausedUntil.Format("15:04:05"))
 		}
 
 		nextRunAt := calculateNextRunAt(task.Attempts+1, retryAfter)
@@ -294,13 +300,13 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		if failErr := database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
 			return repository.NewTaskWriter(tx).Fail(bookkeepCtx, task.ID, err.Error(), nextRunAt)
 		}); failErr != nil {
-			log.Printf("task queue: fail task %d: %v", task.ID, failErr)
+			logger.Error("mark task failed", "err", failErr)
 		}
 		cancel()
 
 		// Check if task just died (day 7 + last attempt)
 		if task.Day >= 7 && task.Attempts+1 >= task.MaxAttempts {
-			w.notifyDeadTask(ctx, task)
+			w.notifyDeadTask(ctx, task, logger)
 		}
 
 		return
@@ -311,15 +317,16 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 	if err := database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTaskWriter(tx).Complete(bookkeepCtx, task.ID)
 	}); err != nil {
-		log.Printf("task queue: complete task %d: %v", task.ID, err)
+		logger.Error("mark task complete", "err", err)
 	}
 }
 
-func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task) error {
+func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task, logger *slog.Logger) error {
 	var payload EnrichmentPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode enrichment payload: %w", err)
 	}
+	logger = logger.With("titleID", payload.TitleID)
 
 	if w.pipeline == nil {
 		return fmt.Errorf("pipeline not configured")
@@ -342,7 +349,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 	var genreList []string
 	if result.Genres != "" {
 		if err := json.Unmarshal([]byte(result.Genres), &genreList); err != nil {
-			log.Printf("enrichment: decode genres for title %d: %v", payload.TitleID, err)
+			logger.Warn("decode genres", "err", err)
 			genreList = nil
 		}
 	}
@@ -355,17 +362,17 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 			return err
 		}
 
-		recalcWatchtime(ctx, tx, payload.TitleID, result.Runtime)
+		recalcWatchtime(ctx, tx, logger, payload.TitleID, result.Runtime)
 
 		if len(result.Names) > 0 {
 			if err := titlesTx.ReplaceNames(ctx, payload.TitleID, result.Names); err != nil {
-				log.Printf("enrichment: replace names for title %d: %v", payload.TitleID, err)
+				logger.Warn("replace title names", "err", err)
 			}
 		}
 
 		if len(genreList) > 0 {
 			if err := genresTx.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
-				log.Printf("enrichment: save genres for title %d: %v", payload.TitleID, err)
+				logger.Warn("save genres", "err", err)
 			}
 		}
 
@@ -377,7 +384,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task)
 
 	// Merge runs outside the persistence tx: it opens its own tx and may
 	// delete the source title, so it must not nest inside another writer.
-	if _, err := w.resolveAnimeConflict(ctx, result, payload); err != nil {
+	if _, err := w.resolveAnimeConflict(ctx, result, payload, logger); err != nil {
 		return err
 	}
 
@@ -445,7 +452,7 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 // Runs against the caller's transaction so all enrichment writes commit or
 // roll back as one. Errors are logged and swallowed — watchtime is derived,
 // never authoritative.
-func recalcWatchtime(ctx context.Context, tx *sql.Tx, titleID int64, runtime *int) {
+func recalcWatchtime(ctx context.Context, tx *sql.Tx, logger *slog.Logger, titleID int64, runtime *int) {
 	if runtime == nil {
 		return
 	}
@@ -453,12 +460,12 @@ func recalcWatchtime(ctx context.Context, tx *sql.Tx, titleID int64, runtime *in
 	writer := repository.NewTitleWriter(tx)
 	count, err := events.CountByTitleID(titleID)
 	if err != nil {
-		log.Printf("enrichment: count watch events for title %d: %v", titleID, err)
+		logger.Warn("count watch events", "err", err)
 		return
 	}
 	newTotal := count * *runtime
 	if err := writer.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
-		log.Printf("enrichment: update total_watch_minutes for title %d: %v", titleID, err)
+		logger.Warn("update total_watch_minutes", "err", err)
 	}
 }
 
@@ -466,34 +473,39 @@ func recalcWatchtime(ctx context.Context, tx *sql.Tx, titleID int64, runtime *in
 // identifies an anime that already exists under another local title. Returns
 // merged=true when the source title has been consumed and the caller should
 // stop processing further enrichment writes.
-func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload) (bool, error) {
+func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, logger *slog.Logger) (bool, error) {
 	if result.IMDBID == "" || !result.IsAnime {
 		return false, nil
 	}
 	existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			log.Printf("enrichment: FindByExternalID error: %v", err)
+			logger.Warn("FindByExternalID", "err", err)
 		}
 		return false, nil
 	}
 	if existing == nil || existing.ID == payload.TitleID || existing.Type == model.TitleTypeMovie {
 		return false, nil
 	}
-	log.Printf("enrichment: discovered IMDB conflict (%s). Merging anime %d into %d (%s)", result.IMDBID, payload.TitleID, existing.ID, existing.Type)
+	logger.Info("IMDB conflict, merging anime",
+		"imdbID", result.IMDBID,
+		"intoTitleID", existing.ID,
+		"existingType", existing.Type,
+	)
 	if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, nil); err != nil {
-		log.Printf("enrichment: merge failed: %v", err)
+		logger.Error("merge after IMDB conflict", "err", err)
 		return false, nil
 	}
-	log.Printf("enrichment: successfully merged title %d into %d", payload.TitleID, existing.ID)
+	logger.Info("merged title after IMDB conflict", "intoTitleID", existing.ID)
 	return true, nil
 }
 
-func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) error {
+func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, logger *slog.Logger) error {
 	var payload RefreshPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode refresh payload: %w", err)
 	}
+	logger = logger.With("titleID", payload.TitleID)
 
 	if w.tmdb == nil {
 		return fmt.Errorf("TMDB client not configured")
@@ -541,17 +553,20 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task) er
 
 	// Fallback: AniList cover
 	if title.CoverURL == nil && title.AniListID != nil {
-		w.downloadAniListCover(ctx, title)
+		w.downloadAniListCover(ctx, title, logger)
 	}
 
 	return nil
 }
 
-func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task) error {
+func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task, logger *slog.Logger) error {
 	var payload CoverFetchPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode cover_fetch payload: %w", err)
 	}
+	// logger carries taskID/type and would be enriched with titleID once
+	// handleCoverFetch grows actual log lines.
+	_ = logger
 
 	coversDir := filepath.Join(w.dataDir, "covers")
 
@@ -606,7 +621,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task)
 	return nil
 }
 
-func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model.Title) {
+func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model.Title, logger *slog.Logger) {
 	if w.anilist == nil || title.AniListID == nil {
 		return
 	}
@@ -628,7 +643,7 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 	title.CoverURL = &coverPath
 }
 
-func (w *TaskQueueWorker) handleAniListPushSeason(ctx context.Context, task model.Task) error {
+func (w *TaskQueueWorker) handleAniListPushSeason(ctx context.Context, task model.Task, logger *slog.Logger) error {
 	var payload AniListPushSeasonPayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode anilist_push_season payload: %w", err)
@@ -636,10 +651,13 @@ func (w *TaskQueueWorker) handleAniListPushSeason(ctx context.Context, task mode
 	if w.anilistPush == nil {
 		return fmt.Errorf("anilist push service not configured")
 	}
+	// logger carries taskID/type and would be enriched with seasonID once
+	// PushSeasonState accepts a logger (phase 4+).
+	_ = logger
 	return w.anilistPush.PushSeasonState(ctx, payload.SeasonID)
 }
 
-func (w *TaskQueueWorker) handleAniListPushMovie(ctx context.Context, task model.Task) error {
+func (w *TaskQueueWorker) handleAniListPushMovie(ctx context.Context, task model.Task, logger *slog.Logger) error {
 	var payload AniListPushMoviePayload
 	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 		return fmt.Errorf("decode anilist_push_movie payload: %w", err)
@@ -647,10 +665,11 @@ func (w *TaskQueueWorker) handleAniListPushMovie(ctx context.Context, task model
 	if w.anilistPush == nil {
 		return fmt.Errorf("anilist push service not configured")
 	}
+	_ = logger
 	return w.anilistPush.PushMovieState(ctx, payload.TitleID)
 }
 
-func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task) {
+func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task, logger *slog.Logger) {
 	if !IsNotificationEnabled(w.settings, NotifDeadTask) {
 		return
 	}
@@ -668,7 +687,7 @@ func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task) {
 		fmt.Sprintf("Task failed — Unable to process: %s", titleName),
 		"/admin/tasks",
 	); err != nil {
-		log.Printf("dead-task push failed for task %d: %v", task.ID, err)
+		logger.Error("dead-task push failed", "err", err)
 	}
 }
 
