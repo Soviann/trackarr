@@ -6,7 +6,26 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+/**
+ * Fetch wrapper for backend API calls.
+ *
+ * The `BASE` prefix `/api` is prepended automatically — pass paths like
+ * `/titles/123`, NOT `/api/titles/123` (would produce `/api/api/...` and 404).
+ * A dev-only `console.error` flags violations on first call.
+ *
+ * Use raw `fetch` with the full `/api/...` URL for pre-auth flows (config,
+ * error reporting, OAuth init) — `apiFetch` redirects on 401, which would
+ * loop those callers.
+ */
+export async function apiFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
+  if (import.meta.env.DEV) {
+    if (!path.startsWith('/')) {
+      console.error(`apiFetch: path must start with '/', got "${path}"`)
+    } else if (path.startsWith('/api')) {
+      console.error(`apiFetch: path must NOT start with '/api' (BASE adds it). Got "${path}" — will hit /api/api/... and 404.`)
+    }
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
