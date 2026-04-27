@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -245,4 +249,131 @@ func TestProcessTask_AniListPushSeason_NoPusherFailsTask(t *testing.T) {
 	require.NotNil(t, task.LastError)
 	assert.Contains(t, *task.LastError, "anilist push service not configured",
 		fmt.Sprintf("got: %v", task.LastError))
+}
+
+// newTaskTMDBMock spins a httptest server returning a TV details payload with
+// a poster path and a fake image at /image/{poster}, so the worker exercises
+// the real GetTVDetails → DownloadCover → persist sequence end-to-end.
+func newTaskTMDBMock(t *testing.T, tmdbID int64, posterPath string) *matching.TMDBClient {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		p := posterPath
+		_ = json.NewEncoder(w).Encode(matching.TMDBTVDetails{
+			ID:         tmdbID,
+			Name:       "Test Series",
+			Status:     "Returning Series",
+			PosterPath: &p,
+		})
+	})
+	mux.HandleFunc("/image/", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("fake-image-bytes"))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+	return client
+}
+
+// TestHandleRefresh_TVSeries_PersistsCoverURL covers the SESSION-12 path:
+// a refresh task for a TV title with a TMDB ID and no cover must fetch the
+// poster, write it to the covers dir, and persist titles.cover_url. A
+// regression here is silent — the cover never appears in the UI but no
+// error surfaces in logs.
+func TestHandleRefresh_TVSeries_PersistsCoverURL(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+	tmdbID := int64(1399)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	dataDir := t.TempDir()
+	tmdb := newTaskTMDBMock(t, tmdbID, "/poster.jpg")
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, dataDir)
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, tmdb, nil, nil, nil, dataDir, titleSvc, db)
+	worker.SetCovers(service.NewCoverService(db, titles, tmdb, nil, dataDir))
+
+	raw, err := json.Marshal(service.RefreshPayload{TitleID: titleID})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeRefresh, string(raw), nil)
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+
+	worker.ProcessTask(context.Background(), queued[0])
+
+	got, err := titles.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, got.CoverURL, "TMDB poster must land in titles.cover_url after handleRefresh")
+	assert.Equal(t, "poster.jpg", *got.CoverURL)
+
+	// And the file must actually exist on disk under {dataDir}/covers/.
+	written, err := os.ReadFile(filepath.Join(dataDir, "covers", *got.CoverURL))
+	require.NoError(t, err)
+	assert.Equal(t, "fake-image-bytes", string(written))
+}
+
+// TestHandleCoverFetch_TVSeries_PersistsCoverURL covers the second untested
+// task type. The cover_fetch payload is what `enrichment` enqueues after
+// matching when no cover came down with the metadata, so this path is on the
+// critical "newly added title" timeline.
+func TestHandleCoverFetch_TVSeries_PersistsCoverURL(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+	tmdbID := int64(1399)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	dataDir := t.TempDir()
+	tmdb := newTaskTMDBMock(t, tmdbID, "/cover.jpg")
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, dataDir)
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, tmdb, nil, nil, nil, dataDir, titleSvc, db)
+	worker.SetCovers(service.NewCoverService(db, titles, tmdb, nil, dataDir))
+
+	raw, err := json.Marshal(service.CoverFetchPayload{
+		TitleID:   titleID,
+		TMDBID:    tmdbID,
+		TitleType: model.TitleTypeSeries,
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeCoverFetch, string(raw), nil)
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+
+	worker.ProcessTask(context.Background(), queued[0])
+
+	got, err := titles.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, got.CoverURL, "TMDB poster must land in titles.cover_url after handleCoverFetch")
+	assert.Equal(t, "cover.jpg", *got.CoverURL)
+
+	written, err := os.ReadFile(filepath.Join(dataDir, "covers", *got.CoverURL))
+	require.NoError(t, err)
+	assert.Equal(t, "fake-image-bytes", string(written))
 }
