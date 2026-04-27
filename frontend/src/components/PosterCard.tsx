@@ -4,6 +4,7 @@ import type { ComponentChildren } from 'preact'
 import type { Title } from '../types'
 import { getName, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
+import { routeTo } from '../routes'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
@@ -58,7 +59,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
 
   return (
     <a
-      href={`/title/${title.id}`}
+      href={routeTo.title(title.id)}
       className={cardClass}
       {...longPressHandlers}
       onPointerDown={handlePointerDown}

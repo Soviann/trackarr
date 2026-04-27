@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import { routeTo } from '../routes'
 import s from './AnilistCallback.module.css'
 
 type Status = 'pending' | 'error'
@@ -30,7 +31,7 @@ export function AnilistCallback({ path }: { path?: string }) {
     })
       .then(() => {
         if (cancelled) return
-        route('/admin/anilist', true)
+        route(routeTo.adminAniList(), true)
       })
       .catch((err) => {
         if (cancelled) return
@@ -52,7 +53,7 @@ export function AnilistCallback({ path }: { path?: string }) {
           <>
             <p className={s.title}>Couldn't connect to AniList</p>
             <p className={s.subtitle}>The access token is missing or was rejected.</p>
-            <a href="/admin/anilist" className={s.link}>Try again</a>
+            <a href={routeTo.adminAniList()} className={s.link}>Try again</a>
           </>
         )}
       </div>

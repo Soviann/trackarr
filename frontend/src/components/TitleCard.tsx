@@ -6,6 +6,7 @@ import type { Title } from '../types'
 import { apiFetch } from '../api'
 import { getName, getTypeLabel, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
+import { routeTo } from '../routes'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
@@ -68,7 +69,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
   }
 
   return (
-    <a href={`/title/${title.id}`} onClick={(e) => { e.preventDefault(); route(`/title/${title.id}`) }} className={s.card}>
+    <a href={routeTo.title(title.id)} onClick={(e) => { e.preventDefault(); route(routeTo.title(title.id)) }} className={s.card}>
       {/* Cover */}
       <div
         className={s.cover}

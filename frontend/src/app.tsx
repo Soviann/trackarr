@@ -25,6 +25,7 @@ import { usePush } from './hooks/usePush'
 import { updateBadge } from './utils/badge'
 import { useTitleStore, useSearchStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { ROUTE_PATHS } from './routes'
 import s from './app.module.css'
 import type { TitleStatus, TitleType, SeriesStatus } from './types'
 
@@ -128,23 +129,23 @@ export function App() {
     <ErrorBoundary>
       <div className={clsx(s.root, !hideNavbar && s.withNavbar)}>
         <Router onChange={handleRoute}>
-          <Library path="/" />
-          <ComingUp path="/coming-up" />
-          <ContinueWatching path="/continue-watching" />
-          <Search path="/search" />
-          <Add path="/add" />
-          <Stats path="/stats" />
-          <Login path="/login" />
-          <TitleDetail path="/title/:id" />
-          <PersonTitles path="/person/:name" />
-          <Admin path="/admin" />
-          <Validate path="/admin/validate" />
-          <AdminTasks path="/admin/tasks" />
-          <AdminNotifications path="/admin/notifications" />
-          <AdminAniList path="/admin/anilist" />
-          <Help path="/admin/help" />
-          <AnilistCallback path="/anilist/callback" />
-          <MatchReview path="/match-review" />
+          <Library path={ROUTE_PATHS.home} />
+          <ComingUp path={ROUTE_PATHS.comingUp} />
+          <ContinueWatching path={ROUTE_PATHS.continueWatching} />
+          <Search path={ROUTE_PATHS.search} />
+          <Add path={ROUTE_PATHS.add} />
+          <Stats path={ROUTE_PATHS.stats} />
+          <Login path={ROUTE_PATHS.login} />
+          <TitleDetail path={ROUTE_PATHS.title} />
+          <PersonTitles path={ROUTE_PATHS.person} />
+          <Admin path={ROUTE_PATHS.admin} />
+          <Validate path={ROUTE_PATHS.adminValidate} />
+          <AdminTasks path={ROUTE_PATHS.adminTasks} />
+          <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
+          <AdminAniList path={ROUTE_PATHS.adminAniList} />
+          <Help path={ROUTE_PATHS.adminHelp} />
+          <AnilistCallback path={ROUTE_PATHS.anilistCallback} />
+          <MatchReview path={ROUTE_PATHS.matchReview} />
         </Router>
         {!hideNavbar && (
           <Navbar

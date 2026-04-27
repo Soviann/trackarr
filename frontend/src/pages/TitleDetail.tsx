@@ -15,6 +15,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
+import { routeTo } from '../routes'
 import s from './TitleDetail.module.css'
 
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
@@ -224,7 +225,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 <button
                   type="button"
                   className={s.castPerson}
-                  onClick={() => route('/person/' + encodeURIComponent(c.name))}
+                  onClick={() => route(routeTo.person(c.name))}
                 >
                   {c.name}
                 </button>

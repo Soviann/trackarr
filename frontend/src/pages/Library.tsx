@@ -7,6 +7,7 @@ import { formatWatchtimeShort } from '../utils'
 import type { Title, ContinueWatchingTitle, UpcomingTitle, StatsResponse } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
+import { routeTo } from '../routes'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
@@ -43,7 +44,7 @@ interface MatchReviewBannerProps {
 function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchReviewBannerProps) {
   if (count === 0) return null
   return (
-    <button type="button" onClick={() => route('/match-review')} className={s.bannerWrapper}>
+    <button type="button" onClick={() => route(routeTo.matchReview())} className={s.bannerWrapper}>
       <div className={s.banner}>
         <div className={s.bannerBadge}>
           <span className={s.bannerBadgeText}>{count}</span>
@@ -231,7 +232,7 @@ export function Library(_props: { path?: string }) {
       <div className={s.header}>
         <div className={s.headerTitle}>Library</div>
         <button
-          onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route('/login') }}
+          onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route(routeTo.login()) }}
           className={s.logoutBtn}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -264,7 +265,7 @@ export function Library(_props: { path?: string }) {
               ? `${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`
               : undefined}
             posters={upcoming ?? undefined}
-            onClick={() => route('/coming-up')}
+            onClick={() => route(routeTo.comingUp())}
             loading={upcoming === null}
           />
         )}
@@ -273,7 +274,7 @@ export function Library(_props: { path?: string }) {
             label="// CONTINUE WATCHING"
             subText={continueWatching ? `${continueWatching.length} in progress` : undefined}
             posters={continueWatching ?? undefined}
-            onClick={() => route('/continue-watching')}
+            onClick={() => route(routeTo.continueWatching())}
             loading={continueWatching === null}
           />
         )}

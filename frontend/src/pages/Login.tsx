@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import { routeTo } from '../routes'
 import s from './Login.module.css'
 
 declare global {
@@ -87,7 +88,7 @@ export function Login({ path }: { path?: string }) {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
               })
-              route('/')
+              route(routeTo.home())
             } catch {
               setDevError('Identifiants invalides')
             }
