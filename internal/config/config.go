@@ -63,8 +63,15 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("required env vars: GOOGLE_CLIENT_ID, GOOGLE_ALLOWED_EMAIL, JWT_SECRET")
 	}
 
-	if cfg.JWTSecret == "dev-secret-change-me" && !cfg.DebugLogin {
-		return nil, fmt.Errorf("JWT_SECRET must be changed from default for production use")
+	// JWT_SECRET integrity is required unconditionally. Previously the default-secret
+	// check was gated on !DebugLogin, which meant a deploy that shipped DEBUG_LOGIN=true
+	// (e.g. .env mis-copied) silently accepted "dev-secret-change-me" → trivial token forge.
+	// 32 bytes is the HMAC-SHA256 block size — shorter keys reduce signature strength.
+	if cfg.JWTSecret == "dev-secret-change-me" {
+		return nil, fmt.Errorf("JWT_SECRET must be changed from the default value")
+	}
+	if len(cfg.JWTSecret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters (HMAC-SHA256 strength)")
 	}
 
 	return cfg, nil
