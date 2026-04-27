@@ -159,6 +159,17 @@ Source of truth for routes: `internal/router/router.go`. Read handler files for 
 
 Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. Shared utils in `frontend/src/utils.ts`. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
 
+### API & routing conventions (read before adding any URL literal)
+
+**`apiFetch(path)` and `useApi(path)` automatically prepend `BASE = '/api'`.** The `path` argument MUST start with `/` and MUST NOT start with `/api` — otherwise the URL becomes `/api/api/...` and 404s silently. The `apiFetch` signature enforces this at compile time for string literals (`P extends \`/api${string}\` ? never : P`) and at runtime via a `console.error` in dev. Same for `useApi`.
+
+**Three legitimate raw `fetch('/api/...')` exceptions** (must keep the prefix because they bypass `apiFetch`'s 401-redirect):
+- `app.tsx` and `Login.tsx` — `/api/config` (pre-auth bootstrap)
+- `ErrorBoundary.tsx` — `/api/client-errors` (must report even if app is broken)
+- `AdminAniList.tsx` — `/api/anilist/auth` full-page navigation (OAuth init)
+
+**SPA routes are singular, API routes are plural.** TitleDetail is `/title/:id`, the API is `/api/titles/:id`. Same for any future resource. SPA route literals MUST go through `ROUTE_PATHS` / `routeTo` in `frontend/src/routes.ts` — never inline a path string. `routeTo.title(id)` builds `/title/${id}`, `ROUTE_PATHS.title` is `/title/:id` for `<Route path="...">` registration.
+
 ### Hooks
 
 | Hook | File | Purpose |
