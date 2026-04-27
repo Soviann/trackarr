@@ -189,7 +189,7 @@ function ActivitySection() {
           <div key={date}>
             <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
             {rows.map((row) => (
-              <a key={row.key} href={`/titles/${row.titleId}`} className={s.activityRow}>
+              <a key={row.key} href={`/title/${row.titleId}`} className={s.activityRow}>
                 {row.coverUrl
                   ? <img className={s.activityThumb} src={`/api/covers/${row.coverUrl}`} alt="" role="presentation" />
                   : <div className={s.activityThumbPlaceholder} />}
