@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -43,6 +43,7 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 }
 
 type PlexService struct {
+	log      *slog.Logger
 	ctx      context.Context
 	db       *sql.DB
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
@@ -52,6 +53,7 @@ type PlexService struct {
 
 func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
 	return &PlexService{
+		log:      slog.With("subsystem", "plex"),
 		ctx:      ctx,
 		db:       db,
 		pipeline: pipeline,
@@ -66,20 +68,27 @@ func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline
 // held indefinitely when a downstream I/O call blocks).
 func (s *PlexService) ProcessWebhook(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
 	meta := payload.Metadata
-	log.Printf("plex webhook: event=%s type=%s title=%q season=%d episode=%d ratingKey=%s",
-		payload.Event, meta.Type, meta.Title, meta.ParentIndex, meta.Index, meta.RatingKey)
+	logger := s.log.With("ratingKey", meta.RatingKey)
+
+	logger.Info("webhook received",
+		"event", payload.Event,
+		"mediaType", meta.Type,
+		"title", meta.Title,
+		"season", meta.ParentIndex,
+		"episode", meta.Index,
+	)
 
 	switch payload.Event {
 	case plexwebhooks.EventTypeScrobble:
-		return s.handleScrobble(ctx, payload, rawPayload)
+		return s.handleScrobble(ctx, payload, rawPayload, logger)
 	case plexwebhooks.EventTypePlay:
-		return s.handlePlay(ctx, payload, rawPayload)
+		return s.handlePlay(ctx, payload, rawPayload, logger)
 	default:
 		return nil
 	}
 }
 
-func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
+func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string, logger *slog.Logger) error {
 	meta := payload.Metadata
 	var ids PlexExternalIDs
 	if meta.Type == plexwebhooks.MediaTypeMovie {
@@ -88,9 +97,9 @@ func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.
 
 	switch meta.Type {
 	case plexwebhooks.MediaTypeMovie:
-		return s.processMovie(ctx, meta, ids, rawPayload)
+		return s.processMovie(ctx, meta, ids, rawPayload, logger)
 	case plexwebhooks.MediaTypeEpisode:
-		return s.processEpisode(ctx, meta, ids, rawPayload)
+		return s.processEpisode(ctx, meta, ids, rawPayload, logger)
 	default:
 		return fmt.Errorf("unknown media type: %s", meta.Type)
 	}
@@ -98,17 +107,17 @@ func (s *PlexService) handleScrobble(ctx context.Context, payload *plexwebhooks.
 
 // handlePlay handles media.play events. Only processes already-watched episodes
 // (rewatches) — first-time watches wait for the media.scrobble event.
-func (s *PlexService) handlePlay(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error {
+func (s *PlexService) handlePlay(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string, logger *slog.Logger) error {
 	// Movies always get a media.scrobble from Plex; only episodes need rewatch tracking.
 	if payload.Metadata.Type != plexwebhooks.MediaTypeEpisode {
 		return nil
 	}
 	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		return s.handleEpisodePlayInTx(ctx, tx, payload.Metadata, rawPayload)
+		return s.handleEpisodePlayInTx(ctx, tx, payload.Metadata, rawPayload, logger)
 	})
 }
 
-func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string) error {
+func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, rawPayload string, logger *slog.Logger) error {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonWriter(tx)
@@ -121,6 +130,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		// Not a tracked title — nothing to do.
 		return nil
 	}
+	logger = logger.With("titleID", title.ID)
 
 	season, err := seasons.GetOrCreate(ctx, title.ID, meta.ParentIndex)
 	if err != nil {
@@ -147,28 +157,28 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 		Source:      model.WatchEventSourcePlex,
 		PlexPayload: &rawPayload,
 	}); err != nil {
-		log.Printf("plex play: create watch event for title %d ep %d: %v", title.ID, ep.ID, err)
+		logger.Warn("create watch event", "episodeID", ep.ID, "err", err)
 	}
 
 	if err := episodes.UpdateLastWatchedAt(ctx, ep.ID, now); err != nil {
-		log.Printf("plex play: update episode last_watched_at for ep %d: %v", ep.ID, err)
+		logger.Warn("update episode last_watched_at", "episodeID", ep.ID, "err", err)
 	}
 
 	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, now); err != nil {
-		log.Printf("plex play: update title last_watched_at for title %d: %v", title.ID, err)
+		logger.Warn("update title last_watched_at", "err", err)
 	}
 
 	return nil
 }
 
-func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, logger *slog.Logger) error {
 	// ratingPrompt is populated inside the transaction and, if non-nil, is fired
 	// AFTER commit. Keeps the webpush HTTP request out of the write transaction
 	// so a slow push endpoint cannot tie up the sole writeDB connection.
 	var ratingPrompt *RatingPrompt
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		prompt, err := s.processMovieInTx(ctx, tx, meta, ids, rawPayload)
+		prompt, err := s.processMovieInTx(ctx, tx, meta, ids, rawPayload, logger)
 		if err != nil {
 			return err
 		}
@@ -182,7 +192,7 @@ func (s *PlexService) processMovie(ctx context.Context, meta plexwebhooks.Metada
 	return nil
 }
 
-func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*RatingPrompt, error) {
+func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, logger *slog.Logger) (*RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	var imdbID *string
@@ -203,6 +213,8 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 		if err != nil {
 			return nil, fmt.Errorf("create movie: %w", err)
 		}
+		logger = logger.With("titleID", titleID)
+		logger.Info("created title from Plex movie")
 
 		prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, titleID, model.WatchEventSourcePlex, &rawPayload)
 		if err != nil {
@@ -213,9 +225,10 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 		}
 		return prompt, nil
 	}
+	logger = logger.With("titleID", title.ID)
 
 	if needsEnrichment(title) {
-		s.enqueueEnrichmentTx(ctx, tx, title.ID, meta.Title, meta.Year, title.Type, ids)
+		s.enqueueEnrichmentTx(ctx, tx, title.ID, meta.Title, meta.Year, title.Type, ids, logger)
 	}
 
 	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
@@ -228,7 +241,7 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 	return prompt, nil
 }
 
-func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) error {
+func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, logger *slog.Logger) error {
 	// Both autoCompleteCheck and ratingPrompt are populated inside the
 	// transaction and, if non-nil, executed AFTER commit. This keeps the TMDB
 	// HTTP request (CheckAutoComplete) and the webpush HTTP request out of the
@@ -238,7 +251,7 @@ func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Meta
 	var ratingPrompt *RatingPrompt
 
 	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		req, prompt, err := s.processEpisodeInTx(ctx, tx, meta, ids, rawPayload)
+		req, prompt, err := s.processEpisodeInTx(ctx, tx, meta, ids, rawPayload, logger)
 		if err != nil {
 			return err
 		}
@@ -253,7 +266,7 @@ func (s *PlexService) processEpisode(ctx context.Context, meta plexwebhooks.Meta
 
 	if autoCompleteCheck != nil {
 		if err := s.libSvc.CheckAutoComplete(ctx, s.db, autoCompleteCheck.titleID, autoCompleteCheck.tmdbID, autoCompleteCheck.seasonNum, autoCompleteCheck.episodeNum); err != nil {
-			log.Printf("auto-complete warning: %v", err)
+			logger.Warn("auto-complete check", "titleID", autoCompleteCheck.titleID, "err", err)
 		}
 	}
 	return nil
@@ -268,7 +281,7 @@ type autoCompleteRequest struct {
 	episodeNum int
 }
 
-func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string) (*autoCompleteRequest, *RatingPrompt, error) {
+func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta plexwebhooks.Metadata, ids PlexExternalIDs, rawPayload string, logger *slog.Logger) (*autoCompleteRequest, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	seasons := repository.NewSeasonWriter(tx)
@@ -296,12 +309,15 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 		if createErr != nil {
 			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}
+		logger = logger.With("titleID", titleID)
+		logger.Info("created title from Plex episode")
 		title = &model.Title{ID: titleID, Status: model.TitleStatusWatching}
 	} else {
+		logger = logger.With("titleID", title.ID)
 		if title.Status != model.TitleStatusCompleted && title.Status != model.TitleStatusWatching {
 			watchingStatus := model.TitleStatusWatching
 			if updateErr := titlesW.Update(ctx, title.ID, repository.TitleUpdate{Status: &watchingStatus}); updateErr != nil {
-				log.Printf("update status to watching: %v", updateErr)
+				logger.Warn("update status to watching", "err", updateErr)
 			}
 		}
 		if needsEnrichment(title) {
@@ -309,7 +325,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 			if seriesName == "" {
 				seriesName = meta.Title
 			}
-			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, meta.Year, title.Type, ids)
+			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, meta.Year, title.Type, ids, logger)
 		}
 	}
 
@@ -329,7 +345,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 	}
 
 	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, time.Now().UTC()); err != nil {
-		log.Printf("plex: update last watched at for title %d: %v", title.ID, err)
+		logger.Warn("update title last_watched_at", "err", err)
 	}
 
 	// Auto-complete check runs AFTER the transaction commits (see processEpisode).
@@ -399,7 +415,7 @@ func needsEnrichment(title *model.Title) bool {
 // already enforces a shared rate limiter, exponential retry and panic recovery,
 // and SQLite's single-writer model means the rafale of webhooks becomes a
 // backlog rather than hundreds of concurrent TMDB/AniList/Gemini calls.
-func (s *PlexService) enqueueEnrichmentTx(ctx context.Context, tx *sql.Tx, titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs) {
+func (s *PlexService) enqueueEnrichmentTx(ctx context.Context, tx *sql.Tx, titleID int64, titleName string, year int, titleType model.TitleType, ids PlexExternalIDs, logger *slog.Logger) {
 	if s.pipeline == nil {
 		return
 	}
@@ -413,11 +429,12 @@ func (s *PlexService) enqueueEnrichmentTx(ctx context.Context, tx *sql.Tx, title
 		TVDBID:    ids.TVDB,
 	})
 	if err != nil {
-		log.Printf("enqueue enrichment for title %d: marshal payload: %v", titleID, err)
+		logger.Error("marshal enrichment payload", "err", err)
 		return
 	}
 	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
 	if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
-		log.Printf("enqueue enrichment for title %d: %v", titleID, err)
+		logger.Error("enqueue enrichment", "err", err)
 	}
+	logger.Info("enrichment enqueued")
 }
