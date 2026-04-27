@@ -129,7 +129,7 @@ func (s *BackgroundService) RefreshAllTitles(ctx context.Context) []RefreshResul
 
 // RefreshByID refreshes metadata for a single title.
 func (s *BackgroundService) RefreshByID(ctx context.Context, titleID int64) error {
-	title, err := s.titles.GetByID(titleID)
+	title, err := s.titles.GetLiteByID(ctx, titleID)
 	if err != nil {
 		return fmt.Errorf("background: get title %d: %w", titleID, err)
 	}
@@ -142,7 +142,7 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 		return nil
 	}
 
-	titles, err := s.titles.ListAll()
+	titles, err := s.titles.ListAllForRefresh(ctx)
 	if err != nil {
 		log.Printf("background: list titles: %v", err)
 		return nil
@@ -150,17 +150,18 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 
 	results := make([]RefreshResult, 0, len(titles))
 
-	for _, title := range titles {
+	for i := range titles {
 		if err := ctx.Err(); err != nil {
 			log.Printf("background: refresh cancelled: %v", err)
 			return results
 		}
 
+		title := &titles[i]
 		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
 			continue
 		}
 
-		result := s.refreshTitle(ctx, &title)
+		result := s.refreshTitle(ctx, title)
 		results = append(results, result)
 
 		_ = s.limiter.Wait(ctx)
@@ -169,10 +170,10 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 	return results
 }
 
-func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title) RefreshResult {
+func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.TitleLite) RefreshResult {
 	result := RefreshResult{
 		TitleID:   title.ID,
-		TitleName: title.PrimaryName(),
+		TitleName: title.PrimaryName,
 	}
 
 	// Step 1: Refresh from TMDB if available
@@ -227,7 +228,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *model.Title
 	return result
 }
 
-func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
 	if title.Type == model.TitleTypeMovie {
 		s.refreshMovieFromTMDB(ctx, title, result)
 	} else {
@@ -246,7 +247,7 @@ func logTitleUpdate(titleID int64, kind string, err error) {
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 // For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
 // For titles without a TMDB ID, overview and genres are also persisted from TVDB.
-func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
 	if title.TVDBID == nil {
 		return
 	}
@@ -324,7 +325,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *model.Ti
 	}
 }
 
-func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
 	details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
@@ -383,7 +384,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *mod
 	}
 }
 
-func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
 	details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
@@ -407,7 +408,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 			if err := s.push.SendNotification(
 				ctx,
 				"PlexTracker",
-				fmt.Sprintf("%s — Series ended", title.PrimaryName()),
+				fmt.Sprintf("%s — Series ended", title.PrimaryName),
 				fmt.Sprintf("/title/%d", title.ID),
 			); err != nil {
 				log.Printf("series-ended push failed for title %d: %v", title.ID, err)
@@ -522,7 +523,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *mo
 // AniList traffic so the admin reconnect banner is the loudest signal until
 // the user acts on it. Errors are logged per mapping; one bad season cannot
 // break the others.
-func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *model.Title, result *RefreshResult) {
+func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
 	if invalid, _ := s.settings.Get(settingAniListTokenInvalid); invalid == "true" {
 		return
 	}

@@ -100,19 +100,20 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 		return 0
 	}
 
-	titles, err := c.titles.ListAll()
+	titles, err := c.titles.ListAllForRefresh(ctx)
 	if err != nil {
 		log.Printf("covers: list titles: %v", err)
 		return 0
 	}
 
 	fetched := 0
-	for _, title := range titles {
+	for i := range titles {
 		if err := ctx.Err(); err != nil {
 			log.Printf("covers: fetch cancelled: %v", err)
 			return fetched
 		}
 
+		title := &titles[i]
 		if title.CoverURL != nil {
 			continue
 		}
@@ -149,7 +150,7 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 		}
 
 		// Fallback: AniList
-		if title.AniListID != nil && c.DownloadAniListCover(ctx, &title) {
+		if title.AniListID != nil && c.DownloadAniListCover(ctx, title) {
 			fetched++
 		}
 
@@ -161,7 +162,7 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 
 // DownloadAniListCover fetches and saves the cover from AniList for a title.
 // Returns true if the cover was successfully downloaded and saved.
-func (c *CoverService) DownloadAniListCover(ctx context.Context, title *model.Title) bool {
+func (c *CoverService) DownloadAniListCover(ctx context.Context, title *repository.TitleLite) bool {
 	if c == nil || c.anilist == nil || title.AniListID == nil {
 		return false
 	}

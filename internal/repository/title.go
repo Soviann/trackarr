@@ -173,6 +173,80 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	return title, nil
 }
 
+// TitleLite is a lean projection of a title used by background refresh and
+// cover fetch flows. They iterate the entire library but only read external
+// IDs, type/status flags, the cover URL and a display name — loading
+// title_names / seasons / episodes via loadTitleRelations was allocating
+// dozens of MB per daily refresh for nothing.
+type TitleLite struct {
+	ID           int64
+	Type         model.TitleType
+	IsAnime      bool
+	Status       model.TitleStatus
+	SeriesStatus *model.SeriesStatus
+	CoverURL     *string
+	TMDBID       *int64
+	TVDBID       *int64
+	AniListID    *int64
+	PrimaryName  string
+}
+
+// titleLiteCols is the column list for TitleLite scans, embedding
+// displayNameExpr (which assumes the outer titles row is aliased `t`).
+const titleLiteCols = `t.id, t.type, t.is_anime, t.status, t.series_status, t.cover_url,
+		t.tmdb_id, t.tvdb_id, t.anilist_id,
+		COALESCE(` + displayNameExpr + `, '') AS name`
+
+func scanTitleLite(scanner interface {
+	Scan(dest ...any) error
+}, t *TitleLite) error {
+	return scanner.Scan(
+		&t.ID, &t.Type, &t.IsAnime, &t.Status, &t.SeriesStatus, &t.CoverURL,
+		&t.TMDBID, &t.TVDBID, &t.AniListID,
+		&t.PrimaryName,
+	)
+}
+
+// ListAllForRefresh returns lean projections of every title for background
+// refresh and cover-fetch loops. Skips loadTitleRelations.
+func (r *TitleRepository) ListAllForRefresh(ctx context.Context) ([]TitleLite, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT `+titleLiteCols+`
+		FROM titles t
+		ORDER BY t.updated_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("list titles for refresh: %w", err)
+	}
+	defer rows.Close()
+
+	var titles []TitleLite
+	for rows.Next() {
+		var t TitleLite
+		if err := scanTitleLite(rows, &t); err != nil {
+			return nil, fmt.Errorf("scan title lite: %w", err)
+		}
+		titles = append(titles, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate titles for refresh: %w", err)
+	}
+	return titles, nil
+}
+
+// GetLiteByID returns the lean projection used by single-title refresh paths
+// (admin RefreshOne, retry-from-task-queue) so they don't pay loadTitleRelations
+// cost when they only need IDs/status/cover.
+func (r *TitleRepository) GetLiteByID(ctx context.Context, id int64) (*TitleLite, error) {
+	var t TitleLite
+	err := scanTitleLite(r.db.QueryRowContext(ctx, `
+		SELECT `+titleLiteCols+`
+		FROM titles t WHERE t.id = ?`, id), &t)
+	if err != nil {
+		return nil, fmt.Errorf("get title lite: %w", err)
+	}
+	return &t, nil
+}
+
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
