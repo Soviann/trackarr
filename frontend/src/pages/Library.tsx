@@ -157,7 +157,7 @@ export function Library(_props: { path?: string }) {
     setBulkPending(true)
     setBulkError(null)
     try {
-      await apiFetch('/api/titles/batch-status', {
+      await apiFetch('/titles/batch-status', {
         method: 'POST',
         body: JSON.stringify({ ids: [...selected], status }),
       })
@@ -176,7 +176,7 @@ export function Library(_props: { path?: string }) {
     setBulkPending(true)
     setBulkError(null)
     try {
-      await apiFetch('/api/titles/batch-delete', {
+      await apiFetch('/titles/batch-delete', {
         method: 'POST',
         body: JSON.stringify({ ids: [...selected] }),
       })
