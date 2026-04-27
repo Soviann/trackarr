@@ -26,6 +26,13 @@ func Serve(distFS embed.FS) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Structured logging defaults: TextHandler at Info, stdout. Single-user
+	// project, console-readable output beats JSON. Set before any work so
+	// every migrated caller (taskqueue, plex webhook…) shares the same sink.
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})))
+
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
