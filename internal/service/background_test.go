@@ -3,7 +3,10 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -16,6 +19,70 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// fakePushNotifier records SendNotification calls so refresh tests can
+// assert the series-ended notification was triggered exactly when expected.
+// The other PushNotifier methods are no-ops — the worker never invokes them
+// during a refresh.
+type fakePushNotifier struct {
+	calls []pushCall
+}
+
+type pushCall struct{ Title, Body, URL string }
+
+func (f *fakePushNotifier) Subscribe(_ context.Context, _ string) error { return nil }
+func (f *fakePushNotifier) Unsubscribe(_ context.Context) error         { return nil }
+func (f *fakePushNotifier) HasSubscription() bool                       { return true }
+func (f *fakePushNotifier) SendNotification(_ context.Context, t, b, u string) error {
+	f.calls = append(f.calls, pushCall{t, b, u})
+	return nil
+}
+
+// newRefreshTMDBMock spins a httptest server returning canned TMDB responses
+// for one TV title. Status drives the series-ended detection branch; seasons
+// is the list mocked under /tv/{id}/season/{n}. Returns a TMDB client already
+// pointed at the server (cleanup auto-registered).
+func newRefreshTMDBMock(t *testing.T, tmdbID int64, status string) *matching.TMDBClient {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(matching.TMDBTVDetails{
+			ID:     tmdbID,
+			Name:   "Test Series",
+			Status: status,
+			// No PosterPath → skips DownloadCover branch (kept out of the
+			// status-change tests; cover persistence is exercised in SESSION-12).
+			Seasons: nil,
+		})
+	})
+	// Catch-all returns 404 so any unexpected fetch surfaces as a clear failure
+	// rather than a hang or zero-value decode.
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+	return client
+}
+
+// newBackgroundServiceWithTMDB mirrors setupBackgroundService but plugs in a
+// TMDB client + a recording PushNotifier so the SESSION-11 path can be
+// exercised without HTTP outside the test process.
+func newBackgroundServiceWithTMDB(t *testing.T, tmdb *matching.TMDBClient) (*service.BackgroundService, *sql.DB, *repository.TitleRepository, *fakePushNotifier) {
+	t.Helper()
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	titleRepo := repository.NewTitleRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	push := &fakePushNotifier{}
+	coverSvc := service.NewCoverService(db, titleRepo, nil, nil, t.TempDir())
+	svc := service.NewBackgroundService(db, titleRepo, settingRepo, tmdb, coverSvc, push)
+	return svc, db, titleRepo, push
+}
 
 // fakeAniListSeasonScoreClient stubs the GetAnimeDetails call so the
 // per-season score refresh can be exercised without a real HTTP server.
@@ -261,4 +328,80 @@ func TestBackgroundService_RefreshAniListScores_SkipsNonAnimeTitles(t *testing.T
 
 	_ = svc.RefreshTitles(context.Background())
 	assert.Empty(t, fake.calls, "non-anime titles must not trigger AniList per-season fetches")
+}
+
+// createSeriesWithTMDBID is a tiny shim around testutil.CreateTitle that bakes
+// in the fields every refreshSeriesFromTMDB test needs: confirmed match,
+// watching status, TMDB ID set, and an initial SeriesStatus.
+func createSeriesWithTMDBID(t *testing.T, db *sql.DB, name string, tmdbID int64, initial model.SeriesStatus) int64 {
+	t.Helper()
+	return testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2008,
+		Status:       model.TitleStatusWatching,
+		MatchStatus:  model.MatchStatusConfirmed,
+		TMDBID:       &tmdbID,
+		SeriesStatus: &initial,
+	}, []model.TitleName{{Name: name, Language: "en", IsPrimary: true}})
+}
+
+// TestBackgroundService_RefreshSeries_StatusChangeFiresPush is the canonical
+// SESSION-11 test: a series that flips from "Returning Series" to "Ended" in
+// TMDB must trigger exactly one push notification with the title-detail URL.
+// The auto-complete branch also runs in the same iteration (no episodes →
+// nothing unwatched), giving us a free regression on that branch too.
+func TestBackgroundService_RefreshSeries_StatusChangeFiresPush(t *testing.T) {
+	tmdb := newRefreshTMDBMock(t, 1399, "Ended")
+	svc, db, titleRepo, push := newBackgroundServiceWithTMDB(t, tmdb)
+
+	titleID := createSeriesWithTMDBID(t, db, "Breaking Bad", 1399, model.SeriesStatusReturning)
+
+	results := svc.RefreshTitles(context.Background())
+	require.Len(t, results, 1)
+	assert.True(t, results[0].StatusChanged)
+	assert.Equal(t, model.SeriesStatusReturning, results[0].OldStatus)
+	assert.Equal(t, model.SeriesStatusEnded, results[0].NewStatus)
+
+	require.Len(t, push.calls, 1, "exactly one series-ended push expected")
+	assert.Equal(t, "PlexTracker", push.calls[0].Title)
+	assert.Contains(t, push.calls[0].Body, "Breaking Bad")
+	assert.Contains(t, push.calls[0].Body, "Series ended")
+	assert.Equal(t, fmt.Sprintf("/title/%d", titleID), push.calls[0].URL)
+
+	got, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, got.SeriesStatus)
+	assert.Equal(t, model.SeriesStatusEnded, *got.SeriesStatus)
+	assert.Equal(t, model.TitleStatusCompleted, got.Status, "auto-complete must run after status flips to Ended with no unwatched episodes")
+}
+
+// TestBackgroundService_RefreshSeries_NotificationToggleSilencesPush proves
+// the notif_series_ended preference is honored — the toggle is the user's
+// only escape hatch from a stream of "X ended" pings, so a regression here
+// is user-visible and silent.
+func TestBackgroundService_RefreshSeries_NotificationToggleSilencesPush(t *testing.T) {
+	tmdb := newRefreshTMDBMock(t, 1399, "Ended")
+	svc, db, _, push := newBackgroundServiceWithTMDB(t, tmdb)
+	testutil.SetSetting(t, db, service.NotifSeriesEnded, "false")
+
+	createSeriesWithTMDBID(t, db, "Breaking Bad", 1399, model.SeriesStatusReturning)
+
+	_ = svc.RefreshTitles(context.Background())
+	assert.Empty(t, push.calls, "notif_series_ended=false must suppress the push")
+}
+
+// TestBackgroundService_RefreshSeries_NoStatusChangeNoPush guards against the
+// other regression direction — a steady-state refresh where TMDB still says
+// "Ended" must NOT fire a push. Otherwise every daily refresh would re-page
+// the user about already-known endings.
+func TestBackgroundService_RefreshSeries_NoStatusChangeNoPush(t *testing.T) {
+	tmdb := newRefreshTMDBMock(t, 1399, "Ended")
+	svc, db, _, push := newBackgroundServiceWithTMDB(t, tmdb)
+
+	createSeriesWithTMDBID(t, db, "Breaking Bad", 1399, model.SeriesStatusEnded)
+
+	results := svc.RefreshTitles(context.Background())
+	require.Len(t, results, 1)
+	assert.False(t, results[0].StatusChanged, "no status flip → no StatusChanged flag")
+	assert.Empty(t, push.calls, "no status flip → no push")
 }
