@@ -35,5 +35,8 @@ docs/superpowers/plans/
 docs/superpowers/specs/
 docs/mockups/
 
+# Audits — working notes, never committed
+docs/audits/
+
 # Playwright MCP
 .playwright-mcp/
