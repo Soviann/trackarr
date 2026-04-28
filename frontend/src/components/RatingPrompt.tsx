@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import clsx from 'clsx'
 import { BottomSheet } from './BottomSheet'
 import s from './RatingPrompt.module.css'
@@ -19,6 +19,10 @@ export function RatingPrompt({
   hasImdb, onSave, onSaveAndImdb,
 }: RatingPromptProps) {
   const [rating, setRating] = useState(initialRating ?? 0)
+
+  useEffect(() => {
+    if (open) setRating(initialRating ?? 0)
+  }, [initialRating, open])
 
   return (
     <BottomSheet open={open} onClose={onClose}>
