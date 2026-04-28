@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 132px);
+  min-height: calc(100vh - 172px);
 }
 
 .results {
@@ -159,54 +159,6 @@
   color: var(--ink);
 }
 
-.searchBar {
-  padding: var(--space-sm) var(--space-lg);
-  border-top: 1px solid var(--border);
-  position: fixed;
-  bottom: 96px;
-  left: 0;
-  right: 0;
-  background: var(--bg);
-  z-index: 99;
-}
-
-.searchInner {
-  background: var(--bg-elev2);
-  border-radius: 12px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.searchInnerFocused {
-  border: none;
-}
-
-.searchInnerIdle {
-  border: 1.5px solid rgba(56, 189, 176, 0.3);
-}
-
-.searchInput {
-  flex: 1;
-  font-size: 14px;
-  color: var(--ink);
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: inherit;
-}
-
-.clearBtn {
-  cursor: pointer;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  display: flex;
-  align-items: center;
-}
-
 /* Merge Drawer */
 .mergeDrawer {
   padding: var(--space-xl);
@@ -295,29 +247,6 @@
 .confirmBtn:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-/* TMDB toggle in search bar */
-.tmdbToggle {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev2);
-  color: var(--ink-dim);
-  font-size: 9px;
-  font-weight: 700;
-  font-family: inherit;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.tmdbToggleOn {
-  background: rgba(0, 188, 212, 0.15);
-  color: var(--accent);
-  border-color: var(--accent);
 }
 
 /* TMDB results divider */

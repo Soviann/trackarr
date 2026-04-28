@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
@@ -36,7 +36,6 @@ function getMetadata(t: Title) {
 export function Search({ path: _ }: { path?: string }) {
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
-  const setQuery = useSearchStore(s => s.setQuery)
   const results = useSearchStore(s => s.results)
   const total = useSearchStore(s => s.total)
   const hasMore = useSearchStore(s => s.hasMore)
@@ -45,7 +44,7 @@ export function Search({ path: _ }: { path?: string }) {
   const error = useSearchStore(s => s.error)
   const search = useSearchStore(s => s.search)
   const loadMore = useSearchStore(s => s.loadMore)
-  const clear = useSearchStore(s => s.clear)
+  const searchOnTMDB = useSearchStore(s => s.searchOnTMDB)
 
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const mergeSourceId = params.get('mergeSourceId')
@@ -55,10 +54,7 @@ export function Search({ path: _ }: { path?: string }) {
   const [targetSeason, setTargetSeason] = useState(1)
   const [merging, setMerging] = useState(false)
   const [mergeError, setMergeError] = useState<string | null>(null)
-  const [searchOnTMDB, setSearchOnTMDB] = useState(false)
   const [tmdbResults, setTmdbResults] = useState<TMDBResult[]>([])
-
-  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     search(filter)
@@ -74,10 +70,6 @@ export function Search({ path: _ }: { path?: string }) {
     filter.release_to,
     filter.include_no_release,
   ])
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
 
   // Load TMDB results when toggle is on. Debounced so each keystroke
   // doesn't burn a TMDB API call.
@@ -281,46 +273,6 @@ export function Search({ path: _ }: { path?: string }) {
           </div>
         </div>
       </BottomSheet>
-
-      {/* Search input */}
-      <div className={s.searchBar}>
-        <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.accent} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            ref={inputRef}
-            type="text"
-            name="search"
-            id="search"
-            autocomplete="off"
-            value={query}
-            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
-            placeholder="Search titles..."
-            className={s.searchInput}
-          />
-          {query && (
-            <button type="button" onClick={clear} aria-label="Clear search" className={s.clearBtn}>
-              <svg
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim}
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
-          {!mergeSourceId && (
-            <button
-              className={clsx(s.tmdbToggle, searchOnTMDB && s.tmdbToggleOn)}
-              onClick={() => setSearchOnTMDB(v => !v)}
-              aria-pressed={searchOnTMDB}
-              title="Also search TMDB"
-            >
-              TMDB
-            </button>
-          )}
-        </div>
-      </div>
     </div>
     </PullToRefresh>
   )

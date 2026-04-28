@@ -4,6 +4,7 @@ import Router from 'preact-router'
 import clsx from 'clsx'
 import { Navbar } from './components/Navbar'
 import { FilterDrawer } from './components/FilterDrawer'
+import { SearchBar } from './components/SearchBar'
 import { Library } from './pages/Library'
 import { ComingUp } from './pages/ComingUp'
 import { ContinueWatching } from './pages/ContinueWatching'
@@ -126,11 +127,51 @@ export function App() {
   }, [setFilter])
   const hideNavbar = currentPath.startsWith('/login')
   const pathname = currentPath.split('?')[0]
-  const showDrawer = pathname === '/' || pathname === '/search'
+  const isSearch = pathname === '/search'
+  const showDrawer = pathname === '/' || isSearch
+  const mergeSourceId = isSearch
+    ? new URLSearchParams(currentPath.split('?')[1] ?? '').get('mergeSourceId')
+    : null
+
+  const filterDrawer = showDrawer ? (
+    <FilterDrawer
+      status={statusFilter}
+      type={typeFilter}
+      isAnime={filter.is_anime === 'true'}
+      seriesStatus={seriesStatusFilter}
+      onStatusChange={handleStatusChange}
+      onTypeChange={handleTypeChange}
+      onIsAnimeChange={handleIsAnimeChange}
+      onSeriesStatusChange={handleSeriesStatusChange}
+      sort={sort}
+      onSortChange={setSort}
+      isSearchActive={isSearch}
+      defaultOpen={true}
+      decade={filter.decade ?? null}
+      releaseFrom={filter.release_from ?? ''}
+      releaseTo={filter.release_to ?? ''}
+      includeNoRelease={filter.include_no_release !== 'false'}
+      onDecadeChange={handleDecadeChange}
+      onReleaseFromChange={handleReleaseFromChange}
+      onReleaseToChange={handleReleaseToChange}
+      onIncludeNoReleaseChange={handleIncludeNoReleaseChange}
+      selectedGenres={filter.genres ?? []}
+      genreOp={filter.genre_op ?? 'OR'}
+      onGenreToggle={handleGenreToggle}
+      onGenreOpChange={handleGenreOpChange}
+    />
+  ) : null
+
+  const above = isSearch ? (
+    <>
+      <SearchBar showTMDBToggle={!mergeSourceId} />
+      {filterDrawer}
+    </>
+  ) : filterDrawer
 
   return (
     <ErrorBoundary>
-      <div className={clsx(s.root, !hideNavbar && s.withNavbar)}>
+      <div className={clsx(s.root, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}>
         <Router onChange={handleRoute}>
           <Library path={ROUTE_PATHS.home} />
           <ComingUp path={ROUTE_PATHS.comingUp} />
@@ -154,34 +195,7 @@ export function App() {
           <Navbar
             currentPath={currentPath}
             onNavigate={navigate}
-            above={showDrawer ? (
-              <FilterDrawer
-                status={statusFilter}
-                type={typeFilter}
-                isAnime={filter.is_anime === 'true'}
-                seriesStatus={seriesStatusFilter}
-                onStatusChange={handleStatusChange}
-                onTypeChange={handleTypeChange}
-                onIsAnimeChange={handleIsAnimeChange}
-                onSeriesStatusChange={handleSeriesStatusChange}
-                sort={sort}
-                onSortChange={setSort}
-                isSearchActive={pathname === '/search'}
-                defaultOpen={true}
-                decade={filter.decade ?? null}
-                releaseFrom={filter.release_from ?? ''}
-                releaseTo={filter.release_to ?? ''}
-                includeNoRelease={filter.include_no_release !== 'false'}
-                onDecadeChange={handleDecadeChange}
-                onReleaseFromChange={handleReleaseFromChange}
-                onReleaseToChange={handleReleaseToChange}
-                onIncludeNoReleaseChange={handleIncludeNoReleaseChange}
-                selectedGenres={filter.genres ?? []}
-                genreOp={filter.genre_op ?? 'OR'}
-                onGenreToggle={handleGenreToggle}
-                onGenreOpChange={handleGenreOpChange}
-              />
-            ) : undefined}
+            above={above}
           />
         )}
       </div>

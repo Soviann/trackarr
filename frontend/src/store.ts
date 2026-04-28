@@ -187,8 +187,10 @@ export interface SearchState {
   loading: boolean
   loadingMore: boolean
   error: string | null
+  searchOnTMDB: boolean
   _searchGen: number
   setQuery: (q: string) => void
+  setSearchOnTMDB: (v: boolean) => void
   search: (filter: TitleState['filter']) => Promise<void>
   loadMore: (filter: TitleState['filter']) => Promise<void>
   clear: () => void
@@ -202,9 +204,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   loading: false,
   loadingMore: false,
   error: null,
+  searchOnTMDB: false,
   _searchGen: 0,
 
   setQuery: (query) => set({ query }),
+  setSearchOnTMDB: (searchOnTMDB) => set({ searchOnTMDB }),
 
   search: async (filter) => {
     const { query, results } = get()
@@ -304,5 +308,5 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  clear: () => set({ query: '', results: [], total: 0, hasMore: false, error: null }),
+  clear: () => set({ query: '', results: [], total: 0, hasMore: false, error: null, searchOnTMDB: false }),
 }))
