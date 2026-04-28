@@ -88,3 +88,33 @@ func TestLoad_JWTSecretMinLengthAccepted(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, secret, cfg.JWTSecret)
 }
+
+// DEBUG_LOGIN=true with COOKIE_SECURE=true means a prod deploy accidentally
+// inherited the dev .env — refuse to boot rather than expose /api/auth/dev.
+func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("DEBUG_LOGIN", "true")
+	t.Setenv("COOKIE_SECURE", "true")
+
+	_, err := config.Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "DEBUG_LOGIN")
+	assert.Contains(t, err.Error(), "COOKIE_SECURE")
+}
+
+// DEBUG_LOGIN=true with COOKIE_SECURE unset is the standard dev path —
+// CookieSecure defaults to !DebugLogin = false, so the guard must not trip.
+func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("DEBUG_LOGIN", "true")
+	t.Setenv("COOKIE_SECURE", "")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.DebugLogin)
+	assert.False(t, cfg.CookieSecure)
+}

@@ -74,6 +74,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters (HMAC-SHA256 strength)")
 	}
 
+	// CookieSecure=true is the prod marker (HTTPS behind reverse proxy). DebugLogin=true
+	// in that environment is a config copy-paste accident — refuse to boot rather than
+	// expose /api/auth/dev with hardcoded creds in prod.
+	if cfg.DebugLogin && cfg.CookieSecure {
+		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with COOKIE_SECURE=true (prod env)")
+	}
+
 	return cfg, nil
 }
 
