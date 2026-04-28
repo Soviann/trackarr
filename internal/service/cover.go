@@ -138,7 +138,7 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 			}
 
 			if posterPath != nil && *posterPath != "" {
-				coverPath, err := c.tmdb.DownloadCover(*posterPath, c.Dir())
+				coverPath, err := c.tmdb.DownloadCover(ctx, *posterPath, c.Dir())
 				if err == nil {
 					logTitleUpdate(title.ID, "missing cover", c.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 					c.ExtractAndStoreAccent(ctx, title.ID, coverPath)
@@ -172,7 +172,7 @@ func (c *CoverService) DownloadAniListCover(ctx context.Context, title *reposito
 		return false
 	}
 
-	coverPath, err := c.anilist.DownloadCover(details.CoverURL, c.Dir())
+	coverPath, err := c.anilist.DownloadCover(ctx, details.CoverURL, c.Dir())
 	if err != nil {
 		return false
 	}

@@ -517,7 +517,7 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, lo
 				return err
 			}
 			if details.PosterPath != nil {
-				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
+				coverPath, err := w.tmdb.DownloadCover(ctx, *details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
 				if err == nil {
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
@@ -532,7 +532,7 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, lo
 				return err
 			}
 			if details.PosterPath != nil {
-				coverPath, err := w.tmdb.DownloadCover(*details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
+				coverPath, err := w.tmdb.DownloadCover(ctx, *details.PosterPath, fmt.Sprintf("%s/covers", w.dataDir))
 				if err == nil {
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
@@ -581,7 +581,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task,
 		}
 
 		if posterPath != nil && *posterPath != "" {
-			coverPath, err := w.tmdb.DownloadCover(*posterPath, coversDir)
+			coverPath, err := w.tmdb.DownloadCover(ctx, *posterPath, coversDir)
 			if err != nil {
 				return err
 			}
@@ -600,7 +600,7 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task,
 			return fmt.Errorf("anilist cover fetch: %w", err)
 		}
 		if details.CoverURL != "" {
-			coverPath, err := w.anilist.DownloadCover(details.CoverURL, coversDir)
+			coverPath, err := w.anilist.DownloadCover(ctx, details.CoverURL, coversDir)
 			if err != nil {
 				return fmt.Errorf("download anilist cover: %w", err)
 			}
@@ -624,7 +624,7 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 		return
 	}
 
-	coverPath, err := w.anilist.DownloadCover(details.CoverURL, fmt.Sprintf("%s/covers", w.dataDir))
+	coverPath, err := w.anilist.DownloadCover(ctx, details.CoverURL, fmt.Sprintf("%s/covers", w.dataDir))
 	if err != nil {
 		return
 	}

@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,8 +10,11 @@ import (
 )
 
 // DownloadCover downloads a poster from TMDB and saves it to destDir.
-// Returns the local filename (not the full path).
-func (c *TMDBClient) DownloadCover(posterPath string, destDir string) (string, error) {
+// Returns the local filename (not the full path). The ctx must be the caller's
+// (e.g. webhook request, taskqueue worker, refresh tick) so a slow CDN or a
+// shutdown cancels the request body in flight rather than pinning the only
+// writeDB connection until the HTTP client's own timeout fires.
+func (c *TMDBClient) DownloadCover(ctx context.Context, posterPath string, destDir string) (string, error) {
 	if posterPath == "" {
 		return "", fmt.Errorf("empty poster path")
 	}
@@ -21,7 +25,11 @@ func (c *TMDBClient) DownloadCover(posterPath string, destDir string) (string, e
 		imageURL = c.baseURL + "/image" + posterPath
 	}
 
-	resp, err := c.httpClient.Get(imageURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("build cover request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download cover: %w", err)
 	}

@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -11,13 +12,19 @@ import (
 )
 
 // DownloadCover downloads a cover image from a full URL (e.g. AniList CDN)
-// and saves it to destDir. Returns the local filename.
-func (c *AniListClient) DownloadCover(imageURL string, destDir string) (string, error) {
+// and saves it to destDir. Returns the local filename. ctx propagates the
+// caller's deadline / cancellation so a stalled CDN cannot pin the only
+// writeDB connection.
+func (c *AniListClient) DownloadCover(ctx context.Context, imageURL string, destDir string) (string, error) {
 	if imageURL == "" {
 		return "", fmt.Errorf("empty image URL")
 	}
 
-	resp, err := c.httpClient.Get(imageURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("build anilist cover request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download anilist cover: %w", err)
 	}

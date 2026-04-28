@@ -242,7 +242,7 @@ func TestTMDBDownloadCover(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
 	destDir := t.TempDir()
-	filename, err := client.DownloadCover("/abc123.jpg", destDir)
+	filename, err := client.DownloadCover(context.Background(), "/abc123.jpg", destDir)
 	require.NoError(t, err)
 	assert.Equal(t, "abc123.jpg", filename)
 
@@ -254,7 +254,7 @@ func TestTMDBDownloadCover(t *testing.T) {
 func TestTMDBDownloadCoverEmptyPath(t *testing.T) {
 	_, client := newTestTMDBServer(t)
 
-	_, err := client.DownloadCover("", t.TempDir())
+	_, err := client.DownloadCover(context.Background(), "", t.TempDir())
 	assert.Error(t, err)
 }
 

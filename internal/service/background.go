@@ -262,7 +262,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		}
 		result.Refreshed = true
 		if title.CoverURL == nil && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
+			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
 		}
@@ -293,7 +293,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		}
 		result.Refreshed = true
 		if title.CoverURL == nil && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(details.Image, tvdbID, s.covers.Dir()); err == nil {
+			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
 		}
@@ -336,7 +336,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
+		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
@@ -418,7 +418,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 
 	// Update cover if missing
 	if title.CoverURL == nil && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(*details.PosterPath, s.covers.Dir())
+		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
 			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)

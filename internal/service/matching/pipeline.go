@@ -610,7 +610,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.tmdbRating = rating
 		out.releaseDate = details.ReleaseDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
-			filename, err := p.tmdb.DownloadCover(*details.PosterPath, coversDir)
+			filename, err := p.tmdb.DownloadCover(ctx, *details.PosterPath, coversDir)
 			if err != nil {
 				log.Printf("download tmdb movie cover failed: %v", err)
 			} else {
@@ -640,7 +640,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.tmdbRating = rating
 		out.releaseDate = details.FirstAirDate
 		if details.PosterPath != nil && *details.PosterPath != "" {
-			filename, err := p.tmdb.DownloadCover(*details.PosterPath, coversDir)
+			filename, err := p.tmdb.DownloadCover(ctx, *details.PosterPath, coversDir)
 			if err != nil {
 				log.Printf("download tmdb tv cover failed: %v", err)
 			} else {
@@ -682,7 +682,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 			out.releaseDate = details.Year
 		}
 		if details.Image != "" {
-			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)
+			filename, err := p.tvdb.DownloadCover(ctx, details.Image, result.TVDBID, coversDir)
 			if err != nil {
 				log.Printf("download tvdb movie cover failed: %v", err)
 			} else {
@@ -714,7 +714,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 			out.releaseDate = details.Year
 		}
 		if details.Image != "" {
-			filename, err := p.tvdb.DownloadCover(details.Image, result.TVDBID, coversDir)
+			filename, err := p.tvdb.DownloadCover(ctx, details.Image, result.TVDBID, coversDir)
 			if err != nil {
 				log.Printf("download tvdb series cover failed: %v", err)
 			} else {
@@ -739,7 +739,7 @@ func (p *Pipeline) downloadAniListCover(ctx context.Context, result *MatchResult
 	}
 
 	coversDir := filepath.Join(p.dataDir, "covers")
-	filename, err := p.anilist.DownloadCover(details.CoverURL, coversDir)
+	filename, err := p.anilist.DownloadCover(ctx, details.CoverURL, coversDir)
 	if err != nil {
 		log.Printf("download anilist cover failed: %v", err)
 		return

@@ -211,7 +211,7 @@ func TestTVDBDownloadCover(t *testing.T) {
 	destDir := t.TempDir()
 	// Use a URL that will be rewritten to the mock server
 	imageURL := tvdbArtworkBaseURL + "/banners/poster.jpg"
-	filename, err := client.DownloadCover(imageURL, 81189, destDir)
+	filename, err := client.DownloadCover(context.Background(), imageURL, 81189, destDir)
 	require.NoError(t, err)
 	assert.Equal(t, "tvdb_81189.jpg", filename)
 
@@ -222,6 +222,6 @@ func TestTVDBDownloadCover(t *testing.T) {
 
 func TestTVDBDownloadCoverEmpty(t *testing.T) {
 	_, client := newTestTVDBServer(t)
-	_, err := client.DownloadCover("", 1, t.TempDir())
+	_, err := client.DownloadCover(context.Background(), "", 1, t.TempDir())
 	assert.Error(t, err)
 }

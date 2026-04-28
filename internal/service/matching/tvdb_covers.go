@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,8 +14,10 @@ const tvdbArtworkBaseURL = "https://artworks.thetvdb.com"
 
 // DownloadCover downloads a cover image from TVDB and saves it to destDir.
 // imageURL is the full URL returned by the TVDB API (e.g. https://artworks.thetvdb.com/...).
-// Returns the local filename (not the full path), prefixed with "tvdb_<id>".
-func (c *TVDBClient) DownloadCover(imageURL string, tvdbID int64, destDir string) (string, error) {
+// Returns the local filename (not the full path), prefixed with "tvdb_<id>". ctx
+// carries the caller's deadline so a stalled CDN cannot pin the writeDB
+// connection.
+func (c *TVDBClient) DownloadCover(ctx context.Context, imageURL string, tvdbID int64, destDir string) (string, error) {
 	if imageURL == "" {
 		return "", fmt.Errorf("empty TVDB image URL")
 	}
@@ -24,7 +27,11 @@ func (c *TVDBClient) DownloadCover(imageURL string, tvdbID int64, destDir string
 		imageURL = c.baseURL + "/artwork" + imageURL[len(tvdbArtworkBaseURL):]
 	}
 
-	resp, err := c.httpClient.Get(imageURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("build tvdb cover request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("tvdb download cover: %w", err)
 	}

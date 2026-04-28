@@ -156,7 +156,7 @@ func TestAniListDownloadCover(t *testing.T) {
 
 	client := NewAniListClient()
 	destDir := t.TempDir()
-	filename, err := client.DownloadCover(imgServer.URL+"/cover/large/bx21-YCDoj1EkAxFn.jpg", destDir)
+	filename, err := client.DownloadCover(context.Background(), imgServer.URL+"/cover/large/bx21-YCDoj1EkAxFn.jpg", destDir)
 	require.NoError(t, err)
 	assert.Equal(t, "al-bx21-YCDoj1EkAxFn.jpg", filename)
 
@@ -167,7 +167,7 @@ func TestAniListDownloadCover(t *testing.T) {
 
 func TestAniListDownloadCoverEmptyURL(t *testing.T) {
 	client := NewAniListClient()
-	_, err := client.DownloadCover("", t.TempDir())
+	_, err := client.DownloadCover(context.Background(), "", t.TempDir())
 	assert.Error(t, err)
 }
 
