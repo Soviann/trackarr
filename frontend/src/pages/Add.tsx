@@ -17,13 +17,16 @@ export function Add({ path }: { path?: string }) {
   useEffect(() => {
     inputRef.current?.focus()
 
-    // Handle PWA share target
+    // PWA share target: mobile share sheets fill url/text/title inconsistently
+    // (IMDb app puts the link in `text`, some only send `title`), so accept any.
     const params = new URLSearchParams(window.location.search)
-    const shareUrl = params.get('url')
-    if (shareUrl) {
-      setQuery(shareUrl)
-      route(`/admin/validate?q=${encodeURIComponent(shareUrl)}`)
-    }
+    const shared = params.get('url') || params.get('text') || params.get('title') || ''
+    if (!shared) return
+    const urlMatch = shared.match(/https?:\/\/\S+/i)
+    const value = urlMatch ? urlMatch[0] : shared.trim()
+    if (!value) return
+    setQuery(value)
+    route(`/admin/validate?q=${encodeURIComponent(value)}`)
   }, [])
 
   const urlType = query.trim() ? detectUrlType(query.trim()) : null
