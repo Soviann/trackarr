@@ -45,7 +45,7 @@
 
 .star {
   font-size: 24px;
-  color: #888;
+  color: var(--ink-dim);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -113,7 +113,7 @@
 
 .externalSubLabel {
   font-size: 11px;
-  color: #fff;
+  color: var(--ink);
 }
 
 .skip {

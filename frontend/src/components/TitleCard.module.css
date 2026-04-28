@@ -60,7 +60,7 @@
 .progressTrack {
   margin-top: 6px;
   height: 3px;
-  background: #2A2A2A;
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }

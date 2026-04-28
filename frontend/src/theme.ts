@@ -18,6 +18,7 @@ export const colors = {
 
   brandImdb: '#F5C518',
   brandTmdb: '#01b4e4',
+  brandTvdb: '#4a90d9',
   brandAnilist: '#02A9FF',
 
   statusOk: '#4CAF50',

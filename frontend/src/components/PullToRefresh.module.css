@@ -11,8 +11,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #1E1E1E;
-  border: 1.5px solid #222222;
+  background: var(--bg-elev);
+  border: 1.5px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,13 +22,13 @@
 }
 
 .indicatorReady {
-  background: #38BDB0;
-  border-color: #38BDB0;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .indicatorSpinning {
-  background: #38BDB0;
-  border-color: #38BDB0;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .arrow {

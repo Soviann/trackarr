@@ -131,7 +131,7 @@
 
 .extTvdb {
   composes: extLink;
-  color: #4a90d9;
+  color: var(--brand-tvdb);
 }
 
 .extAnilist {
@@ -174,13 +174,13 @@
 }
 
 .moreBtnSuccess {
-  color: #22c55e;
-  border-color: #16a34a;
+  color: var(--status-ok);
+  border-color: var(--status-ok);
 }
 
 .moreBtnError {
-  color: #f87171;
-  border-color: #dc2626;
+  color: var(--status-crit);
+  border-color: var(--status-crit);
 }
 
 .bottomPad {

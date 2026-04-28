@@ -4,6 +4,7 @@ import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
 import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
+import { colors } from '../theme'
 import { SeasonTab } from '../components/SeasonTab'
 import { SeasonAniListStrip } from '../components/SeasonAniListStrip'
 import { EpisodeRow } from '../components/EpisodeRow'
@@ -153,7 +154,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Hero — spacer, holds back button; cover image shows through .page background */}
       <div className={s.hero}>
         <button onClick={() => history.back()} aria-label="Back" className={s.backBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
