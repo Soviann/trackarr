@@ -347,14 +347,6 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 
 	update := buildEnrichmentUpdate(result, payload)
 
-	var genreList []string
-	if result.Genres != "" {
-		if err := json.Unmarshal([]byte(result.Genres), &genreList); err != nil {
-			logger.Warn("decode genres", "err", err)
-			genreList = nil
-		}
-	}
-
 	err = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		titlesTx := repository.NewTitleWriter(tx)
 		genresTx := repository.NewGenreWriter(tx)
@@ -371,8 +363,8 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 			}
 		}
 
-		if len(genreList) > 0 {
-			if err := genresTx.ReplaceForTitle(ctx, payload.TitleID, genreList); err != nil {
+		if len(result.Genres) > 0 {
+			if err := genresTx.ReplaceForTitle(ctx, payload.TitleID, result.Genres); err != nil {
 				logger.Warn("save genres", "err", err)
 			}
 		}

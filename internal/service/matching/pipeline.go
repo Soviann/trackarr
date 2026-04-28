@@ -2,7 +2,6 @@ package matching
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -84,7 +83,7 @@ type MatchResult struct {
 	IsAnime     bool              `json:"is_anime"`
 	// TMDB/TVDB metadata
 	Overview      string   `json:"overview"`
-	Genres        string   `json:"genres"` // JSON array
+	Genres        []string `json:"genres"`
 	Runtime       *int     `json:"runtime"`
 	TMDBRating    *float64 `json:"tmdb_rating"`
 	Credits       string   `json:"credits"` // JSON array
@@ -553,7 +552,7 @@ type tvdbFetchResult struct {
 
 // mergeGenres unions TMDB and TVDB genre slices, deduplicating case-insensitively.
 // TMDB genres take priority on case conflicts.
-func mergeGenres(tmdbGenres []string, tvdbGenres []string) string {
+func mergeGenres(tmdbGenres []string, tvdbGenres []string) []string {
 	seen := make(map[string]bool, len(tmdbGenres)+len(tvdbGenres))
 	merged := make([]string, 0, len(tmdbGenres)+len(tvdbGenres))
 	for _, g := range tmdbGenres {
@@ -570,8 +569,7 @@ func mergeGenres(tmdbGenres []string, tvdbGenres []string) string {
 			merged = append(merged, g)
 		}
 	}
-	b, _ := json.Marshal(merged)
-	return string(b)
+	return merged
 }
 
 // mergeNames unions name maps from two sources; primary wins on duplicate key.
