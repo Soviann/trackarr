@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, fireEvent } from '@testing-library/preact'
+import { render, fireEvent, cleanup } from '@testing-library/preact'
 import { BottomSheet } from './BottomSheet'
 
 function makePointerEvent(type: string, overrides: Partial<PointerEvent> = {}): PointerEvent {
@@ -15,6 +15,7 @@ describe('BottomSheet', () => {
   })
 
   afterEach(() => {
+    cleanup()
     document.body.style.overflow = ''
   })
 
@@ -122,5 +123,114 @@ describe('BottomSheet', () => {
     )
     window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  // Test 8 — role/aria attributes
+  it('exposes role="dialog", aria-modal and aria-label', () => {
+    const { container } = render(
+      <BottomSheet open={true} onClose={vi.fn()} ariaLabel="Edit title">
+        <p>content</p>
+      </BottomSheet>,
+    )
+    const sheet = container.querySelector('[role="dialog"]') as HTMLElement
+    expect(sheet).toBeTruthy()
+    expect(sheet.getAttribute('aria-modal')).toBe('true')
+    expect(sheet.getAttribute('aria-label')).toBe('Edit title')
+  })
+
+  it('falls back to aria-label="Dialog" when ariaLabel is not provided', () => {
+    const { container } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <p>content</p>
+      </BottomSheet>,
+    )
+    const sheet = container.querySelector('[role="dialog"]') as HTMLElement
+    expect(sheet.getAttribute('aria-label')).toBe('Dialog')
+  })
+
+  // Test 9 — Escape closes
+  it('calls onClose when Escape is pressed', () => {
+    const onClose = vi.fn()
+    render(
+      <BottomSheet open={true} onClose={onClose}>
+        <button>OK</button>
+      </BottomSheet>,
+    )
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('does not react to Escape when closed', () => {
+    const onClose = vi.fn()
+    render(
+      <BottomSheet open={false} onClose={onClose}>
+        <button>OK</button>
+      </BottomSheet>,
+    )
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  // Test 10 — Initial focus on first focusable child
+  it('moves focus to the first focusable child on open', () => {
+    const { getByText } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <button>First</button>
+        <button>Second</button>
+      </BottomSheet>,
+    )
+    expect(document.activeElement).toBe(getByText('First'))
+  })
+
+  // Test 11 — Focus restoration on close
+  it('restores focus to the previously focused element on close', () => {
+    const trigger = document.createElement('button')
+    trigger.textContent = 'Open'
+    document.body.appendChild(trigger)
+    trigger.focus()
+    expect(document.activeElement).toBe(trigger)
+
+    const { rerender } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <button>Inner</button>
+      </BottomSheet>,
+    )
+    expect(document.activeElement).not.toBe(trigger)
+
+    rerender(
+      <BottomSheet open={false} onClose={vi.fn()}>
+        <button>Inner</button>
+      </BottomSheet>,
+    )
+    expect(document.activeElement).toBe(trigger)
+    document.body.removeChild(trigger)
+  })
+
+  // Test 12 — Tab trap: forward from last wraps to first
+  it('wraps focus to the first focusable when Tab is pressed on the last', () => {
+    const { getByText } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <button>One</button>
+        <button>Two</button>
+      </BottomSheet>,
+    )
+    const last = getByText('Two') as HTMLButtonElement
+    last.focus()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    expect(document.activeElement).toBe(getByText('One'))
+  })
+
+  // Test 13 — Tab trap: backward from first wraps to last
+  it('wraps focus to the last focusable when Shift+Tab is pressed on the first', () => {
+    const { getByText } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <button>One</button>
+        <button>Two</button>
+      </BottomSheet>,
+    )
+    const first = getByText('One') as HTMLButtonElement
+    first.focus()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+    expect(document.activeElement).toBe(getByText('Two'))
   })
 })

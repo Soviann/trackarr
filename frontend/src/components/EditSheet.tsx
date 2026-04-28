@@ -43,7 +43,7 @@ export function EditSheet({ open, onClose, title, onSave }: EditSheetProps) {
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel="Edit title">
       <div className={s.content}>
         {/* Type selector */}
         <div className={s.section}>

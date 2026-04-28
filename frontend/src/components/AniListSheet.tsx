@@ -18,7 +18,7 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
   const isConfirmed = title.match_status === 'confirmed'
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel="AniList match">
       <div className={s.container}>
         <div className={s.heading}>
           AniList Match

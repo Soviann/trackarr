@@ -25,7 +25,7 @@ export function RatingPrompt({
   }, [initialRating, open])
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={`Rate ${titleName}`}>
       {/* Context */}
       {context && (
         <div className={s.context}>

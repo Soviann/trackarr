@@ -141,7 +141,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? 'Link AniList season' : 'Rematch title'}>
       <div className={s.content}>
         {seasonID != null ? (
           /* Season-mode: focused AniList ID input only */

@@ -367,7 +367,7 @@ export function Library(_props: { path?: string }) {
       {bulkError && <ErrorBanner message={bulkError} onDismiss={() => setBulkError(null)} />}
 
       {/* Status picker sheet */}
-      <BottomSheet open={statusSheetOpen} onClose={() => { if (!bulkPending) setStatusSheetOpen(false) }}>
+      <BottomSheet open={statusSheetOpen} onClose={() => { if (!bulkPending) setStatusSheetOpen(false) }} ariaLabel="Set status for selected titles">
         <div className={s.statusSheet}>
           {statusOptions.map(opt => (
             <button

@@ -245,7 +245,7 @@ export function Search({ path: _ }: { path?: string }) {
         )}
       </div>
 
-      <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)}>
+      <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)} ariaLabel="Merge titles">
         <div className={s.mergeDrawer}>
           <div className={s.mergeTitle}>Merge titles?</div>
           <div className={s.mergeDesc}>

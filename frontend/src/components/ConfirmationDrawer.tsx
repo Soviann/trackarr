@@ -40,7 +40,7 @@ export function ConfirmationDrawer({
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={title}>
       <div className={s.content}>
         <div className={s.title}>{title}</div>
         {description && <div className={s.description}>{description}</div>}
