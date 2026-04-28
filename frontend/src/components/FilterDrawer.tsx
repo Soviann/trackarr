@@ -108,11 +108,18 @@ export function FilterDrawer({
   })
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
+  const dragYRef = useRef(0)
+  const openRef = useRef(open)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const genreDropdownRef = useRef<HTMLDivElement>(null)
   const [genres, setGenres] = useState<GenreCount[]>([])
   const [genreSearch, setGenreSearch] = useState('')
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
   const genreBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const genreInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { openRef.current = open }, [open])
+  useEffect(() => { dragYRef.current = dragY }, [dragY])
 
   const fetchGenres = useCallback(() => {
     apiFetch<GenreCount[]>('/genres')
@@ -124,27 +131,46 @@ export function FilterDrawer({
     fetchGenres()
   }, [fetchGenres])
 
-  const handleTouchStart = (e: TouchEvent) => {
-    if (!open) return
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (!openRef.current) return
+    // Skip drag tracking when starting inside the scrollable genre dropdown
+    const target = e.target as Node | null
+    if (target && genreDropdownRef.current?.contains(target)) return
     touchStartY.current = e.touches[0].clientY
-  }
+  }, [])
 
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!open || touchStartY.current === null) return
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (touchStartY.current === null) return
     const deltaY = e.touches[0].clientY - touchStartY.current
     if (deltaY > 0) {
+      // Block native page scroll while we're handling the close gesture
+      e.preventDefault()
       setDragY(deltaY)
     }
-  }
+  }, [])
 
-  const handleTouchEnd = () => {
-    if (!open || touchStartY.current === null) return
-    if (dragY > 100) {
-      setOpen(false)
-    }
+  const handleTouchEnd = useCallback(() => {
+    if (touchStartY.current === null) return
+    if (dragYRef.current > 100) setOpen(false)
     setDragY(0)
     touchStartY.current = null
-  }
+  }, [])
+
+  // Attach touch listeners with { passive: false } so preventDefault can stop page scroll
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    el.addEventListener('touchstart', handleTouchStart, { passive: true })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false })
+    el.addEventListener('touchend', handleTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove', handleTouchMove)
+      el.removeEventListener('touchend', handleTouchEnd)
+      el.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
 
   // Reset to closed when switching to a page with defaultOpen=false
   useEffect(() => {
@@ -195,9 +221,7 @@ export function FilterDrawer({
 
   return (
     <div
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      ref={containerRef}
       style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
       className={s.container}
     >
@@ -340,7 +364,7 @@ export function FilterDrawer({
                   />
                 </div>
                 {genreDropdownOpen && filteredGenres.length > 0 && (
-                  <div className={s.genreDropdown}>
+                  <div ref={genreDropdownRef} className={s.genreDropdown}>
                     {filteredGenres.map(g => (
                       <div
                         key={g.genre}
