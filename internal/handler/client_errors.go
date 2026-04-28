@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 )
@@ -23,9 +24,15 @@ func (h *ClientErrorHandler) Handle(w http.ResponseWriter, r *http.Request) erro
 		return httputil.NewAPIError(http.StatusBadRequest, "message is required")
 	}
 	slog.WarnContext(r.Context(), "[client-error]",
-		"message", payload.Message,
-		"stack", payload.Stack,
+		"message", sanitizeLogLine(payload.Message),
+		"stack", sanitizeLogLine(payload.Stack),
 	)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// sanitizeLogLine collapses CR/LF to spaces so a rogue tab or compromised
+// service worker cannot inject fake log lines into our slog output.
+func sanitizeLogLine(s string) string {
+	return strings.NewReplacer("\r", " ", "\n", " ").Replace(s)
 }

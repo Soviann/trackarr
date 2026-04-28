@@ -165,7 +165,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
 
-			r.Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))
+			clientErrorsRateLimit := mw.RateLimit(ctx, 30, time.Minute)
+			r.With(clientErrorsRateLimit).Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))
 		})
 	})
 
