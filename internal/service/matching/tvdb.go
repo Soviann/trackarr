@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -124,6 +125,6 @@ func isUnauthorized(err error) bool {
 	if err == nil {
 		return false
 	}
-	apiErr, ok := err.(*APIError)
-	return ok && apiErr.StatusCode == http.StatusUnauthorized
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized
 }

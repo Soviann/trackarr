@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -154,7 +155,7 @@ func Serve(distFS embed.FS) error {
 	serverErr := make(chan error, 1)
 	go func() {
 		log.Printf("PlexTracker listening on %s", cfg.ListenAddr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 			return
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -479,7 +480,7 @@ func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matc
 	}
 	existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
 	if err != nil {
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("FindByExternalID", "err", err)
 		}
 		return false, nil

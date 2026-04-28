@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -32,7 +33,7 @@ func (w *SeasonWriter) GetOrCreate(ctx context.Context, titleID int64, seasonNum
 	if err == nil {
 		return &s, nil
 	}
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("get season: %w", err)
 	}
 

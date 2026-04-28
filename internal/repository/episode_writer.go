@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -34,7 +35,7 @@ func (w *EpisodeWriter) GetOrCreate(ctx context.Context, seasonID int64, episode
 	if err == nil {
 		return &e, nil
 	}
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("get episode: %w", err)
 	}
 

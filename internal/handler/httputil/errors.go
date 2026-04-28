@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"errors"
 	"log"
 	"net/http"
 )
@@ -51,7 +52,8 @@ type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 func WrapHandler(h HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := h(w, r); err != nil {
-			if apiErr, ok := err.(*APIError); ok {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) {
 				if apiErr.Err != nil {
 					log.Printf("%s %s: %v", r.Method, r.URL.Path, apiErr.Err)
 				}

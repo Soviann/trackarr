@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -248,7 +249,7 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, destID, m.newNum).Scan(&targetSeasonID)
 		var finalSeasonID int64
 		switch {
-		case err == sql.ErrNoRows:
+		case errors.Is(err, sql.ErrNoRows):
 			if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id); err != nil {
 				return fmt.Errorf("move season %d: %w", m.id, err)
 			}
