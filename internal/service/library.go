@@ -160,10 +160,9 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 
 	watchEvents := make([]model.WatchEvent, len(episodeIDs))
 	for i, epID := range episodeIDs {
-		id := epID
 		watchEvents[i] = model.WatchEvent{
 			TitleID:     titleID,
-			EpisodeID:   &id,
+			EpisodeID:   &epID,
 			Source:      source,
 			PlexPayload: rawPayload,
 		}

@@ -1,8 +1,9 @@
 package repository
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -39,14 +40,8 @@ func (r *TitleRepository) searchTitlesPaginated(searchTerm string, filter TitleF
 	if limit <= 0 {
 		limit = DefaultPageSize
 	}
-	offset := filter.Offset
-	if offset > total {
-		offset = total
-	}
-	end := offset + limit
-	if end > total {
-		end = total
-	}
+	offset := min(filter.Offset, total)
+	end := min(offset+limit, total)
 
 	page := allResults[offset:end]
 	page, err = r.loadTitleRelationsLight(page)
@@ -180,13 +175,11 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 	for _, sr := range bestByTitle {
 		results = append(results, *sr)
 	}
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].relevance != results[j].relevance {
-			return results[i].relevance < results[j].relevance
+	slices.SortFunc(results, func(a, b searchResult) int {
+		if c := cmp.Compare(a.relevance, b.relevance); c != 0 {
+			return c
 		}
-		ni := primaryName(results[i].title)
-		nj := primaryName(results[j].title)
-		return strings.ToLower(ni) < strings.ToLower(nj)
+		return cmp.Compare(strings.ToLower(primaryName(a.title)), strings.ToLower(primaryName(b.title)))
 	})
 
 	// Limit results

@@ -22,9 +22,7 @@ func NewActivityHandler(activity *repository.ActivityRepository) *ActivityHandle
 func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) error {
 	limit := httputil.ParseQueryInt(r, "limit", 50)
 	offset := httputil.ParseQueryInt(r, "offset", 0)
-	if limit > 100 {
-		limit = 100
-	}
+	limit = min(limit, 100)
 	events, err := h.activity.List(r.Context(), limit, offset)
 	if err != nil {
 		return fmt.Errorf("activity: list: %w", err)

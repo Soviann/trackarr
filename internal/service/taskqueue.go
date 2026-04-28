@@ -690,10 +690,7 @@ func calculateNextRunAt(attempts int, retryAfter time.Duration) time.Time {
 	base := 30 * time.Second
 	delay := time.Duration(float64(base) * math.Pow(2, float64(attempts-1)))
 
-	maxDelay := time.Hour
-	if delay > maxDelay {
-		delay = maxDelay
-	}
+	delay = min(delay, time.Hour)
 
 	// Add jitter: 0-25%
 	jitter := time.Duration(float64(delay) * 0.25 * rand.Float64())

@@ -191,10 +191,9 @@ func BackfillPreviousEpisodes(
 	// Create watch events for backfilled episodes
 	watchEvents := make([]model.WatchEvent, len(toMarkIDs))
 	for i, epID := range toMarkIDs {
-		id := epID
 		watchEvents[i] = model.WatchEvent{
 			TitleID:   toEventTitleID,
-			EpisodeID: &id,
+			EpisodeID: &epID,
 			Source:    model.WatchEventSourceBackfill,
 		}
 	}
