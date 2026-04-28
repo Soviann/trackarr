@@ -1,0 +1,21 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Vault refined: P outline + play triangle + check, on a filled disc, transparent corners -->
+
+  <!-- The disc (matches the original "black circle" treatment, in Vault dark) -->
+  <circle cx="256" cy="256" r="240" fill="#1a1714"/>
+
+  <!-- P as a rectangular outline with a foot, like the original -->
+  <g fill="none" stroke="#d4ad7a" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 156 140 L 156 372"/>
+    <path d="M 156 140 L 332 140 L 332 260 L 156 260"/>
+    <path d="M 156 372 L 216 372"/>
+  </g>
+
+  <!-- Play triangle inside the P bowl (movies) -->
+  <path d="M 212 172 L 308 200 L 212 228 Z" fill="#E8A925" opacity="0.95"/>
+
+  <!-- Check mark, lower right (tracked / watched) -->
+  <path d="M 256 328 L 304 376 L 392 288"
+        fill="none" stroke="#d4ad7a" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
