@@ -67,9 +67,15 @@ export function BottomSheet({ open, onClose, ariaLabel = 'Dialog', children }: B
     window.addEventListener('popstate', onPopState)
     return () => {
       window.removeEventListener('popstate', onPopState)
-      // If closing normally (tap overlay, drag dismiss) — pop the dummy entry
+      // If closing normally (tap overlay, drag dismiss), pop the dummy entry —
+      // but only if it's still on top. The Search merge sheet calls route()
+      // mid-open, which pushes the destination on top of our dummy ; popping
+      // there would yank the user back from the page they just landed on.
       if (!closedViaBackRef.current) {
-        history.back()
+        const currentState = history.state as { token?: string } | null
+        if (currentState && currentState.token === token) {
+          history.back()
+        }
       }
       closedViaBackRef.current = false
     }

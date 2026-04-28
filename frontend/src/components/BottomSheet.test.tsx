@@ -125,6 +125,28 @@ describe('BottomSheet', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  // Test 7b — does NOT pop history.back() when the dummy is buried under a
+  // route() push (Search merge sheet pattern). Otherwise we'd yank the user
+  // back from the destination they just landed on.
+  it('skips history.back() when the dummy entry is no longer on top', () => {
+    const back = vi.spyOn(history, 'back')
+    const { rerender } = render(
+      <BottomSheet open={true} onClose={vi.fn()}>
+        <p>content</p>
+      </BottomSheet>,
+    )
+    // Simulate the consumer calling route() while the sheet is open: pushes
+    // a new state on top of our dummy.
+    history.pushState({ token: 'unrelated-route-push' }, '', '')
+
+    rerender(
+      <BottomSheet open={false} onClose={vi.fn()}>
+        <p>content</p>
+      </BottomSheet>,
+    )
+    expect(back).not.toHaveBeenCalled()
+  })
+
   // Test 8 — role/aria attributes
   it('exposes role="dialog", aria-modal and aria-label', () => {
     const { container } = render(
