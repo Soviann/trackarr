@@ -34,12 +34,18 @@ function getMetadata(t: Title) {
 }
 
 export function Search({ path: _ }: { path?: string }) {
-  const { filter } = useTitleStore()
-  const {
-    query, setQuery, results, total, hasMore,
-    loading, loadingMore, error,
-    search, loadMore, clear
-  } = useSearchStore()
+  const filter = useTitleStore(s => s.filter)
+  const query = useSearchStore(s => s.query)
+  const setQuery = useSearchStore(s => s.setQuery)
+  const results = useSearchStore(s => s.results)
+  const total = useSearchStore(s => s.total)
+  const hasMore = useSearchStore(s => s.hasMore)
+  const loading = useSearchStore(s => s.loading)
+  const loadingMore = useSearchStore(s => s.loadingMore)
+  const error = useSearchStore(s => s.error)
+  const search = useSearchStore(s => s.search)
+  const loadMore = useSearchStore(s => s.loadMore)
+  const clear = useSearchStore(s => s.clear)
 
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const mergeSourceId = params.get('mergeSourceId')

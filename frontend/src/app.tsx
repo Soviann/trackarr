@@ -55,7 +55,10 @@ export function App() {
     setCurrentPath(e.url)
   }
 
-  const { filter, setFilter, sort, setSort } = useTitleStore()
+  const filter = useTitleStore(s => s.filter)
+  const setFilter = useTitleStore(s => s.setFilter)
+  const sort = useTitleStore(s => s.sort)
+  const setSort = useTitleStore(s => s.setSort)
 
   const navigate = useCallback((path: string) => {
     if (path === '/' || path === '/search') {
