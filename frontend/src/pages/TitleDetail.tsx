@@ -139,12 +139,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     : coverBackground(null, title.type)
 
   const pageStyle = {
-    ['--cover-bg' as any]: coverBg,
+    '--cover-bg': coverBg,
     ...(title.accent_hex && {
-      ['--cover-accent' as any]: title.accent_hex,
-      ['--cover-accent-wash' as any]: hexToRgba(title.accent_hex, 0.10),
+      '--cover-accent': title.accent_hex,
+      '--cover-accent-wash': hexToRgba(title.accent_hex, 0.10),
     }),
-  }
+  } as JSX.CSSProperties
 
   return (
     <div className={s.page} style={pageStyle}>
