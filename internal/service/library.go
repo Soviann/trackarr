@@ -140,7 +140,14 @@ func (s *LibraryService) TriggerBackfillForEpisode(ctx context.Context, titleID 
 
 // MarkEpisodesWatched marks multiple episodes as watched and logs watch events.
 // Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
-func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, titleID int64, episodeIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
+//
+// seasonIDs is an optional hint: when non-nil, it bypasses the
+// distinctSeasonIDs lookup inside the write transaction. The Plex scrobble
+// hot path always operates on one episode whose season is already loaded —
+// passing the hint avoids a SELECT inside the only writeDB connection.
+// Pass nil when the caller does not already know the season IDs (manual
+// batch-watch flow).
+func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, titleID int64, episodeIDs []int64, seasonIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
 	titles := repository.NewTitleRepository(tx)
 	titlesW := repository.NewTitleWriter(tx)
 	episodes := repository.NewEpisodeWriter(tx)
@@ -183,7 +190,11 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 	// Push one task per distinct season in the batch. Plex scrobbles pass a
 	// single episode at a time, but manual batch-watch can span multiple
 	// seasons when the user catches up on backlogs.
-	for _, seasonID := range distinctSeasonIDs(ctx, tx, episodeIDs) {
+	pushSeasonIDs := seasonIDs
+	if pushSeasonIDs == nil {
+		pushSeasonIDs = distinctSeasonIDs(ctx, tx, episodeIDs)
+	}
+	for _, seasonID := range pushSeasonIDs {
 		EnqueueAniListSeasonPush(ctx, tx, seasonID)
 	}
 

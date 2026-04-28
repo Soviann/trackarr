@@ -139,7 +139,7 @@ func TestMarkEpisodesWatched_EnqueuesDistinctSeasonPushes(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
 		_, _, err := libSvc.MarkEpisodesWatched(ctx, tx, titleID,
-			[]int64{s1e1.ID, s1e2.ID, s2e1.ID},
+			[]int64{s1e1.ID, s1e2.ID, s2e1.ID}, nil,
 			model.WatchEventSourceManual, nil)
 		return err
 	}))

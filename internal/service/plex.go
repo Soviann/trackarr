@@ -337,7 +337,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 		return nil, nil, fmt.Errorf("get/create episode: %w", err)
 	}
 
-	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, model.WatchEventSourcePlex, &rawPayload)
+	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, []int64{ep.SeasonID}, model.WatchEventSourcePlex, &rawPayload)
 	if err != nil {
 		return nil, nil, err
 	}

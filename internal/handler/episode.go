@@ -77,7 +77,7 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		prompt *service.RatingPrompt
 	)
 	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		t, p, e := h.service.MarkEpisodesWatched(r.Context(), tx, titleID, body.EpisodeIDs, model.WatchEventSourceManual, nil)
+		t, p, e := h.service.MarkEpisodesWatched(r.Context(), tx, titleID, body.EpisodeIDs, nil, model.WatchEventSourceManual, nil)
 		if e != nil {
 			return e
 		}
