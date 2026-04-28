@@ -5,6 +5,7 @@ import { formatWatchtime } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
 import type { StatsResponse, FunStat, ActivityEvent } from '../types'
 import { routeTo } from '../routes'
+import { ErrorBanner } from '../components/ErrorBanner'
 import s from './Stats.module.css'
 
 const funStatIcons: Record<string, string> = {
@@ -163,17 +164,26 @@ function ActivitySection() {
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [error, setError] = useState('')
   const LIMIT = 50
 
   const loadMore = async () => {
+    if (loading || !hasMore) return
+    const off = offset
     setLoading(true)
-    const data = await apiFetch<ActivityEvent[]>(
-      `/stats/activity?limit=${LIMIT}&offset=${offset}`
-    )
-    setEvents(prev => [...prev, ...data])
-    setOffset(o => o + LIMIT)
-    setHasMore(data.length === LIMIT)
-    setLoading(false)
+    setError('')
+    try {
+      const data = await apiFetch<ActivityEvent[]>(
+        `/stats/activity?limit=${LIMIT}&offset=${off}`
+      )
+      setEvents(prev => [...prev, ...data])
+      setOffset(off + LIMIT)
+      setHasMore(data.length === LIMIT)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load activity')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadMore() }, [])
@@ -206,6 +216,7 @@ function ActivitySection() {
           </div>
         )
       })}
+      {error && <ErrorBanner message={error} onRetry={loadMore} onDismiss={() => setError('')} />}
       {hasMore && (
         <button className={s.loadMoreBtn} onClick={loadMore} disabled={loading}>
           {loading ? 'Loading…' : 'Load more'}
