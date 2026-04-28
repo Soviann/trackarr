@@ -29,7 +29,7 @@ export function PosterTile({ item }: Props) {
     >
       <div className={s.poster}>
         {item.cover_url
-          ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" />
+          ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" loading="lazy" />
           : <CoverPlaceholder type={item.type} />}
         {item.progressRatio !== undefined && (
           <div className={s.progressBar}>

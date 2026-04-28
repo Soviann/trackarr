@@ -202,7 +202,7 @@ function ActivitySection() {
             {rows.map((row) => (
               <a key={row.key} href={routeTo.title(row.titleId)} className={s.activityRow}>
                 {row.coverUrl
-                  ? <img className={s.activityThumb} src={`/api/covers/${row.coverUrl}`} alt="" role="presentation" />
+                  ? <img className={s.activityThumb} src={`/api/covers/${row.coverUrl}`} alt="" role="presentation" loading="lazy" />
                   : <div className={s.activityThumbPlaceholder} />}
                 <div className={s.activityInfo}>
                   <span className={s.activityTitle}>{row.titleName}</span>
