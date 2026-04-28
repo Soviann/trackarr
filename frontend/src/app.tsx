@@ -48,9 +48,10 @@ export function App() {
     })
   }, [])
 
-  useEffect(() => { updateBadge() }, [])
+  const isAuthed = currentPath !== '/login'
+  useEffect(() => { if (isAuthed) updateBadge() }, [isAuthed])
 
-  usePush(currentPath !== '/login' ? vapidKey : undefined)
+  usePush(isAuthed ? vapidKey : undefined)
 
   const handleRoute = (e: { url: string }) => {
     setCurrentPath(e.url)
