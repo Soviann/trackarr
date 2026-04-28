@@ -41,15 +41,30 @@ func (w *TitleWriter) Create(ctx context.Context, title *model.Title, names []mo
 
 	id, _ := res.LastInsertId()
 
-	for _, name := range names {
-		_, err := w.tx.ExecContext(ctx, `INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, ?)`,
-			id, name.Name, name.Language, name.IsPrimary)
-		if err != nil {
-			return 0, fmt.Errorf("insert title name: %w", err)
-		}
+	if err := w.insertNames(ctx, id, names); err != nil {
+		return 0, err
 	}
 
 	return id, nil
+}
+
+// insertNames batch-inserts names into title_names. No-op on empty slice.
+// Caller owns the transaction.
+func (w *TitleWriter) insertNames(ctx context.Context, titleID int64, names []model.TitleName) error {
+	if len(names) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(names))
+	args := make([]interface{}, 0, len(names)*4)
+	for i, n := range names {
+		placeholders[i] = "(?, ?, ?, ?)"
+		args = append(args, titleID, n.Name, n.Language, n.IsPrimary)
+	}
+	query := fmt.Sprintf(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES %s`, strings.Join(placeholders, ","))
+	if _, err := w.tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("insert title names: %w", err)
+	}
+	return nil
 }
 
 // Update applies a partial update. Nil fields on TitleUpdate are left untouched.
@@ -197,20 +212,7 @@ func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []m
 	if _, err := w.tx.ExecContext(ctx, `DELETE FROM title_names WHERE title_id = ?`, titleID); err != nil {
 		return fmt.Errorf("delete title names: %w", err)
 	}
-	if len(names) == 0 {
-		return nil
-	}
-	placeholders := make([]string, len(names))
-	args := make([]interface{}, 0, len(names)*4)
-	for i, n := range names {
-		placeholders[i] = "(?, ?, ?, ?)"
-		args = append(args, titleID, n.Name, n.Language, n.IsPrimary)
-	}
-	query := fmt.Sprintf(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES %s`, strings.Join(placeholders, ","))
-	if _, err := w.tx.ExecContext(ctx, query, args...); err != nil {
-		return fmt.Errorf("insert title names: %w", err)
-	}
-	return nil
+	return w.insertNames(ctx, titleID, names)
 }
 
 // Merge consolidates sourceID into destID. Moves seasons (shifting their
