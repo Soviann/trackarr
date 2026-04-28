@@ -166,20 +166,24 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 		return httputil.BadRequest("Invalid JSON")
 	}
 
-	for key, enabled := range prefs {
-		// Only allow known keys
-		switch key {
-		case service.NotifRatingPrompt, service.NotifDeadTask, service.NotifSeriesEnded:
-			val := "true"
-			if !enabled {
-				val = "false"
-			}
-			if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
-				return repository.NewSettingWriter(tx).Set(r.Context(), key, val)
-			}); err != nil {
-				return httputil.InternalError("save notification pref", err)
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		writer := repository.NewSettingWriter(tx)
+		for key, enabled := range prefs {
+			// Only allow known keys
+			switch key {
+			case service.NotifRatingPrompt, service.NotifDeadTask, service.NotifSeriesEnded:
+				val := "true"
+				if !enabled {
+					val = "false"
+				}
+				if err := writer.Set(r.Context(), key, val); err != nil {
+					return err
+				}
 			}
 		}
+		return nil
+	}); err != nil {
+		return httputil.InternalError("save notification prefs", err)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
