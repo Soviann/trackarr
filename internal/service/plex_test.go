@@ -37,7 +37,7 @@ func setupPlexService(t *testing.T) (*service.PlexService, *sql.DB, *repository.
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
 	backfillSvc := service.NewBackfillService(db, nil)
 	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, nil)
-	svc := service.NewPlexService(context.Background(), db, nil, titleSvc, libSvc)
+	svc := service.NewPlexService(db, nil, titleSvc, libSvc)
 	return svc, db, titleRepo
 }
 
@@ -195,7 +195,7 @@ func setupPlexServiceWithTMDB(t *testing.T, tmdbClient *matching.TMDBClient) (*s
 	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
 	backfillSvc := service.NewBackfillService(db, tmdbClient)
 	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfillSvc, pipeline)
-	svc := service.NewPlexService(context.Background(), db, pipeline, titleSvc, libSvc)
+	svc := service.NewPlexService(db, pipeline, titleSvc, libSvc)
 	return svc, db, titleRepo
 }
 

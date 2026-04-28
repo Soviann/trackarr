@@ -44,17 +44,15 @@ func ParseGUIDs(guids []*url.URL) PlexExternalIDs {
 
 type PlexService struct {
 	log      *slog.Logger
-	ctx      context.Context
 	db       *sql.DB
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
 	titleSvc *TitleService
 	libSvc   *LibraryService
 }
 
-func NewPlexService(ctx context.Context, db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
+func NewPlexService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
 	return &PlexService{
 		log:      slog.With("subsystem", "plex"),
-		ctx:      ctx,
 		db:       db,
 		pipeline: pipeline,
 		titleSvc: titleSvc,

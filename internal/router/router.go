@@ -57,7 +57,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
-	plexSvc := service.NewPlexService(ctx, writeDB, pipeline, titleSvc, libSvc)
+	plexSvc := service.NewPlexService(writeDB, pipeline, titleSvc, libSvc)
 
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
