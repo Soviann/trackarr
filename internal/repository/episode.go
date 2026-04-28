@@ -37,5 +37,8 @@ func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, erro
 		}
 		episodes = append(episodes, e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate episodes: %w", err)
+	}
 	return episodes, nil
 }

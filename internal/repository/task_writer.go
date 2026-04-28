@@ -83,6 +83,10 @@ func (w *TaskWriter) FetchDue(ctx context.Context, limit int) ([]model.Task, err
 		}
 		tasks = append(tasks, t)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate due tasks: %w", err)
+	}
 	rows.Close()
 
 	if len(tasks) > 0 {

@@ -242,6 +242,10 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		sm.newNum = oldNum + seasonOffset
 		moves = append(moves, sm)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("iterate source seasons: %w", err)
+	}
 	rows.Close()
 
 	for _, m := range moves {

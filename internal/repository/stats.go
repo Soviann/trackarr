@@ -215,6 +215,10 @@ func (r *StatsRepository) ratings(ctx context.Context) (*model.StatsRatings, err
 			}
 		}
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate rating distribution: %w", err)
+	}
 	rows.Close()
 
 	if totalRated > 0 {
@@ -241,6 +245,10 @@ func (r *StatsRepository) ratings(ctx context.Context) (*model.StatsRatings, err
 			return nil, fmt.Errorf("scan avg type: %w", err)
 		}
 		s.AverageByType[t] = math.Round(avg*10) / 10
+	}
+	if err := typeRows.Err(); err != nil {
+		typeRows.Close()
+		return nil, fmt.Errorf("iterate avg by type: %w", err)
 	}
 	typeRows.Close()
 
@@ -273,6 +281,10 @@ func (r *StatsRepository) breakdown(ctx context.Context) (*model.StatsBreakdown,
 		case "type":
 			b.ByType[k] = count
 		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate breakdown: %w", err)
 	}
 	rows.Close()
 

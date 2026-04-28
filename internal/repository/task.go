@@ -64,6 +64,9 @@ func (r *TaskRepository) listByStatuses(statuses ...string) ([]model.Task, error
 		}
 		tasks = append(tasks, t)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tasks: %w", err)
+	}
 	return tasks, nil
 }
 
@@ -101,6 +104,9 @@ func (r *TaskRepository) ListPaginated(filter string, limit, offset int) ([]mode
 		}
 		tasks = append(tasks, t)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate paginated tasks: %w", err)
+	}
 	if tasks == nil {
 		tasks = []model.Task{}
 	}
@@ -123,6 +129,9 @@ func (r *TaskRepository) CountByStatus() (map[model.TaskStatus]int, error) {
 			return nil, fmt.Errorf("scan task count: %w", err)
 		}
 		counts[status] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate task counts: %w", err)
 	}
 	return counts, nil
 }

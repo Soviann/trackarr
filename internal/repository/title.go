@@ -98,6 +98,10 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		}
 		title.Names = append(title.Names, n)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate title names: %w", err)
+	}
 	rows.Close()
 
 	// Load genres from title_genres
@@ -112,6 +116,10 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 			return nil, fmt.Errorf("scan genre: %w", err)
 		}
 		title.Genres = append(title.Genres, g)
+	}
+	if err := genreRows.Err(); err != nil {
+		genreRows.Close()
+		return nil, fmt.Errorf("iterate title genres: %w", err)
 	}
 	genreRows.Close()
 
@@ -142,6 +150,10 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		s.Episodes = []model.Episode{}
 		title.Seasons = append(title.Seasons, s)
 	}
+	if err := seasonRows.Err(); err != nil {
+		seasonRows.Close()
+		return nil, fmt.Errorf("iterate seasons: %w", err)
+	}
 	seasonRows.Close()
 
 	// Load all episodes in one query (seasons cursor is closed above; safe with MaxOpenConns=1)
@@ -162,6 +174,10 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 			return nil, fmt.Errorf("scan episode: %w", err)
 		}
 		grouped[e.SeasonID] = append(grouped[e.SeasonID], e)
+	}
+	if err := epRows.Err(); err != nil {
+		epRows.Close()
+		return nil, fmt.Errorf("iterate episodes: %w", err)
 	}
 	epRows.Close()
 	for i := range title.Seasons {
@@ -268,6 +284,10 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 		t.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
 		titles = append(titles, t)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate all titles: %w", err)
 	}
 	rows.Close()
 
@@ -381,6 +401,9 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 		}
 		used[url] = true
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate used covers: %w", err)
+	}
 
 	return used, nil
 }
@@ -415,6 +438,9 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 		}
 		items = append(items, item)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate continue watching: %w", err)
+	}
 	return items, nil
 }
 
@@ -445,6 +471,9 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 			return nil, fmt.Errorf("scan upcoming: %w", err)
 		}
 		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate upcoming: %w", err)
 	}
 	return items, nil
 }

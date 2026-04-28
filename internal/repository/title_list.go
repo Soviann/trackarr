@@ -222,6 +222,10 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 		titles = append(titles, t)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate titles: %w", err)
+	}
 	rows.Close()
 
 	titles, err = r.loadTitleRelationsLight(titles)

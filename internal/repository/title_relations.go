@@ -42,6 +42,10 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 			t.Names = append(t.Names, n)
 		}
 	}
+	if err := nameRows.Err(); err != nil {
+		nameRows.Close()
+		return nil, fmt.Errorf("iterate title names bulk: %w", err)
+	}
 	nameRows.Close()
 
 	// 2. Bulk load seasons
@@ -72,6 +76,10 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 			seasonArgs = append(seasonArgs, s.ID)
 		}
 	}
+	if err := seasonRows.Err(); err != nil {
+		seasonRows.Close()
+		return nil, fmt.Errorf("iterate seasons bulk: %w", err)
+	}
 	seasonRows.Close()
 
 	// 3. Bulk load episodes
@@ -90,6 +98,10 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 			if s, ok := seasonMap[e.SeasonID]; ok {
 				s.Episodes = append(s.Episodes, e)
 			}
+		}
+		if err := epRows.Err(); err != nil {
+			epRows.Close()
+			return nil, fmt.Errorf("iterate episodes bulk: %w", err)
 		}
 		epRows.Close()
 	}
@@ -148,6 +160,10 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 			t.Names = append(t.Names, n)
 		}
 	}
+	if err := nameRows.Err(); err != nil {
+		nameRows.Close()
+		return nil, fmt.Errorf("iterate title names bulk light: %w", err)
+	}
 	nameRows.Close()
 
 	// 2. Bulk load seasons with counts
@@ -176,6 +192,10 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 		if t, ok := titleMap[s.TitleID]; ok {
 			t.Seasons = append(t.Seasons, s)
 		}
+	}
+	if err := seasonRows.Err(); err != nil {
+		seasonRows.Close()
+		return nil, fmt.Errorf("iterate seasons bulk light: %w", err)
 	}
 	seasonRows.Close()
 

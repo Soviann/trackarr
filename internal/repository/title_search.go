@@ -156,6 +156,9 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 			bestByTitle[t.ID] = &searchResult{title: t, relevance: rel}
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate search titles: %w", err)
+	}
 
 	// Fuzzy fallback if few FTS results
 	seen := make(map[int64]bool, len(bestByTitle))
@@ -344,6 +347,10 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 			candidates = append(candidates, candidate{titleID, name, lang, bestDist})
 		}
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate fuzzy names: %w", err)
+	}
 	rows.Close()
 
 	if len(candidates) == 0 {
@@ -443,6 +450,10 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 			t.MatchedLanguage = &c.language
 		}
 		titles = append(titles, t)
+	}
+	if err := tRows.Err(); err != nil {
+		tRows.Close()
+		return nil, fmt.Errorf("iterate fuzzy titles: %w", err)
 	}
 	tRows.Close()
 

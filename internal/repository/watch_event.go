@@ -39,5 +39,8 @@ func (r *WatchEventRepository) ListByTitle(titleID int64) ([]model.WatchEvent, e
 		}
 		events = append(events, e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate watch events: %w", err)
+	}
 	return events, nil
 }
