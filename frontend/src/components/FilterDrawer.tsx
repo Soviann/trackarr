@@ -203,9 +203,11 @@ export function FilterDrawer({
     >
       {/* Handle */}
       <div className={s.handle} onClick={() => setOpen(!open)}>
-        <div className={s.handleBar} />
-        <span className={s.handleText}>Filters</span>
-        <span className={clsx(s.chevron, open && s.chevronOpen)}>&#9650;</span>
+        <div className={s.handleTop}>
+          <div className={s.handleBar} />
+          <span className={s.handleText}>Filters</span>
+          <div className={s.handleBar} />
+        </div>
         {!open && activeTags.length > 0 && (
           <div className={s.activeTags}>
             {activeTags.map((tag) => (

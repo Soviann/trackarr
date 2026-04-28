@@ -8,12 +8,20 @@
 
 .handle {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding: 10px 0 6px;
+  justify-content: flex-start;
+  gap: var(--space-xs);
+  min-height: 65px;
+  padding-top: 5px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.handleTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .handleBar {
@@ -31,20 +39,9 @@
   color: var(--ink-dim);
 }
 
-.chevron {
-  font-size: 9px;
-  color: var(--ink-mute);
-  transition: transform 0.2s;
-}
-
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
 .activeTags {
   display: flex;
   gap: 4px;
-  margin-left: 2px;
 }
 
 .activeTag {
