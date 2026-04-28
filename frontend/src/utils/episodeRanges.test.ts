@@ -60,6 +60,49 @@ describe('groupIntoRanges', () => {
     const groups = groupIntoRanges(items)
     expect(groups).toHaveLength(2)
   })
+
+  it('folds duplicate episode_numbers (rewatches) into the current range', () => {
+    // E01 watched twice + E02 watched once on the same day must produce a single
+    // E01-E02 range, not "E01" + "E01-02" overlapping rows (regression: activity feed).
+    const items = [ep(1, 1, 'Pilot'), ep(1, 1, 'Pilot'), ep(1, 2)]
+    const groups = groupIntoRanges(items)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({ startEp: 1, endEp: 2 })
+    expect(groups[0].items).toHaveLength(3)
+  })
+
+  it('folds duplicates at the end of an existing range', () => {
+    const items = [ep(1, 1), ep(1, 2), ep(1, 2)]
+    const groups = groupIntoRanges(items)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({ startEp: 1, endEp: 2 })
+    expect(groups[0].items).toHaveLength(3)
+  })
+
+  it('collapses E01+E01+E02+E02 into a single E01-E02 range (exact bug repro)', () => {
+    const items = [ep(1, 1), ep(1, 1), ep(1, 2), ep(1, 2)]
+    const groups = groupIntoRanges(items)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({ startEp: 1, endEp: 2 })
+    expect(groups[0].items).toHaveLength(4)
+  })
+
+  it('keeps episode name when folding duplicates of a singleton group', () => {
+    const items = [ep(1, 5, 'The One'), ep(1, 5, 'The One')]
+    const groups = groupIntoRanges(items)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({ startEp: 5, endEp: 5, episodeName: 'The One' })
+    expect(groups[0].items).toHaveLength(2)
+  })
+
+  it('handles a duplicate after a gap (does not merge across the gap)', () => {
+    const items = [ep(1, 1), ep(1, 3), ep(1, 3)]
+    const groups = groupIntoRanges(items)
+    expect(groups).toHaveLength(2)
+    expect(groups[0]).toMatchObject({ startEp: 1, endEp: 1 })
+    expect(groups[1]).toMatchObject({ startEp: 3, endEp: 3 })
+    expect(groups[1].items).toHaveLength(2)
+  })
 })
 
 describe('formatRangeLabel', () => {

@@ -15,6 +15,9 @@ export interface EpisodeRangeGroup<T> {
 /**
  * Groups a sorted (by episode_number ASC) list of episodes into consecutive ranges.
  * Items with episode_number == null are never merged (standalone groups).
+ * Duplicate episode_numbers (multiple watch_events for the same episode — rewatches,
+ * dual webhook firings) fold into the current group instead of creating a singleton
+ * that would overlap with the next consecutive episode's range.
  */
 export function groupIntoRanges<T extends RangableEpisode>(items: T[]): EpisodeRangeGroup<T>[] {
   if (items.length === 0) return []
@@ -30,15 +33,16 @@ export function groupIntoRanges<T extends RangableEpisode>(items: T[]): EpisodeR
 
   for (let i = 1; i < items.length; i++) {
     const item = items[i]
-    const canMerge =
+    const sameSeason =
       item.episode_number != null &&
       current.endEp != null &&
-      item.season_number === current.seasonNumber &&
-      item.episode_number === current.endEp + 1
+      item.season_number === current.seasonNumber
 
-    if (canMerge) {
+    if (sameSeason && item.episode_number === current.endEp! + 1) {
       current.endEp = item.episode_number
       current.episodeName = null
+      current.items.push(item)
+    } else if (sameSeason && item.episode_number === current.endEp) {
       current.items.push(item)
     } else {
       groups.push(current)
