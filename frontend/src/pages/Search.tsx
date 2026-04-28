@@ -79,7 +79,8 @@ export function Search({ path: _ }: { path?: string }) {
     inputRef.current?.focus()
   }, [])
 
-  // Load TMDB results when toggle is on
+  // Load TMDB results when toggle is on. Debounced so each keystroke
+  // doesn't burn a TMDB API call.
   useEffect(() => {
     if (!searchOnTMDB || !query.trim()) {
       setTmdbResults([])
@@ -87,10 +88,12 @@ export function Search({ path: _ }: { path?: string }) {
     }
     const trimmed = query.trim()
     let cancelled = false
-    apiFetch<TMDBResult[]>(`/tmdb/search?query=${encodeURIComponent(trimmed)}&type=movie`)
-      .then(r => { if (!cancelled) setTmdbResults(r) })
-      .catch(() => { if (!cancelled) setTmdbResults([]) })
-    return () => { cancelled = true }
+    const timer = setTimeout(() => {
+      apiFetch<TMDBResult[]>(`/tmdb/search?query=${encodeURIComponent(trimmed)}&type=movie`)
+        .then(r => { if (!cancelled) setTmdbResults(r) })
+        .catch(() => { if (!cancelled) setTmdbResults([]) })
+    }, 350)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [searchOnTMDB, query])
 
   const retry = () => search(filter)
