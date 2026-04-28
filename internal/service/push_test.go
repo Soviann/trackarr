@@ -72,7 +72,7 @@ func setupPushService(t *testing.T) (*service.PushService, *sql.DB, *repository.
 func TestPushService_Subscribe(t *testing.T) {
 	svc, _, settings := setupPushService(t)
 
-	sub := `{"endpoint":"https://push.example.com/sub1","keys":{"p256dh":"key1","auth":"auth1"}}`
+	sub := `{"endpoint":"https://updates.push.services.mozilla.com/sub1","keys":{"p256dh":"key1","auth":"auth1"}}`
 	err := svc.Subscribe(context.Background(), sub)
 	require.NoError(t, err)
 
@@ -86,7 +86,7 @@ func TestPushService_Unsubscribe(t *testing.T) {
 	svc, db, settings := setupPushService(t)
 
 	// Seed a subscription.
-	testutil.SetSetting(t, db, "push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
+	testutil.SetSetting(t, db, "push_subscription", `{"endpoint":"https://updates.push.services.mozilla.com/sub1"}`)
 
 	err := svc.Unsubscribe(context.Background())
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestPushService_HasSubscription(t *testing.T) {
 
 	assert.False(t, svc.HasSubscription())
 
-	testutil.SetSetting(t, db, "push_subscription", `{"endpoint":"https://push.example.com/sub1"}`)
+	testutil.SetSetting(t, db, "push_subscription", `{"endpoint":"https://updates.push.services.mozilla.com/sub1"}`)
 	assert.True(t, svc.HasSubscription())
 }
 
@@ -117,6 +117,36 @@ func TestPushService_Subscribe_RequiresEndpoint(t *testing.T) {
 
 	err := svc.Subscribe(context.Background(), `{"keys":{"p256dh":"key","auth":"auth"}}`)
 	assert.Error(t, err)
+}
+
+func TestPushService_Subscribe_RejectsForeignHosts(t *testing.T) {
+	svc, _, _ := setupPushService(t)
+
+	cases := map[string]string{
+		"http instead of https":     `{"endpoint":"http://updates.push.services.mozilla.com/sub","keys":{"p256dh":"k","auth":"a"}}`,
+		"random domain":             `{"endpoint":"https://attacker.example.com/sub","keys":{"p256dh":"k","auth":"a"}}`,
+		"vendor host without https": `{"endpoint":"//fcm.googleapis.com/sub","keys":{"p256dh":"k","auth":"a"}}`,
+		"lookalike domain":          `{"endpoint":"https://fakefcm.googleapis.com.evil.tld/sub","keys":{"p256dh":"k","auth":"a"}}`,
+	}
+	for name, sub := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := svc.Subscribe(context.Background(), sub)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestPushService_Subscribe_AcceptsVendorSubdomains(t *testing.T) {
+	svc, _, _ := setupPushService(t)
+
+	cases := []string{
+		`{"endpoint":"https://updates.push.services.mozilla.com/sub","keys":{"p256dh":"k","auth":"a"}}`,
+		`{"endpoint":"https://fcm.googleapis.com/fcm/send/abc","keys":{"p256dh":"k","auth":"a"}}`,
+		`{"endpoint":"https://web.push.apple.com/QABC","keys":{"p256dh":"k","auth":"a"}}`,
+	}
+	for _, sub := range cases {
+		assert.NoError(t, svc.Subscribe(context.Background(), sub))
+	}
 }
 
 func TestNoopNotifier(t *testing.T) {

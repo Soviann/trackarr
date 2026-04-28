@@ -38,6 +38,14 @@ func JWTAuth(secret string) func(http.Handler) http.Handler {
 			}
 
 			email, _ := claims["email"].(string)
+			// Defense-in-depth: a JWT signed by us with an empty email would still
+			// pass the cryptographic check above. Reject it here so any future
+			// caller that does authorization based on email cannot be silently
+			// fooled by a malformed token.
+			if email == "" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 			ctx := context.WithValue(r.Context(), EmailKey, email)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

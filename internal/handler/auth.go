@@ -1,11 +1,12 @@
 package handler
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -58,7 +59,10 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	// Verify Google ID token via Google's tokeninfo endpoint. NewRequestWithContext
 	// ties the upstream call to the HTTP request so a client disconnect aborts
 	// the verify immediately, and googleAuthClient adds a hard 5s timeout on top.
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, fmt.Sprintf("%s?id_token=%s", googleTokenInfoURL, body.Credential), nil)
+	// url.Values escape any & or = in the credential — fmt.Sprintf would have
+	// let a forged token splice extra query params into the request.
+	q := url.Values{"id_token": []string{body.Credential}}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, googleTokenInfoURL+"?"+q.Encode(), nil)
 	if err != nil {
 		return httputil.NewAPIError(http.StatusUnauthorized, "Invalid token")
 	}
@@ -110,8 +114,16 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) error {
 		return httputil.NotFound("Not found")
 	}
 
-	userOK := subtle.ConstantTimeCompare([]byte(body.Username), []byte(h.devUser))
-	passOK := subtle.ConstantTimeCompare([]byte(body.Password), []byte(h.devPassword))
+	// Hash both sides before constant-time compare. Comparing raw strings of
+	// different lengths leaks the expected length via the early-out: an
+	// attacker who notices "I get 401 faster on a 12-byte guess than on a
+	// 14-byte one" learns the password is 12 chars long.
+	userHash := sha256.Sum256([]byte(body.Username))
+	expectedUserHash := sha256.Sum256([]byte(h.devUser))
+	passHash := sha256.Sum256([]byte(body.Password))
+	expectedPassHash := sha256.Sum256([]byte(h.devPassword))
+	userOK := subtle.ConstantTimeCompare(userHash[:], expectedUserHash[:])
+	passOK := subtle.ConstantTimeCompare(passHash[:], expectedPassHash[:])
 	if userOK&passOK != 1 {
 		return httputil.NotFound("Not found")
 	}

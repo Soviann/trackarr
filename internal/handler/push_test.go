@@ -30,7 +30,7 @@ func setupPushHandler(t *testing.T) *handler.PushHandler {
 func TestPushHandler_Subscribe(t *testing.T) {
 	h := setupPushHandler(t)
 
-	body := `{"endpoint":"https://push.example.com/sub","keys":{"p256dh":"k","auth":"a"}}`
+	body := `{"endpoint":"https://updates.push.services.mozilla.com/sub","keys":{"p256dh":"k","auth":"a"}}`
 	req := httptest.NewRequest("POST", "/api/push/subscribe", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 	require.NoError(t, h.Subscribe(rr, req))

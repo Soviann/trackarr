@@ -8,7 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -69,9 +71,41 @@ func (s *PushService) Subscribe(ctx context.Context, rawJSON string) error {
 	if sub.Endpoint == "" {
 		return fmt.Errorf("subscription endpoint required")
 	}
+	if err := validatePushEndpoint(sub.Endpoint); err != nil {
+		return err
+	}
 	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 		return repository.NewSettingWriter(tx).Set(ctx, settingKeyPushSubscription, rawJSON)
 	})
+}
+
+// allowedPushHosts is the set of vendor push gateways this app may dispatch
+// to. Any other host in a Subscribe payload is treated as a probe / SSRF
+// attempt — even though VAPID auth would later reject the delivery, we don't
+// want our server making outbound requests to arbitrary URLs on the user's
+// behalf.
+var allowedPushHosts = []string{
+	"push.services.mozilla.com",
+	"fcm.googleapis.com",
+	"notify.windows.com",
+	"web.push.apple.com",
+}
+
+func validatePushEndpoint(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("subscription endpoint not a URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("subscription endpoint must use https")
+	}
+	host := parsed.Hostname()
+	for _, allowed := range allowedPushHosts {
+		if host == allowed || strings.HasSuffix(host, "."+allowed) {
+			return nil
+		}
+	}
+	return fmt.Errorf("subscription endpoint host not allowed: %s", host)
 }
 
 func (s *PushService) Unsubscribe(ctx context.Context) error {
