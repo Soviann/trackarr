@@ -36,7 +36,7 @@ func TestSettingsHandler_Get_Empty(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, false, result["push_subscribed"])
@@ -50,7 +50,7 @@ func TestSettingsHandler_Get_AniListConnected(t *testing.T) {
 	rr := httptest.NewRecorder()
 	require.NoError(t, h.Get(rr, req))
 
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, true, result["anilist_connected"])
 	assert.Equal(t, false, result["push_subscribed"])
@@ -64,7 +64,7 @@ func TestSettingsHandler_Get_PushSubscribed(t *testing.T) {
 	rr := httptest.NewRecorder()
 	require.NoError(t, h.Get(rr, req))
 
-	var result map[string]interface{}
+	var result map[string]any
 	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, true, result["push_subscribed"])
@@ -79,7 +79,7 @@ func TestSettingsHandler_Get_ReportsTokenInvalid(t *testing.T) {
 	rr := httptest.NewRecorder()
 	require.NoError(t, h.Get(rr, req))
 
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
 	assert.Equal(t, true, result["anilist_connected"])
 	assert.Equal(t, true, result["anilist_token_invalid"])
@@ -93,7 +93,7 @@ func TestSettingsHandler_Get_TokenValidFlagAbsent(t *testing.T) {
 	rr := httptest.NewRecorder()
 	require.NoError(t, h.Get(rr, req))
 
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
 	assert.Equal(t, false, result["anilist_token_invalid"])
 }

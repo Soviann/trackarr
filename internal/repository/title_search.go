@@ -64,7 +64,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 
 	var query string
 	var conditions []string
-	var args []interface{}
+	var args []any
 
 	if useFTS {
 		ftsQuery := buildFTSQuery(searchTerm)
@@ -281,7 +281,7 @@ func levenshtein(a, b string) int {
 // fuzzySearch finds titles by Levenshtein distance when FTS5 returns few results.
 func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter TitleFilter) ([]model.Title, error) {
 	query := `SELECT tn.id, tn.title_id, tn.name, tn.language FROM title_names tn JOIN titles t ON tn.title_id = t.id WHERE 1=1`
-	var qargs []interface{}
+	var qargs []any
 	if filter.Status != nil {
 		query += ` AND t.status = ?`
 		qargs = append(qargs, *filter.Status)
@@ -357,7 +357,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 		}
 	}
 
-	var ids []interface{}
+	var ids []any
 	matchInfo := map[int64]candidate{}
 	for _, c := range best {
 		ids = append(ids, c.titleID)
@@ -370,7 +370,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 
 	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.next_air_date, t.next_air_episode, t.last_watched_at, t.accent_hex, t.created_at, t.updated_at`
 	query = `SELECT ` + baseCols + ` FROM titles t WHERE t.id IN (` + placeholders + `)`
-	var args []interface{}
+	var args []any
 	args = append(args, ids...)
 
 	if filter.Status != nil {

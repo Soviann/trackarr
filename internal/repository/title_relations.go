@@ -16,7 +16,7 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 	ids := make([]int64, len(titles))
 	titleMap := make(map[int64]*model.Title)
 	placeholders := make([]string, len(titles))
-	args := make([]interface{}, len(titles))
+	args := make([]any, len(titles))
 
 	for i := range titles {
 		ids[i] = titles[i].ID
@@ -57,7 +57,7 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 	seasonMap := make(map[int64]*model.Season)
 	var seasonIDs []int64
 	var seasonPlaceholders []string
-	var seasonArgs []interface{}
+	var seasonArgs []any
 
 	for seasonRows.Next() {
 		var s model.Season
@@ -134,7 +134,7 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 	ids := make([]int64, len(titles))
 	titleMap := make(map[int64]*model.Title)
 	placeholders := make([]string, len(titles))
-	args := make([]interface{}, len(titles))
+	args := make([]any, len(titles))
 
 	for i := range titles {
 		ids[i] = titles[i].ID

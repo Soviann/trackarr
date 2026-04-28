@@ -39,7 +39,7 @@ func (w *WatchEventWriter) BatchCreate(ctx context.Context, events []model.Watch
 	}
 
 	placeholders := make([]string, len(events))
-	args := make([]interface{}, 0, len(events)*4)
+	args := make([]any, 0, len(events)*4)
 	for i, e := range events {
 		placeholders[i] = "(?, ?, ?, ?)"
 		args = append(args, e.TitleID, e.EpisodeID, e.Source, e.PlexPayload)

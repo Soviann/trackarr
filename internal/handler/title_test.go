@@ -86,12 +86,12 @@ func TestTitleHandler_Resolve(t *testing.T) {
 func TestTitleHandler_Create(t *testing.T) {
 	h, _, _ := setupHandler(t)
 
-	body, _ := json.Marshal(map[string]interface{}{
+	body, _ := json.Marshal(map[string]any{
 		"type":         "movie",
 		"year":         2024,
 		"status":       "watching",
 		"match_status": "confirmed",
-		"names":        []map[string]interface{}{{"name": "Dune: Part Two", "language": "en", "is_primary": true}},
+		"names":        []map[string]any{{"name": "Dune: Part Two", "language": "en", "is_primary": true}},
 	})
 
 	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader(body))
@@ -178,7 +178,7 @@ func TestTitleHandler_Update(t *testing.T) {
 
 	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
 
-	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
+	body, _ := json.Marshal(map[string]any{"status": "completed"})
 	req := httptest.NewRequest("PUT", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 
@@ -350,7 +350,7 @@ func TestTitleHandler_Update_StatusAndRating_DedupesSeasonPushes(t *testing.T) {
 func TestTitleHandler_Update_InvalidID(t *testing.T) {
 	h, _, _ := setupHandler(t)
 
-	body, _ := json.Marshal(map[string]interface{}{"status": "completed"})
+	body, _ := json.Marshal(map[string]any{"status": "completed"})
 	req := httptest.NewRequest("PUT", "/api/titles/abc", bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 

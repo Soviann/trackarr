@@ -21,7 +21,7 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 	// Login
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]string{"token": "test-jwt-token"},
 		})
 	})
@@ -29,8 +29,8 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 	// Series extended
 	mux.HandleFunc("/series/81189/extended", func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "Bearer test-jwt-token", r.Header.Get("Authorization"))
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
 				"id":    81189,
 				"name":  "Breaking Bad",
 				"score": 9.5,
@@ -39,7 +39,7 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 					{"name": "Crime"},
 				},
 				"averageRuntime": 47,
-				"translations": map[string]interface{}{
+				"translations": map[string]any{
 					"nameTranslations": []map[string]string{
 						{"language": "eng", "name": "Breaking Bad"},
 						{"language": "fra", "name": "Breaking Bad"},
@@ -54,8 +54,8 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 
 	// Movie extended
 	mux.HandleFunc("/movies/999/extended", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
 				"id":    999,
 				"name":  "Fight Club",
 				"year":  "1999",
@@ -65,10 +65,10 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 					{"name": "Thriller"},
 				},
 				"runtime": 139,
-				"remoteIds": []map[string]interface{}{
+				"remoteIds": []map[string]any{
 					{"id": "tt0137523", "sourceId": 2},
 				},
-				"translations": map[string]interface{}{
+				"translations": map[string]any{
 					"nameTranslations": []map[string]string{
 						{"language": "eng", "name": "Fight Club"},
 					},
@@ -82,8 +82,8 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 
 	// Series by slug
 	mux.HandleFunc("/series/slug/breaking-bad", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
 				"id":   81189,
 				"name": "Breaking Bad",
 			},
@@ -92,8 +92,8 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 
 	// Movie by slug
 	mux.HandleFunc("/movies/slug/fight-club-1999", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
 				"id":   999,
 				"name": "Fight Club",
 			},

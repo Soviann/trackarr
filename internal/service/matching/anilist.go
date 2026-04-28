@@ -41,7 +41,7 @@ func (TokenInvalidError) Error() string { return "anilist: token invalid (401)" 
 // queryAuthenticated posts a GraphQL request with a Bearer token and returns
 // TokenInvalidError on 401. It does not decode the response — mutations here
 // only need success/failure signalling.
-func (c *AniListClient) queryAuthenticated(ctx context.Context, gql string, variables map[string]interface{}, accessToken string) error {
+func (c *AniListClient) queryAuthenticated(ctx context.Context, gql string, variables map[string]any, accessToken string) error {
 	body, err := json.Marshal(graphqlRequest{
 		Query:     gql,
 		Variables: variables,
@@ -78,8 +78,8 @@ func (c *AniListClient) queryAuthenticated(ctx context.Context, gql string, vari
 }
 
 type graphqlRequest struct {
-	Query     string                 `json:"query"`
-	Variables map[string]interface{} `json:"variables,omitempty"`
+	Query     string         `json:"query"`
+	Variables map[string]any `json:"variables,omitempty"`
 }
 
 type graphqlResponse struct {
@@ -89,7 +89,7 @@ type graphqlResponse struct {
 	} `json:"errors"`
 }
 
-func (c *AniListClient) query(ctx context.Context, gql string, variables map[string]interface{}, accessToken string, dest interface{}) error {
+func (c *AniListClient) query(ctx context.Context, gql string, variables map[string]any, accessToken string, dest any) error {
 	body, err := json.Marshal(graphqlRequest{
 		Query:     gql,
 		Variables: variables,

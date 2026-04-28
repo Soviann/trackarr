@@ -70,7 +70,7 @@ func (w *EpisodeWriter) BatchMarkWatched(ctx context.Context, ids []int64, watch
 		return nil
 	}
 	placeholders := make([]string, len(ids))
-	args := make([]interface{}, 0, len(ids)+2)
+	args := make([]any, 0, len(ids)+2)
 	args = append(args, watchedAt.UTC(), watchedAt.UTC())
 	for i, id := range ids {
 		placeholders[i] = "?"
@@ -93,7 +93,7 @@ func (w *EpisodeWriter) BatchMarkWatched(ctx context.Context, ids []int64, watch
 // UpdateMetadata sets name and air_date on an episode, only if the new value is non-empty.
 func (w *EpisodeWriter) UpdateMetadata(ctx context.Context, id int64, name, airDate string) error {
 	var sets []string
-	var args []interface{}
+	var args []any
 
 	if name != "" {
 		sets = append(sets, "name = ?")
@@ -122,7 +122,7 @@ func (w *EpisodeWriter) UpsertBatch(ctx context.Context, seasonID int64, entries
 		return nil
 	}
 	placeholders := make([]string, len(entries))
-	args := make([]interface{}, 0, len(entries)*4)
+	args := make([]any, 0, len(entries)*4)
 	for i, e := range entries {
 		placeholders[i] = "(?, ?, ?, ?)"
 		args = append(args, seasonID, e.EpisodeNumber, e.Name, e.AirDate)

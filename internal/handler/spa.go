@@ -39,7 +39,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 func PublicConfig(googleClientID, vapidPublicKey string, devLogin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		httputil.WriteJSON(w, http.StatusOK, map[string]any{
 			"google_client_id": googleClientID,
 			"vapid_public_key": vapidPublicKey,
 			"dev_login":        devLogin,

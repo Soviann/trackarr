@@ -34,7 +34,7 @@ func NewTMDBClient(apiKey string) *TMDBClient {
 // SetBaseURL overrides the TMDB base URL (for tests).
 func (c *TMDBClient) SetBaseURL(u string) { c.baseURL = u }
 
-func (c *TMDBClient) get(ctx context.Context, path string, params url.Values, dest interface{}) error {
+func (c *TMDBClient) get(ctx context.Context, path string, params url.Values, dest any) error {
 	if params == nil {
 		params = url.Values{}
 	}

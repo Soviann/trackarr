@@ -91,7 +91,7 @@ func (w *TaskWriter) FetchDue(ctx context.Context, limit int) ([]model.Task, err
 
 	if len(tasks) > 0 {
 		placeholders := make([]string, len(tasks))
-		args := make([]interface{}, 0, len(tasks)+1)
+		args := make([]any, 0, len(tasks)+1)
 		args = append(args, now)
 		for i, t := range tasks {
 			placeholders[i] = "?"

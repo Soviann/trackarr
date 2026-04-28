@@ -22,7 +22,7 @@ func JWTAuth(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
+			token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (any, error) {
 				return []byte(secret), nil
 			}, jwt.WithValidMethods([]string{"HS256"}), jwt.WithLeeway(30*time.Second))
 

@@ -32,7 +32,7 @@ func TestStatsHandler_Get_EmptyDB(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	var result map[string]interface{}
+	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
 }
 

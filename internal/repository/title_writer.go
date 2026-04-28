@@ -55,7 +55,7 @@ func (w *TitleWriter) insertNames(ctx context.Context, titleID int64, names []mo
 		return nil
 	}
 	placeholders := make([]string, len(names))
-	args := make([]interface{}, 0, len(names)*4)
+	args := make([]any, 0, len(names)*4)
 	for i, n := range names {
 		placeholders[i] = "(?, ?, ?, ?)"
 		args = append(args, titleID, n.Name, n.Language, n.IsPrimary)
@@ -70,7 +70,7 @@ func (w *TitleWriter) insertNames(ctx context.Context, titleID int64, names []mo
 // Update applies a partial update. Nil fields on TitleUpdate are left untouched.
 func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) error {
 	var sets []string
-	var args []interface{}
+	var args []any
 
 	if update.Status != nil {
 		sets = append(sets, `status = ?`)

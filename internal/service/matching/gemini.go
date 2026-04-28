@@ -242,7 +242,7 @@ Respond with ONLY a JSON object:
 }
 
 // parseJSONFromResponse extracts JSON from a Gemini response that may contain markdown fences.
-func parseJSONFromResponse(text string, dest interface{}) error {
+func parseJSONFromResponse(text string, dest any) error {
 	// Strip markdown code fences if present
 	cleaned := text
 	if idx := strings.Index(cleaned, "```json"); idx != -1 {

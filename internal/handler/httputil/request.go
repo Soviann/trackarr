@@ -34,6 +34,6 @@ func ParseQueryInt(r *http.Request, key string, defaultVal int) int {
 }
 
 // ReadJSON decodes the request body (limited to maxBytes) into v.
-func ReadJSON(r *http.Request, v interface{}, maxBytes int64) error {
+func ReadJSON(r *http.Request, v any, maxBytes int64) error {
 	return json.NewDecoder(io.LimitReader(r.Body, maxBytes)).Decode(v)
 }

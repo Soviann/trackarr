@@ -86,7 +86,7 @@ func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniLis
 		} `json:"Page"`
 	}
 
-	err := c.query(ctx, searchAnimeQuery, map[string]interface{}{"search": title}, "", &resp)
+	err := c.query(ctx, searchAnimeQuery, map[string]any{"search": title}, "", &resp)
 	if err != nil {
 		return nil, fmt.Errorf("search anime: %w", err)
 	}
@@ -126,7 +126,7 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 		} `json:"Media"`
 	}
 
-	err := c.query(ctx, getAnimeDetailsQuery, map[string]interface{}{"id": anilistID}, "", &resp)
+	err := c.query(ctx, getAnimeDetailsQuery, map[string]any{"id": anilistID}, "", &resp)
 	if err != nil {
 		return nil, fmt.Errorf("get anime details: %w", err)
 	}

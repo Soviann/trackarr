@@ -78,7 +78,7 @@ func (c *TVDBClient) Login(ctx context.Context) error {
 }
 
 // get performs an authenticated GET request, re-logging in once on 401.
-func (c *TVDBClient) get(ctx context.Context, path string, params url.Values, dest interface{}) error {
+func (c *TVDBClient) get(ctx context.Context, path string, params url.Values, dest any) error {
 	if err := c.doGet(ctx, path, params, dest); err != nil {
 		if isUnauthorized(err) {
 			// Re-login and retry once
@@ -92,7 +92,7 @@ func (c *TVDBClient) get(ctx context.Context, path string, params url.Values, de
 	return nil
 }
 
-func (c *TVDBClient) doGet(ctx context.Context, path string, params url.Values, dest interface{}) error {
+func (c *TVDBClient) doGet(ctx context.Context, path string, params url.Values, dest any) error {
 	reqURL := fmt.Sprintf("%s%s", c.baseURL, path)
 	if len(params) > 0 {
 		reqURL += "?" + params.Encode()

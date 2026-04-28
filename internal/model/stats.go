@@ -7,7 +7,7 @@ type StatsResponse struct {
 	Breakdown         StatsBreakdown `json:"breakdown"`
 	FunStats          []FunStat      `json:"fun_stats"`
 	Year              StatsYear      `json:"year_summary"`
-	Genres            interface{}    `json:"genres"`
+	Genres            any            `json:"genres"`
 	Streaks           StatsStreaks   `json:"streaks"`
 	TotalWatchMinutes int            `json:"total_watch_minutes"`
 	// Library strip — compact at-a-glance figures.

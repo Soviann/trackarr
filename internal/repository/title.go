@@ -299,7 +299,7 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 // are only unique within a media type).
 func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRatingKey *string, anilistID *int64, titleType *model.TitleType) (*model.Title, error) {
 	var conditions []string
-	var args []interface{}
+	var args []any
 
 	if imdbID != nil && *imdbID != "" {
 		conditions = append(conditions, `imdb_id = ?`)
@@ -380,7 +380,7 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 	}
 
 	placeholders := make([]string, len(filenames))
-	args := make([]interface{}, len(filenames))
+	args := make([]any, len(filenames))
 	for i, name := range filenames {
 		placeholders[i] = "?"
 		args[i] = name

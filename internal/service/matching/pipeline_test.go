@@ -112,11 +112,11 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		if contains(req.Query, "Page(perPage") {
 			eps := 12
 			year := 2015
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Page": map[string]interface{}{
-						"media": []interface{}{
-							map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Page": map[string]any{
+						"media": []any{
+							map[string]any{
 								"id":       21,
 								"title":    map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
 								"episodes": eps, "format": "TV", "seasonYear": year,
@@ -128,9 +128,9 @@ func setupPipelineTest(t *testing.T) (*Pipeline, string) {
 		} else if contains(req.Query, "Media(id") {
 			eps := 12
 			year := 2015
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Media": map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Media": map[string]any{
 						"id": 21, "title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
 						"episodes": eps, "format": "TV", "seasonYear": year,
 					},
@@ -225,11 +225,11 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		if contains(req.Query, "Page(perPage") {
 			eps := 12
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Page": map[string]interface{}{
-						"media": []interface{}{
-							map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Page": map[string]any{
+						"media": []any{
+							map[string]any{
 								"id": 21, "title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
 								"episodes": eps, "format": "TV",
 							},
@@ -239,9 +239,9 @@ func TestPipeline_Step4_AniListSearch(t *testing.T) {
 			})
 		} else {
 			eps := 12
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Media": map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Media": map[string]any{
 						"id": 21, "title": map[string]string{"romaji": "One Punch Man", "english": "One Punch Man"},
 						"episodes": eps, "format": "TV",
 					},
@@ -464,16 +464,16 @@ func TestPipeline_IMDBConflict_TMDBWins(t *testing.T) {
 	// TVDB mock: TVDB ID 999 returns a CONFLICTING IMDB "tt9999999"
 	tvdbMux := http.NewServeMux()
 	tvdbMux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]string{"token": "test-token"},
 		})
 	})
 	tvdbMux.HandleFunc("/movies/999/extended", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
 				"id":   999,
 				"name": "Fight Club",
-				"remoteIds": []map[string]interface{}{
+				"remoteIds": []map[string]any{
 					{"id": "tt9999999", "sourceId": 2}, // IMDB, conflicts with TMDB
 				},
 			},

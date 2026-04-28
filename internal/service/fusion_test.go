@@ -67,10 +67,10 @@ func TestAnimeFusion_SoloLeveling(t *testing.T) {
 	tmdbMux := http.NewServeMux()
 	tmdbMux.HandleFunc("/tv/301796", func(w http.ResponseWriter, r *http.Request) {
 		// Mock TMDB response for S2 that provides the SHARED IMDB ID
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":   301796,
 			"name": "Solo Leveling: Arise from the Shadow",
-			"external_ids": map[string]interface{}{
+			"external_ids": map[string]any{
 				"imdb_id": "tt21209876", // Matches Master
 			},
 		})

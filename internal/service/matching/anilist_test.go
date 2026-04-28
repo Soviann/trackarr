@@ -27,11 +27,11 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 			malID := int64(21)
 			eps := 148
 			year := 2011
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Page": map[string]interface{}{
-						"media": []interface{}{
-							map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Page": map[string]any{
+						"media": []any{
+							map[string]any{
 								"id":    21,
 								"idMal": malID,
 								"title": map[string]string{
@@ -52,9 +52,9 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 			malID := int64(21)
 			eps := 12
 			year := 2015
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"Media": map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"Media": map[string]any{
 						"id":    21,
 						"idMal": malID,
 						"title": map[string]string{
@@ -75,9 +75,9 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 		case contains(req.Query, "SaveMediaListEntry"):
 			// Sync rating mutation
 			assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
-					"SaveMediaListEntry": map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"SaveMediaListEntry": map[string]any{
 						"id":    1,
 						"score": 85,
 					},

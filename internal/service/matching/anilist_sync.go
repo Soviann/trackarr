@@ -28,7 +28,7 @@ func (c *AniListClient) SaveMediaListEntry(ctx context.Context, in SaveMediaList
 	if in.MediaID == 0 {
 		return fmt.Errorf("anilist: missing mediaId")
 	}
-	vars := map[string]interface{}{
+	vars := map[string]any{
 		"mediaId":  in.MediaID,
 		"status":   in.Status,
 		"progress": in.Progress,

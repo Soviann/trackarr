@@ -31,9 +31,9 @@ func TestAniListStrategy_EmptyTitle_NotMatched(t *testing.T) {
 
 func TestAniListStrategy_SearchEmpty_NotMatched(t *testing.T) {
 	anilistServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"data": map[string]interface{}{
-				"Page": map[string]interface{}{"media": []interface{}{}},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"Page": map[string]any{"media": []any{}},
 			},
 		})
 	}))
