@@ -1,3 +1,8 @@
+// Empty fetch handler — required by Chrome on Android to consider the app
+// installable as a PWA. We stay online-first (no caching strategy) so we let
+// the browser handle every request normally by not calling event.respondWith.
+self.addEventListener('fetch', () => {})
+
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {}
   const title = data.title || 'PlexTracker'

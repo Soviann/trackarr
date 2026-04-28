@@ -23,6 +23,7 @@ import { AnilistCallback } from './pages/AnilistCallback'
 import { Help } from './pages/Help'
 import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
+import { useServiceWorker } from './hooks/useServiceWorker'
 import { updateBadge } from './utils/badge'
 import { useTitleStore, useSearchStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -51,6 +52,7 @@ export function App() {
   const isAuthed = currentPath !== '/login'
   useEffect(() => { if (isAuthed) updateBadge() }, [isAuthed])
 
+  useServiceWorker(isAuthed)
   usePush(isAuthed ? vapidKey : undefined)
 
   const handleRoute = (e: { url: string }) => {

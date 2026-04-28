@@ -18,7 +18,7 @@ export function usePush(vapidPublicKey: string | undefined) {
   useEffect(() => {
     if (!vapidPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return
 
-    navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+    navigator.serviceWorker.ready.then(async (reg) => {
       const existing = await reg.pushManager.getSubscription()
       if (existing) {
         setSubscribed(true)
@@ -41,7 +41,7 @@ export function usePush(vapidPublicKey: string | undefined) {
       })
       setSubscribed(true)
     }).catch((err) => {
-      console.error('Service worker registration failed:', err)
+      console.error('Push subscription failed:', err)
       setPushError(true)
     })
   }, [vapidPublicKey])
