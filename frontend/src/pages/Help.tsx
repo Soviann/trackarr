@@ -22,8 +22,8 @@ const sections: FaqSection[] = [
         a: (
           <>
             Open the title, pull up the <strong>Actions</strong> bar at the bottom of the screen,
-            then tap <strong>Fix match</strong>. Paste a TMDB / IMDb / TheTVDB / AniList URL,
-            or search by name. Saving rematches the title immediately.
+            tap <strong>More</strong>, then <strong>Rematch</strong>. Paste a TMDB / IMDb /
+            TheTVDB / AniList URL, or search by name. Saving rematches the title immediately.
           </>
         ),
       },
@@ -112,14 +112,14 @@ const sections: FaqSection[] = [
               <strong>Watching</strong> — at least one unwatched episode exists right now.
             </li>
             <li>
-              <strong>Up to date</strong> — caught up on all aired episodes, but more are coming.
+              <strong>Caught up</strong> — all aired episodes watched, but more are coming.
               It’s a sub-filter of Watching, not a separate status.
             </li>
             <li>
               <strong>Completed</strong> — series ended <em>and</em> fully watched.
             </li>
             <li>
-              <strong>Plan to watch</strong> — added but not started.
+              <strong>Plan</strong> — added but not started.
             </li>
             <li>
               <strong>Dropped</strong> — abandoned.
@@ -151,10 +151,10 @@ const sections: FaqSection[] = [
         a: (
           <>
             Open the title you want to <strong>discard</strong> (the source) → pull up the
-            Actions bar → <strong>Merge</strong>. Search for the title to keep, confirm. All
-            episodes, watch events and AniList mapping move over. For anime, Gemini detects
-            which season the source maps to, so episodes land on the right season number in the
-            destination.
+            Actions bar → <strong>More</strong> → <strong>Merge</strong>. Search for the title
+            to keep, confirm. All episodes, watch events and AniList mapping move over. For
+            anime, Gemini detects which season the source maps to, so episodes land on the
+            right season number in the destination.
           </>
         ),
       },
@@ -174,7 +174,8 @@ const sections: FaqSection[] = [
               <li>Use the Android share sheet — PlexTracker registers as a share target</li>
             </ul>
             <span className={s.afterList}>
-              After confirmation, choose Watching, Already seen, or Plan to watch.
+              After confirmation, choose Watching, Plan to watch, or Completed (marks every
+              episode as watched and prompts you to rate the title).
             </span>
           </>
         ),

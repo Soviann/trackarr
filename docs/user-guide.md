@@ -97,14 +97,14 @@ Trois méthodes :
 2. **Rechercher par nom** : recherche dans TMDB/AniList
 3. **Partage Android/iOS** : PlexTracker s'enregistre comme cible de partage. Depuis l'app IMDb, TVDB ou un navigateur, utiliser "Partager" → "PlexTracker" pour ajouter directement un titre.
 
-Après confirmation, choisir le statut : En cours, Déjà vu, À regarder.
-- "Déjà vu" marque tous les épisodes comme vus et propose de noter le titre.
+Après confirmation, choisir le statut : **Watching** (En cours), **Plan to watch** (À regarder), ou **Completed** (Terminé).
+- **Completed** marque tous les épisodes comme vus et déclenche le prompt de notation.
 
 ### Fusion de titres
 
 Il arrive que Plex ou l'import Simkl crée des doublons (ex: une série d'anime éclatée en plusieurs titres).
 
-**Action "Merge into..."** : Depuis le détail d'un titre, dans le tiroir d'actions (ActionDrawer) → "Manage" → "Merge into...".
+**Action "Merge"** : Depuis le détail du titre à **fusionner (et supprimer)**, ouvrir le tiroir d'actions (ActionDrawer) → **More** → **Merge**.
 1. Rechercher le titre de destination (celui à conserver)
 2. Confirmer la fusion
 
