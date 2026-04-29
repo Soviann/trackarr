@@ -14,9 +14,9 @@ PlexTracker est une application personnelle de suivi de visionnage. Elle remplac
 
 ### Ce que PlexTracker ne fait PAS
 
-- Ce n'est pas une base de données média (pas de synopsis, casting, critiques — IMDb/AniList s'en chargent)
+- Ce n'est pas un agrégateur de critiques — pas de reviews, pas de scores critiques agrégés (IMDb/AniList s'en chargent en un clic)
 - Pas de version desktop — interface mobile uniquement
-- Pas de mode hors-ligne
+- Pas de mode hors-ligne (le service worker reste online-first et ne met rien en cache)
 - Pas de multi-utilisateur
 
 ---
@@ -27,7 +27,7 @@ PlexTracker est une PWA (Progressive Web App) accessible depuis le navigateur Ch
 
 1. Ouvrir `http://<nas-ip>:8080` dans Chrome
 2. Se connecter avec le compte Google autorisé
-3. Ajouter à l'écran d'accueil pour un accès rapide (Chrome → menu → "Ajouter à l'écran d'accueil")
+3. Installer l'app : Chrome propose nativement une bannière « Installer PlexTracker » la première fois qu'on ouvre le site. Sinon, ouvrir le menu Chrome (⋮) → « Installer l'application » / « Ajouter à l'écran d'accueil »
 
 **Raccourcis** : un appui long sur l'icône PlexTracker dans le launcher Android affiche 3 raccourcis : Ajouter un titre, Bibliothèque, Recherche.
 
@@ -41,11 +41,15 @@ PlexTracker est une PWA (Progressive Web App) accessible depuis le navigateur Ch
 
 L'écran principal affiche tous les titres organisés par statut.
 
-**Onglet "All"** (par défaut) : sections empilées — Terminés, À regarder, Abandonnés (grilles de posters), puis En cours / À jour (cartes horizontales avec barre de progression).
+**Bandeau de stats** : juste sous le titre « Library », une ligne discrète résume l'année en cours — `2026 · 47 watched · ★ 7.8 avg · 3h this week`.
 
-**Onglets filtrés** : Watching, Up to date, Completed, Dropped, Plan to watch — affiche uniquement les titres du statut sélectionné.
+**Affichage par défaut** : grille de posters de toute la bibliothèque. Quand le filtre est `Watching` (En cours) ou `Caught up` (À jour), l'écran bascule en cartes horizontales avec barre de progression et badge « prochain épisode ».
 
-**Tri** : le tiroir de filtres propose 5 options de tri (dernière mise à jour, titre, année, note, date d'ajout). Taper un chip l'active ; taper à nouveau inverse la direction (↑/↓). Le tri est masqué pendant la recherche et persiste via localStorage.
+**Filtres de statut** : ouvrir le tiroir de filtres pour basculer entre All, Plan, Watching, Caught up, Completed, Dropped. Les filtres actifs sont rappelés sur la barre du tiroir replié.
+
+**Tri** : le tiroir de filtres propose 6 options de tri (dernière mise à jour, titre, date de sortie, note, date d'ajout, dernier visionnage). Taper un chip l'active ; taper à nouveau inverse la direction (↑/↓). Le tri est masqué pendant la recherche et persiste via localStorage.
+
+**Badge film/série** : un petit pictogramme se superpose à chaque vignette pour distinguer d'un coup d'œil les films des séries (en grille comme en cartes horizontales).
 
 **Action rapide** : le badge rond sur chaque carte "En cours" affiche le numéro du prochain épisode. Un tap marque cet épisode comme vu et passe au suivant.
 
@@ -59,17 +63,25 @@ L'écran principal affiche tous les titres organisés par statut.
 
 ### Détail d'un titre
 
-- **Couverture** en haut avec dégradé, bouton retour et bouton édition
-- **Notes externes** : badges TMDB (bleu-vert), TVDB (bleu) et AniList (%) affichés côte à côte quand disponibles
-- **Barre de progression** : "S2 · 7 of 10 episodes watched"
-- **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée
-- **Liste d'épisodes** : tap sur un épisode pour le marquer vu/non vu
-- **Barre d'actions** (au-dessus de la navbar) :
-  - **S02E06** : prochain épisode à regarder, tap pour marquer vu
-  - **IMDb** : ouvre la page IMDb
-  - **TVDB** : ouvre la page TheTVDB (quand un `tvdb_id` est connu)
-  - **AniList** : ouvre la fiche AniList (films et séries mono-saison ; masqué pour les séries multi-saisons — chaque saison a son propre lien dans le bandeau bleu de la saison active)
-  - **Rate** : ouvre le prompt de notation
+- **Couverture** en haut, avec teinte dominante extraite (accent), bouton retour.
+- **Identité** : titre, année, durée/saisons, statut série, pills de genres, pastille de statut.
+- **Carte « My rating »** : note personnelle (sur 10) à gauche ; à droite, les notes externes TMDB et AniList (en %) quand disponibles. Pas de note TVDB.
+- **Carte « Synopsis »** : résumé du titre avec bouton « Show more » / « Show less » pour développer.
+- **Carte « Cast & Crew »** : liste des acteurs principaux et de l'équipe (rôles). Taper un nom ouvre la page **Person** qui filtre la bibliothèque sur tous les titres où cette personne apparaît.
+- **Carte « Details »** : Added, Last watched, Watch time (cumulé), Last refreshed.
+- **Bouton « Historique »** : ouvre une vue plein écran des sessions de visionnage du titre, avec regroupement automatique des épisodes consécutifs en plages (ex: `S1 E1–4 · 12 avr.`).
+- **Barre de progression** (séries/anime) : `S2 · 7 of 10 episodes watched`.
+- **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée.
+- **Bandeau AniList par saison** (anime uniquement) : entre la barre de progression et la liste d'épisodes — score communautaire, lien AniList, crayon ✎ pour corriger l'association.
+- **Liste d'épisodes** : tap sur un épisode pour le marquer vu/non vu.
+- **Tiroir « Actions »** (poignée glissable au-dessus de la navbar) :
+  - **★ Rate** : ouvre le prompt de notation
+  - **Edit** : ouvre l'édition de type / statut / nom affiché
+  - **More** : déploie Rematch, Merge, Refresh
+  - **Liens externes** (sur leur propre ligne) :
+    - **IMDb** quand un `imdb_id` est connu
+    - **TVDB** quand un `tvdb_id` est connu
+    - **AniList** pour les films et séries mono-saison ; masqué pour les séries multi-saisons (chaque saison a son lien dans le bandeau bleu)
 
 ### Recherche
 
@@ -140,6 +152,8 @@ L'onglet Stats (icône chart, barre lavande) affiche un tableau de bord de l'ens
 **Le savais-tu ?** : cartes insight surprenantes — plus gros binge, série la plus fidèle, sprint complétion, oiseau de nuit/lève-tôt, Plex vs Manuel, écart de notes entre types, préférence de décennies, cimetière des titres abandonnés, pression du backlog, mois record. Chaque carte n'apparaît que si la donnée est pertinente.
 
 **Année en cours** : 3 mini-cartes — titres ajoutés, épisodes vus, et complétions cette année.
+
+**Recent activity** : flux paginé des derniers événements de visionnage. Les épisodes consécutifs d'une même saison sont automatiquement regroupés en plages — `S1 E1–4` plutôt que quatre lignes séparées. Les rewatches et les déclenchements webhook en double sont absorbés dans la plage courante.
 
 ### Édition d'un titre
 

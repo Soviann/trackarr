@@ -24,6 +24,8 @@ Update when adding routes, services, components, or commands.
 | LibraryService | `internal/service/library.go` | User library (marking watched, auto-complete, rating, notifications) |
 | BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous). **Opens own writeDB tx — never call from inside another tx; fire post-commit via `LibraryService.TriggerBackfillForEpisode`.** |
 | AniListPushService | `internal/service/anilist_push.go` | Per-season / per-movie push of status, progress, score to AniList. Silently skips on missing token, missing season mapping, or 401 (flags token invalid). Enqueued via `TaskTypeAniListPushSeason` / `TaskTypeAniListPushMovie`. |
+| CoverService | `internal/service/cover.go` | Owns cover image lifecycle: fetches from TMDB/TVDB/AniList with deadlines (a stalled CDN can't freeze the writeDB), persists filename via `TitleUpdate`, drives accent extraction (`colorextract/`). Shares the 2 rps `APILimiter` budget with TaskQueueWorker + BackgroundService. |
+| APILimiter | `internal/service/ratelimiter.go` | Global 2 rps token bucket guarding TMDB/TVDB/AniList HTTP calls across all background workers. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
 | BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-season AniList community score via `season_external_ids` mappings — 401 flags `anilist_token_invalid` and aborts remaining calls) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
@@ -157,7 +159,15 @@ Source of truth for routes: `internal/router/router.go`. Read handler files for 
 
 ## Frontend (Preact)
 
-Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. Shared utils in `frontend/src/utils.ts`. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
+
+Shared utilities split between `frontend/src/utils.ts` (formatters, name resolvers, AniList URL helpers — `getName`, `formatDate`, `formatWatchtime`, `computeAniListUrl`, `hexToRgba`…) and the typed `frontend/src/utils/` subdirectory:
+
+| Module | Purpose |
+|---|---|
+| `utils/badge.ts` | PWA app icon badge: `updateBadge()` reads `/api/titles/review-count` and calls `navigator.setAppBadge`. User toggle persisted in `localStorage` (`badge-enabled`). Called from `app.tsx` on auth + `MatchReview.tsx` after each action. |
+| `utils/haptic.ts` | `navigator.vibrate` wrapper with `HAPTIC_SHORT` / `HAPTIC_MEDIUM` / `HAPTIC_LONG` patterns. |
+| `utils/episodeRanges.ts` | Groups consecutive watched episodes into ranges (e.g. `S1 E1–4`) for the activity feed and per-title history. Folds duplicate episode_numbers (rewatches, dual webhook firings) into the current group. |
 
 ### API & routing conventions (read before adding any URL literal)
 
@@ -176,19 +186,23 @@ Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS cus
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
 | `useTitleStore` | `store.ts` | Zustand: paginated title fetch, filter, sort (localStorage), loadMore, cache |
-| `useSearchStore` | `store.ts` | Zustand: search results + scroll position persistence |
-| `usePush` | `hooks/usePush.ts` | Service worker registration + push subscription |
+| `useSearchStore` | `store.ts` | Zustand: search query/results/scroll, TMDB toggle |
+| `useServiceWorker` | `hooks/useServiceWorker.ts` | Registers `/sw.js` once authenticated (gates on `isAuthed` so unauthenticated visits don't install the SW). |
+| `usePush` | `hooks/usePush.ts` | Push subscription via the SW registration (VAPID) |
 | `useLongPress` | `hooks/useLongPress.ts` | Long-press detection (pointer events, configurable threshold/tolerance) |
 
 ### Components
 
 | Component | File | Purpose |
 |---|---|---|
-| TitleHistory | `components/TitleHistory.tsx` | Watch history overlay per title |
+| TitleHistory | `components/TitleHistory.tsx` | Watch history overlay per title (uses `episodeRanges` to fold consecutive episodes) |
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav |
-| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres) |
-| TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge |
-| PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3, gradient overlay) |
+| SearchBar | `components/SearchBar.tsx` | Sticky bottom search input bound to `useSearchStore` (auto-focus, optional TMDB toggle). Mounted in `app.tsx` only on `/search` (gated by `isSearch === pathname === '/search'`). The merge flow hides the TMDB toggle (`showTMDBToggle={!mergeSourceId}`). |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres). Status chips are the canonical status filter (no separate tab strip): All, Plan, Watching, Caught up, Completed, Dropped. Collapsed view surfaces active filter chips. |
+| TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge. Stamps a `TypeBadge` (size `sm`). |
+| PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3, gradient overlay). Stamps a `TypeBadge` overlay. |
+| TypeBadge | `components/TypeBadge.tsx` | Movie/series glyph (with `typeIcons.tsx` config). Used by `PosterCard` and `TitleCard` to distinguish the two at a glance in lists. |
+| SectionRow | `components/SectionRow.tsx` | Library "rich row" — label + subtext + 3-poster peek, used for `// COMING UP` and `// CONTINUE WATCHING` shortcuts above the title grid. |
 | StatusBadge | `components/StatusBadge.tsx` | Colored status pill |
 | SeasonTab | `components/SeasonTab.tsx` | Season pill with progress/check |
 | EpisodeRow | `components/EpisodeRow.tsx` | Episode row with toggle watched |
