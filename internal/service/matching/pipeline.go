@@ -175,7 +175,33 @@ func (p *Pipeline) ResolveURL(ctx context.Context, rawURL string) (*MatchResult,
 		input.Type = model.TitleTypeSeries
 	}
 
-	return p.Run(ctx, input)
+	result, err := p.Run(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	// plex_ids matches as soon as any external ID is supplied; for the
+	// resolve-by-URL flow that means an IMDb-only URL TMDB has never seen
+	// (recent or niche releases) yields a "confirmed" result with no type
+	// and no names. The frontend's "Could not identify" fallback is the
+	// right UX, so signal unidentified instead of returning that empty card.
+	if !resultHasIdentity(result) {
+		return nil, fmt.Errorf("could not identify title from URL: %s", rawURL)
+	}
+	return result, nil
+}
+
+// resultHasIdentity reports whether the pipeline produced enough metadata for
+// the frontend to render a meaningful preview (type and at least one name).
+func resultHasIdentity(r *MatchResult) bool {
+	if r == nil || r.TitleType == "" {
+		return false
+	}
+	for _, n := range r.Names {
+		if n.Name != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Pipeline) searchTMDB(ctx context.Context, input MatchInput, result *MatchResult) bool {
@@ -306,10 +332,13 @@ func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result
 // enrichFromIDs fetches multilingual names, covers, and cross-references.
 func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input MatchInput) {
 	p.resolveIDsFromSources(ctx, result, input)
-	p.appendAniListRomaji(ctx, result)
+	p.enrichFromAniList(ctx, result)
 
-	// Fallback: use input title if no names found
-	if len(result.Names) == 0 {
+	// Fallback: use input title as a placeholder when nothing else is known.
+	// Only seed when input.Title is non-empty — the URL-resolve flow passes
+	// no title, and an empty placeholder marked is_primary=true masks the
+	// real English name later added from TMDB translations/details.
+	if len(result.Names) == 0 && input.Title != "" {
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
 
@@ -458,20 +487,46 @@ func (p *Pipeline) fetchTMDBAndTVDBParallel(ctx context.Context, result *MatchRe
 	return tmdbRes, tvdbRes
 }
 
-// appendAniListRomaji appends an "x-romaji" name from AniList GetNames when
-// an AniList ID is known. Best-effort: errors and empty romaji are silently skipped.
-func (p *Pipeline) appendAniListRomaji(ctx context.Context, result *MatchResult) {
+// enrichFromAniList fills type, primary name, romaji, and is_anime from
+// AniList when an AniList ID is known. Lets URL-resolve flows succeed for
+// anime that have no TMDB cross-ref (the common case for niche anime).
+// Best-effort: any failure is silently skipped.
+func (p *Pipeline) enrichFromAniList(ctx context.Context, result *MatchResult) {
 	if p.anilist == nil || result.AniListID == 0 {
 		return
 	}
-	alNames, err := p.anilist.GetNames(ctx, result.AniListID)
-	if err != nil || alNames.Romaji == "" {
+	details, err := p.anilist.GetAnimeDetails(ctx, result.AniListID)
+	if err != nil {
 		return
 	}
-	result.Names = append(result.Names, model.TitleName{
-		Name:     alNames.Romaji,
-		Language: "x-romaji",
-	})
+	result.IsAnime = true
+	if result.TitleType == "" {
+		if details.Format == "MOVIE" {
+			result.TitleType = model.TitleTypeMovie
+		} else {
+			result.TitleType = model.TitleTypeSeries
+		}
+	}
+	hasPrimaryName := false
+	for _, n := range result.Names {
+		if n.IsPrimary && n.Name != "" {
+			hasPrimaryName = true
+			break
+		}
+	}
+	if !hasPrimaryName && details.EnglishTitle != "" {
+		result.Names = append(result.Names, model.TitleName{
+			Name:      details.EnglishTitle,
+			Language:  "en",
+			IsPrimary: true,
+		})
+	}
+	if details.RomajiTitle != "" {
+		result.Names = append(result.Names, model.TitleName{
+			Name:     details.RomajiTitle,
+			Language: "x-romaji",
+		})
+	}
 }
 
 // resolveIDsFromSources fills missing external IDs by chaining cross-ref lookup,
@@ -622,6 +677,18 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		if err == nil {
 			out.names = names
 		}
+		// /movie/{id}/translations sometimes omits the canonical English entry
+		// (the original_language sits under details.Title alone), which left
+		// share-from-IMDb resolves with an empty primary name. Backfill from
+		// details so a TMDB-known title always carries a usable "en" name.
+		if details.Title != "" {
+			if out.names == nil {
+				out.names = make(map[string]string)
+			}
+			if out.names["en"] == "" {
+				out.names["en"] = details.Title
+			}
+		}
 	} else {
 		details, err := p.tmdb.GetTVDetails(ctx, result.TMDBID)
 		if err != nil {
@@ -650,6 +717,14 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		names, err := p.tmdb.GetTitleNames(ctx, result.TMDBID, "tv")
 		if err == nil {
 			out.names = names
+		}
+		if details.Name != "" {
+			if out.names == nil {
+				out.names = make(map[string]string)
+			}
+			if out.names["en"] == "" {
+				out.names["en"] = details.Name
+			}
 		}
 	}
 }

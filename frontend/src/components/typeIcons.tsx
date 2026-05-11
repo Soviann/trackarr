@@ -45,6 +45,8 @@ export const typeIconConfig: Record<TypeIconKey, { color: string; icon: JSX.Elem
   },
 }
 
-export function resolveTypeIconKey(type: TitleType, isAnime?: boolean): TypeIconKey {
-  return isAnime ? 'anime' : type
+export function resolveTypeIconKey(type: TitleType | '' | null | undefined, isAnime?: boolean): TypeIconKey {
+  if (isAnime) return 'anime'
+  if (type === 'movie' || type === 'series') return type
+  return 'unknown'
 }

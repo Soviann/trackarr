@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../types'
 import { useApi } from '../hooks/useApi'
+import { useSearchStore } from '../store'
 import { getName } from '../utils'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../api'
@@ -40,7 +41,12 @@ export function Validate({ path }: { path?: string }) {
   const params = new URLSearchParams(window.location.search)
   const query = params.get('q') ?? ''
   const id = params.get('id')
-  
+  // Share fallback: when /add ships us here from an IMDb/AniList share, it
+  // forwards the human title under `name`. If URL resolve later fails we use
+  // it to bounce the user to the in-app TMDB search instead of stranding them
+  // on a useless "add with empty data" card.
+  const fallbackName = params.get('name')
+
   const searchPath = query && !isUrl(query) ? `/titles?search=${encodeURIComponent(query)}` : null
   const { data: resultsData, loading: loadingSearch, mutate: mutateSearch } = useApi<PaginatedResponse>(searchPath)
   const results = resultsData?.titles ?? []
@@ -67,6 +73,14 @@ export function Validate({ path }: { path?: string }) {
         .then(setResolved)
         .catch(() => {
           setResolved(null)
+          // Adding a title TMDB doesn't know is useless (no metadata edit in
+          // PlexTracker). Redirect to the in-app TMDB search prefilled with
+          // the share-provided name so the user can pick the canonical entry.
+          if (fallbackName) {
+            useSearchStore.getState().setQuery(fallbackName)
+            useSearchStore.getState().setSearchOnTMDB(true)
+            route('/search')
+          }
         })
         .finally(() => setLoadingResolve(false))
     } else {
@@ -305,7 +319,7 @@ export function Validate({ path }: { path?: string }) {
 
           {!resolved && isUrl(query) && !loading && (
             <div className={s.urlFallback}>
-              Could not identify title from URL. It will be added with the URL as name.
+              Could not identify title from URL. Search by name instead.
             </div>
           )}
 
@@ -324,9 +338,13 @@ export function Validate({ path }: { path?: string }) {
             </div>
           )}
 
+          {/* Block "Add to library" when the URL didn't resolve to a TMDB match —
+              creating a title without metadata is dead weight (no edit UI to fix
+              it later). The fallback name + redirect handles share flows; this
+              guard catches the rare pasted-URL case. */}
           <button
             onClick={handleAction}
-            disabled={adding || (!!id && !resolved && !isUrl(query))}
+            disabled={adding || (!resolved && isUrl(query)) || (!!id && !resolved && !isUrl(query))}
             className={s.addBtn}
           >
             <span className={s.addBtnText}>

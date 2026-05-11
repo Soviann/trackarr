@@ -1,12 +1,40 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { colors } from '../theme'
+import { useSearchStore } from '../store'
 import s from './Add.module.css'
 
 function detectUrlType(input: string): string | null {
   if (/imdb\.com\/title\/(tt\d+)/i.test(input)) return 'imdb'
   if (/thetvdb\.com/i.test(input)) return 'tvdb'
   if (/anilist\.co\/anime\/(\d+)/i.test(input)) return 'anilist'
+  return null
+}
+
+// extractSharedUrl scans share-target params for the first http(s) URL.
+function extractSharedUrl(params: URLSearchParams): string | null {
+  for (const key of ['url', 'text', 'title']) {
+    const v = params.get(key)
+    if (!v) continue
+    const m = v.match(/https?:\/\/\S+/i)
+    if (m) return m[0]
+  }
+  return null
+}
+
+// extractSharedName recovers a human title for TMDB search when the URL
+// resolution fails. IMDb on Android sends EXTRA_SUBJECT (`title`) as the bare
+// movie name; AniList sends similar. Strips trailing " - IMDb" / "- AniList".
+function extractSharedName(params: URLSearchParams): string | null {
+  const fromTitle = params.get('title')?.trim()
+  if (fromTitle && !/^https?:\/\//i.test(fromTitle)) {
+    return fromTitle.replace(/\s*[-–|·]\s*(IMDb|AniList)\s*$/i, '').trim() || null
+  }
+  const fromText = params.get('text')?.trim()
+  if (fromText) {
+    const stripped = fromText.replace(/https?:\/\/\S+/gi, '').trim()
+    if (stripped) return stripped.replace(/\s*[-–|·]\s*(IMDb|AniList)\s*$/i, '').trim() || null
+  }
   return null
 }
 
@@ -18,15 +46,26 @@ export function Add({ path }: { path?: string }) {
     inputRef.current?.focus()
 
     // PWA share target: mobile share sheets fill url/text/title inconsistently
-    // (IMDb app puts the link in `text`, some only send `title`), so accept any.
+    // (IMDb app puts the link in `text`, some only send `title`). Capture both
+    // a URL (for resolve) and a human name (search fallback when TMDB doesn't
+    // know the title — e.g. IMDb-only, niche anime without TMDB cross-ref).
     const params = new URLSearchParams(window.location.search)
-    const shared = params.get('url') || params.get('text') || params.get('title') || ''
-    if (!shared) return
-    const urlMatch = shared.match(/https?:\/\/\S+/i)
-    const value = urlMatch ? urlMatch[0] : shared.trim()
-    if (!value) return
-    setQuery(value)
-    route(`/admin/validate?q=${encodeURIComponent(value)}`)
+    const sharedUrl = extractSharedUrl(params)
+    const sharedName = extractSharedName(params)
+
+    if (sharedUrl) {
+      setQuery(sharedUrl)
+      const target = sharedName
+        ? `/admin/validate?q=${encodeURIComponent(sharedUrl)}&name=${encodeURIComponent(sharedName)}`
+        : `/admin/validate?q=${encodeURIComponent(sharedUrl)}`
+      route(target)
+      return
+    }
+    if (sharedName) {
+      useSearchStore.getState().setQuery(sharedName)
+      useSearchStore.getState().setSearchOnTMDB(true)
+      route('/search')
+    }
   }, [])
 
   const urlType = query.trim() ? detectUrlType(query.trim()) : null
