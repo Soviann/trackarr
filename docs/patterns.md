@@ -48,6 +48,11 @@ Confidence: `ConfidenceHigh`/`Medium`/`Low` (constants in `pipeline.go`). Nil cl
 
 After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres: union; cover: TMDB > TVDB > AniList). TVDB URL resolution via `ParseURLFull()` → slug → numeric ID.
 
+**Seasons NOT created by enrichment.** Created only by refresh (`TaskTypeRefresh` → `refreshSeriesFromTMDB`, needs `TMDBID`) or watched-episode (`SeasonWriter.GetOrCreate`, `plex.go`). Consequences:
+- Just-matched series has 0 seasons until refresh/watch. API omits the field (`Seasons json:"seasons,omitempty"` → `undefined` client-side) — front-end must guard (e.g. `title.seasons ?? []`).
+- `handleEnrichment.enqueueSeasonBackfill` enqueues `refresh:<id>` for each matched non-movie with a TMDB ID → seasons appear immediately, not next cron.
+- Periodic `RefreshTitles` cron backfills existing titles regardless of `match_status` (skips completed/dropped).
+
 ### AniList per-season push
 
 **Data model.** `season_external_ids(season_id, provider, external_id)` stores per-provider external IDs per season. Accessed via `SeasonExternalIDRepository` (`Get`, `Set`, `Delete`, `ListForTitle`) and `SeasonExternalIDWriter` (`Stamp` — first-writer-wins). `titles.anilist_id` is retained for movies and title-level display but is no longer the canonical push target for multi-season anime.
