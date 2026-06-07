@@ -162,8 +162,9 @@ export function computeAniListUrl(title: Title): string | null {
   if (title.type === 'movie') {
     return title.anilist_id ? aniListMediaUrl(title.anilist_id) : null
   }
-  if (title.seasons.length === 1) {
-    const s1 = title.seasons[0]
+  const seasons = title.seasons ?? []
+  if (seasons.length === 1) {
+    const s1 = seasons[0]
     return s1?.anilist_id ? aniListMediaUrl(s1.anilist_id) : null
   }
   return null

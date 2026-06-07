@@ -197,4 +197,9 @@ describe('computeAniListUrl', () => {
     const t = makeTitle({ is_anime: true, type: 'series', seasons: [s1, s2] })
     expect(computeAniListUrl(t)).toBeNull()
   })
+
+  it('returns null for anime series with no seasons array (unconfirmed title)', () => {
+    const t = makeTitle({ is_anime: true, type: 'series', seasons: undefined as unknown as Season[] })
+    expect(computeAniListUrl(t)).toBeNull()
+  })
 })
