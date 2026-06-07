@@ -52,7 +52,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
 
   const buildStatusText = () => {
     const source = sourceLabel ?? (isUnconfirmed ? 'Unconfirmed match' : 'Pending review')
-    if (isUnconfirmed && !hasAnyID) return `${source} — needs manual linking`
+    if (isUnconfirmed && !hasAnyID) return `${source} — keep as-is or fix match`
     if (isUnconfirmed && hasAnyID) return `${source} — please verify`
     if (!isUnconfirmed) return `${source} — AI-verified, confirm?`
     return source
@@ -109,10 +109,9 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
       <div className={s.actions}>
         <button
           onClick={handleConfirm}
-          disabled={!hasAnyID}
           className={s.btnConfirm}
         >
-          Confirm
+          {hasAnyID ? 'Confirm' : 'Keep as-is'}
         </button>
         <button
           onClick={(e: Event) => { e.stopPropagation(); route(`/admin/validate?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`) }}

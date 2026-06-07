@@ -40,8 +40,7 @@ export function MatchReview({ path }: { path?: string }) {
           </svg>
         ),
         color: '#2ECC71',
-        label: 'Confirm',
-        disabled: !hasAnyID,
+        label: hasAnyID ? 'Confirm' : 'Keep as-is',
         onAction: async () => {
           await apiFetch(`/titles/${title.id}`, {
             method: 'PATCH',

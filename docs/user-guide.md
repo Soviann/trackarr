@@ -119,7 +119,9 @@ Quand PlexTracker reçoit un nouveau titre via Plex, il tente de l'identifier au
 
 Actions : Confirmer le match ou Corriger (re-recherche ou saisie manuelle d'IDs).
 
-**Swipe actions** : glisser une carte vers la gauche révèle deux boutons — Confirm (vert) et Fix match (orange). Glisser loin exécute automatiquement l'action principale (Confirm).
+**Titre introuvable** : certains titres n'existent dans aucune base (TMDB, IMDb, AniList). Dans ce cas le bouton principal devient **Keep as-is** : il accepte le titre tel quel (nom Plex conservé, sans métadonnées externes) et le sort de la file de revue. Le titre reste suivi dans la bibliothèque.
+
+**Swipe actions** : glisser une carte vers la gauche révèle deux boutons — Confirm / Keep as-is (vert) et Fix match (orange). Glisser loin exécute automatiquement l'action principale.
 
 Le bouton "Batch confirm" permet de confirmer tous les matchs "pending" d'un coup.
 
