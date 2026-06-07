@@ -377,7 +377,8 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 
 	// Merge runs outside the persistence tx: it opens its own tx and may
 	// delete the source title, so it must not nest inside another writer.
-	if _, err := w.resolveAnimeConflict(ctx, result, payload, logger); err != nil {
+	merged, err := w.resolveAnimeConflict(ctx, result, payload, logger)
+	if err != nil {
 		return err
 	}
 
@@ -389,7 +390,49 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 		w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, result.CoverFile)
 	}
 
+	// Enrichment writes IDs/metadata but never creates seasons — only a refresh
+	// does. Enqueue one now so a just-matched series shows its episode list in
+	// review immediately, instead of staying empty until the next periodic
+	// refresh cycle. Skipped when the conflict resolver merged the title away.
+	if !merged {
+		w.enqueueSeasonBackfill(ctx, result, payload, logger)
+	}
+
 	return nil
+}
+
+// enqueueSeasonBackfill schedules a refresh for a freshly-matched series so its
+// seasons/episodes get populated without waiting for the periodic refresh.
+// Movies have no seasons, and seasons are sourced from TMDB, so both checks
+// gate the enqueue. Idempotent via the refresh:<id> dedup key.
+func (w *TaskQueueWorker) enqueueSeasonBackfill(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, logger *slog.Logger) {
+	titleType := result.TitleType
+	if titleType == "" {
+		titleType = payload.TitleType
+	}
+	if titleType == model.TitleTypeMovie {
+		return
+	}
+	tmdbID := result.TMDBID
+	if tmdbID == 0 {
+		tmdbID = payload.TMDBID
+	}
+	if tmdbID == 0 {
+		return
+	}
+
+	data, err := json.Marshal(RefreshPayload{TitleID: payload.TitleID})
+	if err != nil {
+		logger.Warn("marshal season backfill payload", "err", err)
+		return
+	}
+	dedupKey := fmt.Sprintf("refresh:%d", payload.TitleID)
+	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeRefresh, string(data), &dedupKey)
+		return e
+	}); err != nil {
+		logger.Warn("enqueue season backfill refresh", "err", err)
+	}
 }
 
 // buildEnrichmentUpdate translates a pipeline MatchResult into a TitleUpdate

@@ -99,6 +99,112 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	assert.Equal(t, matching.MatchSourcePlexIDs, *after.MatchSource)
 }
 
+// pendingRefreshFor returns the first pending refresh task targeting titleID, or
+// nil. Used to assert season-backfill enqueue behaviour after enrichment.
+func pendingRefreshFor(t *testing.T, tasks *repository.TaskRepository, titleID int64) *model.Task {
+	t.Helper()
+	pending, err := tasks.ListPending()
+	require.NoError(t, err)
+	for i := range pending {
+		if pending[i].TaskType != model.TaskTypeRefresh {
+			continue
+		}
+		var rp service.RefreshPayload
+		if err := json.Unmarshal([]byte(pending[i].Payload), &rp); err != nil {
+			continue
+		}
+		if rp.TitleID == titleID {
+			return &pending[i]
+		}
+	}
+	return nil
+}
+
+// TestHandleEnrichment_EnqueuesSeasonBackfillForSeries verifies that matching a
+// series enqueues a refresh so its seasons/episodes are populated right away.
+// Enrichment writes IDs/metadata but never creates seasons (only refresh does),
+// so without this a just-matched series sits in the review queue with an empty
+// episode list — the state that previously crashed the title page.
+func TestHandleEnrichment_EnqueuesSeasonBackfillForSeries(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Some Series", Language: "en", IsPrimary: true}})
+
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: "Some Series",
+		Year:      2024,
+		TitleType: model.TitleTypeSeries,
+		TMDBID:    1396,
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.NotNil(t, pendingRefreshFor(t, tasks, id),
+		"matching a series should enqueue a refresh to backfill its seasons")
+}
+
+// TestHandleEnrichment_NoSeasonBackfillForMovie guards the inverse: movies have
+// no seasons, so enrichment must not enqueue a redundant refresh for them.
+func TestHandleEnrichment_NoSeasonBackfillForMovie(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Some Movie", Language: "en", IsPrimary: true}})
+
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: "Some Movie",
+		Year:      2024,
+		TitleType: model.TitleTypeMovie,
+		TMDBID:    42,
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.Nil(t, pendingRefreshFor(t, tasks, id),
+		"matching a movie must not enqueue a season-backfill refresh")
+}
+
 // TestHandleEnrichment_CtxCancelRollsBack makes sure a cancelled context
 // prevents the persistence transaction from committing. With handleEnrichment
 // now wrapping all writes in a single WithTxContext, BeginTx must fail before
