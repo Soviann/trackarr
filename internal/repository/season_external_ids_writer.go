@@ -52,3 +52,17 @@ func (w *SeasonExternalIDWriter) Upsert(ctx context.Context, seasonID int64, pro
 	}
 	return nil
 }
+
+// Delete removes the (seasonID, provider) mapping inside the caller's
+// transaction. Mirrors SeasonExternalIDRepository.Delete for tx-bound flows
+// (manual ID editor clearing an anime season's AniList link atomically with
+// the title update).
+func (w *SeasonExternalIDWriter) Delete(ctx context.Context, seasonID int64, provider string) error {
+	if _, err := w.tx.ExecContext(ctx,
+		`DELETE FROM season_external_ids WHERE season_id = ? AND provider = ?`,
+		seasonID, provider,
+	); err != nil {
+		return fmt.Errorf("season_external_ids delete: %w", err)
+	}
+	return nil
+}

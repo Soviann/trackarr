@@ -89,15 +89,19 @@ func newBackgroundServiceWithTMDB(t *testing.T, tmdb *matching.TMDBClient) (*ser
 // scoreByID maps an AniList media id to the averageScore the fake should
 // return; errByID overrides the response with an error for that id.
 type fakeAniListSeasonScoreClient struct {
-	scoreByID map[int64]int
-	errByID   map[int64]error
-	calls     []int64
+	scoreByID   map[int64]int
+	errByID     map[int64]error
+	detailsByID map[int64]*matching.AniListDetails
+	calls       []int64
 }
 
 func (f *fakeAniListSeasonScoreClient) GetAnimeDetails(_ context.Context, id int64) (*matching.AniListDetails, error) {
 	f.calls = append(f.calls, id)
 	if err, ok := f.errByID[id]; ok {
 		return nil, err
+	}
+	if d, ok := f.detailsByID[id]; ok {
+		return d, nil
 	}
 	if score, ok := f.scoreByID[id]; ok {
 		s := score
@@ -243,6 +247,40 @@ func readSeasonAniListScore(t *testing.T, db *sql.DB, seasonID int64) *int {
 	}
 	v := int(score.Int64)
 	return &v
+}
+
+func TestRefreshByID_AniListOnly_SourcesMetadata(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+
+	anilistID := int64(555)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, IsAnime: true, Year: 2024,
+		Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+		AniListID: &anilistID,
+	}, []model.TitleName{{Name: "Wrong TMDB Name", Language: "en", IsPrimary: true}})
+
+	score, dur := 80, 24
+	svc.SetAniList(&fakeAniListSeasonScoreClient{
+		detailsByID: map[int64]*matching.AniListDetails{
+			anilistID: {
+				ID: anilistID, EnglishTitle: "Correct Anime", RomajiTitle: "Tadashii",
+				Description: "The real synopsis.", Genres: []string{"Action", "Drama"},
+				AverageScore: &score, Duration: &dur,
+			},
+		},
+	})
+
+	require.NoError(t, svc.RefreshByID(context.Background(), id))
+
+	got, err := titleRepo.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, "Correct Anime", got.PrimaryName(), "name sourced from AniList, overwriting the stale TMDB name")
+	require.NotNil(t, got.Overview)
+	assert.Equal(t, "The real synopsis.", *got.Overview)
+	require.NotNil(t, got.AniListRating)
+	assert.Equal(t, 80, *got.AniListRating)
+	require.NotNil(t, got.Runtime)
+	assert.Equal(t, 24, *got.Runtime)
 }
 
 func TestBackgroundService_RefreshAniListScores_PersistsPerSeason(t *testing.T) {

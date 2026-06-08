@@ -143,6 +143,92 @@ func TestMerge_StampsSourceAniListOnDestSeason(t *testing.T) {
 	assert.Equal(t, "145064", got)
 }
 
+func TestSetExternalIDs_ClearsRoutesAniListAndLocks(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	tmdb, imdb, tvdb, anilist := int64(316694), "tt475306", int64(475306), int64(209219)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, IsAnime: true, Year: 2020,
+		Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+		TMDBID: &tmdb, IMDBID: &imdb, TVDBID: &tvdb, AniListID: &anilist,
+	}, []model.TitleName{{Name: "Anime", Language: "en", IsPrimary: true}})
+	seasonID := testutil.InsertSeason(t, db, id, 1)
+
+	// Toggle off: clear TVDB, keep TMDB/IMDB, route AniList to the season.
+	newAniList := int64(209219)
+	require.NoError(t, svc.SetExternalIDs(context.Background(), db, id, service.ExternalIDEdit{
+		TMDBID:          &tmdb,
+		IMDBID:          &imdb,
+		TVDBID:          nil, // emptied → clear
+		AniListID:       &newAniList,
+		AniListSeasonID: &seasonID,
+		AutoFill:        false,
+	}))
+
+	got, err := titleRepo.GetByID(id)
+	require.NoError(t, err)
+	assert.Nil(t, got.TVDBID, "emptied TVDB cleared to NULL")
+	require.NotNil(t, got.TMDBID)
+	assert.Equal(t, tmdb, *got.TMDBID, "kept TMDB")
+	require.NotNil(t, got.MatchSource)
+	assert.Equal(t, "manual", *got.MatchSource, "marked manually matched")
+
+	seasonAniList, err := testutil.GetSeasonExternalID(t, db, seasonID, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "209219", seasonAniList, "AniList routed to the season mapping")
+
+	// Toggle off locks every ID so the enrichment refresh can't rewrite them.
+	var payloadJSON string
+	require.NoError(t, db.QueryRow(
+		`SELECT payload FROM task_queue WHERE task_type = 'enrichment' ORDER BY id DESC LIMIT 1`,
+	).Scan(&payloadJSON))
+	var payload service.EnrichmentPayload
+	require.NoError(t, json.Unmarshal([]byte(payloadJSON), &payload))
+	assert.True(t, payload.PreserveMatch, "manual edit preserves match state")
+	assert.ElementsMatch(t,
+		[]string{service.LockTMDB, service.LockIMDB, service.LockTVDB, service.LockAniList},
+		payload.LockedIDs, "toggle off locks all IDs")
+}
+
+func TestSetExternalIDs_AutoFillLocksOnlyProvided(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2014,
+		Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Movie", Language: "en", IsPrimary: true}})
+
+	// Toggle on: provide only TMDB; leave the rest empty for back-fill.
+	tmdb := int64(550)
+	require.NoError(t, svc.SetExternalIDs(context.Background(), db, id, service.ExternalIDEdit{
+		TMDBID:   &tmdb,
+		AutoFill: true,
+	}))
+
+	var payloadJSON string
+	require.NoError(t, db.QueryRow(
+		`SELECT payload FROM task_queue WHERE task_type = 'enrichment' ORDER BY id DESC LIMIT 1`,
+	).Scan(&payloadJSON))
+	var payload service.EnrichmentPayload
+	require.NoError(t, json.Unmarshal([]byte(payloadJSON), &payload))
+	assert.Equal(t, []string{service.LockTMDB}, payload.LockedIDs,
+		"auto-fill locks only the provided ID, leaving blanks open for matching")
+}
+
 func TestMerge_ReSearchesAniListWhenSourceLacksID(t *testing.T) {
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)

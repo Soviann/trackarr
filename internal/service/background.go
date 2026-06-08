@@ -181,9 +181,11 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		s.refreshFromTMDB(ctx, title, &result)
 	}
 
-	// Step 1b: AniList cover fallback for titles without TMDB ID
-	if title.CoverURL == nil && title.TMDBID == nil && title.AniListID != nil {
-		s.covers.DownloadAniListCover(ctx, title)
+	// Step 1b: AniList as the full metadata source when there's no TMDB — niche
+	// anime that aren't on TMDB. Sources names/synopsis/genres/rating/cover from
+	// AniList (subsumes the old cover-only fallback).
+	if title.TMDBID == nil && title.AniListID != nil {
+		s.refreshFromAniList(ctx, title, &result)
 	}
 
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
@@ -509,6 +511,73 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		tvdbID := details.ExternalIDs.TVDBID
 		logTitleUpdate(title.ID, "series tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
+	}
+}
+
+// refreshFromAniList sources a title's metadata (names, synopsis, genres,
+// rating, runtime, cover) from AniList. Used for titles that have an AniList ID
+// but no TMDB — niche anime absent from TMDB. AniList is then the authority, so
+// it OVERWRITES existing values (which are often stale, left over from a removed
+// wrong TMDB match). Best-effort: each piece is logged and skipped on failure.
+func (s *BackgroundService) refreshFromAniList(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+	if s.anilist == nil || title.AniListID == nil {
+		return
+	}
+	details, err := s.anilist.GetAnimeDetails(ctx, *title.AniListID)
+	if err != nil {
+		result.Error = err
+		return
+	}
+	result.Refreshed = true
+
+	// Names: English primary (fall back to romaji), romaji as alternate.
+	primary := details.EnglishTitle
+	if primary == "" {
+		primary = details.RomajiTitle
+	}
+	var names []model.TitleName
+	if primary != "" {
+		names = append(names, model.TitleName{Name: primary, Language: "en", IsPrimary: true})
+	}
+	if details.RomajiTitle != "" && details.RomajiTitle != primary {
+		names = append(names, model.TitleName{Name: details.RomajiTitle, Language: "x-romaji"})
+	}
+	if len(names) > 0 {
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).ReplaceNames(ctx, title.ID, names)
+		}); err != nil {
+			log.Printf("background: anilist names for title %d: %v", title.ID, err)
+		} else {
+			title.PrimaryName = primary
+			result.TitleName = primary
+		}
+	}
+
+	update := repository.TitleUpdate{}
+	if details.Description != "" {
+		update.Overview = &details.Description
+	}
+	if details.AverageScore != nil {
+		update.AniListRating = details.AverageScore
+	}
+	if details.Duration != nil {
+		update.Runtime = details.Duration
+	}
+	logTitleUpdate(title.ID, "anilist metadata", s.updateTitle(ctx, title.ID, update))
+
+	if len(details.Genres) > 0 {
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, details.Genres)
+		}); err != nil {
+			log.Printf("background: anilist genres for title %d: %v", title.ID, err)
+		}
+	}
+
+	// Cover from AniList when missing. SetExternalIDs clears the stale cover when
+	// the TMDB/TVDB sources are removed, so this fills it on the next refresh
+	// without re-downloading every cycle.
+	if title.CoverURL == nil {
+		s.covers.DownloadAniListCover(ctx, title)
 	}
 }
 

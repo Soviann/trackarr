@@ -199,6 +199,33 @@ func TestTitleRepository_UpdateNoFields(t *testing.T) {
 	assert.Equal(t, model.TitleStatusWatching, got.Status)
 }
 
+func TestTitleRepository_Update_ClearsExternalIDsToNull(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	imdb, tmdb, anilist, tvdb := "tt1234567", int64(550), int64(21), int64(81189)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+		IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist, TVDBID: &tvdb,
+	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	// Clear TVDB + IMDB, keep TMDB, reassign AniList — the three states in one Update.
+	newAnilist := int64(99)
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+		ClearTVDBID: true,
+		ClearIMDBID: true,
+		AniListID:   &newAnilist,
+	})
+
+	got, _ := repo.GetByID(id)
+	assert.Nil(t, got.TVDBID, "TVDB cleared to NULL")
+	assert.Nil(t, got.IMDBID, "IMDB cleared to NULL")
+	require.NotNil(t, got.TMDBID)
+	assert.Equal(t, int64(550), *got.TMDBID, "untouched TMDB preserved")
+	require.NotNil(t, got.AniListID)
+	assert.Equal(t, int64(99), *got.AniListID, "AniList reassigned")
+}
+
 func TestTitleRepository_FindByExternalID(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

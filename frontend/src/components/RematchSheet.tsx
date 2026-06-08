@@ -33,7 +33,16 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   const [manualImdb, setManualImdb] = useState('')
   const [manualAnilist, setManualAnilist] = useState('')
   const [manualTvdb, setManualTvdb] = useState('')
+  const [autoFill, setAutoFill] = useState(false)
   const [seasonAniListID, setSeasonAniListID] = useState('')
+
+  // For an anime series the on-screen AniList link is driven by a season, not
+  // the title row — so the manual editor edits that season's mapping (prefer
+  // S1, else the first season). Movies and non-anime use the title row.
+  const anilistSeason =
+    title.is_anime && title.type !== 'movie'
+      ? ((title.seasons ?? []).find((sn) => sn.season_number === 1) ?? (title.seasons ?? [])[0])
+      : undefined
 
   // Le composant reste monté entre les ouvertures : useState ne capte
   // l'ID que lors du premier rendu (quand seasonID vaut undefined).
@@ -41,6 +50,22 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   useEffect(() => {
     setSeasonAniListID(season?.anilist_id ?? '')
   }, [seasonID, season?.anilist_id])
+
+  // Prefill the manual fields with the title's current IDs each time the sheet
+  // opens, so the user sees and edits real values (blank = remove the ID).
+  useEffect(() => {
+    if (!open) return
+    setManualTmdb(title.tmdb_id != null ? String(title.tmdb_id) : '')
+    setManualImdb(title.imdb_id ?? '')
+    setManualTvdb(title.tvdb_id != null ? String(title.tvdb_id) : '')
+    const titleAniList = title.anilist_id != null ? String(title.anilist_id) : ''
+    // For an anime series, prefer the season mapping but fall back to the title
+    // row, so an existing (invisible) title-level ID surfaces and can migrate to
+    // the season on save.
+    setManualAnilist(anilistSeason ? (anilistSeason.anilist_id ?? titleAniList) : titleAniList)
+    setAutoFill(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, title.id])
   const doSearch = async (q: string, type: 'movie' | 'tv') => {
     if (!q.trim()) {
       setResults([])
@@ -87,18 +112,20 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   }
 
   const handleManualSave = async () => {
-    const body: Record<string, unknown> = {}
-    if (manualTmdb) body.tmdb_id = parseInt(manualTmdb, 10)
-    if (manualImdb) body.imdb_id = manualImdb
-    if (manualAnilist) body.anilist_id = parseInt(manualAnilist, 10)
-    if (manualTvdb) body.tvdb_id = parseInt(manualTvdb, 10)
-    if (Object.keys(body).length === 0) return
-
+    // Authoritative snapshot: every field is sent, empty = clear the ID. The
+    // server locks what's filled in; auto_fill lets it back-fill the blanks.
     setSaving(true)
     try {
-      await apiFetch(`/titles/${title.id}/rematch`, {
-        method: 'POST',
-        body: JSON.stringify(body),
+      await apiFetch(`/titles/${title.id}/external-ids`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          tmdb_id: manualTmdb.trim(),
+          imdb_id: manualImdb.trim(),
+          anilist_id: manualAnilist.trim(),
+          tvdb_id: manualTvdb.trim(),
+          anilist_season_id: anilistSeason ? anilistSeason.id : null,
+          auto_fill: autoFill,
+        }),
       })
       onDone()
       onClose()
@@ -254,15 +281,22 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                   <input type="text" value={manualImdb} onInput={(e) => setManualImdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. tt0137523" />
                 </label>
                 <label className={s.fieldLabel}>
-                  AniList ID
+                  {anilistSeason ? `AniList ID (S${anilistSeason.season_number})` : 'AniList ID'}
                   <input type="text" value={manualAnilist} onInput={(e) => setManualAnilist((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 21" />
                 </label>
                 <label className={s.fieldLabel}>
                   TVDB ID
                   <input type="text" value={manualTvdb} onInput={(e) => setManualTvdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 81189" />
                 </label>
+                <label className={s.autoFillRow}>
+                  <input type="checkbox" checked={autoFill} onChange={(e) => setAutoFill((e.target as HTMLInputElement).checked)} />
+                  <span>Auto-find the other IDs</span>
+                </label>
+                <p className={s.autoFillHint}>
+                  Leave blank to remove an ID. Tick the box to let matching fill the empty ones.
+                </p>
                 <button onClick={handleManualSave} disabled={saving} className={s.saveButton}>
-                  <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save & re-enrich'}</span>
+                  <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save'}</span>
                 </button>
               </div>
             )}

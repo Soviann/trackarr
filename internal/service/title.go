@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -172,6 +173,148 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 		IMDBID:    payloadIMDB,
 		TMDBID:    payloadTMDB,
 		TVDBID:    payloadTVDB,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal enrichment payload: %w", err)
+	}
+	dedupKey := fmt.Sprintf("enrichment:%d", id)
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		_, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey)
+		return err
+	})
+}
+
+// ExternalIDEdit is the authoritative snapshot from the manual ID editor. The
+// editor always sends all four IDs, so each field carries the desired final
+// value and a nil pointer means "clear this ID" (not "leave unchanged"). When
+// AniListSeasonID is set, the AniList value routes to that season's mapping
+// instead of the title row — for anime series the on-screen AniList link is
+// driven by the season, so the title column would be invisible. AutoFill lets
+// auto-matching back-fill the IDs left empty; without it, emptied IDs stay empty.
+type ExternalIDEdit struct {
+	TMDBID          *int64
+	IMDBID          *string
+	AniListID       *int64
+	TVDBID          *int64
+	AniListSeasonID *int64
+	AutoFill        bool
+}
+
+// SetExternalIDs applies a manual external-ID snapshot. Unlike Rematch (which
+// re-identifies from a chosen TMDB entry and re-derives everything), this treats
+// the user's IDs as authoritative: it writes them exactly, marks the title
+// manually matched, and enqueues a metadata refresh that locks the IDs the user
+// touched so auto-matching never overwrites them. AutoFill controls whether the
+// fields left empty get back-filled by that refresh.
+func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64, edit ExternalIDEdit) error {
+	title, err := s.titles.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	matchStatus := model.MatchStatusConfirmed
+	matchSource := matching.MatchSourceManual
+	update := repository.TitleUpdate{
+		MatchStatus: &matchStatus,
+		MatchSource: &matchSource,
+	}
+	// nil pointer = the user emptied the field → clear it to NULL.
+	if edit.TMDBID != nil {
+		update.TMDBID = edit.TMDBID
+	} else {
+		update.ClearTMDBID = true
+	}
+	if edit.IMDBID != nil {
+		update.IMDBID = edit.IMDBID
+	} else {
+		update.ClearIMDBID = true
+	}
+	if edit.TVDBID != nil {
+		update.TVDBID = edit.TVDBID
+	} else {
+		update.ClearTVDBID = true
+	}
+	// AniList always mirrors onto the title row (so the AniList-as-metadata
+	// refresh, which keys off titles.anilist_id, can find it). For an anime
+	// series we ALSO write the season mapping that drives the on-screen link.
+	if edit.AniListID != nil {
+		update.AniListID = edit.AniListID
+	} else {
+		update.ClearAniListID = true
+	}
+	routeAniListToSeason := edit.AniListSeasonID != nil
+
+	// When both poster sources (TMDB, TVDB) are gone, reset the cover so a later
+	// refresh re-derives it from AniList instead of keeping the stale one.
+	if edit.TMDBID == nil && edit.TVDBID == nil {
+		update.ClearCoverURL = true
+	}
+
+	if err := database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		if err := repository.NewTitleWriter(tx).Update(ctx, id, update); err != nil {
+			return err
+		}
+		if routeAniListToSeason {
+			seasonID := *edit.AniListSeasonID
+			writer := repository.NewSeasonExternalIDWriter(tx)
+			if edit.AniListID != nil {
+				if err := writer.Upsert(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(*edit.AniListID, 10)); err != nil {
+					return err
+				}
+				EnqueueAniListSeasonPush(ctx, tx, seasonID)
+			} else if err := writer.Delete(ctx, seasonID, repository.ProviderAniList); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Metadata refresh. With a TMDB anchor, enqueue the enrichment pipeline and
+	// lock the IDs the user owns so auto-matching can't overwrite them. Without
+	// TMDB there's no reliable anchor — the name-search pipeline could inject
+	// wrong metadata — so the caller triggers an AniList-sourced refresh instead
+	// (the SetExternalIDs handler fires RefreshByID, which reads from AniList).
+	if edit.TMDBID == nil {
+		return nil
+	}
+
+	// AutoFill on → lock only the fields the user filled (blanks get back-filled);
+	// off → lock all four (no auto ID writes, emptied IDs stay empty). AniList
+	// is always locked at the title level — its value is user-set here.
+	var locked []string
+	lockIf := func(authoritative bool, key string) {
+		if authoritative || !edit.AutoFill {
+			locked = append(locked, key)
+		}
+	}
+	lockIf(true, LockTMDB)
+	lockIf(edit.IMDBID != nil, LockIMDB)
+	lockIf(edit.TVDBID != nil, LockTVDB)
+	lockIf(routeAniListToSeason || edit.AniListID != nil, LockAniList)
+
+	payloadTMDB := *edit.TMDBID
+	payloadIMDB := ""
+	if edit.IMDBID != nil {
+		payloadIMDB = *edit.IMDBID
+	}
+	payloadTVDB := int64(0)
+	if edit.TVDBID != nil {
+		payloadTVDB = *edit.TVDBID
+	}
+
+	payload, err := json.Marshal(EnrichmentPayload{
+		TitleID:       id,
+		TitleName:     title.PrimaryName(),
+		Year:          title.Year,
+		TitleType:     title.Type,
+		IsAnime:       title.IsAnime,
+		IMDBID:        payloadIMDB,
+		TMDBID:        payloadTMDB,
+		TVDBID:        payloadTVDB,
+		LockedIDs:     locked,
+		PreserveMatch: true,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal enrichment payload: %w", err)

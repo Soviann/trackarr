@@ -130,6 +130,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
 			r.Delete("/titles/{id}", httputil.WrapHandler(titles.Delete))
 			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
+			r.Put("/titles/{id}/external-ids", httputil.WrapHandler(titles.SetExternalIDs))
 			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))

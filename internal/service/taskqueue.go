@@ -30,7 +30,24 @@ type EnrichmentPayload struct {
 	IMDBID    string          `json:"imdb_id,omitempty"`
 	TMDBID    int64           `json:"tmdb_id,omitempty"`
 	TVDBID    int64           `json:"tvdb_id,omitempty"`
+	// LockedIDs lists external-ID fields this enrichment run must NOT write
+	// (values from LockIMDB/LockTMDB/LockTVDB/LockAniList). The manual ID editor
+	// sets these so a user-provided or deliberately-emptied ID is never
+	// overwritten or back-filled by auto-matching. Empty = enrich every field.
+	LockedIDs []string `json:"locked_ids,omitempty"`
+	// PreserveMatch keeps the title's current match_status/match_source instead
+	// of overwriting them with the pipeline result — set when the run follows a
+	// manual edit so the "matched manually" state survives a metadata refresh.
+	PreserveMatch bool `json:"preserve_match,omitempty"`
 }
+
+// External-ID field keys for EnrichmentPayload.LockedIDs.
+const (
+	LockIMDB    = "imdb"
+	LockTMDB    = "tmdb"
+	LockTVDB    = "tvdb"
+	LockAniList = "anilist"
+)
 
 type RefreshPayload struct {
 	TitleID int64 `json:"title_id"`
@@ -438,20 +455,27 @@ func (w *TaskQueueWorker) enqueueSeasonBackfill(ctx context.Context, result *mat
 // buildEnrichmentUpdate translates a pipeline MatchResult into a TitleUpdate
 // diff. Pure: no side effects, safe to call outside a transaction.
 func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPayload) repository.TitleUpdate {
-	update := repository.TitleUpdate{
-		MatchStatus: &result.MatchStatus,
-		MatchSource: &result.MatchSource,
+	locked := make(map[string]bool, len(payload.LockedIDs))
+	for _, k := range payload.LockedIDs {
+		locked[k] = true
 	}
-	if result.IMDBID != "" {
+
+	update := repository.TitleUpdate{}
+	// A manual edit owns the match state; only a fresh (re)match rewrites it.
+	if !payload.PreserveMatch {
+		update.MatchStatus = &result.MatchStatus
+		update.MatchSource = &result.MatchSource
+	}
+	if result.IMDBID != "" && !locked[LockIMDB] {
 		update.IMDBID = &result.IMDBID
 	}
-	if result.TMDBID != 0 {
+	if result.TMDBID != 0 && !locked[LockTMDB] {
 		update.TMDBID = &result.TMDBID
 	}
-	if result.TVDBID != 0 {
+	if result.TVDBID != 0 && !locked[LockTVDB] {
 		update.TVDBID = &result.TVDBID
 	}
-	if result.AniListID != 0 {
+	if result.AniListID != 0 && !locked[LockAniList] {
 		update.AniListID = &result.AniListID
 	}
 	if result.CoverFile != "" {

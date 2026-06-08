@@ -20,6 +20,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBuildEnrichmentUpdate_LocksAndPreservesMatch(t *testing.T) {
+	result := &matching.MatchResult{
+		IMDBID:      "tt9999999",
+		TMDBID:      111,
+		TVDBID:      222,
+		AniListID:   333,
+		MatchStatus: model.MatchStatusConfirmed,
+		MatchSource: matching.MatchSourceTMDBSearch,
+	}
+
+	t.Run("no locks applies every ID and rewrites match", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(result, service.EnrichmentPayload{})
+		require.NotNil(t, u.TMDBID)
+		assert.Equal(t, int64(111), *u.TMDBID)
+		require.NotNil(t, u.TVDBID)
+		assert.Equal(t, int64(222), *u.TVDBID)
+		require.NotNil(t, u.IMDBID)
+		require.NotNil(t, u.AniListID)
+		require.NotNil(t, u.MatchSource, "match source rewritten on a fresh match")
+	})
+
+	t.Run("locked IDs are not written, preserve keeps match state", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(result, service.EnrichmentPayload{
+			LockedIDs:     []string{service.LockTVDB, service.LockIMDB},
+			PreserveMatch: true,
+		})
+		assert.Nil(t, u.TVDBID, "locked TVDB left untouched")
+		assert.Nil(t, u.IMDBID, "locked IMDB left untouched")
+		require.NotNil(t, u.TMDBID, "unlocked TMDB still back-filled")
+		assert.Equal(t, int64(111), *u.TMDBID)
+		assert.Nil(t, u.MatchStatus, "PreserveMatch keeps existing match status")
+		assert.Nil(t, u.MatchSource, "PreserveMatch keeps existing match source")
+	})
+}
+
 // fakeAniListPusher records PushSeasonState/PushMovieState invocations so
 // dispatch tests can assert the worker routes each task kind to the right
 // method with the payload decoded correctly.

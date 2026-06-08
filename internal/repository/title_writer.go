@@ -88,23 +88,33 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `series_status = ?`)
 		args = append(args, *update.SeriesStatus)
 	}
-	if update.CoverURL != nil {
+	if update.ClearCoverURL {
+		sets = append(sets, `cover_url = NULL`)
+	} else if update.CoverURL != nil {
 		sets = append(sets, `cover_url = ?`)
 		args = append(args, *update.CoverURL)
 	}
-	if update.IMDBID != nil {
+	if update.ClearIMDBID {
+		sets = append(sets, `imdb_id = NULL`)
+	} else if update.IMDBID != nil {
 		sets = append(sets, `imdb_id = ?`)
 		args = append(args, *update.IMDBID)
 	}
-	if update.AniListID != nil {
+	if update.ClearAniListID {
+		sets = append(sets, `anilist_id = NULL`)
+	} else if update.AniListID != nil {
 		sets = append(sets, `anilist_id = ?`)
 		args = append(args, *update.AniListID)
 	}
-	if update.TMDBID != nil {
+	if update.ClearTMDBID {
+		sets = append(sets, `tmdb_id = NULL`)
+	} else if update.TMDBID != nil {
 		sets = append(sets, `tmdb_id = ?`)
 		args = append(args, *update.TMDBID)
 	}
-	if update.TVDBID != nil {
+	if update.ClearTVDBID {
+		sets = append(sets, `tvdb_id = NULL`)
+	} else if update.TVDBID != nil {
 		sets = append(sets, `tvdb_id = ?`)
 		args = append(args, *update.TVDBID)
 	}

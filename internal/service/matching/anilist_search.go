@@ -3,6 +3,9 @@ package matching
 import (
 	"context"
 	"fmt"
+	"html"
+	"regexp"
+	"strings"
 )
 
 type AniListSearchResult struct {
@@ -23,15 +26,18 @@ func (r *AniListSearchResult) DisplayTitle() string {
 }
 
 type AniListDetails struct {
-	ID           int64  `json:"id"`
-	MALID        *int64 `json:"idMal"`
-	RomajiTitle  string `json:"romajiTitle"`
-	EnglishTitle string `json:"englishTitle"`
-	Episodes     *int   `json:"episodes"`
-	Format       string `json:"format"`
-	SeasonYear   *int   `json:"seasonYear"`
-	CoverURL     string `json:"coverURL"` // extraLarge or large
-	AverageScore *int   `json:"averageScore"`
+	ID           int64    `json:"id"`
+	MALID        *int64   `json:"idMal"`
+	RomajiTitle  string   `json:"romajiTitle"`
+	EnglishTitle string   `json:"englishTitle"`
+	Episodes     *int     `json:"episodes"`
+	Format       string   `json:"format"`
+	SeasonYear   *int     `json:"seasonYear"`
+	CoverURL     string   `json:"coverURL"` // extraLarge or large
+	AverageScore *int     `json:"averageScore"`
+	Description  string   `json:"description"` // synopsis, HTML stripped to plain text
+	Genres       []string `json:"genres"`
+	Duration     *int     `json:"duration"` // minutes per episode
 }
 
 type AniListNames struct {
@@ -61,13 +67,36 @@ query ($id: Int) {
     idMal
     title { romaji english }
     episodes
+    duration
     format
     seasonYear
     averageScore
+    genres
+    description(asHtml: false)
     coverImage { extraLarge large }
   }
 }
 `
+
+var (
+	anilistBreakRe = regexp.MustCompile(`(?i)<br\s*/?>|</p>`)
+	anilistTagRe   = regexp.MustCompile(`<[^>]*>`)
+	anilistBlankRe = regexp.MustCompile(`\n{3,}`)
+)
+
+// cleanAniListDescription turns AniList's lightly-marked-up synopsis into plain
+// text: block breaks become newlines, remaining tags are dropped, and HTML
+// entities are decoded. AniList returns <br>/<i>/<b> even with asHtml:false.
+func cleanAniListDescription(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	s := anilistBreakRe.ReplaceAllString(raw, "\n")
+	s = anilistTagRe.ReplaceAllString(s, "")
+	s = html.UnescapeString(s)
+	s = anilistBlankRe.ReplaceAllString(s, "\n\n")
+	return strings.TrimSpace(s)
+}
 
 func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniListSearchResult, error) {
 	var resp struct {
@@ -115,10 +144,13 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 				Romaji  string `json:"romaji"`
 				English string `json:"english"`
 			} `json:"title"`
-			Episodes     *int   `json:"episodes"`
-			Format       string `json:"format"`
-			SeasonYear   *int   `json:"seasonYear"`
-			AverageScore *int   `json:"averageScore"`
+			Episodes     *int     `json:"episodes"`
+			Duration     *int     `json:"duration"`
+			Format       string   `json:"format"`
+			SeasonYear   *int     `json:"seasonYear"`
+			AverageScore *int     `json:"averageScore"`
+			Genres       []string `json:"genres"`
+			Description  string   `json:"description"`
 			CoverImage   struct {
 				ExtraLarge string `json:"extraLarge"`
 				Large      string `json:"large"`
@@ -146,6 +178,9 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 		SeasonYear:   resp.Media.SeasonYear,
 		CoverURL:     coverURL,
 		AverageScore: resp.Media.AverageScore,
+		Description:  cleanAniListDescription(resp.Media.Description),
+		Genres:       resp.Media.Genres,
+		Duration:     resp.Media.Duration,
 	}, nil
 }
 

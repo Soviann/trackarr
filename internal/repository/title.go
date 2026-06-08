@@ -43,15 +43,26 @@ func NewTitleRepository(db database.DBTX) *TitleRepository {
 }
 
 type TitleUpdate struct {
-	Status            *model.TitleStatus
-	MatchStatus       *model.MatchStatus
-	MyRating          *int
-	SeriesStatus      *model.SeriesStatus
-	CoverURL          *string
-	IMDBID            *string
-	AniListID         *int64
-	TMDBID            *int64
-	TVDBID            *int64
+	Status       *model.TitleStatus
+	MatchStatus  *model.MatchStatus
+	MyRating     *int
+	SeriesStatus *model.SeriesStatus
+	CoverURL     *string
+	IMDBID       *string
+	AniListID    *int64
+	TMDBID       *int64
+	TVDBID       *int64
+	// Clear* flags force the corresponding external ID to NULL. A nil pointer
+	// means "leave unchanged"; a set pointer means "set this value"; the Clear
+	// flag is the third state — "erase". Used by the manual ID editor so a user
+	// can remove a wrong ID for a platform that doesn't carry the title.
+	ClearIMDBID    bool
+	ClearAniListID bool
+	ClearTMDBID    bool
+	ClearTVDBID    bool
+	// ClearCoverURL resets the cover to NULL — used when the TMDB/TVDB poster
+	// source is removed so a later refresh re-derives it (e.g. from AniList).
+	ClearCoverURL     bool
 	PlexRatingKey     *string
 	MatchSource       *string
 	OriginalTitle     *string

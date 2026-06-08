@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -419,6 +421,76 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 
 	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
 		return httputil.InternalError("Failed to rematch", err)
+	}
+
+	updated, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+// SetExternalIDs applies a manual external-ID snapshot from the editor. Unlike
+// Rematch (TMDB re-identify), the IDs are authoritative: each field is set to
+// the value sent, or cleared when sent empty. PUT /api/titles/{id}/external-ids
+func (h *TitleHandler) SetExternalIDs(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		TMDBID          string `json:"tmdb_id"`
+		IMDBID          string `json:"imdb_id"`
+		AniListID       string `json:"anilist_id"`
+		TVDBID          string `json:"tvdb_id"`
+		AniListSeasonID *int64 `json:"anilist_season_id"`
+		AutoFill        bool   `json:"auto_fill"`
+	}
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	// Empty string = clear (nil pointer); non-empty = set. Numeric IDs must parse.
+	parseID := func(raw, field string) (*int64, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return nil, nil
+		}
+		v, perr := strconv.ParseInt(raw, 10, 64)
+		if perr != nil {
+			return nil, httputil.BadRequest("Invalid " + field)
+		}
+		return &v, nil
+	}
+
+	edit := service.ExternalIDEdit{
+		AniListSeasonID: body.AniListSeasonID,
+		AutoFill:        body.AutoFill,
+	}
+	if edit.TMDBID, err = parseID(body.TMDBID, "TMDB ID"); err != nil {
+		return err
+	}
+	if edit.AniListID, err = parseID(body.AniListID, "AniList ID"); err != nil {
+		return err
+	}
+	if edit.TVDBID, err = parseID(body.TVDBID, "TVDB ID"); err != nil {
+		return err
+	}
+	if imdb := strings.TrimSpace(body.IMDBID); imdb != "" {
+		edit.IMDBID = &imdb
+	}
+
+	if err := h.service.SetExternalIDs(r.Context(), h.db, id, edit); err != nil {
+		return httputil.InternalError("Failed to update external IDs", err)
+	}
+
+	// AniList-only edit (no TMDB anchor): the service skipped the enrichment
+	// pipeline, so refresh metadata straight from AniList now and return the
+	// fresh title. Synchronous because it's one GraphQL call + a cover download,
+	// and the user expects the screen to reflect the change immediately.
+	if edit.TMDBID == nil && h.bgSvc != nil {
+		if err := h.bgSvc.RefreshByID(r.Context(), id); err != nil {
+			log.Printf("external-ids anilist refresh for title %d: %v", id, err)
+		}
 	}
 
 	updated, _ := h.titles.GetByID(id)

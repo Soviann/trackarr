@@ -222,3 +222,26 @@
   margin-top: 8px;
   text-align: center;
 }
+
+.autoFillRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.autoFillRow input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.autoFillHint {
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin: 0;
+  line-height: 1.4;
+}
