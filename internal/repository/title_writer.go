@@ -234,6 +234,7 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		newNum int
 	}
 	var moves []seasonMove
+	maxSourceNew := 0 // highest dest-space season number the source contributes
 	for rows.Next() {
 		var sm seasonMove
 		var oldNum int
@@ -242,6 +243,9 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 			return err
 		}
 		sm.newNum = oldNum + seasonOffset
+		if len(moves) == 0 || sm.newNum > maxSourceNew {
+			maxSourceNew = sm.newNum
+		}
 		moves = append(moves, sm)
 	}
 	if err := rows.Err(); err != nil {
@@ -249,6 +253,14 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		return fmt.Errorf("iterate source seasons: %w", err)
 	}
 	rows.Close()
+
+	// Capture the dest's highest season before re-parenting moves it. Combined
+	// with maxSourceNew this tells us which block owns the newest season, which
+	// drives status reconciliation below.
+	var maxDest int
+	if err := w.tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(season_number), 0) FROM seasons WHERE title_id = ?`, destID).Scan(&maxDest); err != nil {
+		return fmt.Errorf("get dest max season: %w", err)
+	}
 
 	for _, m := range moves {
 		var targetSeasonID int64
@@ -325,6 +337,27 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		plex_rating_key = COALESCE(plex_rating_key, (SELECT plex_rating_key FROM titles WHERE id = ?))
 		WHERE id = ?`, sourceID, sourceID, sourceID, sourceID, sourceID, destID); err != nil {
 		return fmt.Errorf("transfer external ids: %w", err)
+	}
+
+	// 4b. Reconcile the watch status. The dest keeps its row, so without this it
+	// would silently retain its own status and discard the source's (e.g. a
+	// dropped sequel merged into a completed S1 would stay "completed"). The
+	// newest season's block drives the result; ties keep the dest as anchor.
+	var destStatus, sourceStatus model.TitleStatus
+	if err := w.tx.QueryRowContext(ctx, `SELECT status FROM titles WHERE id = ?`, destID).Scan(&destStatus); err != nil {
+		return fmt.Errorf("get dest status: %w", err)
+	}
+	if err := w.tx.QueryRowContext(ctx, `SELECT status FROM titles WHERE id = ?`, sourceID).Scan(&sourceStatus); err != nil {
+		return fmt.Errorf("get source status: %w", err)
+	}
+	older, newest := sourceStatus, destStatus
+	if maxSourceNew > maxDest {
+		older, newest = destStatus, sourceStatus
+	}
+	if combined := model.CombineMergedStatus(older, newest); combined != destStatus {
+		if _, err := w.tx.ExecContext(ctx, `UPDATE titles SET status = ? WHERE id = ?`, combined, destID); err != nil {
+			return fmt.Errorf("reconcile merged status: %w", err)
+		}
 	}
 
 	// 5. Delete source title; FK cascades handle whatever we haven't moved.

@@ -18,6 +18,30 @@ const (
 	TitleStatusPlanToWatch TitleStatus = "plan_to_watch"
 )
 
+// CombineMergedStatus reconciles the watch statuses of two titles being merged
+// into one. older/newest are the statuses of the title blocks owning the lower
+// and higher season numbers after the merge offset is applied. Rules (agreed
+// with the PO):
+//   - dropped is sticky: if either block is dropped, the series is dropped;
+//   - otherwise the newest started season defines the series (completed/watching);
+//   - if the newest season is plan_to_watch, fall back to the older block, but a
+//     completed older becomes watching because newer unwatched content exists.
+func CombineMergedStatus(older, newest TitleStatus) TitleStatus {
+	switch {
+	case older == TitleStatusDropped || newest == TitleStatusDropped:
+		return TitleStatusDropped
+	case newest == TitleStatusCompleted:
+		return TitleStatusCompleted
+	case newest == TitleStatusWatching:
+		return TitleStatusWatching
+	default: // newest == plan_to_watch
+		if older == TitleStatusPlanToWatch {
+			return TitleStatusPlanToWatch
+		}
+		return TitleStatusWatching
+	}
+}
+
 type SeriesStatus string
 
 const (

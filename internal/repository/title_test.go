@@ -862,4 +862,59 @@ func TestTitleRepository_Merge_DeletesSource(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// Reported bug: merging a dropped S2 (source, becomes the newest season) into a
+// completed S1 (dest) must make the series dropped, not stay completed.
+func TestTitleRepository_Merge_NewestDroppedWins(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Granblue Fantasy", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, destID, 1)
+
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Granblue Fantasy S2", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1) // shifts to dest S2 under offset 1
+
+	testutil.MergeTitles(t, db, destID, sourceID, 1)
+
+	got, err := repo.GetByID(destID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusDropped, got.Status)
+}
+
+// Prequel merge: the source becomes the OLDER season (negative offset), so the
+// dest is the newest block. Its watching status must win over the source's
+// completed — proving "newest" is resolved by season number, not by source/dest.
+func TestTitleRepository_Merge_NewestResolvedBySeasonNumber(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest S2", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, destID, 2)
+
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source S2", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 2) // offset -1 → becomes S1 (older)
+
+	testutil.MergeTitles(t, db, destID, sourceID, -1)
+
+	got, err := repo.GetByID(destID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, got.Status)
+}
+
 func ptr[T any](v T) *T { return &v }
