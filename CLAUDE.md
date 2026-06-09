@@ -90,7 +90,7 @@ Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/
 - Errors: `fmt.Errorf("context: %w", err)`. Tests: `testify/assert`, in-memory SQLite.
 
 ## Visual Verification
-After UI/UX changes, verify in-browser via `cmux browser surface:32 ...` against `http://localhost:8080` (already logged in, never open a new browser surface): confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation. The PWA service worker caches aggressively — append `?t=$(date +%s)` to the URL to bust the cache after a frontend change. Frontend changes need air to re-embed `frontend/dist`: touch `main.go` after `make test-front` to force a Go rebuild.
+After UI/UX changes, verify in-browser via `cmux browser --surface surface:7 ...` against `http://localhost:8080` (prod is `surface:28`; already logged in, never open a new browser surface): confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation. The PWA service worker caches aggressively — append `?t=$(date +%s)` to the URL to bust the cache after a frontend change. Frontend changes need air to re-embed `frontend/dist`: touch `main.go` after `make test-front` to force a Go rebuild.
 
 ## Git
 - Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
