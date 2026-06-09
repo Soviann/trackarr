@@ -25,3 +25,8 @@
   color: var(--ink);
   background: var(--bg-elev2);
 }
+
+.caughtUp {
+  color: var(--bg);
+  background: var(--status-ok);
+}

@@ -37,6 +37,7 @@ export interface Title {
   release_date: string | null
   last_watched_at?: string
   last_refreshed_at?: string
+  caught_up?: boolean
   created_at: string
   updated_at: string
   names: TitleName[]

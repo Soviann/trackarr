@@ -74,7 +74,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
           <TypeBadge type={title.type} />
         </div>
         <div className={s.statusBadge}>
-          <StatusBadge status={title.status} />
+          <StatusBadge status={title.status} caughtUp={title.caught_up} />
         </div>
         <div className={s.labelOverlay}>
           <div className={s.label}>{name}</div>

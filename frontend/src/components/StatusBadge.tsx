@@ -16,10 +16,11 @@ const statusClass: Record<TitleStatus, string> = {
   plan_to_watch: s.planToWatch,
 }
 
-export function StatusBadge({ status }: { status: TitleStatus }) {
+export function StatusBadge({ status, caughtUp }: { status: TitleStatus; caughtUp?: boolean }) {
+  const isCaughtUp = status === 'watching' && caughtUp
   return (
-    <span class={clsx(s.badge, statusClass[status])}>
-      {statusLabels[status]}
+    <span class={clsx(s.badge, isCaughtUp ? s.caughtUp : statusClass[status])}>
+      {isCaughtUp ? 'CAUGHT UP' : statusLabels[status]}
     </span>
   )
 }

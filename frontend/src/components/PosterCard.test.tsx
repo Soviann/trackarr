@@ -45,6 +45,17 @@ describe('PosterCard', () => {
     expect(anchor!.getAttribute('href')).toBe('/title/42')
   })
 
+  it('renders CAUGHT UP for a watching title that is caught up', () => {
+    const { container } = render(<PosterCard title={{ ...baseTitle, caught_up: true }} />)
+    expect(container.textContent).toContain('CAUGHT UP')
+  })
+
+  it('renders WATCHING for a watching title that is not caught up', () => {
+    const { container } = render(<PosterCard title={{ ...baseTitle, caught_up: false }} />)
+    expect(container.textContent).toContain('WATCHING')
+    expect(container.textContent).not.toContain('CAUGHT UP')
+  })
+
   it('calls onClick when clicked in selection mode (no long-press)', () => {
     const onClick = vi.fn()
     const { container } = render(<PosterCard title={baseTitle} onClick={onClick} />)
