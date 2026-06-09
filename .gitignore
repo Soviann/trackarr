@@ -8,7 +8,7 @@ logs/
 tmp/
 
 # Frontend
-frontend/node_modules/
+node_modules/
 frontend/dist/
 
 # IDE
