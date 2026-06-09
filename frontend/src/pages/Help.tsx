@@ -109,14 +109,17 @@ const sections: FaqSection[] = [
         a: (
           <ul className={s.bulletList}>
             <li>
-              <strong>Watching</strong> — at least one unwatched episode exists right now.
+              <strong>Watching</strong> — at least one <em>aired</em> episode is still unwatched.
+              Episodes that haven’t aired yet don’t count.
             </li>
             <li>
-              <strong>Caught up</strong> — all aired episodes watched, but more are coming.
+              <strong>Caught up</strong> — every aired episode watched, but the series is
+              ongoing (more are coming). These cards show a green <strong>CAUGHT UP</strong>{' '}
+              badge instead of WATCHING, and flip back to WATCHING the moment a new episode airs.
               It’s a sub-filter of Watching, not a separate status.
             </li>
             <li>
-              <strong>Completed</strong> — series ended <em>and</em> fully watched.
+              <strong>Completed</strong> — series ended (or cancelled) <em>and</em> fully watched.
             </li>
             <li>
               <strong>Plan</strong> — added but not started.
@@ -125,6 +128,19 @@ const sections: FaqSection[] = [
               <strong>Dropped</strong> — abandoned.
             </li>
           </ul>
+        ),
+      },
+      {
+        q: 'Does PlexTracker ever change a series to Completed by itself?',
+        a: (
+          <>
+            Yes — but only when a series <em>both</em> ends (or gets cancelled) <em>and</em> has
+            every episode watched. It happens instantly when you mark the last episode watched,
+            and the daily refresh also catches it when TMDB reports the series ended or cancelled.
+            <br />
+            A cancelled series you haven’t finished stays <strong>Watching</strong> — cancellation
+            alone never marks it Completed.
+          </>
         ),
       },
       {
