@@ -17,8 +17,8 @@
 
 ## Plans
 - Path defined per project (see PROJECT block). Plans are temporary unless the project rules say otherwise. Never commit unless the project explicitly retains them.
-- Generation: `/plan-split` only (wraps `writing-plans`; splits if ≥ 2 phases). Never call `writing-plans` directly.
-- Phase closure: `/phase-finish <path|N>` — runs validation conditions, typed-yes commit gate, handoff.
+- Generation: `superpowers:writing-plans` (single plan file; no phase splitting).
+- Execution: `phased-development:run-plan <path>` — drives the plan task-by-task. (The old `plan-split`/`plan-exec`/`phase-finish` skills were removed in phased-development 0.6.0.)
 
 ## Quality
 - Linters/formatters: before committing only, ONLY on modified files.
