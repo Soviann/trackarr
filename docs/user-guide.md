@@ -51,6 +51,8 @@ L'écran principal affiche tous les titres organisés par statut.
 
 **Badge film/série** : un petit pictogramme se superpose à chaque vignette pour distinguer d'un coup d'œil les films des séries (en grille comme en cartes horizontales).
 
+**Badge de statut « à jour »** : pour une série en cours dont tous les épisodes déjà diffusés ont été vus, le badge de statut affiche « CAUGHT UP » (vert) au lieu de « WATCHING ». On repère ainsi directement dans la liste les séries à jour, sans passer par le filtre `Caught up`. Les épisodes pas encore diffusés ne comptent pas : le badge repasse à « WATCHING » dès qu'un nouvel épisode sort.
+
 **Action rapide** : le badge rond sur chaque carte "En cours" affiche le numéro du prochain épisode. Un tap marque cet épisode comme vu et passe au suivant.
 
 **Sélection multiple** : un appui long (~500 ms) sur une vignette active le mode sélection (vibration courte). Toucher d'autres vignettes les coche/décoche. Actions disponibles : changement de statut ou suppression en lot.
