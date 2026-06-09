@@ -7,6 +7,26 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
+// airedEpisode matches an episode whose air date is known and in the past.
+// Empty/NULL air_date counts as "not aired" (unknown) so not-yet-dated
+// episodes never falsely block "caught up".
+const airedEpisode = `e.air_date IS NOT NULL AND e.air_date != '' AND e.air_date <= date('now')`
+
+const existsAired = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season_id = s.id WHERE s.title_id = t.id AND ` + airedEpisode + `)`
+
+const existsAiredUnwatched = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season_id = s.id WHERE s.title_id = t.id AND ` + airedEpisode + ` AND e.watched = 0)`
+
+// caughtUpCond: watching series with ≥1 aired episode and no aired-unwatched episode.
+const caughtUpCond = `t.status = 'watching' AND (t.type != 'movie' OR t.is_anime = 1) AND ` + existsAired + ` AND NOT ` + existsAiredUnwatched
+
+// watchingBehindCond: the exact complement over watching titles.
+const watchingBehindCond = `t.status = 'watching' AND ((t.type = 'movie' AND t.is_anime = 0) OR NOT ` + existsAired + ` OR ` + existsAiredUnwatched + `)`
+
+// titleSelectCols is the canonical title column list for list/search queries,
+// with the derived caught_up flag appended. Centralized so the three query
+// paths (List, searchTitles, fuzzySearch) cannot drift.
+const titleSelectCols = `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.next_air_date, t.next_air_episode, t.last_watched_at, t.accent_hex, t.created_at, t.updated_at, (CASE WHEN ` + caughtUpCond + ` THEN 1 ELSE 0 END) AS caught_up`
+
 type TitleFilter struct {
 	Status           *model.TitleStatus
 	Type             *model.TitleType
@@ -72,22 +92,16 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		return r.searchTitlesPaginated(searchTerm, filter)
 	}
 
-	baseCols := `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.next_air_date, t.next_air_episode, t.last_watched_at, t.accent_hex, t.created_at, t.updated_at`
-
 	var conditions []string
 	var args []any
 
 	switch {
 	case filter.UpToDate:
-		// "Up to date" = watching + every episode watched (no unwatched episodes)
-		conditions = append(conditions, `t.status = 'watching'`)
-		conditions = append(conditions, `(t.type != 'movie' OR t.is_anime = 1)`)
-		conditions = append(conditions, `EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id)`)
-		conditions = append(conditions, `NOT EXISTS (SELECT 1 FROM seasons s3 JOIN episodes e3 ON e3.season_id = s3.id WHERE s3.title_id = t.id AND e3.watched = 0)`)
+		// "Up to date" = watching + every aired episode watched (air-date gated)
+		conditions = append(conditions, caughtUpCond)
 	case filter.WatchingBehind:
-		// "Watching behind" = watching + has at least one unwatched episode (or is a movie, or has no episodes)
-		conditions = append(conditions, `t.status = 'watching'`)
-		conditions = append(conditions, `((t.type = 'movie' AND t.is_anime = 0) OR NOT EXISTS (SELECT 1 FROM seasons s2 JOIN episodes e2 ON e2.season_id = s2.id WHERE s2.title_id = t.id) OR EXISTS (SELECT 1 FROM seasons s4 JOIN episodes e4 ON e4.season_id = s4.id WHERE s4.title_id = t.id AND e4.watched = 0))`)
+		// "Watching behind" = the exact complement of caught-up over watching titles
+		conditions = append(conditions, watchingBehindCond)
 	default:
 		if filter.Status != nil {
 			conditions = append(conditions, `t.status = ?`)
@@ -198,7 +212,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		}
 	}
 
-	query := `SELECT ` + baseCols + ` FROM titles t` + whereClause + ` ORDER BY ` + orderBy + ` LIMIT ? OFFSET ?`
+	query := `SELECT ` + titleSelectCols + ` FROM titles t` + whereClause + ` ORDER BY ` + orderBy + ` LIMIT ? OFFSET ?`
 	queryArgs := make([]any, len(args), len(args)+2)
 	copy(queryArgs, args)
 	queryArgs = append(queryArgs, limit, offset)
@@ -215,7 +229,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}

@@ -66,6 +66,70 @@ func TestTitleRepository_GetByID_NotFound(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestTitleRepository_CaughtUp(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	// caughtUp: anime series, both aired episodes watched → caught up
+	caughtUp := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, IsAnime: true, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "CaughtUp", Language: "en", IsPrimary: true}})
+	sCU := testutil.GetOrCreateSeason(t, db, caughtUp, 1)
+	testutil.SeedEpisode(t, db, sCU.ID, 1, "2020-01-01", true)
+	testutil.SeedEpisode(t, db, sCU.ID, 2, "2020-01-08", true)
+
+	// behind: series with an aired, unwatched episode → not caught up
+	behind := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Behind", Language: "en", IsPrimary: true}})
+	sB := testutil.GetOrCreateSeason(t, db, behind, 1)
+	testutil.SeedEpisode(t, db, sB.ID, 1, "2020-01-01", false)
+
+	// future: all aired watched + one not-yet-aired unwatched → caught up (future ignored)
+	future := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Future", Language: "en", IsPrimary: true}})
+	sF := testutil.GetOrCreateSeason(t, db, future, 1)
+	testutil.SeedEpisode(t, db, sF.ID, 1, "2020-01-01", true)
+	testutil.SeedEpisode(t, db, sF.ID, 2, "2099-01-01", false)
+
+	// unknownDate: aired watched + unwatched with empty air_date → caught up (unknown ignored)
+	unknownDate := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Unknown", Language: "en", IsPrimary: true}})
+	sU := testutil.GetOrCreateSeason(t, db, unknownDate, 1)
+	testutil.SeedEpisode(t, db, sU.ID, 1, "2020-01-01", true)
+	testutil.SeedEpisode(t, db, sU.ID, 2, "", false)
+
+	// movie: watching movie → never caught up
+	_ = testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Movie", Language: "en", IsPrimary: true}})
+
+	want := map[string]bool{"CaughtUp": true, "Behind": false, "Future": true, "Unknown": true, "Movie": false}
+
+	res, err := repo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	got := map[string]bool{}
+	for _, tt := range res.Titles {
+		got[tt.PrimaryName()] = tt.CaughtUp
+	}
+	for name, exp := range want {
+		assert.Equal(t, exp, got[name], "CaughtUp for %s", name)
+	}
+
+	// up_to_date filter == titles whose CaughtUp is true
+	utd, err := repo.List(repository.TitleFilter{UpToDate: true})
+	require.NoError(t, err)
+	utdNames := map[string]bool{}
+	for _, tt := range utd.Titles {
+		utdNames[tt.PrimaryName()] = true
+		assert.True(t, tt.CaughtUp, "up_to_date result %s should be CaughtUp", tt.PrimaryName())
+	}
+	assert.True(t, utdNames["CaughtUp"] && utdNames["Future"] && utdNames["Unknown"])
+	assert.False(t, utdNames["Behind"] || utdNames["Movie"])
+
+	// watching_behind is the complement over watching titles
+	wb, err := repo.List(repository.TitleFilter{WatchingBehind: true})
+	require.NoError(t, err)
+	wbNames := map[string]bool{}
+	for _, tt := range wb.Titles {
+		wbNames[tt.PrimaryName()] = true
+	}
+	assert.True(t, wbNames["Behind"] && wbNames["Movie"])
+	assert.False(t, wbNames["CaughtUp"] || wbNames["Future"] || wbNames["Unknown"])
+}
+
 func TestTitleRepository_List(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
@@ -76,17 +140,15 @@ func TestTitleRepository_List(t *testing.T) {
 	idC := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2022, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Naruto", Language: "en", IsPrimary: true}})
 
 	// Create episodes for "up to date" and "watching behind" tests
-	// Naruto: 1 season, 2 episodes, all watched → "up to date"
+	// Naruto: 1 season, 2 aired episodes, all watched → "up to date"
 	sN := testutil.GetOrCreateSeason(t, db, idC, 1)
-	eN1 := testutil.GetOrCreateEpisode(t, db, sN.ID, 1)
-	_ = testutil.ToggleEpisodeWatched(t, db, eN1.ID)
-	eN2 := testutil.GetOrCreateEpisode(t, db, sN.ID, 2)
-	_ = testutil.ToggleEpisodeWatched(t, db, eN2.ID)
+	testutil.SeedEpisode(t, db, sN.ID, 1, "2020-01-01", true)
+	testutil.SeedEpisode(t, db, sN.ID, 2, "2020-01-08", true)
 
-	// Add a series "watching behind": series with unwatched episodes
+	// Add a series "watching behind": series with an aired, unwatched episode
 	idD := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "The Bear", Language: "en", IsPrimary: true}})
 	sD := testutil.GetOrCreateSeason(t, db, idD, 1)
-	_ = testutil.GetOrCreateEpisode(t, db, sD.ID, 1) // unwatched
+	testutil.SeedEpisode(t, db, sD.ID, 1, "2020-01-01", false) // aired, unwatched
 
 	_ = idA
 	_ = idB

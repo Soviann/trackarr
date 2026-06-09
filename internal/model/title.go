@@ -93,6 +93,11 @@ type Title struct {
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`
 
+	// CaughtUp is true when this watching series has watched every aired
+	// episode. Derived at query time by the list/search SQL (not stored);
+	// false on responses that don't compute it (e.g. single-title GET).
+	CaughtUp bool `json:"caught_up"`
+
 	// Loaded relations
 	Names   []TitleName `json:"names,omitempty"`
 	Seasons []Season    `json:"seasons,omitempty"`

@@ -71,6 +71,22 @@ func UpsertEpisodesBatch(t *testing.T, db *sql.DB, seasonID int64, entries []rep
 	}))
 }
 
+// SeedEpisode creates (or updates) one episode with an explicit air_date and
+// watched state, returning it with its assigned ID. airDate is "YYYY-MM-DD"
+// (or "" for unknown). Used by caught-up tests that need air-date control.
+func SeedEpisode(t *testing.T, db *sql.DB, seasonID int64, episodeNumber int, airDate string, watched bool) *model.Episode {
+	t.Helper()
+	UpsertEpisodesBatch(t, db, seasonID, []repository.EpisodeUpsert{
+		{EpisodeNumber: episodeNumber, Name: "", AirDate: airDate},
+	})
+	ep := GetOrCreateEpisode(t, db, seasonID, episodeNumber)
+	if watched {
+		MarkEpisodeWatched(t, db, ep.ID, time.Now())
+		ep = GetOrCreateEpisode(t, db, seasonID, episodeNumber)
+	}
+	return ep
+}
+
 // MarkEpisodesWatched creates count episodes (numbered 1..count) in the season
 // if missing, and flips watched=1 on all of them. Used by tests that fixture
 // season progress without caring about per-episode timestamps.
