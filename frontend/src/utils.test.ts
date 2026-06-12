@@ -4,11 +4,12 @@ import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
   return {
-    id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, accent_hex: null, imdb_id: null, anilist_id: null,
+    id: 1, type: 'movie', is_anime: false, year: 2024, cover_url: null, accent_hex: null, imdb_id: null,
+    simkl_id: null, simkl_slug: null, anilist_id: null,
     tmdb_id: null, tvdb_id: null, my_rating: null, status: 'watching', series_status: null,
     match_status: 'confirmed', original_title: null, match_source: null, names: [], seasons: [],
     overview: null, genres: null, runtime: null, tmdb_rating: null, credits: null,
-    anilist_rating: null, release_date: null, created_at: '', updated_at: '',
+    anilist_rating: null, release_date: null, total_watch_minutes: 0, created_at: '', updated_at: '',
     ...overrides,
   }
 }

@@ -1,4 +1,4 @@
-import type { PaginatedResponse } from '../types'
+import type { PaginatedResponse, MatchEvent } from '../types'
 import { useState, useCallback } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -9,6 +9,7 @@ import { MatchReviewCard } from '../components/MatchReviewCard'
 import { SwipeActions } from '../components/SwipeActions'
 import type { SwipeAction } from '../components/SwipeActions'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import clsx from 'clsx'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { route } from 'preact-router'
@@ -20,10 +21,11 @@ export function MatchReview({ path }: { path?: string }) {
 
   const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>(`/titles?match_status=pending_review&limit=${pendingLimit}`)
   const { data: unconfirmedData, loading: l2, error: e2, mutate: m2 } = useApi<PaginatedResponse>(`/titles?match_status=unconfirmed&limit=${unconfirmedLimit}`)
+  const { data: eventsData, error: e3, mutate: m3 } = useApi<{ events: MatchEvent[] }>('/match-events?limit=30')
 
   const loading = l1 || l2
-  const error = e1 || e2
-  const mutate = useCallback(() => { m1(); m2() }, [m1, m2])
+  const error = e1 || e2 || e3
+  const mutate = useCallback(() => { m1(); m2(); m3() }, [m1, m2, m3])
 
   const pending = pendingData?.titles ?? []
   const unconfirmed = unconfirmedData?.titles ?? []
@@ -31,7 +33,7 @@ export function MatchReview({ path }: { path?: string }) {
 
   const buildSwipeActions = useCallback((title: import('../types').Title): SwipeAction[] => {
     const name = getName(title)
-    const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id)
+    const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id || title.simkl_id)
     return [
       {
         icon: (
@@ -161,6 +163,38 @@ export function MatchReview({ path }: { path?: string }) {
               </button>
             </div>
           )}
+        </>
+      )}
+      {/* Recently auto-matched section */}
+      {(eventsData?.events?.length ?? 0) > 0 && (
+        <>
+          <div className={clsx(s.sectionLabel, s.sectionLabelEvents)}>
+            Recently auto-matched
+          </div>
+          <div className={s.eventList}>
+            {eventsData!.events.map((ev) => (
+              <div key={ev.id} className={s.eventRow}>
+                <div
+                  className={s.eventCover}
+                  style={{ background: coverBackground(ev.cover_url ?? null, 'series') }}
+                >
+                  {!ev.cover_url && <CoverPlaceholder type="series" iconSize="14px" />}
+                </div>
+                <div className={s.eventBody}>
+                  <div className={s.eventDetail}>{ev.detail}</div>
+                  <div className={s.eventDate}>{new Date(ev.created_at).toLocaleDateString()}</div>
+                </div>
+                {ev.title_id != null && (
+                  <button
+                    className={s.eventFixBtn}
+                    onClick={() => route(`/admin/validate?id=${ev.title_id}`)}
+                  >
+                    Fix match
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

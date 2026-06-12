@@ -18,6 +18,8 @@ export interface Title {
   cover_url: string | null
   accent_hex: string | null
   imdb_id: string | null
+  simkl_id: number | null
+  simkl_slug: string | null
   anilist_id: number | null
   tmdb_id: number | null
   tvdb_id: number | null
@@ -207,6 +209,17 @@ export interface ContinueWatchingTitle {
   watched_episodes: number
   total_episodes: number
   last_watched_at: string | null
+}
+
+export type MatchEventKind = 'auto_confirmed' | 'season_attached'
+
+export interface MatchEvent {
+  id: number
+  title_id: number | null
+  kind: MatchEventKind
+  detail: string
+  created_at: string
+  cover_url?: string | null
 }
 
 export interface UpcomingTitle {

@@ -29,7 +29,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
   const name = getName(title)
   const isUnconfirmed = title.match_status === 'unconfirmed'
   const statusColor = isUnconfirmed ? STATUS_COLORS.unconfirmed : STATUS_COLORS.default
-  const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id)
+  const hasAnyID = !!(title.imdb_id || title.tmdb_id || title.tvdb_id || title.anilist_id || title.simkl_id)
 
   const handleConfirm = async (e: Event) => {
     e.stopPropagation()
@@ -40,12 +40,14 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
     onUpdate()
   }
 
+  const simklSection = title.type === 'movie' ? 'movies' : title.is_anime ? 'anime' : 'tv'
   const idChips = [
-    title.imdb_id && { label: 'IMDb', value: title.imdb_id },
-    title.tmdb_id && { label: 'TMDB', value: String(title.tmdb_id) },
+    title.simkl_id && { label: 'Simkl', value: String(title.simkl_id), href: title.simkl_slug ? `https://simkl.com/${simklSection}/${title.simkl_id}/${title.simkl_slug}` : `https://simkl.com/${simklSection}/${title.simkl_id}` },
+    title.imdb_id && { label: 'IMDb', value: title.imdb_id, href: `https://www.imdb.com/title/${title.imdb_id}/` },
+    title.tmdb_id && { label: 'TMDB', value: String(title.tmdb_id), href: `https://www.themoviedb.org/${title.type === 'movie' ? 'movie' : 'tv'}/${title.tmdb_id}` },
     title.tvdb_id && { label: 'TVDB', value: String(title.tvdb_id) },
-    title.anilist_id && { label: 'AniList', value: String(title.anilist_id) },
-  ].filter(Boolean) as { label: string; value: string }[]
+    title.anilist_id && { label: 'AniList', value: String(title.anilist_id), href: `https://anilist.co/anime/${title.anilist_id}` },
+  ].filter(Boolean) as { label: string; value: string; href?: string }[]
 
   // Build contextual explanation
   const sourceLabel = title.match_source ? (matchSourceLabels[title.match_source] ?? title.match_source) : null
@@ -90,11 +92,17 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           {/* ID chips */}
           {idChips.length > 0 && (
             <div className={s.chips}>
-              {idChips.map((chip) => (
-                <span key={chip.label} className={s.chip}>
-                  {chip.label}: {chip.value}
-                </span>
-              ))}
+              {idChips.map((chip) =>
+                chip.href ? (
+                  <a key={chip.label} className={s.chip} href={chip.href} target="_blank" rel="noopener noreferrer" onClick={(e: Event) => e.stopPropagation()}>
+                    {chip.label}: {chip.value}
+                  </a>
+                ) : (
+                  <span key={chip.label} className={s.chip}>
+                    {chip.label}: {chip.value}
+                  </span>
+                )
+              )}
             </div>
           )}
 
