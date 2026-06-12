@@ -20,3 +20,13 @@ func SetPushHTTPClientForTest(c *http.Client) func() {
 func BuildEnrichmentUpdateForTest(result *matching.MatchResult, payload EnrichmentPayload) repository.TitleUpdate {
 	return buildEnrichmentUpdate(result, payload)
 }
+
+// IsSearchSourceForTest exposes isSearchSource for unit tests.
+func IsSearchSourceForTest(source string) bool {
+	return isSearchSource(source)
+}
+
+// ResolvedNameForTest exposes resolvedName for unit tests.
+func ResolvedNameForTest(result *matching.MatchResult, payload EnrichmentPayload) string {
+	return resolvedName(result, payload)
+}

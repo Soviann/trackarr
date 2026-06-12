@@ -389,6 +389,13 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 			}
 		}
 
+		if !payload.PreserveMatch && result.MatchStatus == model.MatchStatusConfirmed && isSearchSource(result.MatchSource) {
+			detail := fmt.Sprintf("%q → %q", payload.TitleName, resolvedName(result, payload))
+			if err := repository.NewMatchEventWriter(tx).Create(ctx, payload.TitleID, model.MatchEventAutoConfirmed, detail); err != nil {
+				logger.Warn("write auto-confirm event", "err", err)
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -752,6 +759,39 @@ func (w *TaskQueueWorker) notifyDeadTask(ctx context.Context, task model.Task, l
 	); err != nil {
 		logger.Error("dead-task push failed", "err", err)
 	}
+}
+
+// isSearchSource reports whether the match came from a search strategy — the
+// only sources where auto-confirmation is a decision worth surfacing (ID-based
+// sources were already confirmed by construction).
+func isSearchSource(source string) bool {
+	switch source {
+	case matching.MatchSourceTMDBSearch, matching.MatchSourceAniListSearch, matching.MatchSourceGeminiFuzzy:
+		return true
+	}
+	return false
+}
+
+// resolvedName returns the resolved primary name from the pipeline result.
+// TMDB-enriched names are appended after any input-seeded fallback, so the
+// last primary English name is the most authoritative resolved title.
+// Falls back to the first name in the list, then to the payload title.
+func resolvedName(result *matching.MatchResult, payload EnrichmentPayload) string {
+	// Prefer the last primary name — pipeline appends TMDB names after any
+	// input fallback, so the last primary entry is the most authoritative.
+	last := ""
+	for _, n := range result.Names {
+		if n.IsPrimary && n.Name != "" {
+			last = n.Name
+		}
+	}
+	if last != "" {
+		return last
+	}
+	if len(result.Names) > 0 {
+		return result.Names[0].Name
+	}
+	return payload.TitleName
 }
 
 // calculateNextRunAt computes the next retry time with exponential backoff + jitter.

@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -576,4 +577,302 @@ func TestHandleCoverFetch_TVSeries_PersistsCoverURL(t *testing.T) {
 	written, err := os.ReadFile(filepath.Join(dataDir, "covers", *got.CoverURL))
 	require.NoError(t, err)
 	assert.Equal(t, "fake-image-bytes", string(written))
+}
+
+// ----------------------------------------------------------------------------
+// isSearchSource / resolvedName unit tests
+// ----------------------------------------------------------------------------
+
+func TestIsSearchSource(t *testing.T) {
+	assert.True(t, service.IsSearchSourceForTest(matching.MatchSourceTMDBSearch))
+	assert.True(t, service.IsSearchSourceForTest(matching.MatchSourceAniListSearch))
+	assert.True(t, service.IsSearchSourceForTest(matching.MatchSourceGeminiFuzzy))
+	assert.False(t, service.IsSearchSourceForTest(matching.MatchSourcePlexIDs))
+	assert.False(t, service.IsSearchSourceForTest(matching.MatchSourceCrossRef))
+	assert.False(t, service.IsSearchSourceForTest(matching.MatchSourceManual))
+	assert.False(t, service.IsSearchSourceForTest(matching.MatchSourceNone))
+	assert.False(t, service.IsSearchSourceForTest(""))
+}
+
+func TestResolvedName(t *testing.T) {
+	t.Run("returns primary name", func(t *testing.T) {
+		result := &matching.MatchResult{
+			Names: []model.TitleName{
+				{Name: "Secondary", Language: "fr", IsPrimary: false},
+				{Name: "Primary Title", Language: "en", IsPrimary: true},
+			},
+		}
+		got := service.ResolvedNameForTest(result, service.EnrichmentPayload{TitleName: "Original"})
+		assert.Equal(t, "Primary Title", got)
+	})
+
+	t.Run("falls back to first name when no primary", func(t *testing.T) {
+		result := &matching.MatchResult{
+			Names: []model.TitleName{
+				{Name: "First", Language: "en", IsPrimary: false},
+				{Name: "Second", Language: "fr", IsPrimary: false},
+			},
+		}
+		got := service.ResolvedNameForTest(result, service.EnrichmentPayload{TitleName: "Original"})
+		assert.Equal(t, "First", got)
+	})
+
+	t.Run("falls back to payload name when names empty", func(t *testing.T) {
+		result := &matching.MatchResult{}
+		got := service.ResolvedNameForTest(result, service.EnrichmentPayload{TitleName: "Original"})
+		assert.Equal(t, "Original", got)
+	})
+
+	t.Run("returns last primary when multiple primaries exist", func(t *testing.T) {
+		result := &matching.MatchResult{
+			Names: []model.TitleName{
+				{Name: "Original Plex Name", Language: "en", IsPrimary: true},
+				{Name: "TMDB Resolved Name", Language: "en", IsPrimary: true},
+			},
+		}
+		got := service.ResolvedNameForTest(result, service.EnrichmentPayload{TitleName: "fallback"})
+		assert.Equal(t, "TMDB Resolved Name", got)
+	})
+}
+
+// matchEventsForTitle queries match_events rows for the given title and kind directly.
+func matchEventsForTitle(t *testing.T, db *sql.DB, titleID int64, kind model.MatchEventKind) []model.MatchEvent {
+	t.Helper()
+	rows, err := db.QueryContext(context.Background(),
+		`SELECT id, title_id, kind, detail FROM match_events WHERE title_id = ? AND kind = ?`,
+		titleID, kind,
+	)
+	require.NoError(t, err)
+	defer rows.Close()
+	var events []model.MatchEvent
+	for rows.Next() {
+		var ev model.MatchEvent
+		require.NoError(t, rows.Scan(&ev.ID, &ev.TitleID, &ev.Kind, &ev.Detail))
+		events = append(events, ev)
+	}
+	require.NoError(t, rows.Err())
+	return events
+}
+
+// newTMDBSearchMock returns an httptest-backed TMDBClient that answers search
+// queries with a single confirmed result, so the pipeline takes the tmdb_search
+// branch and sets MatchStatusConfirmed.
+func newTMDBSearchMock(t *testing.T, tmdbID int64, resolvedTitle string) *matching.TMDBClient {
+	t.Helper()
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/search/movie", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []map[string]any{
+				{"id": tmdbID, "title": resolvedTitle, "release_date": "2024-01-01"},
+			},
+		})
+	})
+	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []map[string]any{
+				{"id": tmdbID, "name": resolvedTitle, "first_air_date": "2024-01-01"},
+			},
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(matching.TMDBMovieDetails{
+			ID:    tmdbID,
+			Title: resolvedTitle,
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(matching.TMDBTVDetails{
+			ID:   tmdbID,
+			Name: resolvedTitle,
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+	return client
+}
+
+// newGeminiHighConfidenceMock returns an httptest-backed GeminiClient that
+// always responds with confirmed=true, confidence=high so the pipeline sets
+// MatchStatusConfirmed for a tmdb_search result.
+func newGeminiHighConfidenceMock(t *testing.T) *matching.GeminiClient {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Gemini wraps the JSON answer inside its "candidates" envelope.
+		payload := map[string]any{
+			"candidates": []map[string]any{
+				{
+					"content": map[string]any{
+						"parts": []map[string]any{
+							{"text": `{"confirmed": true, "confidence": "high", "reason": "exact match"}`},
+						},
+					},
+				},
+			},
+		}
+		_ = json.NewEncoder(w).Encode(payload)
+	}))
+	t.Cleanup(server.Close)
+
+	client := matching.NewGeminiClient([]string{"test-key"})
+	client.SetBaseURL(server.URL)
+	return client
+}
+
+// TestHandleEnrichment_SearchMatch_WritesAutoConfirmedEvent verifies that an
+// enrichment whose pipeline result is MatchStatusConfirmed via a search source
+// (tmdb_search) produces exactly one match_events row with kind=auto_confirmed
+// whose detail contains both the original and resolved names.
+func TestHandleEnrichment_SearchMatch_WritesAutoConfirmedEvent(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	const originalName = "Alien Movie Original"
+	const resolvedTitle = "Alien: Romulus"
+	const tmdbID = int64(945961)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: originalName, Language: "en", IsPrimary: true}})
+
+	tmdb := newTMDBSearchMock(t, tmdbID, resolvedTitle)
+	gemini := newGeminiHighConfidenceMock(t)
+	pipeline := matching.NewPipeline(tmdb, nil, gemini, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, tmdb, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: originalName,
+		Year:      2024,
+		TitleType: model.TitleTypeMovie,
+		// No TMDB/IMDB pre-set — forces the search path.
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	// Verify the title was confirmed via TMDB search.
+	got, err := titles.GetByID(id)
+	require.NoError(t, err)
+	require.Equal(t, model.MatchStatusConfirmed, got.MatchStatus)
+	require.NotNil(t, got.MatchSource)
+	assert.Equal(t, matching.MatchSourceTMDBSearch, *got.MatchSource)
+
+	// Verify exactly one auto_confirmed event with correct detail.
+	events := matchEventsForTitle(t, db, id, model.MatchEventAutoConfirmed)
+	require.Len(t, events, 1, "search match must produce exactly one auto_confirmed event")
+	assert.Contains(t, events[0].Detail, originalName,
+		"event detail must contain the original payload name")
+	assert.Contains(t, events[0].Detail, resolvedTitle,
+		"event detail must contain the resolved primary name")
+}
+
+// TestHandleEnrichment_PlexIDsMatch_NoEvent ensures that an enrichment
+// confirmed via plex_ids (ID-based, no search decision) does NOT write a
+// match_events row.
+func TestHandleEnrichment_PlexIDsMatch_NoEvent(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Known Movie", Language: "en", IsPrimary: true}})
+
+	// Supplying TMDBID makes the pipeline take the plex_ids branch (MatchSourcePlexIDs).
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: "Known Movie",
+		Year:      2024,
+		TitleType: model.TitleTypeMovie,
+		TMDBID:    42, // pre-supplied ID → plex_ids branch, MatchSourcePlexIDs
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	got, err := titles.GetByID(id)
+	require.NoError(t, err)
+	require.Equal(t, model.MatchStatusConfirmed, got.MatchStatus)
+	require.NotNil(t, got.MatchSource)
+	assert.Equal(t, matching.MatchSourcePlexIDs, *got.MatchSource)
+
+	events := matchEventsForTitle(t, db, id, model.MatchEventAutoConfirmed)
+	assert.Empty(t, events, "plex_ids match must not write an auto_confirmed event")
+}
+
+// TestHandleEnrichment_PreserveMatch_NoEvent ensures that an enrichment run
+// with PreserveMatch=true (manual-edit path) does not write a match_events row.
+func TestHandleEnrichment_PreserveMatch_NoEvent(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	const tmdbID = int64(945961)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Manually Matched Movie", Language: "en", IsPrimary: true}})
+
+	tmdb := newTMDBSearchMock(t, tmdbID, "Alien: Romulus")
+	gemini := newGeminiHighConfidenceMock(t)
+	pipeline := matching.NewPipeline(tmdb, nil, gemini, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, tmdb, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:       id,
+		TitleName:     "Manually Matched Movie",
+		Year:          2024,
+		TitleType:     model.TitleTypeMovie,
+		PreserveMatch: true, // manual-edit path — must never write an event
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	events := matchEventsForTitle(t, db, id, model.MatchEventAutoConfirmed)
+	assert.Empty(t, events, "PreserveMatch=true must not write an auto_confirmed event")
 }
