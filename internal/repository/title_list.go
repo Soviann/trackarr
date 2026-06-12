@@ -25,7 +25,7 @@ const watchingBehindCond = `t.status = 'watching' AND ((t.type = 'movie' AND t.i
 // titleSelectCols is the canonical title column list for list/search queries,
 // with the derived caught_up flag appended. Centralized so the three query
 // paths (List, searchTitles, fuzzySearch) cannot drift.
-const titleSelectCols = `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.next_air_date, t.next_air_episode, t.last_watched_at, t.accent_hex, t.created_at, t.updated_at, (CASE WHEN ` + caughtUpCond + ` THEN 1 ELSE 0 END) AS caught_up`
+const titleSelectCols = `t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.plex_rating_key, t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime, t.total_watch_minutes, t.tmdb_rating, t.credits, t.anilist_rating, t.release_date, t.next_air_date, t.next_air_episode, t.last_watched_at, t.accent_hex, t.simkl_id, t.simkl_slug, t.created_at, t.updated_at, (CASE WHEN ` + caughtUpCond + ` THEN 1 ELSE 0 END) AS caught_up`
 
 type TitleFilter struct {
 	Status           *model.TitleStatus
@@ -229,7 +229,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}

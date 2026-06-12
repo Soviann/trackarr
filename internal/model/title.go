@@ -90,6 +90,8 @@ type Title struct {
 	LastWatchedAt     *time.Time    `json:"last_watched_at,omitempty"`
 	LastRefreshedAt   *time.Time    `json:"last_refreshed_at,omitempty"`
 	AccentHex         *string       `json:"accent_hex,omitempty"`
+	SimklID           *int64        `json:"simkl_id,omitempty"`
+	SimklSlug         *string       `json:"simkl_slug,omitempty"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`
 

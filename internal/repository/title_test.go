@@ -1006,4 +1006,61 @@ func TestTitleRepository_Merge_NewestResolvedBySeasonNumber(t *testing.T) {
 	assert.Equal(t, model.TitleStatusWatching, got.Status)
 }
 
+func TestTitleRepository_SimklIDRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	simklID := int64(123456)
+	simklSlug := "breaking-bad-2008"
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		SimklID:     &simklID,
+		SimklSlug:   &simklSlug,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+	require.NotNil(t, got.SimklID, "SimklID should round-trip through Create/GetByID")
+	assert.Equal(t, simklID, *got.SimklID)
+	require.NotNil(t, got.SimklSlug, "SimklSlug should round-trip through Create/GetByID")
+	assert.Equal(t, simklSlug, *got.SimklSlug)
+
+	// Update via TitleUpdate — both fields writable
+	newID := int64(999)
+	newSlug := "breaking-bad-updated"
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+		SimklID:   &newID,
+		SimklSlug: &newSlug,
+	})
+
+	got2, err := repo.GetByID(id)
+	require.NoError(t, err)
+	require.NotNil(t, got2.SimklID)
+	assert.Equal(t, newID, *got2.SimklID)
+	require.NotNil(t, got2.SimklSlug)
+	assert.Equal(t, newSlug, *got2.SimklSlug)
+}
+
+func TestTitleRepository_SimklID_NilWhenAbsent(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2011,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		// SimklID and SimklSlug deliberately omitted
+	}, []model.TitleName{{Name: "Game of Thrones", Language: "en", IsPrimary: true}})
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+	assert.Nil(t, got.SimklID, "SimklID should be nil when not set")
+	assert.Nil(t, got.SimklSlug, "SimklSlug should be nil when not set")
+}
+
 func ptr[T any](v T) *T { return &v }

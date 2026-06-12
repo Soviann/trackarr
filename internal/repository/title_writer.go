@@ -27,13 +27,13 @@ func NewTitleWriter(tx *sql.Tx) *TitleWriter {
 // Create inserts a title plus its names. Caller must open the transaction.
 func (w *TitleWriter) Create(ctx context.Context, title *model.Title, names []model.TitleName) (int64, error) {
 	res, err := w.tx.ExecContext(ctx, `
-		INSERT INTO titles (type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO titles (type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, simkl_id, simkl_slug)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		title.Type, title.IsAnime, title.Year, title.CoverURL, title.IMDBID, title.AniListID, title.TMDBID, title.TVDBID,
 		title.PlexRatingKey, title.MyRating, title.Status, title.SeriesStatus, title.MatchStatus,
 		title.OriginalTitle, title.MatchSource,
 		title.Overview, title.Runtime, title.TotalWatchMinutes, title.TMDBRating, title.Credits, title.AniListRating,
-		title.ReleaseDate, title.NextAirDate, title.NextAirEpisode,
+		title.ReleaseDate, title.NextAirDate, title.NextAirEpisode, title.SimklID, title.SimklSlug,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("insert title: %w", err)
@@ -177,6 +177,14 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 	if update.AccentHex != nil {
 		sets = append(sets, `accent_hex = ?`)
 		args = append(args, *update.AccentHex)
+	}
+	if update.SimklID != nil {
+		sets = append(sets, `simkl_id = ?`)
+		args = append(args, *update.SimklID)
+	}
+	if update.SimklSlug != nil {
+		sets = append(sets, `simkl_slug = ?`)
+		args = append(args, *update.SimklSlug)
 	}
 
 	if len(sets) == 0 {
