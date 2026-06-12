@@ -180,8 +180,8 @@ func TestPipeline_Step3_TMDBSearch(t *testing.T) {
 		Type:  model.TitleTypeMovie,
 	})
 	require.NoError(t, err)
-	// Gemini confirms with high confidence → pending_review
-	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
+	// Gemini confirms with high confidence → confirmed
+	assert.Equal(t, model.MatchStatusConfirmed, result.MatchStatus)
 	assert.Equal(t, MatchSourceTMDBSearch, result.MatchSource)
 	assert.Equal(t, int64(550), result.TMDBID)
 	assert.Equal(t, "tt0137523", result.IMDBID)
@@ -196,7 +196,7 @@ func TestPipeline_Step3_TVSearch(t *testing.T) {
 		Type:  model.TitleTypeSeries,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
+	assert.Equal(t, model.MatchStatusConfirmed, result.MatchStatus)
 	assert.Equal(t, MatchSourceTMDBSearch, result.MatchSource)
 	assert.Equal(t, int64(1399), result.TMDBID)
 	assert.Equal(t, "tt0903747", result.IMDBID)
@@ -498,6 +498,98 @@ func TestPipeline_IMDBConflict_TMDBWins(t *testing.T) {
 	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
 	assert.Equal(t, MatchSourcePlexIDs, result.MatchSource)
 	assert.Equal(t, "tt0137523", result.IMDBID, "TMDB IMDB ID should win over TVDB's conflicting value")
+}
+
+// setupTMDBOnly returns a pipeline with a TMDB mock that matches "Fight Club"
+// (movie/1999/TMDB 550) and the provided Gemini client (may be nil).
+func setupTMDBOnly(t *testing.T, geminiClient *GeminiClient) *Pipeline {
+	t.Helper()
+	dataDir := t.TempDir()
+
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
+			Results: []TMDBSearchResult{
+				{ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15"},
+			},
+		})
+	})
+	tmdbMux.HandleFunc("/movie/550", func(w http.ResponseWriter, r *http.Request) {
+		poster := "/poster550.jpg"
+		_ = json.NewEncoder(w).Encode(TMDBMovieDetails{
+			ID: 550, Title: "Fight Club", ReleaseDate: "1999-10-15",
+			IMDBID: "tt0137523", PosterPath: &poster,
+			ExternalIDs: &struct {
+				IMDBID string `json:"imdb_id"`
+				TVDBID int64  `json:"tvdb_id"`
+			}{IMDBID: "tt0137523"},
+		})
+	})
+	tmdbMux.HandleFunc("/movie/550/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{})
+	})
+	tmdbMux.HandleFunc("/image/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("fake-cover"))
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	t.Cleanup(tmdbServer.Close)
+
+	tmdbClient := NewTMDBClient("test-key")
+	tmdbClient.baseURL = tmdbServer.URL
+
+	return NewPipeline(tmdbClient, nil, geminiClient, nil, dataDir)
+}
+
+func TestPipeline_GeminiMediumConfidence_Unconfirmed(t *testing.T) {
+	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "medium", "reason": "Partial match"}`))
+	}))
+	t.Cleanup(geminiServer.Close)
+
+	geminiClient := NewGeminiClient([]string{"test-key"})
+	geminiClient.apiURL = geminiServer.URL
+
+	pipeline := setupTMDBOnly(t, geminiClient)
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title: "Fight Club",
+		Year:  1999,
+		Type:  model.TitleTypeMovie,
+	})
+	require.NoError(t, err)
+	// Medium confidence does not auto-confirm
+	assert.Equal(t, model.MatchStatusUnconfirmed, result.MatchStatus)
+}
+
+func TestPipeline_GeminiHTTPError_Unconfirmed(t *testing.T) {
+	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	}))
+	t.Cleanup(geminiServer.Close)
+
+	geminiClient := NewGeminiClient([]string{"test-key"})
+	geminiClient.apiURL = geminiServer.URL
+
+	pipeline := setupTMDBOnly(t, geminiClient)
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title: "Fight Club",
+		Year:  1999,
+		Type:  model.TitleTypeMovie,
+	})
+	require.NoError(t, err)
+	// Gemini HTTP error → unconfirmed, pipeline does not fail
+	assert.Equal(t, model.MatchStatusUnconfirmed, result.MatchStatus)
+}
+
+func TestPipeline_NoGemini_PendingReview(t *testing.T) {
+	pipeline := setupTMDBOnly(t, nil)
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title: "Fight Club",
+		Year:  1999,
+		Type:  model.TitleTypeMovie,
+	})
+	require.NoError(t, err)
+	// No Gemini configured → pending_review for human triage
+	assert.Equal(t, model.MatchStatusPendingReview, result.MatchStatus)
 }
 
 func TestPipeline_NilClients(t *testing.T) {

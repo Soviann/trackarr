@@ -317,7 +317,7 @@ func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result
 			log.Printf("gemini verification failed: %v", err)
 			result.MatchStatus = model.MatchStatusUnconfirmed
 		case verification.Confirmed && verification.Confidence == ConfidenceHigh:
-			result.MatchStatus = model.MatchStatusPendingReview
+			result.MatchStatus = model.MatchStatusConfirmed
 		default:
 			result.MatchStatus = model.MatchStatusUnconfirmed
 		}
