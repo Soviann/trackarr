@@ -198,8 +198,13 @@ describe('computeAniListUrl', () => {
     expect(computeAniListUrl(t)).toBeNull()
   })
 
-  it('returns null for anime series with no seasons array (unconfirmed title)', () => {
-    const t = makeTitle({ is_anime: true, type: 'series', seasons: undefined as unknown as Season[] })
+  it('returns title URL for anime series with no seasons fetched yet (pending match review)', () => {
+    const t = makeTitle({ is_anime: true, type: 'series', anilist_id: 1234, seasons: [] })
+    expect(computeAniListUrl(t)).toBe('https://anilist.co/anime/1234')
+  })
+
+  it('returns null for anime series with no seasons array and no title id (unconfirmed title)', () => {
+    const t = makeTitle({ is_anime: true, type: 'series', anilist_id: null, seasons: undefined as unknown as Season[] })
     expect(computeAniListUrl(t)).toBeNull()
   })
 })

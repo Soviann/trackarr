@@ -156,6 +156,8 @@ export function aniListMediaUrl(id: number | string): string {
  * Movies use the title's anilist_id; single-season anime use the season's mapping (preferred
  * over the title's, since AniList tracks each season as its own entry); multi-season anime
  * resolve at season-level only and return null here.
+ * When no seasons are fetched yet (e.g. a title still pending match review) the title's
+ * anilist_id describes season 1, so it's the best link available until seasons load.
  */
 export function computeAniListUrl(title: Title): string | null {
   if (!title.is_anime) return null
@@ -163,6 +165,9 @@ export function computeAniListUrl(title: Title): string | null {
     return title.anilist_id ? aniListMediaUrl(title.anilist_id) : null
   }
   const seasons = title.seasons ?? []
+  if (seasons.length === 0) {
+    return title.anilist_id ? aniListMediaUrl(title.anilist_id) : null
+  }
   if (seasons.length === 1) {
     const s1 = seasons[0]
     return s1?.anilist_id ? aniListMediaUrl(s1.anilist_id) : null
