@@ -2,14 +2,8 @@ import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { colors } from '../theme'
 import { useSearchStore } from '../store'
+import { detectUrlType } from '../utils/url'
 import s from './Add.module.css'
-
-function detectUrlType(input: string): string | null {
-  if (/imdb\.com\/title\/(tt\d+)/i.test(input)) return 'imdb'
-  if (/thetvdb\.com/i.test(input)) return 'tvdb'
-  if (/anilist\.co\/anime\/(\d+)/i.test(input)) return 'anilist'
-  return null
-}
 
 // extractSharedUrl scans share-target params for the first http(s) URL.
 function extractSharedUrl(params: URLSearchParams): string | null {

@@ -4,6 +4,7 @@ import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../type
 import { useApi } from '../hooks/useApi'
 import { useSearchStore } from '../store'
 import { getName } from '../utils'
+import { isUrl } from '../utils/url'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../api'
 import { colors } from '../theme'
@@ -12,10 +13,6 @@ import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import clsx from 'clsx'
 import { PullToRefresh } from '../components/PullToRefresh'
 import s from './Validate.module.css'
-
-function isUrl(str: string): boolean {
-  return /^(https?:\/\/)?([\w.-]+)+\.([a-z]{2,10})(\/[\w.-]*)*\/?$/i.test(str)
-}
 
 interface RematchPayload {
   tmdb_id?: number
