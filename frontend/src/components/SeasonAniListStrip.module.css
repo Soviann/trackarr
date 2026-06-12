@@ -38,6 +38,16 @@
   white-space: nowrap;
 }
 
+.entryLink {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.entryLink:hover {
+  color: var(--brand-anilist);
+  text-decoration: underline;
+}
+
 .unmappedText {
   flex: 1;
   font-size: 11px;

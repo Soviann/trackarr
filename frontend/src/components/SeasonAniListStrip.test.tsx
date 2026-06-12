@@ -28,6 +28,15 @@ describe('SeasonAniListStrip', () => {
     expect(getByLabelText('Edit AniList mapping')).toBeTruthy()
   })
 
+  it('links the entry name to that season AniList page (mapped variant)', () => {
+    const season = makeSeason({ anilist_id: '12345' })
+    const { getByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)
+    const link = getByText('S2').closest('a')
+    expect(link?.getAttribute('href')).toBe('https://anilist.co/anime/12345')
+    expect(link?.getAttribute('target')).toBe('_blank')
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer')
+  })
+
   it('renders the unmapped variant when anilist_id is null', () => {
     const season = makeSeason({ anilist_id: null })
     const { getByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)

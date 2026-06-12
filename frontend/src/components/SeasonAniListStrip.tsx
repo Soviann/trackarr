@@ -1,4 +1,5 @@
 import type { Season } from '../types'
+import { aniListMediaUrl } from '../utils'
 import s from './SeasonAniListStrip.module.css'
 
 interface SeasonAniListStripProps {
@@ -8,9 +9,8 @@ interface SeasonAniListStripProps {
 }
 
 export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListStripProps) {
-  const isMapped = season.anilist_id != null
-
-  if (!isMapped) {
+  // null check (not a derived boolean) so TS narrows season.anilist_id to string below.
+  if (season.anilist_id == null) {
     return (
       <div className={s.stripUnmapped}>
         <span className={s.label}>ANILIST</span>
@@ -25,7 +25,14 @@ export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListS
   return (
     <div className={s.stripMapped}>
       <span className={s.label}>ANILIST</span>
-      <span className={s.entryName}>{entryName ?? `S${season.season_number}`}</span>
+      <a
+        href={aniListMediaUrl(season.anilist_id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${s.entryName} ${s.entryLink}`}
+      >
+        {entryName ?? `S${season.season_number}`}
+      </a>
       {season.anilist_community_score != null && (
         <span className={s.score}>{season.anilist_community_score}%</span>
       )}
