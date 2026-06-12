@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"database/sql"
+	"encoding/json"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -197,6 +198,51 @@ func TestSimklImport_BackfillsPreviousEpisodes(t *testing.T) {
 	for _, ep := range episodes {
 		assert.True(t, ep.Watched, "episode %d should be watched", ep.Episode)
 	}
+}
+
+func TestSimklImport_SimklIDsAndAniListEnrichment(t *testing.T) {
+	deps := setupImporterWithDB(t)
+
+	const backupJSON = `{
+		"anime": [{
+			"status": "completed",
+			"show": {
+				"title": "Dance in the Vampire Bund",
+				"year": 2010,
+				"ids": {
+					"simkl": 36048,
+					"slug": "dance-in-the-vampire-bund",
+					"anilist": "6747"
+				}
+			}
+		}]
+	}`
+
+	var backup service.SimklBackup
+	require.NoError(t, json.Unmarshal([]byte(backupJSON), &backup))
+
+	result, err := deps.importer.Import(&backup, false)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Created)
+
+	// Check the title has SimklID and SimklSlug set
+	titles, err := repository.NewTitleRepository(deps.db).ListAll()
+	require.NoError(t, err)
+	require.Len(t, titles, 1)
+	title := titles[0]
+	require.NotNil(t, title.SimklID, "SimklID should be set")
+	assert.Equal(t, int64(36048), *title.SimklID)
+	require.NotNil(t, title.SimklSlug, "SimklSlug should be set")
+	assert.Equal(t, "dance-in-the-vampire-bund", *title.SimklSlug)
+
+	// Check the enqueued enrichment task carries the AniList id
+	tasks, err := deps.tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, "enrichment", string(tasks[0].TaskType))
+	var p service.EnrichmentPayload
+	require.NoError(t, json.Unmarshal([]byte(tasks[0].Payload), &p))
+	assert.Equal(t, int64(6747), p.AniListID)
 }
 
 func intPtr(i int) *int { return &i }

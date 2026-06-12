@@ -30,6 +30,7 @@ type EnrichmentPayload struct {
 	IMDBID    string          `json:"imdb_id,omitempty"`
 	TMDBID    int64           `json:"tmdb_id,omitempty"`
 	TVDBID    int64           `json:"tvdb_id,omitempty"`
+	AniListID int64           `json:"anilist_id,omitempty"`
 	// LockedIDs lists external-ID fields this enrichment run must NOT write
 	// (values from LockIMDB/LockTMDB/LockTVDB/LockAniList). The manual ID editor
 	// sets these so a user-provided or deliberately-emptied ID is never
@@ -351,13 +352,14 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 	}
 
 	result, err := w.pipeline.Run(ctx, matching.MatchInput{
-		Title:   payload.TitleName,
-		Year:    payload.Year,
-		Type:    payload.TitleType,
-		IsAnime: payload.IsAnime,
-		IMDBID:  payload.IMDBID,
-		TMDBID:  payload.TMDBID,
-		TVDBID:  payload.TVDBID,
+		Title:     payload.TitleName,
+		Year:      payload.Year,
+		Type:      payload.TitleType,
+		IsAnime:   payload.IsAnime,
+		IMDBID:    payload.IMDBID,
+		TMDBID:    payload.TMDBID,
+		TVDBID:    payload.TVDBID,
+		AniListID: payload.AniListID,
 	})
 	if err != nil {
 		return err

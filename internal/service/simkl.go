@@ -49,6 +49,8 @@ type SimklIDs struct {
 	TMDB    flexInt64 `json:"tmdb"`
 	AniList flexInt64 `json:"anilist"`
 	TVDB    flexInt64 `json:"tvdb"`
+	Simkl   flexInt64 `json:"simkl"`
+	Slug    string    `json:"slug"`
 }
 
 // flexInt64 handles JSON values that may be int or string.
@@ -205,6 +207,13 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 		v := int64(media.IDs.TVDB)
 		title.TVDBID = &v
 	}
+	if media.IDs.Simkl != 0 {
+		v := int64(media.IDs.Simkl)
+		title.SimklID = &v
+	}
+	if media.IDs.Slug != "" {
+		title.SimklSlug = &media.IDs.Slug
+	}
 
 	names := []model.TitleName{{Name: media.Title, Language: "en", IsPrimary: true}}
 
@@ -331,6 +340,7 @@ func (s *SimklImporter) enqueueEnrichment(titleID int64, name string, year int, 
 		IMDBID:    ids.IMDB,
 		TMDBID:    int64(ids.TMDB),
 		TVDBID:    int64(ids.TVDB),
+		AniListID: int64(ids.AniList),
 	})
 	if err != nil {
 		log.Printf("simkl import: enqueue enrichment for title %d: marshal payload: %v", titleID, err)
