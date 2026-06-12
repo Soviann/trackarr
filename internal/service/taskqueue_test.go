@@ -134,6 +134,65 @@ func TestHandleEnrichment_PersistsAllFieldsInSingleTx(t *testing.T) {
 	assert.Equal(t, matching.MatchSourcePlexIDs, *after.MatchSource)
 }
 
+// TestHandleEnrichment_ResolvesOtherIDsFromIMDB drives the auto-find path: an
+// enrichment payload carrying only an IMDb id must resolve the other external
+// IDs through TMDB's /find/{imdb_id} endpoint. The bug was that handleEnrichment
+// dropped payload.IMDBID when building the matcher input, so the pipeline never
+// had the id to resolve from and the title gained no TMDB id.
+func TestHandleEnrichment_ResolvesOtherIDsFromIMDB(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2025,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Placeholder", Language: "en", IsPrimary: true}})
+
+	const wantTMDB = int64(987654)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/find/tt31974288", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"movie_results": []map[string]any{{"id": wantTMDB, "title": "Resolved Movie"}},
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	tmdb := matching.NewTMDBClient("test-key")
+	tmdb.SetBaseURL(server.URL)
+	pipeline := matching.NewPipeline(tmdb, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, tmdb, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   id,
+		TitleName: "Placeholder",
+		TitleType: model.TitleTypeMovie,
+		IMDBID:    "tt31974288",
+		LockedIDs: []string{service.LockIMDB},
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	got, err := titles.GetByID(id)
+	require.NoError(t, err)
+	require.NotNil(t, got.TMDBID, "enrichment must resolve a TMDB id from the IMDb anchor via /find")
+	assert.Equal(t, wantTMDB, *got.TMDBID)
+}
+
 // pendingRefreshFor returns the first pending refresh task targeting titleID, or
 // nil. Used to assert season-backfill enqueue behaviour after enrichment.
 func pendingRefreshFor(t *testing.T, tasks *repository.TaskRepository, titleID int64) *model.Task {

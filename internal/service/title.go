@@ -271,12 +271,13 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 		return err
 	}
 
-	// Metadata refresh. With a TMDB anchor, enqueue the enrichment pipeline and
-	// lock the IDs the user owns so auto-matching can't overwrite them. Without
-	// TMDB there's no reliable anchor — the name-search pipeline could inject
-	// wrong metadata — so the caller triggers an AniList-sourced refresh instead
-	// (the SetExternalIDs handler fires RefreshByID, which reads from AniList).
-	if edit.TMDBID == nil {
+	// Metadata refresh. Enqueue the enrichment pipeline when the user supplied a
+	// strong anchor the pipeline can resolve from without a fuzzy name search: a
+	// TMDB id, or an IMDb id (TMDB's /find/{imdb_id} resolves the rest, and
+	// plexIDStrategy short-circuits before any name search). With neither there's
+	// no reliable anchor — an AniList-only edit is handled by the caller's
+	// AniList-sourced RefreshByID instead — so skip enrichment.
+	if edit.TMDBID == nil && edit.IMDBID == nil {
 		return nil
 	}
 
@@ -289,12 +290,15 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 			locked = append(locked, key)
 		}
 	}
-	lockIf(true, LockTMDB)
+	lockIf(edit.TMDBID != nil, LockTMDB)
 	lockIf(edit.IMDBID != nil, LockIMDB)
 	lockIf(edit.TVDBID != nil, LockTVDB)
 	lockIf(routeAniListToSeason || edit.AniListID != nil, LockAniList)
 
-	payloadTMDB := *edit.TMDBID
+	payloadTMDB := int64(0)
+	if edit.TMDBID != nil {
+		payloadTMDB = *edit.TMDBID
+	}
 	payloadIMDB := ""
 	if edit.IMDBID != nil {
 		payloadIMDB = *edit.IMDBID

@@ -229,6 +229,46 @@ func TestSetExternalIDs_AutoFillLocksOnlyProvided(t *testing.T) {
 		"auto-fill locks only the provided ID, leaving blanks open for matching")
 }
 
+// TestSetExternalIDs_IMDBOnlyAnchorEnqueuesEnrichment guards the share/rematch
+// path where the user pastes only an IMDb id and ticks "auto-find the other
+// IDs". An IMDb id is a valid enrichment anchor — TMDB's /find/{imdb_id}
+// resolves the rest and plexIDStrategy short-circuits before any fuzzy name
+// search — so enrichment must run even though no TMDB id was supplied.
+// Previously the service bailed whenever TMDB was nil, so auto-find silently
+// did nothing.
+func TestSetExternalIDs_IMDBOnlyAnchorEnqueuesEnrichment(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2025,
+		Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusUnconfirmed,
+	}, []model.TitleName{{Name: "Placeholder", Language: "en", IsPrimary: true}})
+
+	imdb := "tt31974288"
+	require.NoError(t, svc.SetExternalIDs(context.Background(), db, id, service.ExternalIDEdit{
+		IMDBID:   &imdb,
+		AutoFill: true,
+	}))
+
+	var payloadJSON string
+	require.NoError(t, db.QueryRow(
+		`SELECT payload FROM task_queue WHERE task_type = 'enrichment' ORDER BY id DESC LIMIT 1`,
+	).Scan(&payloadJSON))
+	var payload service.EnrichmentPayload
+	require.NoError(t, json.Unmarshal([]byte(payloadJSON), &payload))
+	assert.Equal(t, "tt31974288", payload.IMDBID,
+		"IMDb id carried into the enrichment payload as the anchor")
+	assert.Equal(t, []string{service.LockIMDB}, payload.LockedIDs,
+		"auto-fill locks only the user-supplied IMDb id, leaving TMDB/TVDB/AniList open for back-fill")
+}
+
 func TestMerge_ReSearchesAniListWhenSourceLacksID(t *testing.T) {
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)

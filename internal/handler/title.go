@@ -483,11 +483,13 @@ func (h *TitleHandler) SetExternalIDs(w http.ResponseWriter, r *http.Request) er
 		return httputil.InternalError("Failed to update external IDs", err)
 	}
 
-	// AniList-only edit (no TMDB anchor): the service skipped the enrichment
-	// pipeline, so refresh metadata straight from AniList now and return the
-	// fresh title. Synchronous because it's one GraphQL call + a cover download,
-	// and the user expects the screen to reflect the change immediately.
-	if edit.TMDBID == nil && h.bgSvc != nil {
+	// AniList-only edit (no TMDB or IMDb anchor): the service skipped the
+	// enrichment pipeline, so refresh metadata straight from AniList now and
+	// return the fresh title. Synchronous because it's one GraphQL call + a cover
+	// download, and the user expects the screen to reflect the change
+	// immediately. When an IMDb id is present the service enqueued enrichment
+	// instead, so this fallback must not also fire.
+	if edit.TMDBID == nil && edit.IMDBID == nil && h.bgSvc != nil {
 		if err := h.bgSvc.RefreshByID(r.Context(), id); err != nil {
 			log.Printf("external-ids anilist refresh for title %d: %v", id, err)
 		}

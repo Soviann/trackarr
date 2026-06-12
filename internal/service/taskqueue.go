@@ -355,6 +355,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 		Year:    payload.Year,
 		Type:    payload.TitleType,
 		IsAnime: payload.IsAnime,
+		IMDBID:  payload.IMDBID,
 		TMDBID:  payload.TMDBID,
 		TVDBID:  payload.TVDBID,
 	})
