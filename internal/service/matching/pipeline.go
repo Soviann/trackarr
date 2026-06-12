@@ -252,6 +252,14 @@ func (p *Pipeline) IdentifyAnimeSeason(ctx context.Context, title string, year i
 	return p.gemini.IdentifyAnimeSeason(ctx, title, year)
 }
 
+// ResolveAniListSeason walks the PREQUEL chain for an AniList media.
+func (p *Pipeline) ResolveAniListSeason(ctx context.Context, anilistID int64) (*SeasonChain, error) {
+	if p.anilist == nil {
+		return nil, fmt.Errorf("anilist not configured")
+	}
+	return p.anilist.ResolveSeasonChain(ctx, anilistID)
+}
+
 // SearchAniListByName looks up the top AniList match for a name and returns
 // its ID (or 0 when the client is not configured or no result is returned).
 // Used by the anime-merge flow to recover a per-season AniList ID when the
