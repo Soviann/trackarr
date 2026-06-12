@@ -350,25 +350,35 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	return r.GetByID(id)
 }
 
-// parseSQLiteTime parses a nullable SQLite datetime string into a *time.Time.
+// parseSQLiteTimeVal parses a SQLite datetime string into a time.Time.
 // SQLite stores datetimes in UTC without a timezone marker; time.Parse returns
 // UTC when no timezone is embedded, which is the expected behaviour here.
 // Accepted formats: "2006-01-02 15:04:05" (SQLite default) or RFC3339.
+// Returns the zero time.Time if no format matches.
+func parseSQLiteTimeVal(s string) time.Time {
+	// Try standard SQLite datetime format
+	t, err := time.Parse("2006-01-02 15:04:05", s)
+	if err == nil {
+		return t
+	}
+	// Try RFC3339 (ISO)
+	t, err = time.Parse(time.RFC3339, s)
+	if err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
+// parseSQLiteTime parses a nullable SQLite datetime string into a *time.Time.
 func parseSQLiteTime(s *string) *time.Time {
 	if s == nil {
 		return nil
 	}
-	// Try standard SQLite datetime format
-	t, err := time.Parse("2006-01-02 15:04:05", *s)
-	if err == nil {
-		return &t
+	t := parseSQLiteTimeVal(*s)
+	if t.IsZero() {
+		return nil
 	}
-	// Try RFC3339 (ISO)
-	t, err = time.Parse(time.RFC3339, *s)
-	if err == nil {
-		return &t
-	}
-	return nil
+	return &t
 }
 
 // HasUnwatchedEpisodes returns true if the title has at least one unwatched episode.

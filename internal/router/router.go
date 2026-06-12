@@ -63,6 +63,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	statsRepo := repository.NewStatsRepository(readDB)
 	activityRepo := repository.NewActivityRepository(readDB)
 	historyRepo := repository.NewHistoryRepository(readDB)
+	matchEventRepo := repository.NewMatchEventRepository(readDB)
 
 	// Genre repository (read-only)
 	genreReadRepo := repository.NewGenreRepository(readDB)
@@ -87,6 +88,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	genres := handler.NewGenreHandler(genreReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)
 	history := handler.NewHistoryHandler(historyRepo)
+	matchEvents := handler.NewMatchEventHandler(matchEventRepo)
 	clientErrors := &handler.ClientErrorHandler{}
 
 	// API routes
@@ -147,6 +149,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 			r.Get("/stats", httputil.WrapHandler(stats.Get))
 			r.Get("/stats/activity", httputil.WrapHandler(activity.List))
+			r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
 			r.Get("/genres", httputil.WrapHandler(genres.List))
 
 			r.Get("/titles/{id}/history", httputil.WrapHandler(history.Get))
