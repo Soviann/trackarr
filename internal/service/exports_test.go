@@ -3,6 +3,7 @@ package service
 import (
 	"net/http"
 
+	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
@@ -29,4 +30,28 @@ func IsSearchSourceForTest(source string) bool {
 // ResolvedNameForTest exposes resolvedName for unit tests.
 func ResolvedNameForTest(result *matching.MatchResult, payload EnrichmentPayload) string {
 	return resolvedName(result, payload)
+}
+
+// Season-action kinds re-exported (as plain int) for the external test package.
+var (
+	SeasonActionNoneForTest       = int(seasonActionNone)
+	SeasonActionLegacyForTest     = int(seasonActionLegacy)
+	SeasonActionLegacyRootForTest = int(seasonActionLegacyRoot)
+	SeasonActionMergeIntoForTest  = int(seasonActionMergeInto)
+	SeasonActionCreateRootForTest = int(seasonActionCreateRoot)
+)
+
+// SeasonActionForTest mirrors seasonAction for assertions in the external test
+// package, exposing the otherwise-unexported decision fields.
+type SeasonActionForTest struct {
+	Kind     int
+	ParentID int64
+	Offset   int
+}
+
+// DecideSeasonActionForTest exposes decideSeasonAction to the external test
+// package so the franchise-protection rule table is unit-testable.
+func DecideSeasonActionForTest(chain *matching.SeasonChain, result *matching.MatchResult, parentByIDs, parentByRoot *model.Title) SeasonActionForTest {
+	a := decideSeasonAction(chain, result, parentByIDs, parentByRoot)
+	return SeasonActionForTest{Kind: int(a.Kind), ParentID: a.ParentID, Offset: a.Offset}
 }

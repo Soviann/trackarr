@@ -404,7 +404,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 
 	// Merge runs outside the persistence tx: it opens its own tx and may
 	// delete the source title, so it must not nest inside another writer.
-	merged, err := w.resolveAnimeConflict(ctx, result, payload, logger)
+	merged, err := w.resolveAnimeSeason(ctx, result, payload, logger)
 	if err != nil {
 		return err
 	}
@@ -543,7 +543,11 @@ func recalcWatchtime(ctx context.Context, tx *sql.Tx, logger *slog.Logger, title
 // identifies an anime that already exists under another local title. Returns
 // merged=true when the source title has been consumed and the caller should
 // stop processing further enrichment writes.
-func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, logger *slog.Logger) (bool, error) {
+//
+// explicitOffset is forwarded to Merge: nil falls back to Gemini name-parsing
+// for the season offset (legacy behaviour); a non-nil pointer uses that offset
+// directly (a chain root colliding on IMDb is the same show's season 1 → 0).
+func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, explicitOffset *int, logger *slog.Logger) (bool, error) {
 	if result.IMDBID == "" || !result.IsAnime {
 		return false, nil
 	}
@@ -562,12 +566,274 @@ func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matc
 		"intoTitleID", existing.ID,
 		"existingType", existing.Type,
 	)
-	if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, nil); err != nil {
+	if err := w.titleSvc.Merge(ctx, w.writeDB, existing.ID, payload.TitleID, explicitOffset); err != nil {
 		logger.Error("merge after IMDB conflict", "err", err)
 		return false, nil
 	}
 	logger.Info("merged title after IMDB conflict", "intoTitleID", existing.ID)
 	return true, nil
+}
+
+// seasonActionKind enumerates the outcomes of the season-attachment decision.
+type seasonActionKind int
+
+const (
+	seasonActionNone       seasonActionKind = iota // leave standalone
+	seasonActionLegacy                             // IMDb-collision path, Gemini-inferred offset (nil)
+	seasonActionLegacyRoot                         // IMDb-collision path, explicit offset 0
+	seasonActionMergeInto                          // merge into ParentID with Offset
+	seasonActionCreateRoot                         // create the root, then merge with Offset
+)
+
+// seasonAction is the decision produced by decideSeasonAction.
+type seasonAction struct {
+	Kind     seasonActionKind
+	ParentID int64
+	Offset   int
+}
+
+// decideSeasonAction encodes the franchise-protection rules for relations-driven
+// season attachment. It is pure (no DB/HTTP) so the rule table is unit-testable.
+//
+//   - chain == nil (resolve failed) or chain.IsRoot → fall back to the legacy
+//     IMDb-collision path. A root colliding on IMDb is the same show's season 1,
+//     so it gets an explicit offset 0 (legacyRoot); a failed resolve keeps the
+//     Gemini-inferred offset (legacy).
+//   - A non-series root is never a merge target — a TV season must not attach to
+//     a movie/special root.
+//   - parentByIDs (found by the entry's OWN IMDb/TMDB id) proves same-show:
+//     Simkl season entries carry the PARENT's id, so a shared id == same show →
+//     always safe to merge.
+//   - parentByRoot (found by the root AniList id) is relations-only evidence:
+//     merge ONLY when the entry has no external identity of its own. Otherwise
+//     it is a distinct franchise member (e.g. Dragon Ball Z has its own IMDb)
+//     and must stay standalone.
+//   - No parent found: create the root and merge, but again only when the entry
+//     has no identity of its own (same protection).
+func decideSeasonAction(chain *matching.SeasonChain, result *matching.MatchResult, parentByIDs, parentByRoot *model.Title) seasonAction {
+	if chain == nil {
+		return seasonAction{Kind: seasonActionLegacy}
+	}
+	if chain.IsRoot {
+		return seasonAction{Kind: seasonActionLegacyRoot, Offset: 0}
+	}
+	if !chain.RootIsSeries {
+		// Never merge a season into a movie/special root.
+		return seasonAction{Kind: seasonActionNone}
+	}
+
+	offset := chain.SeasonNumber - 1
+
+	// Shared external id proves same-show: always safe to merge.
+	if parentByIDs != nil {
+		return seasonAction{Kind: seasonActionMergeInto, ParentID: parentByIDs.ID, Offset: offset}
+	}
+
+	hasOwnIdentity := result.IMDBID != "" || result.TMDBID != 0 || result.TVDBID != 0
+
+	// Relations-only evidence: attach only an entry without its own identity.
+	if parentByRoot != nil {
+		if hasOwnIdentity {
+			return seasonAction{Kind: seasonActionNone}
+		}
+		return seasonAction{Kind: seasonActionMergeInto, ParentID: parentByRoot.ID, Offset: offset}
+	}
+
+	// No parent exists yet. Create the root only for an identity-less entry.
+	if hasOwnIdentity {
+		return seasonAction{Kind: seasonActionNone}
+	}
+	return seasonAction{Kind: seasonActionCreateRoot, Offset: offset}
+}
+
+// resolveAnimeSeason auto-attaches an anime season to its parent series using
+// AniList PREQUEL relations, with id-safety guards against merging distinct
+// franchise members. Returns merged=true when the source title was consumed
+// (so the caller skips season backfill). Non-anime / no-AniList-id titles, and
+// any resolve/lookup failure, fall back to the legacy IMDb-collision path.
+func (w *TaskQueueWorker) resolveAnimeSeason(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, logger *slog.Logger) (bool, error) {
+	// Rule 1: not anime or no AniList id → legacy behaviour, unchanged.
+	if !result.IsAnime || result.AniListID == 0 {
+		return w.resolveAnimeConflict(ctx, result, payload, nil, logger)
+	}
+
+	// Rule 2: resolve failure (incl. nil pipeline) → legacy behaviour.
+	var chain *matching.SeasonChain
+	if w.pipeline != nil {
+		c, err := w.pipeline.ResolveAniListSeason(ctx, result.AniListID)
+		if err != nil {
+			logger.Warn("resolve AniList season chain", "anilistID", result.AniListID, "err", err)
+		} else {
+			chain = c
+		}
+	}
+
+	// Parent lookups (only the meaningful ones once we have a season entry).
+	var parentByIDs, parentByRoot *model.Title
+	if chain != nil && !chain.IsRoot && chain.RootIsSeries {
+		seriesType := model.TitleTypeSeries
+		var imdbPtr *string
+		if result.IMDBID != "" {
+			imdbPtr = &result.IMDBID
+		}
+		var tmdbPtr *int64
+		if result.TMDBID != 0 {
+			tmdbPtr = &result.TMDBID
+		}
+		if imdbPtr != nil || tmdbPtr != nil {
+			t, err := w.titles.FindByExternalID(imdbPtr, tmdbPtr, nil, nil, &seriesType)
+			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					logger.Warn("FindByExternalID (own ids)", "err", err)
+				}
+			} else if t != nil && t.ID != payload.TitleID {
+				parentByIDs = t
+			}
+		}
+		if parentByIDs == nil {
+			t, err := w.titles.FindByExternalID(nil, nil, nil, &chain.RootID, &seriesType)
+			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					logger.Warn("FindByExternalID (root anilist)", "err", err)
+				}
+			} else if t != nil && t.ID != payload.TitleID {
+				parentByRoot = t
+			}
+		}
+	}
+
+	action := decideSeasonAction(chain, result, parentByIDs, parentByRoot)
+
+	switch action.Kind {
+	case seasonActionNone:
+		if chain != nil {
+			logger.Info("anime season left standalone",
+				"anilistID", result.AniListID,
+				"rootID", chain.RootID,
+				"seasonNumber", chain.SeasonNumber,
+			)
+		}
+		return false, nil
+	case seasonActionLegacy:
+		return w.resolveAnimeConflict(ctx, result, payload, nil, logger)
+	case seasonActionLegacyRoot:
+		offset := action.Offset
+		return w.resolveAnimeConflict(ctx, result, payload, &offset, logger)
+	case seasonActionMergeInto:
+		return w.attachSeason(ctx, payload, chain, action.ParentID, action.Offset, "", logger)
+	case seasonActionCreateRoot:
+		return w.createParentAndAttach(ctx, result, payload, chain, action.Offset, logger)
+	default:
+		return false, nil
+	}
+}
+
+// attachSeason merges the source title into parentID with the given offset and,
+// on success, records a season_attached event on the parent. parentNameOverride
+// is used when the parent was just created (its primary name isn't queryable
+// via GetByID in the same flow); empty means fetch the parent's primary name.
+func (w *TaskQueueWorker) attachSeason(ctx context.Context, payload EnrichmentPayload, chain *matching.SeasonChain, parentID int64, offset int, parentNameOverride string, logger *slog.Logger) (bool, error) {
+	// Fetch the source name BEFORE Merge — Merge deletes the source row.
+	sourceName := ""
+	if src, err := w.titles.GetByID(payload.TitleID); err == nil {
+		sourceName = src.PrimaryName()
+	} else {
+		logger.Warn("fetch source title before merge", "err", err)
+	}
+
+	parentName := parentNameOverride
+	if parentName == "" {
+		if parent, err := w.titles.GetByID(parentID); err == nil {
+			parentName = parent.PrimaryName()
+		} else {
+			logger.Warn("fetch parent title name", "err", err)
+		}
+	}
+
+	logger.Info("attaching anime season",
+		"anilistID", payload.AniListID,
+		"intoTitleID", parentID,
+		"seasonNumber", chain.SeasonNumber,
+		"offset", offset,
+	)
+	off := offset
+	if err := w.titleSvc.Merge(ctx, w.writeDB, parentID, payload.TitleID, &off); err != nil {
+		logger.Error("merge season into parent", "err", err)
+		return false, nil
+	}
+
+	detail := fmt.Sprintf("%q attached as Season %d of %q", sourceName, chain.SeasonNumber, parentName)
+	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		return repository.NewMatchEventWriter(tx).Create(ctx, parentID, model.MatchEventSeasonAttached, detail)
+	}); err != nil {
+		logger.Warn("write season_attached event", "err", err)
+	}
+	return true, nil
+}
+
+// createParentAndAttach creates a new root series title for the chain, enqueues
+// its enrichment, then merges the source season into it. The source's Year is
+// copied so the new parent isn't year-zero when AniList enrichment is pending.
+func (w *TaskQueueWorker) createParentAndAttach(ctx context.Context, result *matching.MatchResult, payload EnrichmentPayload, chain *matching.SeasonChain, offset int, logger *slog.Logger) (bool, error) {
+	source, err := w.titles.GetByID(payload.TitleID)
+	if err != nil {
+		logger.Warn("fetch source title for parent creation", "err", err)
+		return false, nil
+	}
+
+	rootAniList := chain.RootID
+	confirmed := model.MatchStatusConfirmed
+	matchSource := matching.MatchSourceAniListSearch
+	parent := &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        source.Year,
+		Status:      source.Status,
+		MatchStatus: confirmed,
+		MatchSource: &matchSource,
+		AniListID:   &rootAniList,
+	}
+	names := []model.TitleName{{Name: chain.RootTitle, Language: "en", IsPrimary: true}}
+
+	var newID int64
+	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+		id, e := repository.NewTitleWriter(tx).Create(ctx, parent, names)
+		if e != nil {
+			return e
+		}
+		newID = id
+		return nil
+	}); err != nil {
+		logger.Error("create root parent title", "err", err)
+		return false, nil
+	}
+
+	// Enqueue enrichment for the freshly-created parent so it gains metadata.
+	enrichPayload := EnrichmentPayload{
+		TitleID:   newID,
+		TitleName: chain.RootTitle,
+		TitleType: model.TitleTypeSeries,
+		IsAnime:   true,
+		AniListID: rootAniList,
+	}
+	if data, e := json.Marshal(enrichPayload); e != nil {
+		logger.Warn("marshal parent enrichment payload", "err", e)
+	} else {
+		dedupKey := fmt.Sprintf("enrichment:%d", newID)
+		if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+			_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(data), &dedupKey)
+			return e
+		}); err != nil {
+			logger.Warn("enqueue parent enrichment", "err", err)
+		}
+	}
+
+	logger.Info("created root parent for anime season",
+		"anilistID", result.AniListID,
+		"rootID", chain.RootID,
+		"newParentID", newID,
+	)
+	return w.attachSeason(ctx, payload, chain, newID, offset, chain.RootTitle, logger)
 }
 
 func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, logger *slog.Logger) error {

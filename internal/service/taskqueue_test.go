@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
@@ -875,4 +876,277 @@ func TestHandleEnrichment_PreserveMatch_NoEvent(t *testing.T) {
 
 	events := matchEventsForTitle(t, db, id, model.MatchEventAutoConfirmed)
 	assert.Empty(t, events, "PreserveMatch=true must not write an auto_confirmed event")
+}
+
+// ----------------------------------------------------------------------------
+// decideSeasonAction — franchise-protection rule table (pure, no infra)
+// ----------------------------------------------------------------------------
+
+func TestDecideSeasonAction(t *testing.T) {
+	seasonChain := func(season int, isRoot, rootIsSeries bool) *matching.SeasonChain {
+		return &matching.SeasonChain{
+			RootID:       1000,
+			RootTitle:    "Root Show",
+			SeasonNumber: season,
+			IsRoot:       isRoot,
+			RootIsSeries: rootIsSeries,
+		}
+	}
+	titleAt := func(id int64) *model.Title { return &model.Title{ID: id} }
+
+	tests := []struct {
+		name         string
+		chain        *matching.SeasonChain
+		result       *matching.MatchResult
+		parentByIDs  *model.Title
+		parentByRoot *model.Title
+		wantKind     int
+		wantParent   int64
+		wantOffset   int
+	}{
+		{
+			name:     "nil chain → legacy",
+			chain:    nil,
+			result:   &matching.MatchResult{IMDBID: "tt1"},
+			wantKind: service.SeasonActionLegacyForTest,
+		},
+		{
+			name:       "IsRoot → legacyRoot offset 0",
+			chain:      seasonChain(1, true, true),
+			result:     &matching.MatchResult{IMDBID: "tt1"},
+			wantKind:   service.SeasonActionLegacyRootForTest,
+			wantOffset: 0,
+		},
+		{
+			name:        "S2, parentByIDs found → mergeInto offset 1",
+			chain:       seasonChain(2, false, true),
+			result:      &matching.MatchResult{IMDBID: "tt-parent"},
+			parentByIDs: titleAt(7),
+			wantKind:    service.SeasonActionMergeIntoForTest,
+			wantParent:  7,
+			wantOffset:  1,
+		},
+		{
+			name:         "S2, own imdb + only parentByRoot → none (id-conflict protection)",
+			chain:        seasonChain(2, false, true),
+			result:       &matching.MatchResult{IMDBID: "tt-own"},
+			parentByRoot: titleAt(9),
+			wantKind:     service.SeasonActionNoneForTest,
+		},
+		{
+			name:         "S2, no ids + parentByRoot → mergeInto offset 1",
+			chain:        seasonChain(2, false, true),
+			result:       &matching.MatchResult{},
+			parentByRoot: titleAt(9),
+			wantKind:     service.SeasonActionMergeIntoForTest,
+			wantParent:   9,
+			wantOffset:   1,
+		},
+		{
+			name:       "S2, no ids, no parent → createRoot offset 1",
+			chain:      seasonChain(2, false, true),
+			result:     &matching.MatchResult{},
+			wantKind:   service.SeasonActionCreateRootForTest,
+			wantOffset: 1,
+		},
+		{
+			name:     "S3, own imdb, no parent → none",
+			chain:    seasonChain(3, false, true),
+			result:   &matching.MatchResult{IMDBID: "tt-own"},
+			wantKind: service.SeasonActionNoneForTest,
+		},
+		{
+			name:         "S2, RootIsSeries=false → none (movie root)",
+			chain:        seasonChain(2, false, false),
+			result:       &matching.MatchResult{},
+			parentByRoot: titleAt(9),
+			wantKind:     service.SeasonActionNoneForTest,
+		},
+		{
+			// TVDB-only identity: result has TVDBID but no IMDb/TMDB id.
+			// parentByIDs=nil (TVDB lookup returned nothing), parentByRoot has a
+			// hit. Relations-only evidence must not override an entry's own
+			// external identity — expect none.
+			name:         "S2, TVDB-only identity + parentByRoot → none (id-conflict protection)",
+			chain:        seasonChain(2, false, true),
+			result:       &matching.MatchResult{TVDBID: 222},
+			parentByRoot: titleAt(9),
+			wantKind:     service.SeasonActionNoneForTest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := service.DecideSeasonActionForTest(tc.chain, tc.result, tc.parentByIDs, tc.parentByRoot)
+			assert.Equal(t, tc.wantKind, got.Kind, "kind")
+			assert.Equal(t, tc.wantParent, got.ParentID, "parent id")
+			assert.Equal(t, tc.wantOffset, got.Offset, "offset")
+		})
+	}
+}
+
+// newAniListChainMock returns an AniListClient whose GraphQL endpoint answers
+// BOTH the relations query (used by ResolveSeasonChain) and the anime-details
+// query (used during enrichment). The two share the /graphql POST shape and an
+// "id" variable; we branch on whether the query string mentions "relations".
+// media maps an AniList id to its {format, english title, prequel id (0=none)}.
+func newAniListChainMock(t *testing.T, media map[int64]struct {
+	Format  string
+	English string
+	Prequel int64
+}) *matching.AniListClient {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Query     string         `json:"query"`
+			Variables map[string]any `json:"variables"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		idRaw, ok := req.Variables["id"].(float64)
+		if !ok {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+		m, found := media[int64(idRaw)]
+		if !found {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		node := map[string]any{
+			"id":     int64(idRaw),
+			"format": m.Format,
+			"title":  map[string]any{"english": m.English, "romaji": m.English},
+		}
+		if strings.Contains(req.Query, "relations") {
+			edges := []any{}
+			if m.Prequel != 0 {
+				edges = append(edges, map[string]any{
+					"relationType": "PREQUEL",
+					"node": map[string]any{
+						"id":     m.Prequel,
+						"type":   "ANIME",
+						"format": media[m.Prequel].Format,
+						"title":  map[string]any{},
+					},
+				})
+			}
+			node["relations"] = map[string]any{"edges": edges}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{"Media": node},
+		})
+	}))
+	t.Cleanup(server.Close)
+	return matching.NewAniListClientWithURL(server.URL)
+}
+
+// TestHandleEnrichment_AutoAttachesSeasonBySharedIMDb is the integration-flavored
+// test for Task 7: an anime entry whose AniList id resolves to "season 2 of root
+// X", with the parent series already present locally under the same (parent)
+// IMDb id. After ProcessTask the source title is merged into the parent (seasons
+// shifted by the season offset), and exactly one season_attached match_event is
+// written on the parent with a detail mentioning "Season 2".
+func TestHandleEnrichment_AutoAttachesSeasonBySharedIMDb(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	const sharedIMDB = "tt-root-show"
+	const seasonAniList = int64(20)
+
+	// Parent series already present, carrying the shared (parent) IMDb id.
+	imdb := sharedIMDB
+	parentID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2013,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		IMDBID:      &imdb,
+	}, []model.TitleName{{Name: "Root Show", Language: "en", IsPrimary: true}})
+
+	// Source = the season-2 entry, also carrying the shared (parent) IMDb id
+	// (Simkl season entries inherit the parent show's id) plus its AniList id.
+	srcIMDB := sharedIMDB
+	srcAniList := seasonAniList
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2017,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		IMDBID:      &srcIMDB,
+		AniListID:   &srcAniList,
+	}, []model.TitleName{{Name: "Root Show Season 2", Language: "en", IsPrimary: true}})
+
+	// Seed a season on the source so the merge has something to shift.
+	// season_number=1 on the source will become season_number=2 on the parent
+	// after the offset of 1 is applied.
+	srcSeasonID := testutil.InsertSeason(t, db, sourceID, 1)
+	testutil.GetOrCreateEpisode(t, db, srcSeasonID, 1)
+
+	// AniList: 20 (TV) → PREQUEL 10 (TV, root). Resolving 20 yields season 2.
+	anilist := newAniListChainMock(t, map[int64]struct {
+		Format  string
+		English string
+		Prequel int64
+	}{
+		10: {Format: "TV", English: "Root Show", Prequel: 0},
+		20: {Format: "TV", English: "Root Show Season 2", Prequel: 10},
+	})
+
+	pipeline := matching.NewPipeline(nil, anilist, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, anilist, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   sourceID,
+		TitleName: "Root Show Season 2",
+		Year:      2017,
+		TitleType: model.TitleTypeSeries,
+		IsAnime:   true,
+		IMDBID:    sharedIMDB,
+		AniListID: seasonAniList,
+		// Lock IMDb so enrichment doesn't try to re-resolve it via TMDB (no client).
+		LockedIDs: []string{service.LockIMDB},
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	// Source title consumed by the merge.
+	_, err = titles.GetByID(sourceID)
+	assert.Error(t, err, "source season title must be deleted after merge into parent")
+
+	// Exactly one season_attached event on the parent, mentioning Season 2.
+	events := matchEventsForTitle(t, db, parentID, model.MatchEventSeasonAttached)
+	require.Len(t, events, 1, "merge must write exactly one season_attached event on the parent")
+	assert.Contains(t, events[0].Detail, "Season 2",
+		"event detail must name the attached season ordinal")
+
+	// No season-backfill refresh enqueued for the consumed source.
+	assert.Nil(t, pendingRefreshFor(t, tasks, sourceID),
+		"a merged-away source must not enqueue a season-backfill refresh")
+
+	// Offset applied: the source's season 1 must now live as season 2 on the parent.
+	var seasonCount int
+	err = db.QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM seasons WHERE title_id = ? AND season_number = 2`,
+		parentID,
+	).Scan(&seasonCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, seasonCount,
+		"source season 1 must be re-numbered to season 2 on the parent after merge with offset 1")
 }
