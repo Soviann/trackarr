@@ -89,6 +89,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	activity := handler.NewActivityHandler(activityRepo)
 	history := handler.NewHistoryHandler(historyRepo)
 	matchEvents := handler.NewMatchEventHandler(matchEventRepo)
+	seasonAuditSvc := service.NewSeasonAuditService(writeDB, titleRepo, repository.NewSeasonAuditRepository(readDB), pipeline, titleSvc)
+	seasonAudit := handler.NewSeasonAuditHandler(seasonAuditSvc)
 	clientErrors := &handler.ClientErrorHandler{}
 
 	// API routes
@@ -168,6 +170,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
+			r.Get("/admin/season-audit", httputil.WrapHandler(seasonAudit.List))
+			r.Post("/admin/season-audit/accept", httputil.WrapHandler(seasonAudit.Accept))
+			r.Post("/admin/season-audit/dismiss", httputil.WrapHandler(seasonAudit.Dismiss))
 
 			clientErrorsRateLimit := mw.RateLimit(ctx, 30, time.Minute)
 			r.With(clientErrorsRateLimit).Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))
