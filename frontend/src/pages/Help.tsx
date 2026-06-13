@@ -31,14 +31,18 @@ const sections: FaqSection[] = [
         q: 'What does "Pending review" / "Unconfirmed" mean? Should I do something?',
         a: (
           <>
-            PlexTracker tried to identify the title automatically but isn't fully sure.
+            PlexTracker tried to identify the title automatically but isn't sure enough to
+            confirm it on its own.
             <br />
-            <strong>Pending review</strong> — high confidence, just confirm.
+            <strong>Unconfirmed</strong> — medium or low confidence, or AI verification failed;
+            take a look and confirm or fix the match.
             <br />
-            <strong>Unconfirmed</strong> — weak match, probably needs a manual fix.
+            <strong>Pending review</strong> — falls back to manual confirmation when the AI
+            verifier (Gemini) is unavailable. Same action: confirm or fix.
             <br />
-            Both show up in the <strong>Match Review</strong> screen (a red banner appears on the
-            Library home if any are waiting).
+            High-confidence AI-verified matches are confirmed automatically and never reach this
+            queue. Both statuses appear in the <strong>Match Review</strong> screen (a red banner
+            shows on Library home when any are waiting).
           </>
         ),
       },
@@ -61,6 +65,50 @@ const sections: FaqSection[] = [
             community score. Tap the pencil <strong>✎</strong> in that strip to change the entry,
             or tap <strong>Link entry</strong> if the season is unmapped. AniList sync starts
             using the new entry immediately.
+          </>
+        ),
+      },
+      {
+        q: 'Why is my Match Review list so much shorter after an import?',
+        a: (
+          <>
+            High-confidence matches — those AI-verified against TMDB, AniList, or a fuzzy
+            search — are <strong>confirmed automatically</strong> and never enter the queue.
+            Only titles the app isn't sure about land in Match Review, so the list stays
+            focused on the ones that actually need a human look.
+          </>
+        ),
+      },
+      {
+        q: 'What is the "Recently auto-matched" section on the Match Review screen?',
+        a: (
+          <>
+            A read-only log (newest first) of titles the app confirmed automatically or anime
+            seasons it attached to their main series without prompting you. Each row shows the
+            original import name and what it resolved to. Nothing to action — it's there for
+            spot-checking. If something looks wrong, tap <strong>Fix match</strong> on that row.
+          </>
+        ),
+      },
+      {
+        q: 'How does the app handle "Solo Leveling Season 2" style anime imports?',
+        a: (
+          <>
+            When an imported anime is a later season of a series already in your library,
+            PlexTracker uses AniList's relations to attach it to the main series entry at the
+            correct season number — automatically, with no separate entry and no review item.
+            It only does this when external IDs confirm it's the same series. Genuine sequels
+            (e.g. Dragon Ball → Dragon Ball Z) are left as separate titles.
+          </>
+        ),
+      },
+      {
+        q: 'The Match Review card shows chips like "Simkl", "IMDb", "TMDB" — what are those?',
+        a: (
+          <>
+            Clickable links to the title's page on each service. Tap one to open it in your
+            browser so you can verify the match before confirming. Only chips for IDs the app
+            actually found are shown.
           </>
         ),
       },
@@ -221,6 +269,19 @@ const sections: FaqSection[] = [
               To rate manually, open the title, pull up the Actions bar and tap{' '}
               <strong>★ Rate</strong>.
             </span>
+          </>
+        ),
+      },
+      {
+        q: 'What is "Season audit" in Admin?',
+        a: (
+          <>
+            <strong>Admin → Season audit</strong> scans your library for anime seasons that were
+            imported as standalone entries and ended up confirmed before being attached to their
+            main series. For each one, it proposes a merge. Tap <strong>Accept</strong> to merge
+            it into the right series, or <strong>Dismiss</strong> to leave it alone (dismissed
+            proposals don't come back). <strong>Accept all</strong> processes every proposal at
+            once. Nothing merges without your click.
           </>
         ),
       },
