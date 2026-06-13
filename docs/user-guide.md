@@ -114,18 +114,26 @@ Il arrive que Plex ou l'import Simkl crée des doublons (ex: une série d'anime 
 
 ### Revue des matchs
 
-Quand PlexTracker reçoit un nouveau titre via Plex, il tente de l'identifier automatiquement (TMDB, AniList, Gemini AI). Si l'identification n'est pas certaine :
+Quand PlexTracker reçoit un nouveau titre via Plex, il tente de l'identifier automatiquement (TMDB, AniList, Gemini AI).
+
+**Confirmation automatique** : quand Gemini est très confiant dans son identification, le match est confirmé directement — sans passer par la file de revue. La revue des matchs ne contient donc que les cas ambigus qui méritent vraiment une vérification.
+
+Si l'identification n'est pas certaine :
 
 - **Pending review** (confiance haute) : probablement correct, à confirmer
 - **Unconfirmed** (confiance basse) : nécessite une vérification manuelle
 
 Actions : Confirmer le match ou Corriger (re-recherche ou saisie manuelle d'IDs).
 
+**Liens de vérification** : chaque carte de revue affiche les liens vers les bases externes disponibles (Simkl, IMDb, TMDB, AniList) pour identifier rapidement le titre avant de confirmer.
+
 **Titre introuvable** : certains titres n'existent dans aucune base (TMDB, IMDb, AniList). Dans ce cas le bouton principal devient **Keep as-is** : il accepte le titre tel quel (nom Plex conservé, sans métadonnées externes) et le sort de la file de revue. Le titre reste suivi dans la bibliothèque.
 
 **Swipe actions** : glisser une carte vers la gauche révèle deux boutons — Confirm / Keep as-is (vert) et Fix match (orange). Glisser loin exécute automatiquement l'action principale.
 
 Le bouton "Batch confirm" permet de confirmer tous les matchs "pending" d'un coup.
+
+**Récemment confirmés automatiquement** : en bas de l'écran de revue, une section "Recently auto-matched" liste les titres récemment confirmés automatiquement. Permet de repérer et corriger rapidement un faux positif sans attendre de le trouver dans la bibliothèque.
 
 ### Panneaux (BottomSheet)
 
@@ -214,6 +222,14 @@ Dès qu'un événement se produit dans PlexTracker, une mise à jour est envoyé
 
 La synchronisation est **par saison**. AniList traite chaque saison comme une œuvre séparée : *Solo Leveling* S1 et *Solo Leveling S2 — Arise from the Shadow* sont deux entrées distinctes. PlexTracker envoie chaque saison à l'entrée AniList correspondante.
 
+### Rattachement automatique des saisons anime
+
+Quand PlexTracker identifie un anime avec un ID AniList, il remonte automatiquement la chaîne de prequels pour déterminer si c'est une saison d'une série plus grande. Si c'est le cas, le titre est fusionné dans la série parente (créée au besoin) à la bonne position de saison — sans intervention de l'utilisateur.
+
+**Protection franchise** : si la saison a sa propre identité externe (IMDb, TMDB, TVDB propres), elle n'est pas fusionnée automatiquement — elle reste un titre indépendant. Seules les entrées sans identité propre sont rattachées par les relations AniList seules.
+
+Si le rattachement automatique s'est trompé, utiliser **Merge** depuis le tiroir d'actions pour corriger manuellement.
+
 ### Associer une saison à une entrée AniList
 
 Pour la plupart des animes, le pipeline d'identification (Gemini AI) attribue automatiquement la bonne entrée AniList à chaque saison lors de l'import. Si une saison n'est pas mappée, un bandeau ambre « Not mapped for this season · Link entry » apparaît sur la saison active. Tapper « Link entry » ouvre un panneau de recherche AniList — sélectionner la bonne entrée et valider.
@@ -279,10 +295,25 @@ Déclenché automatiquement quand un nouveau titre est détecté (via Plex ou aj
 3. **Recherche TMDB** : recherche par titre + année si aucun ID trouvé
 4. **Recherche AniList** : recherche par titre (anime uniquement)
 5. **Vérification Gemini AI** : si les étapes 3-4 ont trouvé un candidat, Gemini vérifie la correspondance
-   - Confiance haute → `pending_review` (à confirmer par l'utilisateur)
-   - Confiance basse → `unconfirmed` (à vérifier manuellement)
+   - Confiance haute + vérifié → `confirmed` automatiquement (plus rien à faire)
+   - Toute autre issue (confiance moyenne, basse, ou échec de vérification) → `unconfirmed` (à vérifier manuellement)
+   - Si Gemini est indisponible → `pending_review` (à confirmer par l'utilisateur)
 
 Si aucune étape ne trouve de match, le titre est créé quand même avec les métadonnées Plex disponibles, en statut `unconfirmed`. L'utilisateur peut corriger depuis l'écran de revue des matchs.
+
+---
+
+## Audit des saisons (Admin)
+
+L'outil **Season Audit** (Admin → Season Audit) détecte les séries confirmées qui partagent un identifiant externe commun — signe qu'elles sont probablement des saisons d'une même série qui n'ont pas encore été fusionnées automatiquement.
+
+Pour chaque groupe détecté, PlexTracker propose une fusion nommée (en s'appuyant sur les relations AniList quand disponibles). Chaque proposition indique le titre source, le titre de destination, et le numéro de saison suggéré.
+
+**Actions disponibles par proposition :**
+- **Accept** : fusionne le titre source dans la destination à la saison indiquée. L'opération est immédiate et irréversible (le titre source est supprimé).
+- **Dismiss** : écarte définitivement cette proposition. La paire ne sera plus jamais suggérée.
+
+Aucune fusion n'est automatique — toutes nécessitent une validation explicite.
 
 ---
 
@@ -299,6 +330,18 @@ make import BACKUP_FILE=/chemin/vers/Simkl_backup.zip
 ```
 
 L'import crée les titres avec les IDs externes, les épisodes vus, et les notes. Les données manquantes (couvertures, liste complète d'épisodes, noms multilingues) sont enrichies automatiquement par la tâche de fond quotidienne sur plusieurs jours.
+
+**Réinitialisation complète + réimport** : pour repartir d'une base vide et tout réimporter (utile après une migration ou en cas de corruption) :
+
+```bash
+# Local
+make reset-import BACKUP_FILE=/chemin/vers/Simkl_backup.zip
+
+# NAS (le fichier doit être dans /volume1/downloads/)
+make ssh-reset-import BACKUP_FILE=Simkl_backup.zip
+```
+
+Ces commandes suppriment les fichiers de base (db + WAL + SHM), redémarrent le conteneur (qui rejoue les migrations sur une base vide), puis réimportent le backup. Elles refusent de s'exécuter sans `BACKUP_FILE`.
 
 ---
 

@@ -10,6 +10,8 @@ Update when adding routes, services, components, or commands.
 |---|---|---|
 | `serve` | `cmd/serve.go` | HTTP server (configurable with `DISABLE_BACKGROUND_TASKS`) |
 | `import` | `cmd/import.go` | Simkl backup import |
+| `reset-import` | `Makefile` | Calls `db-reset` (deletes .db + -wal + -shm, restarts Docker container so migrations re-run on boot), sleeps 5 s, then `import`. Refuses without `BACKUP_FILE=`. |
+| `ssh-reset-import` | `Makefile` | Calls `ssh-db-reset` (rm files inside container + `docker restart plextracker`, migrations re-run on boot), sleeps 20 s, then `ssh-import`. `BACKUP_FILE=` is a filename under `/volume1/downloads`. Refuses without it. |
 
 ### Models
 
@@ -42,11 +44,55 @@ Update when adding routes, services, components, or commands.
 2. **Cross-reference** — anime-offline-database lookup → `confirmed`
 3. **TMDB search** — by title+year → Step 5
 4. **AniList search** — anime only → Step 5
-5. **Gemini verification** — high confidence → `pending_review`, low → `unconfirmed`
+5. **Gemini verification** — `verifyAndEnrich` in `pipeline.go`:
+   - Gemini present: `Confirmed && Confidence==High` → `confirmed`; all other outcomes (medium, low, not-confirmed, HTTP error) → `unconfirmed`.
+   - Gemini absent (`p.gemini == nil`) → `pending_review`.
+
+**Auto-confirm rule (migration 026+):** When Gemini returns `ConfidenceHigh` AND `MatchSource` is a search strategy (`tmdb_search`, `anilist_search`, `gemini_fuzzy`) AND `PreserveMatch` is false → `match_status = confirmed` directly (skips `pending_review`). A `match_events` row with kind `auto_confirmed` is written in the same tx. `isSearchSource()` in `taskqueue.go` encodes which sources qualify.
 
 Confidence: `ConfidenceHigh`/`Medium`/`Low` (constants in `pipeline.go`). Nil clients are skipped (graceful degradation). Each step sets `MatchSource` (`plex_ids`, `crossref`, `tmdb_search`, `anilist_search`, `gemini_fuzzy`, `none`).
 
 After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres: union; cover: TMDB > TVDB > AniList). TVDB URL resolution via `ParseURLFull()` → slug → numeric ID.
+
+### AniList Season Chain
+
+`AniListClient.ResolveSeasonChain(ctx, id)` in `internal/service/matching/anilist_relations.go` walks PREQUEL edges to the chain root and returns `SeasonChain{RootID, RootTitle, SeasonNumber, IsRoot, RootIsSeries}`.
+
+Rules:
+- TV and ONA formats count as season carriers (increment ordinal); movies/OVA/specials are traversed without incrementing.
+- Non-TV/ONA entry → `IsRoot=true, SeasonNumber=1, RootIsSeries=false` immediately.
+- `pickPrequel`: prefers TV over ONA over any other ANIME PREQUEL edge.
+- Cycle guard: errors on revisited node. Depth guard: errors at `maxChainDepth=25`.
+
+Pipeline wrapper: `Pipeline.ResolveAniListSeason(ctx, anilistID)` (called from `resolveAnimeSeason` in `taskqueue.go`).
+
+### Season Auto-Attach (`decideSeasonAction`)
+
+Pure fn in `taskqueue.go`; called from `resolveAnimeSeason` after `ResolveSeasonChain`. No DB/HTTP — unit-testable.
+
+| Input state | Decision |
+|---|---|
+| `chain == nil` (resolve failed) | `legacy` — fall back to IMDb-collision path |
+| `chain.IsRoot` | `legacyRoot` — offset 0 (season 1 treatment) |
+| `!chain.RootIsSeries` | `none` — never attach TV season to movie/special root |
+| `parentByIDs != nil` (shared own IMDb/TMDB id) | `mergeInto parentByIDs` at `SeasonNumber-1` offset |
+| `parentByRoot != nil` AND entry has own IMDb/TMDB/TVDB identity | `none` — distinct franchise member (e.g. Dragon Ball Z) |
+| `parentByRoot != nil` AND no own identity | `mergeInto parentByRoot` at offset |
+| No parent found AND entry has own identity | `none` |
+| No parent found AND no own identity | `createRoot` (create the parent series, then merge) |
+
+On accepted merge: writes `match_events` row with kind `season_attached` on the surviving parent title.
+
+### match_events
+
+Migration 026. Table: `match_events(id PK, title_id INTEGER nullable FK→titles CASCADE, kind TEXT, detail TEXT, created_at)`. `title_id` has no NOT NULL constraint — the model field is `*int64`; it becomes NULL when the referenced title is deleted (CASCADE sets it). Index on `created_at DESC`.
+
+Kinds (`model.MatchEventKind`):
+- `auto_confirmed` — written in `handleEnrichment` when a search-source match lands `confirmed` (not `PreserveMatch`).
+- `season_attached` — written in `mergeSeasonInto` on successful auto-attach; `title_id` points to the surviving parent.
+
+Writer: `repository.NewMatchEventWriter(tx).Create(ctx, titleID, kind, detail)`.
+Reader: `repository.MatchEventRepository.ListRecent(ctx, limit)` — returns events with `cover_url` join.
 
 **Seasons NOT created by enrichment.** Created only by refresh (`TaskTypeRefresh` → `refreshSeriesFromTMDB`, needs `TMDBID`) or watched-episode (`SeasonWriter.GetOrCreate`, `plex.go`). Consequences:
 - Just-matched series has 0 seasons until refresh/watch. API omits the field (`Seasons json:"seasons,omitempty"` → `undefined` client-side) — front-end must guard (e.g. `title.seasons ?? []`).
@@ -78,6 +124,18 @@ After matching: parallel TMDB + TVDB fetch → fusion (overview: longest; genres
 
 **UI (Concept B).** Active-season info strip between the progress line and the episode grid. Component: `frontend/src/components/SeasonAniListStrip.tsx`. Multi-season titles hide the title-level AniList tab in the action bar; movies and single-season titles keep it. Per-season fix-match via the pencil ✎ in the strip (or "Link entry" CTA on unmapped seasons) opens `RematchSheet` with `seasonID` context — saving calls `PUT /titles/{titleID}/seasons/{seasonID}/anilist`, removing calls `DELETE` on the same route.
 
+### Season Audit Service
+
+`internal/service/seasonaudit.go` — `SeasonAuditService.Scan(ctx)` finds confirmed series that share an external id (IMDb/TMDB/TVDB/AniList), groups them into connected components, then proposes merges named via AniList relations (or fallback heuristics). Returns `[]SeasonAuditProposal`. Dismissed pairs (persisted in `season_audit_dismissals`) are excluded.
+
+`Accept(ctx, sourceTitleID, targetTitleID, seasonNumber)` — executes the merge (source → target at given season offset). Never automatic; always user-initiated.
+
+`Dismiss(ctx, sourceTitleID, targetTitleID)` — inserts a `season_audit_dismissals` row; pair never re-proposed.
+
+### Simkl Provenance
+
+Migration 026 adds `titles.simkl_id INTEGER` and `titles.simkl_slug TEXT`. `SimklImporter` (`internal/service/simkl.go`) populates these from `ids.simkl` / `ids.slug` on every imported title. `MatchReviewCard.tsx` uses them to build outbound Simkl links (`https://simkl.com/<section>/<id>/<slug>`). Also renders IMDb, TMDB, and AniList outbound links from their respective title fields. AniList id now flows through `SimklIDs` → `EnrichmentPayload.AniListID` → `MatchInput.AniListID` so it's available to the pipeline on first enrichment.
+
 ### Repositories
 
 `internal/repository/` — Read methods accept `database.DBTX` (pool or tx). Write methods live on typed writer structs (e.g. `TitleWriter`, `SeasonWriter`, `EpisodeWriter`, `WatchEventWriter`) that take `*sql.Tx` in their constructor; the compiler rejects any attempt to write outside a transaction. Callers wrap in `database.WithTxContext(ctx, pool, func(tx *sql.Tx) error { ... })` and build writers from `tx`.
@@ -94,6 +152,8 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | SeasonExternalID | `Get`, `ListForTitle` | `Set`, `Delete` on pool (`SeasonExternalIDRepository`); `Stamp` on tx (`SeasonExternalIDWriter`) — `Stamp` is first-writer-wins (`ON CONFLICT DO NOTHING`) and is the entry point used by the merge flow (`TitleWriter.Merge`) and S1 backfill (`stampSeasonAniListID` in `backfill.go`); `Set` overwrites (used by Phase 7 fix-match). Provider key constant: `repository.ProviderAniList`. Migration 020. |
 | Genre | `ListWithCounts` | `ReplaceForTitle` |
 | Setting | `Get` | `Set`, `Delete` |
+| MatchEvent | `ListRecent(ctx, limit)` — returns events with cover_url join | `Create(ctx, titleID, kind, detail)` on `*sql.Tx` via `MatchEventWriter` |
+| SeasonAuditDismissal | — | `Dismiss(ctx, src, tgt)` direct pool write (`season_audit.go`) |
 | StatsRepository | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` |
 | ActivityRepository | `List` (paginated watch events) |
 | HistoryRepository | `GetByTitleID` (per-title watch log) |
@@ -150,6 +210,10 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | GET | `/api/anilist/auth` | Authorize | Yes |
 | POST | `/api/anilist/token` | SaveToken | Yes |
 | DELETE | `/api/anilist/token` | Disconnect | Yes |
+| GET | `/api/match-events` | List (default 30, cap 100 via `?limit=N`) → `{"events":[{id,title_id,kind,detail,created_at,cover_url}]}` | Yes |
+| GET | `/api/admin/season-audit` | List → `{"proposals":[...]}` | Yes |
+| POST | `/api/admin/season-audit/accept` | Accept `{source_title_id,target_title_id,season_number}` | Yes |
+| POST | `/api/admin/season-audit/dismiss` | Dismiss `{source_title_id,target_title_id}` | Yes |
 | GET | `/api/admin/counts` | Counts | Yes |
 | GET | `/api/admin/tasks` | ListTasks | Yes |
 | POST | `/api/admin/tasks/{id}/retry` | RetryTask | Yes |
@@ -248,6 +312,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | `/admin/notifications` | AdminNotifications | `pages/AdminNotifications.tsx` |
 | `/admin/anilist` | AdminAniList | `pages/AdminAniList.tsx` |
 | `/admin/help` | Help | `pages/Help.tsx` (in-app FAQ) |
+| `/admin/season-audit` | AdminSeasonAudit | `pages/AdminSeasonAudit.tsx` |
 | `/anilist/callback` | AnilistCallback | `pages/AnilistCallback.tsx` |
 | `/match-review` | MatchReview | `pages/MatchReview.tsx` |
 
