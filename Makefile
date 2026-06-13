@@ -6,8 +6,8 @@ DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
 .PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate
-.PHONY: import import-dry db-reset backfill-accents
-.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-logs
+.PHONY: import import-dry db-reset reset-import backfill-accents
+.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-logs
 
 # SSH helper: sources NAS_* from .env.local and runs a command over SSH
 NAS_SSH = bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
@@ -65,8 +65,14 @@ backfill-accents: ## Backfill accent_hex sur tous les titres avec cover (idempot
 	$(EXEC) ./tmp/plextracker backfill-accents $(if $(FORCE),--force,)
 
 db-reset: ## Reset la BDD locale (supprime + restart pour re-migrer)
-	$(EXEC) sh -c 'rm -f $${DATA_DIR}/plextracker.db'
+	$(EXEC) sh -c 'rm -f $${DATA_DIR}/plextracker.db $${DATA_DIR}/plextracker.db-wal $${DATA_DIR}/plextracker.db-shm'
 	$(DC) restart app
+
+reset-import: ## Vide la BDD locale puis réimporte un backup Simkl (BACKUP_FILE=path)
+	@test -n "$(BACKUP_FILE)" || { echo "BACKUP_FILE est requis"; exit 1; }
+	$(MAKE) db-reset
+	@sleep 5
+	$(MAKE) import BACKUP_FILE=$(BACKUP_FILE)
 
 # ── NAS (via SSH) ─────────────────────────────────
 
@@ -81,8 +87,14 @@ ssh-import-dry: ## Dry-run Simkl import sur le NAS (BACKUP_FILE=filename in /vol
 		/usr/local/bin/docker exec plextracker rm /tmp/$(BACKUP_FILE))
 
 ssh-db-reset: ## Reset la BDD du NAS (supprime + restart pour re-migrer)
-	@$(call NAS_SSH,/usr/local/bin/docker exec plextracker rm /data/plextracker.db && \
+	@$(call NAS_SSH,/usr/local/bin/docker exec plextracker rm -f /data/plextracker.db /data/plextracker.db-wal /data/plextracker.db-shm && \
 		/usr/local/bin/docker restart plextracker)
+
+ssh-reset-import: ## Vide la BDD du NAS puis réimporte (BACKUP_FILE=filename in /volume1/downloads)
+	@test -n "$(BACKUP_FILE)" || { echo "BACKUP_FILE est requis"; exit 1; }
+	$(MAKE) ssh-db-reset
+	@sleep 20
+	$(MAKE) ssh-import BACKUP_FILE=$(BACKUP_FILE)
 
 ssh-db-pull: ## Pull la BDD du NAS vers le local (nettoie le local avant)
 	@echo "Arrêt de l'application locale..."
