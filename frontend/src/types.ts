@@ -231,3 +231,12 @@ export interface UpcomingTitle {
   next_air_episode: string | null
   status: string
 }
+
+export interface SeasonAuditProposal {
+  source_title_id: number
+  source_name: string
+  target_title_id: number
+  target_name: string
+  season_number: number
+  shared_id: string
+}

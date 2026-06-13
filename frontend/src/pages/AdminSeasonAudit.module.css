@@ -1,0 +1,174 @@
+.page {
+  padding: var(--space-lg) var(--space-lg) 180px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.scanBtn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scanBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading,
+.empty {
+  padding: var(--space-xl);
+  color: var(--ink);
+  text-align: center;
+  font-size: 14px;
+}
+
+.topActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+.acceptAllBtn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acceptAllBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proposal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.sourceName {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.arrow {
+  color: var(--ink-dim);
+  font-size: 14px;
+}
+
+.targetInfo {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.sharedIdChip {
+  display: inline-block;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-dim);
+  font-size: 11px;
+  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.acceptBtn,
+.dismissBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-button);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.acceptBtn {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.dismissBtn {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.acceptBtn:disabled,
+.dismissBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
