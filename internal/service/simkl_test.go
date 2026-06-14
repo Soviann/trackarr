@@ -246,3 +246,63 @@ func TestSimklImport_SimklIDsAndAniListEnrichment(t *testing.T) {
 }
 
 func intPtr(i int) *int { return &i }
+
+func TestSimklImport_AnimeSeriesSharedID_NotSkipped(t *testing.T) {
+	importer := setupImporter(t)
+
+	// Two anime cours that share the parent franchise's IMDb id but carry
+	// distinct AniList ids — Simkl stamps sequels with the parent show's id.
+	backup := &service.SimklBackup{
+		Anime: []service.SimklItem{
+			{
+				Status:    "completed",
+				AnimeType: "tv",
+				Show:      &service.SimklMedia{Title: "Sword Art Online", Year: 2012, IDs: service.SimklIDs{IMDB: "tt2250192", AniList: 11757}},
+			},
+			{
+				Status:    "completed",
+				AnimeType: "tv",
+				Show:      &service.SimklMedia{Title: "Sword Art Online II", Year: 2014, IDs: service.SimklIDs{IMDB: "tt2250192", AniList: 20594}},
+			},
+		},
+	}
+
+	result, err := importer.Import(backup, false)
+	require.NoError(t, err)
+	assert.Equal(t, 2, result.Created, "both anime cours must be created, not deduped on the shared parent id")
+	assert.Equal(t, 0, result.Skipped)
+}
+
+func TestSimklImport_NonAnimeSeriesSharedID_StillSkips(t *testing.T) {
+	importer := setupImporter(t)
+
+	// A regular show appearing twice under the same id is a true duplicate.
+	backup := &service.SimklBackup{
+		Shows: []service.SimklItem{
+			{Status: "completed", Show: &service.SimklMedia{Title: "Breaking Bad", Year: 2008, IDs: service.SimklIDs{IMDB: "tt0903747"}}},
+			{Status: "completed", Show: &service.SimklMedia{Title: "Breaking Bad", Year: 2008, IDs: service.SimklIDs{IMDB: "tt0903747"}}},
+		},
+	}
+
+	result, err := importer.Import(backup, false)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Created)
+	assert.Equal(t, 1, result.Skipped, "non-anime series sharing an id is a true duplicate — keep skipping")
+}
+
+func TestSimklImport_AnimeMovieSharedID_StillSkips(t *testing.T) {
+	importer := setupImporter(t)
+
+	// Two anime movies sharing an id are true duplicates — movies always skip.
+	backup := &service.SimklBackup{
+		Anime: []service.SimklItem{
+			{Status: "completed", AnimeType: "movie", Movie: &service.SimklMedia{Title: "A Silent Voice", Year: 2016, IDs: service.SimklIDs{IMDB: "tt5323662"}}},
+			{Status: "completed", AnimeType: "movie", Movie: &service.SimklMedia{Title: "A Silent Voice", Year: 2016, IDs: service.SimklIDs{IMDB: "tt5323662"}}},
+		},
+	}
+
+	result, err := importer.Import(backup, false)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Created)
+	assert.Equal(t, 1, result.Skipped, "anime movies sharing an id are true duplicates — keep skipping")
+}

@@ -168,10 +168,18 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 		tmdbID = &v
 	}
 
-	if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil, nil, &titleType); err == nil && existing != nil {
-		log.Printf("simkl import: skipped %q (%s) — already exists as %q (id=%d)", media.Title, titleType, existing.PrimaryName(), existing.ID)
-		result.Skipped++
-		return nil
+	// Anime series sequels share the parent franchise's external id in Simkl
+	// exports, so an id-collision is NOT a duplicate — it is another cour.
+	// Create it anyway and let enrichment's season-attach machinery fold it
+	// into the parent. Movies and non-anime series sharing an id are true
+	// duplicates, so they keep skipping.
+	isAnimeSeries := isAnime && titleType == model.TitleTypeSeries
+	if !isAnimeSeries {
+		if existing, err := s.titles.FindByExternalID(imdbID, tmdbID, nil, nil, &titleType); err == nil && existing != nil {
+			log.Printf("simkl import: skipped %q (%s) — already exists as %q (id=%d)", media.Title, titleType, existing.PrimaryName(), existing.ID)
+			result.Skipped++
+			return nil
+		}
 	}
 
 	if dryRun {
