@@ -1165,6 +1165,101 @@ func TestHandleEnrichment_AutoAttachesSeasonBySharedIMDb(t *testing.T) {
 		"source season 1 must be re-numbered to season 2 on the parent after merge with offset 1")
 }
 
+// TestHandleEnrichment_ThreeCoursMergeIntoRoot verifies N-cours consolidation:
+// S2 and S3 both share the root's parent imdb but carry distinct AniList ids.
+// Each enriches and merges into the root (resolved by AniList root id) at its
+// absolute season — S2→season 2, S3→season 3 — independent of import order.
+func TestHandleEnrichment_ThreeCoursMergeIntoRoot(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	const sharedIMDB = "tt-root-show"
+
+	mk := func(name string, year int, anilist int64) int64 {
+		imdb := sharedIMDB
+		al := anilist
+		return testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     true,
+			Year:        year,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+			IMDBID:      &imdb,
+			AniListID:   &al,
+		}, []model.TitleName{{Name: name, Language: "en", IsPrimary: true}})
+	}
+
+	// Root carries its AniList id (10) so parentByRoot resolves deterministically.
+	rootID := mk("Root Show", 2012, 10)
+	s2ID := mk("Root Show II", 2014, 20)
+	s3ID := mk("Root Show III", 2016, 30)
+
+	// Seed one season on each sequel so the merge has something to shift.
+	testutil.GetOrCreateEpisode(t, db, testutil.InsertSeason(t, db, s2ID, 1), 1)
+	testutil.GetOrCreateEpisode(t, db, testutil.InsertSeason(t, db, s3ID, 1), 1)
+
+	// AniList chain: 30 → PREQUEL 20 → PREQUEL 10 (root).
+	anilist := newAniListChainMock(t, map[int64]struct {
+		Format  string
+		English string
+		Prequel int64
+	}{
+		10: {Format: "TV", English: "Root Show", Prequel: 0},
+		20: {Format: "TV", English: "Root Show II", Prequel: 10},
+		30: {Format: "TV", English: "Root Show III", Prequel: 20},
+	})
+
+	pipeline := matching.NewPipeline(nil, anilist, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, anilist, nil, nil, t.TempDir(), titleSvc, db)
+
+	enrich := func(titleID int64, name string, anilist int64) {
+		raw, err := json.Marshal(service.EnrichmentPayload{
+			TitleID:   titleID,
+			TitleName: name,
+			TitleType: model.TitleTypeSeries,
+			IsAnime:   true,
+			IMDBID:    sharedIMDB,
+			AniListID: anilist,
+			LockedIDs: []string{service.LockIMDB},
+		})
+		require.NoError(t, err)
+		testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+	}
+	// Enrich the sequels (the root needs no merge). Process newest-first to
+	// prove order-independence of the root targeting.
+	enrich(s3ID, "Root Show III", 30)
+	enrich(s2ID, "Root Show II", 20)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	for _, task := range queued {
+		worker.ProcessTask(context.Background(), task)
+	}
+
+	// Both sequels consumed by merges into the root.
+	_, err = titles.GetByID(s2ID)
+	assert.Error(t, err, "S2 must be merged away into the root")
+	_, err = titles.GetByID(s3ID)
+	assert.Error(t, err, "S3 must be merged away into the root")
+
+	// Root keeps its absolute seasons: S2→2, S3→3.
+	for _, season := range []int{2, 3} {
+		var count int
+		err = db.QueryRowContext(context.Background(),
+			`SELECT COUNT(*) FROM seasons WHERE title_id = ? AND season_number = ?`,
+			rootID, season,
+		).Scan(&count)
+		require.NoError(t, err)
+		assert.Equal(t, 1, count, "cour must live as absolute season %d on the root", season)
+	}
+}
+
 // TestHandleEnrichment_RootNotMergedIntoDistinctSibling guards the direction of
 // the legacy IMDb-collision merge: a chain ROOT enriching while a distinct
 // AniList sibling (a sequel) shares its imdb must NOT merge the root into the
