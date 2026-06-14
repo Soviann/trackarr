@@ -561,11 +561,16 @@ func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matc
 	if existing == nil || existing.ID == payload.TitleID || existing.Type == model.TitleTypeMovie {
 		return false, nil
 	}
-	// A distinct non-zero AniList id means `existing` is a different franchise
-	// member (typically a sequel sharing the parent's imdb). The current title
-	// must never merge INTO it — let that member's own enrichment merge it into
-	// the root instead. Merge only a true duplicate (no/0 AniList id, or the
-	// same AniList id as the current title).
+	// Guard on `existing`'s AniList id: a distinct non-zero id means `existing`
+	// is a different franchise member (typically a sequel sharing the parent's
+	// imdb). The current title must never merge INTO it — let that member's own
+	// enrichment merge it into the root instead. This fires even when the
+	// current title has no AniList id of its own (result.AniListID == 0, the
+	// path that reaches here): we cannot prove same-show, so leaving a standalone
+	// title (surfaced by the Season-audit tool) is the safe fallback, whereas a
+	// wrong-direction merge would silently destroy data. The merge proceeds only
+	// when `existing` has no/0 AniList id (a legacy/Plex duplicate) or the same
+	// id as the current title (a true duplicate).
 	if existing.AniListID != nil && *existing.AniListID != 0 && *existing.AniListID != result.AniListID {
 		logger.Info("skip IMDB-collision merge into distinct AniList sibling",
 			"imdbID", result.IMDBID,
