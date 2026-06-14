@@ -1164,3 +1164,88 @@ func TestHandleEnrichment_AutoAttachesSeasonBySharedIMDb(t *testing.T) {
 	assert.Equal(t, 1, seasonCount,
 		"source season 1 must be re-numbered to season 2 on the parent after merge with offset 1")
 }
+
+// TestHandleEnrichment_RootNotMergedIntoDistinctSibling guards the direction of
+// the legacy IMDb-collision merge: a chain ROOT enriching while a distinct
+// AniList sibling (a sequel) shares its imdb must NOT merge the root into the
+// sibling. The root stays; the sequel's own enrichment folds it in later.
+func TestHandleEnrichment_RootNotMergedIntoDistinctSibling(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	const sharedIMDB = "tt-root-show"
+	const rootAniList = int64(10)
+	const siblingAniList = int64(20)
+
+	// Create the sibling FIRST so it owns the lower rowid: FindByExternalID is
+	// `... LIMIT 1` with no ORDER BY, so the legacy collision path will return
+	// the sibling, not the root — this is what actually exercises the guard.
+	// Without the guard the root would merge INTO this distinct-AniList sibling.
+	sibIMDB := sharedIMDB
+	sibAL := siblingAniList
+	siblingID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2014,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		IMDBID:      &sibIMDB,
+		AniListID:   &sibAL,
+	}, []model.TitleName{{Name: "Root Show II", Language: "en", IsPrimary: true}})
+
+	// The root title (season 1) being enriched.
+	imdb := sharedIMDB
+	rootAL := rootAniList
+	rootID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2012,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		IMDBID:      &imdb,
+		AniListID:   &rootAL,
+	}, []model.TitleName{{Name: "Root Show", Language: "en", IsPrimary: true}})
+
+	// AniList: 10 is the root (no prequel). Resolving 10 yields IsRoot=true.
+	anilist := newAniListChainMock(t, map[int64]struct {
+		Format  string
+		English string
+		Prequel int64
+	}{
+		10: {Format: "TV", English: "Root Show", Prequel: 0},
+		20: {Format: "TV", English: "Root Show II", Prequel: 10},
+	})
+
+	pipeline := matching.NewPipeline(nil, anilist, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, anilist, nil, nil, t.TempDir(), titleSvc, db)
+
+	raw, err := json.Marshal(service.EnrichmentPayload{
+		TitleID:   rootID,
+		TitleName: "Root Show",
+		Year:      2012,
+		TitleType: model.TitleTypeSeries,
+		IsAnime:   true,
+		IMDBID:    sharedIMDB,
+		AniListID: rootAniList,
+		LockedIDs: []string{service.LockIMDB},
+	})
+	require.NoError(t, err)
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, string(raw), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	// Both titles must still exist — the root was NOT merged into the sibling.
+	_, err = titles.GetByID(rootID)
+	assert.NoError(t, err, "root title must survive — it must never merge into a distinct-AniList sibling")
+	_, err = titles.GetByID(siblingID)
+	assert.NoError(t, err, "sibling must be untouched by the root's enrichment")
+}
