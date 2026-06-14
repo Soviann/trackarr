@@ -624,9 +624,16 @@ func decideSeasonAction(chain *matching.SeasonChain, result *matching.MatchResul
 
 	offset := chain.SeasonNumber - 1
 
-	// Shared external id proves same-show: always safe to merge.
+	// Shared external id proves same-show: always safe to merge. Prefer the
+	// AniList chain root (parentByRoot, looked up by the unique root AniList id)
+	// as the target so 3+ cours sharing one parent imdb all merge into the true
+	// root — parentByIDs is a LIMIT-1 imdb match and may point at a sibling.
 	if parentByIDs != nil {
-		return seasonAction{Kind: seasonActionMergeInto, ParentID: parentByIDs.ID, Offset: offset}
+		target := parentByIDs
+		if parentByRoot != nil {
+			target = parentByRoot
+		}
+		return seasonAction{Kind: seasonActionMergeInto, ParentID: target.ID, Offset: offset}
 	}
 
 	hasOwnIdentity := result.IMDBID != "" || result.TMDBID != 0 || result.TVDBID != 0
@@ -690,15 +697,16 @@ func (w *TaskQueueWorker) resolveAnimeSeason(ctx context.Context, result *matchi
 				parentByIDs = t
 			}
 		}
-		if parentByIDs == nil {
-			t, err := w.titles.FindByExternalID(nil, nil, nil, &chain.RootID, &seriesType)
-			if err != nil {
-				if !errors.Is(err, sql.ErrNoRows) {
-					logger.Warn("FindByExternalID (root anilist)", "err", err)
-				}
-			} else if t != nil && t.ID != payload.TitleID {
-				parentByRoot = t
+		// Always resolve the chain root by its (unique) AniList id so
+		// decideSeasonAction can target it deterministically, even when
+		// parentByIDs already found a same-show sibling (3+ cours case).
+		rootT, rootErr := w.titles.FindByExternalID(nil, nil, nil, &chain.RootID, &seriesType)
+		if rootErr != nil {
+			if !errors.Is(rootErr, sql.ErrNoRows) {
+				logger.Warn("FindByExternalID (root anilist)", "err", rootErr)
 			}
+		} else if rootT != nil && rootT.ID != payload.TitleID {
+			parentByRoot = rootT
 		}
 	}
 

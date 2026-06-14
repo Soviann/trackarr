@@ -927,6 +927,20 @@ func TestDecideSeasonAction(t *testing.T) {
 			wantOffset:  1,
 		},
 		{
+			// Same-show proven by parentByIDs, AND the chain root resolves to a
+			// distinct title (parentByRoot). The merge must target the root, not
+			// the arbitrary shared-imdb sibling — this is what makes 3+ cours
+			// sharing one parent imdb merge into the true root deterministically.
+			name:         "S3, parentByIDs + parentByRoot → mergeInto targets root",
+			chain:        seasonChain(3, false, true),
+			result:       &matching.MatchResult{IMDBID: "tt-parent"},
+			parentByIDs:  titleAt(7),
+			parentByRoot: titleAt(9),
+			wantKind:     service.SeasonActionMergeIntoForTest,
+			wantParent:   9,
+			wantOffset:   2,
+		},
+		{
 			name:         "S2, own imdb + only parentByRoot → none (id-conflict protection)",
 			chain:        seasonChain(2, false, true),
 			result:       &matching.MatchResult{IMDBID: "tt-own"},
