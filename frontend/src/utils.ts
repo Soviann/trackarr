@@ -23,6 +23,47 @@ export function getName(title: Title): string {
   return title.names[0].name
 }
 
+/** Flag emoji + short label for a name's language code. Falls back to the uppercased code. */
+export function languageLabel(lang: string): { flag: string; label: string } {
+  switch (lang) {
+    case 'fr': return { flag: '🇫🇷', label: 'FR' }
+    case 'en': return { flag: '🇬🇧', label: 'EN' }
+    case 'x-romaji': return { flag: '🇯🇵', label: 'Romaji' }
+    case 'ja': return { flag: '🇯🇵', label: 'JP' }
+    case 'de': return { flag: '🇩🇪', label: 'DE' }
+    case 'es': return { flag: '🇪🇸', label: 'ES' }
+    case 'it': return { flag: '🇮🇹', label: 'IT' }
+    case 'pt': return { flag: '🇵🇹', label: 'PT' }
+    default: return { flag: '🏳️', label: lang.toUpperCase() }
+  }
+}
+
+/**
+ * Returns the alternative titles to display on the detail page: every name in
+ * `title.names`, deduplicated case-insensitively, excluding the one already shown
+ * as the main title and the `original_title`. Ordered by language priority.
+ */
+export function getAlternativeNames(title: Title): { name: string; language: string }[] {
+  if (!title.names || title.names.length === 0) return []
+  const norm = (s: string) => s.trim().toLowerCase()
+  const shown = new Set<string>([norm(getName(title))])
+  if (title.original_title) shown.add(norm(title.original_title))
+  const order = ['fr', 'en', 'x-romaji', 'ja']
+  const langRank = (lang: string) => {
+    const i = order.indexOf(lang)
+    return i === -1 ? order.length : i
+  }
+  const seen = new Set<string>()
+  const out: { name: string; language: string }[] = []
+  for (const n of title.names) {
+    const key = norm(n.name)
+    if (shown.has(key) || seen.has(key)) continue
+    seen.add(key)
+    out.push({ name: n.name, language: n.language })
+  }
+  return out.sort((a, b) => langRank(a.language) - langRank(b.language))
+}
+
 /** Returns the display label for a title type. */
 export function getTypeLabel(type: TitleType): string {
   switch (type) {

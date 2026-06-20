@@ -2,7 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { Title } from '../types'
 import { useApi } from '../hooks/useApi'
-import { computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
+import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
 import { colors } from '../theme'
 import { SeasonTab } from '../components/SeasonTab'
@@ -74,6 +74,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   }
 
   const name = getName(title)
+  const altNames = getAlternativeNames(title)
   const typeLabel = getTypeLabel(title.type)
   const current = sortedSeasons.find((ss) => ss.season_number === activeSeason)
     ?? sortedSeasons.find((ss) => (ss.episodes ?? []).some((e) => !e.watched))
@@ -287,6 +288,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <div className={s.detailRow}>
             <span className={s.detailKey}>Original title</span>
             <span className={s.detailVal}>{title.original_title}</span>
+          </div>
+        )}
+        {altNames.length > 0 && (
+          <div className={s.altNames}>
+            <div className={s.altNamesLabel}>Autres titres</div>
+            {altNames.map((alt) => {
+              const lang = languageLabel(alt.language)
+              return (
+                <div key={`${alt.language}-${alt.name}`} className={s.altNameRow}>
+                  <span className={s.altNameFlag} title={lang.label}>{lang.flag}</span>
+                  <span className={s.altNameText}>{alt.name}</span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

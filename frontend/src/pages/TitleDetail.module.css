@@ -236,6 +236,34 @@
 .detailKey { color: var(--ink); }
 .detailVal { color: #fff; text-align: right; }
 
+/* Alternative titles */
+.altNames {
+  padding-top: 6px;
+}
+
+.altNamesLabel {
+  color: var(--ink);
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.altNameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.altNameFlag {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.altNameText {
+  color: #fff;
+}
+
 /* Series-specific (unchanged pattern) */
 .progressWrap {
   padding: var(--space-md) var(--space-lg) 10px;
