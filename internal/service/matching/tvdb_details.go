@@ -47,9 +47,13 @@ type tvdbSeriesDetail struct {
 	Genres   []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
-	Score        float64           `json:"score"`
-	Runtime      *int              `json:"averageRuntime"`
-	Status       string            `json:"status"`
+	Score   float64 `json:"score"`
+	Runtime *int    `json:"averageRuntime"`
+	// TVDB v4 returns status as an object ({id, name, recordType, keepUpdated}),
+	// not a string. Decoding it as a string aborts the whole series fetch.
+	Status struct {
+		Name string `json:"name"`
+	} `json:"status"`
 	RemoteIDs    []tvdbRemoteID    `json:"remoteIds"`
 	Translations *tvdbTranslations `json:"translations"`
 }

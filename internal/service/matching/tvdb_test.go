@@ -34,6 +34,12 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 				"id":    81189,
 				"name":  "Breaking Bad",
 				"score": 9.5,
+				// TVDB v4 returns status as an object, not a string.
+				"status": map[string]any{
+					"id":         2,
+					"name":       "Ended",
+					"recordType": "series",
+				},
 				"genres": []map[string]string{
 					{"name": "Drama"},
 					{"name": "Crime"},
@@ -143,6 +149,7 @@ func TestTVDBGetSeriesDetails(t *testing.T) {
 	assert.Equal(t, int64(81189), details.ID)
 	assert.Equal(t, "Breaking Bad", details.Name)
 	assert.InDelta(t, 9.5, details.Score, 0.01)
+	assert.Equal(t, "Ended", details.Status.Name)
 	assert.Len(t, details.Genres, 2)
 
 	genres := extractSeriesGenres(details)
