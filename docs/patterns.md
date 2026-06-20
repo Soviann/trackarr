@@ -29,7 +29,7 @@ Update when adding routes, services, components, or commands.
 | CoverService | `internal/service/cover.go` | Owns cover image lifecycle: fetches from TMDB/TVDB/AniList with deadlines (a stalled CDN can't freeze the writeDB), persists filename via `TitleUpdate`, drives accent extraction (`colorextract/`). Shares the 2 rps `APILimiter` budget with TaskQueueWorker + BackgroundService. |
 | APILimiter | `internal/service/ratelimiter.go` | Global 2 rps token bucket guarding TMDB/TVDB/AniList HTTP calls across all background workers. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
-| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls) |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls). Name backfill: `syncTitleNames` → `AddMissingNames` inserts en/fr translations from TMDB (`GetTitleNames`) + TVDB (`details.Names()`) on refresh, additive (never deletes → anime romaji & merged-season aliases survive). AniList-only titles (no TMDB) still `ReplaceNames` (en+romaji) in `refreshFromAniList`. |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
@@ -141,7 +141,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 
 | Repository | Reader (DBTX) | Writer (*sql.Tx, ctx) |
 |---|---|---|
-| Title | `List`, `ListAll`, `GetByID`, `FindByExternalID`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `Merge`, `Delete`, `BatchDelete`, `BatchUpdateStatus` |
+| Title | `List`, `ListAll`, `GetByID`, `FindByExternalID`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchUpdateStatus` |
 | Season | `GetByID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
@@ -228,7 +228,9 @@ Source of truth for routes: `internal/router/router.go`. Read handler files for 
 
 Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
 
-Shared utilities split between `frontend/src/utils.ts` (formatters, name resolvers, AniList URL helpers — `getName`, `formatDate`, `formatWatchtime`, `computeAniListUrl`, `hexToRgba`…) and the typed `frontend/src/utils/` subdirectory:
+Shared utilities split between `frontend/src/utils.ts` (formatters, name resolvers, AniList URL helpers — `getName`, `getAlternativeNames`, `languageLabel`, `formatDate`, `formatWatchtime`, `computeAniListUrl`, `hexToRgba`…) and the typed `frontend/src/utils/` subdirectory:
+
+`getName` → single best display name (fr→en→romaji/ja→first). `getAlternativeNames` → dedup'd `title.names` minus the shown name and `original_title`, sorted by language; rendered as TitleDetail's "Autres titres" section. `languageLabel(code)` → `{flag, label}` for a name's language.
 
 | Module | Purpose |
 |---|---|

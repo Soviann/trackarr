@@ -70,7 +70,7 @@ L'écran principal affiche tous les titres organisés par statut.
 - **Carte « My rating »** : note personnelle (sur 10) à gauche ; à droite, les notes externes TMDB et AniList (en %) quand disponibles. Pas de note TVDB.
 - **Carte « Synopsis »** : résumé du titre avec bouton « Show more » / « Show less » pour développer.
 - **Carte « Cast & Crew »** : liste des acteurs principaux et de l'équipe (rôles). Taper un nom ouvre la page **Person** qui filtre la bibliothèque sur tous les titres où cette personne apparaît.
-- **Carte « Details »** : Added, Last watched, Watch time (cumulé), Last refreshed.
+- **Carte « Details »** : Added, Last watched, Watch time (cumulé), Last refreshed, Original title, et une section **« Autres titres »** listant les titres dans les autres langues et les alias connus (chacun avec son drapeau 🇫🇷/🇬🇧/🇯🇵), sans doublon ni répétition du titre déjà affiché. Ces titres alternatifs sont complétés au fil des rafraîchissements (traductions TMDB/TVDB).
 - **Bouton « Historique »** : ouvre une vue plein écran des sessions de visionnage du titre, avec regroupement automatique des épisodes consécutifs en plages (ex: `S1 E1–4 · 12 avr.`).
 - **Barre de progression** (séries/anime) : `S2 · 7 of 10 episodes watched`.
 - **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée.
