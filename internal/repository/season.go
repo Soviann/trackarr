@@ -55,3 +55,23 @@ func (r *SeasonRepository) GetWithProgress(ctx context.Context, id int64) (*Seas
 	}
 	return &s, nil
 }
+
+// WatchedEpisodeNumbers returns the ascending episode numbers watched in a
+// season. Used by the per-part AniList push to split progress across parts.
+func (r *SeasonRepository) WatchedEpisodeNumbers(ctx context.Context, seasonID int64) ([]int, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT episode FROM episodes WHERE season_id = ? AND watched = 1 ORDER BY episode`, seasonID)
+	if err != nil {
+		return nil, fmt.Errorf("watched episode numbers: %w", err)
+	}
+	defer rows.Close()
+	var nums []int
+	for rows.Next() {
+		var n int
+		if err := rows.Scan(&n); err != nil {
+			return nil, fmt.Errorf("scan watched episode: %w", err)
+		}
+		nums = append(nums, n)
+	}
+	return nums, rows.Err()
+}

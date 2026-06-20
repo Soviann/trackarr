@@ -4,12 +4,24 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func ptrInt(v int) *int { return &v }
+
+// seq returns []int{a, a+1, ..., b}.
+func seq(a, b int) []int {
+	out := make([]int, 0, b-a+1)
+	for i := a; i <= b; i++ {
+		out = append(out, i)
+	}
+	return out
+}
 
 type fakeAniListClient struct {
 	calls       []matching.SaveMediaListEntryInput
@@ -45,6 +57,88 @@ func TestDeriveSeasonState(t *testing.T) {
 			assert.Equal(t, tt.wantProgress, gotProgress)
 		})
 	}
+}
+
+func TestDerivePartStates_TwoParts(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: ptrInt(16)},
+	}
+
+	// All 28 watched → both parts COMPLETED at their full counts.
+	got := service.DerivePartStates("watching", parts, seq(1, 28))
+	require.Len(t, got, 2)
+	assert.Equal(t, int64(100), got[0].MediaID)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.True(t, got[0].Rating)
+	assert.Equal(t, int64(200), got[1].MediaID)
+	assert.Equal(t, "COMPLETED", got[1].Status)
+	assert.Equal(t, 16, got[1].Progress)
+	assert.True(t, got[1].Rating)
+
+	// Exactly part 1 watched → part1 COMPLETED(12), part2 CURRENT(0).
+	got = service.DerivePartStates("watching", parts, seq(1, 12))
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 0, got[1].Progress)
+	assert.False(t, got[1].Rating)
+
+	// 18 watched → part1 COMPLETED(12), part2 CURRENT(6).
+	got = service.DerivePartStates("watching", parts, seq(1, 18))
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 6, got[1].Progress)
+}
+
+func TestDerivePartStates_DroppedPartial(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: ptrInt(16)},
+	}
+
+	// Dropped title, part1 fully watched, part2 partial: COMPLETED still wins
+	// for the finished part; the unfinished part is DROPPED with its progress.
+	got := service.DerivePartStates("dropped", parts, seq(1, 18))
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "DROPPED", got[1].Status)
+	assert.Equal(t, 6, got[1].Progress)
+	assert.True(t, got[1].Rating)
+}
+
+func TestDerivePartStates_OverflowAbsorbsRemainder(t *testing.T) {
+	// Part 2 has an unknown count → it absorbs every watched episode past
+	// part 1's range so nothing is dropped.
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: nil},
+	}
+
+	got := service.DerivePartStates("watching", parts, seq(1, 20))
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	// count==0 (unknown) can never reach COMPLETED; remainder lands here.
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 8, got[1].Progress)
+}
+
+func TestDerivePartStates_SkipsNonNumericID(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "not-a-number", EpisodeCount: ptrInt(16)},
+	}
+
+	got := service.DerivePartStates("watching", parts, seq(1, 28))
+	// The non-numeric part is dropped entirely; only the parsed part emits.
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(100), got[0].MediaID)
 }
 
 func TestShouldPushRating(t *testing.T) {
@@ -83,6 +177,7 @@ func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
 	testutil.SetSeasonEpisodeCount(t, db, seasonID, 12)
 	testutil.MarkEpisodesWatched(t, db, seasonID, 12)
 	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "113415")
+	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "113415", 12)
 	testutil.SetTitleStatus(t, db, titleID, "watching")
 	testutil.SetTitleRating(t, db, titleID, 8)
 	testutil.SetSetting(t, db, "anilist_token", "test-token")
@@ -95,6 +190,38 @@ func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
 	assert.Equal(t, "COMPLETED", fake.calls[0].Status)
 	require.NotNil(t, fake.calls[0].Score)
 	assert.Equal(t, 8, *fake.calls[0].Score)
+}
+
+func TestPushSeasonState_MultiPartSplitsProgress(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Attack on Titan", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 4)
+	// Final Season as one PlexTracker season of 28 episodes, mapped to two
+	// AniList parts (12 + 16). 18 watched → part1 COMPLETED(12), part2 CURRENT(6).
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 28)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 18)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "200")
+	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "100", 12)
+	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "200", 16)
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	require.Len(t, fake.calls, 2)
+	byMedia := make(map[int64]matching.SaveMediaListEntryInput, len(fake.calls))
+	for _, c := range fake.calls {
+		byMedia[c.MediaID] = c
+	}
+	require.Contains(t, byMedia, int64(100))
+	require.Contains(t, byMedia, int64(200))
+	assert.Equal(t, "COMPLETED", byMedia[100].Status)
+	assert.Equal(t, 12, byMedia[100].Progress)
+	assert.Equal(t, "CURRENT", byMedia[200].Status)
+	assert.Equal(t, 6, byMedia[200].Progress)
 }
 
 func TestPushSeasonState_SkipsWhenNoMapping(t *testing.T) {
