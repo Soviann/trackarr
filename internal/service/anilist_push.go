@@ -91,7 +91,7 @@ func (s *AniListPushService) PushSeasonState(ctx context.Context, seasonID int64
 		return err
 	}
 
-	for _, ps := range DerivePartStates(string(title.Status), parts, watched) {
+	for _, ps := range DerivePartStates(string(title.Status), parts, watched, season.TotalEpisodes) {
 		var score *int
 		if ps.Rating && title.MyRating != nil {
 			score = title.MyRating
@@ -232,7 +232,7 @@ type PartPush struct {
 // numbers (cum, cum+count]; the last part (and any part with an unknown count)
 // absorbs the remainder so a watched episode is never dropped. Parts with a
 // non-numeric ExternalID are skipped (the caller logs them); they never emit.
-func DerivePartStates(titleStatus string, parts []model.AniListPart, watched []int) []PartPush {
+func DerivePartStates(titleStatus string, parts []model.AniListPart, watched []int, seasonTotal int) []PartPush {
 	watchedSet := make(map[int]bool, len(watched))
 	maxWatched := 0
 	for _, n := range watched {
@@ -254,13 +254,30 @@ func DerivePartStates(titleStatus string, parts []model.AniListPart, watched []i
 			count = *p.EpisodeCount
 		}
 		last := i == len(parts)-1
-		// Range upper bound: cum+count, or "everything remaining" for the last
-		// part / a part with an unknown count.
+
+		// Effective count for state derivation. When AniList's count is unknown
+		// (nil/0 — e.g. a freshly linked season the daily refresh hasn't reached
+		// yet), fall back to the season's own remaining episode total so a
+		// fully-watched part still reaches COMPLETED — preserving pre-multi-part
+		// behaviour. Falls back further to the watched span if the season total
+		// is also unknown.
+		effectiveCount := count
+		if effectiveCount == 0 {
+			if rem := seasonTotal - cum; rem > 0 {
+				effectiveCount = rem
+			} else if rem := maxWatched - cum; rem > 0 {
+				effectiveCount = rem
+			}
+		}
+
+		// Range upper bound: cum+count for a known middle part; the last part
+		// (or an unknown-count part) absorbs everything remaining so no watched
+		// episode is dropped.
 		hi := cum + count
 		if last || count == 0 {
-			hi = maxWatched
-			if cum+count > hi {
-				hi = cum + count
+			hi = cum + effectiveCount
+			if maxWatched > hi {
+				hi = maxWatched
 			}
 		}
 		inRange := 0
@@ -269,7 +286,7 @@ func DerivePartStates(titleStatus string, parts []model.AniListPart, watched []i
 				inRange++
 			}
 		}
-		status, progress := derivePartState(titleStatus, count, inRange)
+		status, progress := derivePartState(titleStatus, effectiveCount, inRange)
 		out = append(out, PartPush{MediaID: mediaID, Status: status, Progress: progress, Rating: ShouldPushRating(status)})
 		cum += count
 	}

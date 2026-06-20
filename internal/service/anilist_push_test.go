@@ -59,6 +59,31 @@ func TestDeriveSeasonState(t *testing.T) {
 	}
 }
 
+// TestDerivePartStates_SingleNilCountCompletes guards the freshly-linked-season
+// regression: a single AniList part whose anilist_episode_count is still NULL
+// (the daily refresh hasn't reached it yet) must still reach COMPLETED when the
+// whole season is watched, by falling back to the season's own total.
+func TestDerivePartStates_SingleNilCountCompletes(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "123", EpisodeCount: nil},
+	}
+
+	// Fully watched (12/12) with seasonTotal=12 → COMPLETED + rating.
+	got := service.DerivePartStates("watching", parts, seq(1, 12), 12)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(123), got[0].MediaID)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.True(t, got[0].Rating)
+
+	// Partial (6/12) → CURRENT(6), no rating.
+	got = service.DerivePartStates("watching", parts, seq(1, 6), 12)
+	require.Len(t, got, 1)
+	assert.Equal(t, "CURRENT", got[0].Status)
+	assert.Equal(t, 6, got[0].Progress)
+	assert.False(t, got[0].Rating)
+}
+
 func TestDerivePartStates_TwoParts(t *testing.T) {
 	parts := []model.AniListPart{
 		{ExternalID: "100", EpisodeCount: ptrInt(12)},
@@ -66,7 +91,7 @@ func TestDerivePartStates_TwoParts(t *testing.T) {
 	}
 
 	// All 28 watched → both parts COMPLETED at their full counts.
-	got := service.DerivePartStates("watching", parts, seq(1, 28))
+	got := service.DerivePartStates("watching", parts, seq(1, 28), 28)
 	require.Len(t, got, 2)
 	assert.Equal(t, int64(100), got[0].MediaID)
 	assert.Equal(t, "COMPLETED", got[0].Status)
@@ -78,7 +103,7 @@ func TestDerivePartStates_TwoParts(t *testing.T) {
 	assert.True(t, got[1].Rating)
 
 	// Exactly part 1 watched → part1 COMPLETED(12), part2 CURRENT(0).
-	got = service.DerivePartStates("watching", parts, seq(1, 12))
+	got = service.DerivePartStates("watching", parts, seq(1, 12), 28)
 	require.Len(t, got, 2)
 	assert.Equal(t, "COMPLETED", got[0].Status)
 	assert.Equal(t, 12, got[0].Progress)
@@ -87,7 +112,7 @@ func TestDerivePartStates_TwoParts(t *testing.T) {
 	assert.False(t, got[1].Rating)
 
 	// 18 watched → part1 COMPLETED(12), part2 CURRENT(6).
-	got = service.DerivePartStates("watching", parts, seq(1, 18))
+	got = service.DerivePartStates("watching", parts, seq(1, 18), 28)
 	require.Len(t, got, 2)
 	assert.Equal(t, "COMPLETED", got[0].Status)
 	assert.Equal(t, 12, got[0].Progress)
@@ -103,7 +128,7 @@ func TestDerivePartStates_DroppedPartial(t *testing.T) {
 
 	// Dropped title, part1 fully watched, part2 partial: COMPLETED still wins
 	// for the finished part; the unfinished part is DROPPED with its progress.
-	got := service.DerivePartStates("dropped", parts, seq(1, 18))
+	got := service.DerivePartStates("dropped", parts, seq(1, 18), 28)
 	require.Len(t, got, 2)
 	assert.Equal(t, "COMPLETED", got[0].Status)
 	assert.Equal(t, 12, got[0].Progress)
@@ -120,11 +145,15 @@ func TestDerivePartStates_OverflowAbsorbsRemainder(t *testing.T) {
 		{ExternalID: "200", EpisodeCount: nil},
 	}
 
-	got := service.DerivePartStates("watching", parts, seq(1, 20))
+	// seasonTotal=25 > maxWatched=20: the unknown-count part is NOT fully
+	// watched (remaining = 25-12 = 13, only 8 of them seen), so it stays
+	// CURRENT. (Passing seasonTotal=20 would legitimately complete it now.)
+	got := service.DerivePartStates("watching", parts, seq(1, 20), 25)
 	require.Len(t, got, 2)
 	assert.Equal(t, "COMPLETED", got[0].Status)
 	assert.Equal(t, 12, got[0].Progress)
-	// count==0 (unknown) can never reach COMPLETED; remainder lands here.
+	// Unknown count falls back to the season's remaining (13) > watched (8),
+	// so the part is incomplete → CURRENT; remainder lands here, none dropped.
 	assert.Equal(t, "CURRENT", got[1].Status)
 	assert.Equal(t, 8, got[1].Progress)
 }
@@ -135,7 +164,7 @@ func TestDerivePartStates_SkipsNonNumericID(t *testing.T) {
 		{ExternalID: "not-a-number", EpisodeCount: ptrInt(16)},
 	}
 
-	got := service.DerivePartStates("watching", parts, seq(1, 28))
+	got := service.DerivePartStates("watching", parts, seq(1, 28), 28)
 	// The non-numeric part is dropped entirely; only the parsed part emits.
 	require.Len(t, got, 1)
 	assert.Equal(t, int64(100), got[0].MediaID)
@@ -177,7 +206,10 @@ func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
 	testutil.SetSeasonEpisodeCount(t, db, seasonID, 12)
 	testutil.MarkEpisodesWatched(t, db, seasonID, 12)
 	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "113415")
-	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "113415", 12)
+	// Deliberately NO SetPartEpisodeCount: anilist_episode_count stays NULL, as
+	// for a freshly linked season the daily refresh hasn't reached. The fully
+	// watched season must still push COMPLETED + rating via the season-total
+	// fallback (the regression this fix restores).
 	testutil.SetTitleStatus(t, db, titleID, "watching")
 	testutil.SetTitleRating(t, db, titleID, 8)
 	testutil.SetSetting(t, db, "anilist_token", "test-token")
