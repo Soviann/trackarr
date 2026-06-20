@@ -25,11 +25,11 @@ Update when adding routes, services, components, or commands.
 | TitleService | `internal/service/title.go` | Title logic (creation, rematching, URL resolution, merging) |
 | LibraryService | `internal/service/library.go` | User library (marking watched, auto-complete, rating, notifications) |
 | BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous). **Opens own writeDB tx — never call from inside another tx; fire post-commit via `LibraryService.TriggerBackfillForEpisode`.** |
-| AniListPushService | `internal/service/anilist_push.go` | Per-season / per-movie push of status, progress, score to AniList. Silently skips on missing token, missing season mapping, or 401 (flags token invalid). Enqueued via `TaskTypeAniListPushSeason` / `TaskTypeAniListPushMovie`. |
+| AniListPushService | `internal/service/anilist_push.go` | Per-part (each AniList entry mapped to a season) / per-movie push of status, progress, score. `PushSeasonState` splits watched episodes across parts by derived range and pushes each. Silently skips on missing token, no parts, or 401 (flags token invalid). Enqueued via `TaskTypeAniListPushSeason` / `TaskTypeAniListPushMovie`. |
 | CoverService | `internal/service/cover.go` | Owns cover image lifecycle: fetches from TMDB/TVDB/AniList with deadlines (a stalled CDN can't freeze the writeDB), persists filename via `TitleUpdate`, drives accent extraction (`colorextract/`). Shares the 2 rps `APILimiter` budget with TaskQueueWorker + BackgroundService. |
 | APILimiter | `internal/service/ratelimiter.go` | Global 2 rps token bucket guarding TMDB/TVDB/AniList HTTP calls across all background workers. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
-| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-season AniList community score via `season_external_ids` mappings — 401 flags `anilist_token_invalid` and aborts remaining calls) |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls) |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
@@ -101,28 +101,25 @@ Reader: `repository.MatchEventRepository.ListRecent(ctx, limit)` — returns eve
 
 ### AniList per-season push
 
-**Data model.** `season_external_ids(season_id, provider, external_id)` stores per-provider external IDs per season. Accessed via `SeasonExternalIDRepository` (`Get`, `Set`, `Delete`, `ListForTitle`) and `SeasonExternalIDWriter` (`Stamp` — first-writer-wins). `titles.anilist_id` is retained for movies and title-level display but is no longer the canonical push target for multi-season anime.
+**Data model — multiple parts per season.** A season can map to several AniList entries ("parts" — split-cour seasons like AoT Final Season Part 1 + Part 2). `season_external_ids(season_id, provider, external_id, anilist_episode_count, anilist_start_date, anilist_average_score, sort_order)` with PK `(season_id, provider, external_id)` (migration 027; was `(season_id, provider)` in 020). Each row is one part; dedup is by `external_id`. The per-part `anilist_*` meta columns are populated by the daily refresh; `sort_order` is a manual override. **Ordering is always** `ORDER BY (sort_order IS NULL), sort_order, (anilist_start_date IS NULL), anilist_start_date, external_id` — explicit order first, then AniList start date (NULL-last), `external_id` tiebreak. The detail API exposes `season.anilist_parts[]`; the legacy `season.anilist_id`/`anilist_community_score` remain as **derived primary-part aliases** (first part) for backward compat. `seasons.anilist_average_score` column survives but is no longer read/written (score lives on the part rows). `titles.anilist_id` is retained for movies and title-level display.
 
-**Push service.** `service.AniListPushService` exposes `PushSeasonState(ctx, seasonID)` and `PushMovieState(ctx, titleID)`. Both derive state from DB, skip silently when no mapping / no token / token flagged invalid, and absorb HTTP 401 by setting `settings.anilist_token_invalid = 'true'`.
+Accessed via `SeasonExternalIDRepository` (`Get` → primary part, `ListParts`, `ListPartsForTitle`, `Add`, `DeletePart`, `Reorder`, `UpdatePartMeta`) and `SeasonExternalIDWriter` (`Stamp`/`Add` — append a part, `ON CONFLICT(season_id,provider,external_id) DO NOTHING`; `Delete` all parts; `DeletePart` one). Merge appends incoming parts (a split-cour merge keeps both entries).
 
-**Status derivation** (`service.DeriveSeasonState`):
-- All episodes watched → `COMPLETED` (wins over dropped)
-- `title.status = dropped` + not fully watched → `DROPPED`
-- `watchedEpisodes > 0` but not all → `CURRENT`
-- `watchedEpisodes == 0` + `title.status = plan_to_watch` → `PLANNING`
-- otherwise → `CURRENT`
+**Push service.** `service.AniListPushService` exposes `PushSeasonState(ctx, seasonID)` and `PushMovieState(ctx, titleID)`. `PushSeasonState` derives a state **per part** and pushes each independently; skips silently when no parts / no token / token flagged invalid, absorbs HTTP 401 by setting `settings.anilist_token_invalid = 'true'`.
 
-**Rating guard** (`service.ShouldPushRating`): score is included in the mutation only when derived status is `COMPLETED` or `DROPPED`.
+**Per-part range derivation** (`service.DerivePartStates(titleStatus, parts, watched, seasonTotal)`): walking parts in sort order, part *i* covers season episodes `(cum, cum+anilist_episode_count]`; the last part / any part with an unknown count absorbs the remainder (no watched episode dropped). When a part's AniList count is unknown (e.g. freshly linked, refresh not yet run), the last/only part's effective count falls back to `seasonTotal − cum` so a fully-watched single-part season still reaches `COMPLETED`. Each part's status uses `service.derivePartState` (same rules as the old `DeriveSeasonState`, scoped to the part's range): all-in-range watched → `COMPLETED` (wins over dropped); dropped + unfinished → `DROPPED`; partial → `CURRENT`; zero + plan_to_watch → `PLANNING`. `DeriveSeasonState` is retained (still used by `TitleHandler.Patch`).
+
+**Rating guard** (`service.ShouldPushRating`): score included only when a part's derived status is `COMPLETED` or `DROPPED`.
 
 **Triggers** (all via task queue `anilist_push_season` / `anilist_push_movie`):
 - Episode watched/unwatched → `LibraryService.MarkEpisodeWatched` enqueues.
 - Title status change → `TitleHandler.Patch` enqueues for every season.
 - Title rating change → `TitleHandler.Patch` enqueues for seasons whose derived status is `COMPLETED`/`DROPPED`.
-- Season AniList-ID set via `PUT /titles/{titleID}/seasons/{seasonID}/anilist` → handler enqueues immediately.
+- Season AniList part added via `POST /titles/{titleID}/seasons/{seasonID}/anilist` → handler enqueues immediately.
 
 **Token expiry.** `settings.anilist_token_invalid = 'true'` suppresses further pushes. The Settings screen surfaces a "Reconnect AniList" banner. Successful OAuth reconnect clears the flag (`anilist_auth.SaveToken` calls `settings.Delete("anilist_token_invalid")`).
 
-**UI (Concept B).** Active-season info strip between the progress line and the episode grid. Component: `frontend/src/components/SeasonAniListStrip.tsx`. Multi-season titles hide the title-level AniList tab in the action bar; movies and single-season titles keep it. Per-season fix-match via the pencil ✎ in the strip (or "Link entry" CTA on unmapped seasons) opens `RematchSheet` with `seasonID` context — saving calls `PUT /titles/{titleID}/seasons/{seasonID}/anilist`, removing calls `DELETE` on the same route.
+**UI (Concept B).** Active-season info strip between the progress line and the episode grid. Component: `frontend/src/components/SeasonAniListStrip.tsx` — single part renders as before (`S{n}` link + score); 2+ parts render a list of "Part N · View on AniList · score" rows. Per-season management via the pencil ✎ (or "Link entry" CTA) opens `RematchSheet` with `seasonID` context: a multi-link manager listing parts with ▲/▼ reorder + Remove, plus an Add-by-ID input. Add → `POST .../anilist`; remove → `DELETE .../anilist/{externalID}`; reorder → `PUT .../anilist/order` `{ordered_ids}`. The sheet stays open (`onDone`, not `onClose`) for managing several parts.
 
 ### Season Audit Service
 
@@ -149,7 +146,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
 | Task | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus`, `CountDead` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch`. Task kinds: `TaskTypeEnrichment`, `TaskTypeRefresh`, `TaskTypeCoverFetch`, `TaskTypeAniListPushSeason`, `TaskTypeAniListPushMovie`. |
-| SeasonExternalID | `Get`, `ListForTitle` | `Set`, `Delete` on pool (`SeasonExternalIDRepository`); `Stamp` on tx (`SeasonExternalIDWriter`) — `Stamp` is first-writer-wins (`ON CONFLICT DO NOTHING`) and is the entry point used by the merge flow (`TitleWriter.Merge`) and S1 backfill (`stampSeasonAniListID` in `backfill.go`); `Set` overwrites (used by Phase 7 fix-match). Provider key constant: `repository.ProviderAniList`. Migration 020. |
+| SeasonExternalID | `Get` (primary part), `ListParts`, `ListPartsForTitle` | pool (`SeasonExternalIDRepository`): `Add` (append part, dedup by id), `DeletePart` (one), `Delete` (all), `Reorder` (`sort_order` by index), `UpdatePartMeta` (score/episode_count/start_date). tx (`SeasonExternalIDWriter`): `Stamp`/`Add` append (`ON CONFLICT(season_id,provider,external_id) DO NOTHING`) — entry point for merge (`TitleWriter.Merge`, keeps both parts) and S1 backfill (`stampSeasonAniListID`); `Delete`/`DeletePart`. Multiple parts per season (split-cour). Provider key: `repository.ProviderAniList`. Migration 027 (PK `(season_id,provider,external_id)` + per-part meta cols). |
 | Genre | `ListWithCounts` | `ReplaceForTitle` |
 | Setting | `Get` | `Set`, `Delete` |
 | MatchEvent | `ListRecent(ctx, limit)` — returns events with cover_url join | `Create(ctx, titleID, kind, detail)` on `*sql.Tx` via `MatchEventWriter` |
@@ -199,8 +196,9 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | GET | `/api/tmdb/search` | Search | Yes |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | ToggleWatched | Yes |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | BatchMarkWatched | Yes |
-| PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | SetAniListID | Yes |
-| DELETE | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | ClearAniListID | Yes |
+| POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | AddAniListID | Yes |
+| DELETE | `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | RemoveAniListID | Yes |
+| PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | ReorderAniList | Yes |
 | POST | `/api/push/subscribe` | Subscribe | Yes |
 | DELETE | `/api/push/subscribe` | Unsubscribe | Yes |
 | GET | `/api/stats` | Get | Yes |

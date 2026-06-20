@@ -74,7 +74,7 @@ L'écran principal affiche tous les titres organisés par statut.
 - **Bouton « Historique »** : ouvre une vue plein écran des sessions de visionnage du titre, avec regroupement automatique des épisodes consécutifs en plages (ex: `S1 E1–4 · 12 avr.`).
 - **Barre de progression** (séries/anime) : `S2 · 7 of 10 episodes watched`.
 - **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée.
-- **Bandeau AniList par saison** (anime uniquement) : entre la barre de progression et la liste d'épisodes — score communautaire, lien AniList, crayon ✎ pour corriger l'association.
+- **Bandeau AniList par saison** (anime uniquement) : entre la barre de progression et la liste d'épisodes — score communautaire, lien AniList, crayon ✎ pour corriger l'association. Une saison peut être liée à **plusieurs entrées AniList** (« Part 1 », « Part 2 »…) pour les saisons découpées en deux cours (ex. *Attack on Titan* — saison finale). Chaque part affiche son propre lien et son score.
 - **Liste d'épisodes** : tap sur un épisode pour le marquer vu/non vu.
 - **Tiroir « Actions »** (poignée glissable au-dessus de la navbar) :
   - **★ Rate** : ouvre le prompt de notation
@@ -221,6 +221,8 @@ Dès qu'un événement se produit dans PlexTracker, une mise à jour est envoyé
 - **Note du titre modifiée** → note envoyée aux saisons déjà terminées ou abandonnées (les saisons en cours ne reçoivent pas de note tant qu'elles ne sont pas clôturées).
 
 La synchronisation est **par saison**. AniList traite chaque saison comme une œuvre séparée : *Solo Leveling* S1 et *Solo Leveling S2 — Arise from the Shadow* sont deux entrées distinctes. PlexTracker envoie chaque saison à l'entrée AniList correspondante.
+
+**Saisons en deux parties.** Certaines saisons existent sous forme de deux entrées AniList (une « Part 1 » et une « Part 2 »). Via le crayon ✎ du bandeau, on peut lier plusieurs entrées à une même saison, les réordonner (▲ ▼) et en retirer. PlexTracker répartit alors les épisodes vus entre les parts (les premiers épisodes vont à la Part 1, les suivants à la Part 2…) et pousse la progression à chaque entrée. Lors d'une fusion, les entrées des deux parts sont conservées au lieu d'être écrasées.
 
 ### Rattachement automatique des saisons anime
 
