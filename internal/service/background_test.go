@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -236,12 +237,20 @@ func TestBackgroundService_RefreshCancelledContextStopsLoop(t *testing.T) {
 	assert.Less(t, len(results), 10, "not all titles should be processed after cancel")
 }
 
-// readSeasonAniListScore reads the persisted anilist_average_score column
-// directly so the test asserts on DB state, not method return values.
-func readSeasonAniListScore(t *testing.T, db *sql.DB, seasonID int64) *int {
+// readPartScore returns the anilist_average_score persisted in
+// season_external_ids for the primary (first-sorted) part of (seasonID,
+// "anilist"). Returns nil if no row exists or the score is NULL.
+func readPartScore(t *testing.T, db *sql.DB, seasonID int64, externalID string) *int {
 	t.Helper()
 	var score sql.NullInt64
-	require.NoError(t, db.QueryRow(`SELECT anilist_average_score FROM seasons WHERE id = ?`, seasonID).Scan(&score))
+	err := db.QueryRow(`
+		SELECT anilist_average_score FROM season_external_ids
+		WHERE season_id = ? AND provider = 'anilist' AND external_id = ?`,
+		seasonID, externalID).Scan(&score)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	require.NoError(t, err)
 	if !score.Valid {
 		return nil
 	}
@@ -301,8 +310,8 @@ func TestBackgroundService_RefreshAniListScores_PersistsPerSeason(t *testing.T) 
 	require.Len(t, results, 1)
 
 	assert.ElementsMatch(t, []int64{113415, 145064}, fake.calls)
-	got1 := readSeasonAniListScore(t, db, s1)
-	got2 := readSeasonAniListScore(t, db, s2)
+	got1 := readPartScore(t, db, s1, "113415")
+	got2 := readPartScore(t, db, s2, "145064")
 	require.NotNil(t, got1)
 	require.NotNil(t, got2)
 	assert.Equal(t, 86, *got1)
@@ -322,7 +331,7 @@ func TestBackgroundService_RefreshAniListScores_SkipsWhenTokenInvalid(t *testing
 
 	_ = svc.RefreshTitles(context.Background())
 	assert.Empty(t, fake.calls, "no AniList call may be issued while the token is flagged invalid")
-	assert.Nil(t, readSeasonAniListScore(t, db, seasonID))
+	assert.Nil(t, readPartScore(t, db, seasonID, "100"))
 }
 
 func TestBackgroundService_RefreshAniListScores_ContinuesOnTransientError(t *testing.T) {
@@ -347,9 +356,9 @@ func TestBackgroundService_RefreshAniListScores_ContinuesOnTransientError(t *tes
 	assert.NotEqual(t, "true", got)
 
 	// S1 score stays nil, S2 was still persisted despite S1's failure.
-	assert.Nil(t, readSeasonAniListScore(t, db, s1))
-	require.NotNil(t, readSeasonAniListScore(t, db, s2))
-	assert.Equal(t, 77, *readSeasonAniListScore(t, db, s2))
+	assert.Nil(t, readPartScore(t, db, s1, "1"))
+	require.NotNil(t, readPartScore(t, db, s2, "2"))
+	assert.Equal(t, 77, *readPartScore(t, db, s2, "2"))
 }
 
 func TestBackgroundService_RefreshAniListScores_SkipsNonAnimeTitles(t *testing.T) {
@@ -366,6 +375,60 @@ func TestBackgroundService_RefreshAniListScores_SkipsNonAnimeTitles(t *testing.T
 
 	_ = svc.RefreshTitles(context.Background())
 	assert.Empty(t, fake.calls, "non-anime titles must not trigger AniList per-season fetches")
+}
+
+// TestBackgroundService_RefreshAniListScores_PersistsPerPartMeta asserts that
+// when a season has two AniList parts, the refresh job persists
+// score, episode count, and start date for each part independently.
+func TestBackgroundService_RefreshAniListScores_PersistsPerPartMeta(t *testing.T) {
+	svc, db, _, _, _ := setupBackgroundService(t)
+
+	titleID := testutil.InsertTitle(t, db, "Sword Art Online", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	// Two AniList parts for the same season (split-cour).
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "11757")
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "14833")
+
+	eps1, eps2 := 25, 12
+	date1, date2 := "2012-07-07", "2012-10-06"
+	score1, score2 := 72, 68
+	fake := &fakeAniListSeasonScoreClient{
+		detailsByID: map[int64]*matching.AniListDetails{
+			11757: {ID: 11757, AverageScore: &score1, Episodes: &eps1, StartDate: &date1},
+			14833: {ID: 14833, AverageScore: &score2, Episodes: &eps2, StartDate: &date2},
+		},
+	}
+	svc.SetAniList(fake)
+
+	results := svc.RefreshTitles(context.Background())
+	require.Len(t, results, 1)
+	assert.ElementsMatch(t, []int64{11757, 14833}, fake.calls)
+
+	extIDRepo := repository.NewSeasonExternalIDRepository(db)
+	parts, err := extIDRepo.ListParts(context.Background(), seasonID, "anilist")
+	require.NoError(t, err)
+	require.Len(t, parts, 2)
+
+	byID := make(map[string]model.AniListPart, len(parts))
+	for _, p := range parts {
+		byID[p.ExternalID] = p
+	}
+
+	p1 := byID["11757"]
+	require.NotNil(t, p1.Score)
+	assert.Equal(t, score1, *p1.Score)
+	require.NotNil(t, p1.EpisodeCount)
+	assert.Equal(t, eps1, *p1.EpisodeCount)
+	require.NotNil(t, p1.StartDate)
+	assert.Equal(t, date1, *p1.StartDate)
+
+	p2 := byID["14833"]
+	require.NotNil(t, p2.Score)
+	assert.Equal(t, score2, *p2.Score)
+	require.NotNil(t, p2.EpisodeCount)
+	assert.Equal(t, eps2, *p2.EpisodeCount)
+	require.NotNil(t, p2.StartDate)
+	assert.Equal(t, date2, *p2.StartDate)
 }
 
 // createSeriesWithTMDBID is a tiny shim around testutil.CreateTitle that bakes

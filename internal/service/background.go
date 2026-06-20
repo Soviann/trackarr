@@ -597,41 +597,39 @@ func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, titl
 		return
 	}
 
-	mappings, err := s.seasonExtIDs.ListForTitle(ctx, title.ID, providerAniList)
+	partsBySeason, err := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, providerAniList)
 	if err != nil {
-		log.Printf("background anilist score: list mappings for title %d: %v", title.ID, err)
+		log.Printf("background anilist score: list parts for title %d: %v", title.ID, err)
 		return
 	}
-	if len(mappings) == 0 {
+	if len(partsBySeason) == 0 {
 		return
 	}
 
-	for seasonID, externalID := range mappings {
-		if err := ctx.Err(); err != nil {
-			return
-		}
-
-		anilistID, err := strconv.ParseInt(externalID, 10, 64)
-		if err != nil {
-			log.Printf("background anilist score: invalid mapping %q for season %d: %v", externalID, seasonID, err)
-			continue
-		}
-
-		details, err := s.anilist.GetAnimeDetails(ctx, anilistID)
-		if err != nil {
-			log.Printf("background anilist score: fetch %d: %v", anilistID, err)
+	for seasonID, parts := range partsBySeason {
+		for _, part := range parts {
+			if err := ctx.Err(); err != nil {
+				return
+			}
+			anilistID, err := strconv.ParseInt(part.ExternalID, 10, 64)
+			if err != nil {
+				log.Printf("background anilist score: invalid mapping %q for season %d: %v", part.ExternalID, seasonID, err)
+				continue
+			}
+			details, err := s.anilist.GetAnimeDetails(ctx, anilistID)
+			if err != nil {
+				log.Printf("background anilist score: fetch %d: %v", anilistID, err)
+				_ = s.limiter.Wait(ctx)
+				continue
+			}
+			result.Refreshed = true
+			if err := s.seasonExtIDs.UpdatePartMeta(
+				ctx, seasonID, providerAniList, part.ExternalID,
+				details.AverageScore, details.Episodes, details.StartDate); err != nil {
+				log.Printf("background anilist score: persist season %d part %s: %v", seasonID, part.ExternalID, err)
+			}
 			_ = s.limiter.Wait(ctx)
-			continue
 		}
-		result.Refreshed = true
-
-		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			return repository.NewSeasonWriter(tx).UpdateAniListAverageScore(ctx, seasonID, details.AverageScore)
-		}); err != nil {
-			log.Printf("background anilist score: persist season %d: %v", seasonID, err)
-		}
-
-		_ = s.limiter.Wait(ctx)
 	}
 }
 
