@@ -306,9 +306,9 @@ export function Validate({ path }: { path?: string }) {
                   {resolved.type} · {resolved.release_date?.slice(0, 4) || 'Unknown year'}
                 </div>
                 <div className={s.previewIds}>
-                  {resolved.imdb_id && <span className={s.idTag}>IMDb</span>}
-                  {resolved.tmdb_id && <span className={s.idTag}>TMDB</span>}
-                  {resolved.anilist_id && <span className={s.idTag}>AniList</span>}
+                  {!!resolved.imdb_id && <span className={s.idTag}>IMDb</span>}
+                  {!!resolved.tmdb_id && <span className={s.idTag}>TMDB</span>}
+                  {!!resolved.anilist_id && <span className={s.idTag}>AniList</span>}
                 </div>
               </div>
             </div>
