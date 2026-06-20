@@ -18,51 +18,59 @@ func NewSeasonExternalIDWriter(tx *sql.Tx) *SeasonExternalIDWriter {
 	return &SeasonExternalIDWriter{tx: tx}
 }
 
-// Stamp inserts the mapping only when no row exists for (seasonID, provider).
-// First writer wins — a user-confirmed link survives a later automatic stamp
-// from the merge or backfill flows.
+// Stamp appends an AniList part for the season. ON CONFLICT on the full
+// (season_id, provider, external_id) key dedupes the same entry; a *different*
+// incoming id coexists as a new part. This is what makes split-season merges
+// keep both parts instead of dropping the second.
 func (w *SeasonExternalIDWriter) Stamp(ctx context.Context, seasonID int64, provider, externalID string) error {
 	if _, err := w.tx.ExecContext(ctx, `
 		INSERT INTO season_external_ids (season_id, provider, external_id)
 		VALUES (?, ?, ?)
-		ON CONFLICT(season_id, provider) DO NOTHING
-	`, seasonID, provider, externalID); err != nil {
+		ON CONFLICT(season_id, provider, external_id) DO NOTHING`, seasonID, provider, externalID); err != nil {
 		return fmt.Errorf("season_external_ids stamp: %w", err)
 	}
 	return nil
 }
 
-// Upsert inserts or replaces the (seasonID, provider) → externalID mapping.
-// Last writer wins — use for user-driven fix-match flows where the new value
-// must always take effect regardless of an existing row.
-//
-// L'instruction SQL doit rester identique à SeasonExternalIDRepository.Set :
-// les deux variantes (pool / tx) doivent produire exactement la même ligne.
-// Toute évolution de l'une (colonnes, ON CONFLICT) doit être répercutée à
-// l'autre.
+// Add is a semantic alias of Stamp for call sites that "add a part" rather than
+// "stamp during merge". Same insert-if-absent behaviour.
+func (w *SeasonExternalIDWriter) Add(ctx context.Context, seasonID int64, provider, externalID string) error {
+	return w.Stamp(ctx, seasonID, provider, externalID)
+}
+
+// Upsert inserts or deduplicates the (seasonID, provider, externalID) mapping.
+// With the new composite PK, conflicting on (season_id, provider, external_id)
+// means the same triple is a no-op; a different externalID adds a new part.
+// Task 7 will migrate callers of this method to Add; kept for now to avoid
+// breaking handler/season_external.go and service/title.go.
 func (w *SeasonExternalIDWriter) Upsert(ctx context.Context, seasonID int64, provider, externalID string) error {
 	if _, err := w.tx.ExecContext(ctx, `
 		INSERT INTO season_external_ids (season_id, provider, external_id)
 		VALUES (?, ?, ?)
-		ON CONFLICT(season_id, provider) DO UPDATE SET
-		    external_id = excluded.external_id,
-		    updated_at  = CURRENT_TIMESTAMP
-	`, seasonID, provider, externalID); err != nil {
+		ON CONFLICT(season_id, provider, external_id) DO NOTHING`, seasonID, provider, externalID); err != nil {
 		return fmt.Errorf("season_external_ids upsert: %w", err)
 	}
 	return nil
 }
 
-// Delete removes the (seasonID, provider) mapping inside the caller's
-// transaction. Mirrors SeasonExternalIDRepository.Delete for tx-bound flows
-// (manual ID editor clearing an anime season's AniList link atomically with
-// the title update).
+// Delete removes all (seasonID, provider) parts inside the caller's transaction.
 func (w *SeasonExternalIDWriter) Delete(ctx context.Context, seasonID int64, provider string) error {
 	if _, err := w.tx.ExecContext(ctx,
 		`DELETE FROM season_external_ids WHERE season_id = ? AND provider = ?`,
 		seasonID, provider,
 	); err != nil {
 		return fmt.Errorf("season_external_ids delete: %w", err)
+	}
+	return nil
+}
+
+// DeletePart removes a single (seasonID, provider, externalID) part inside the
+// caller's transaction.
+func (w *SeasonExternalIDWriter) DeletePart(ctx context.Context, seasonID int64, provider, externalID string) error {
+	if _, err := w.tx.ExecContext(ctx,
+		`DELETE FROM season_external_ids WHERE season_id = ? AND provider = ? AND external_id = ?`,
+		seasonID, provider, externalID); err != nil {
+		return fmt.Errorf("season_external_ids delete part: %w", err)
 	}
 	return nil
 }

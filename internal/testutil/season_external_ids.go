@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// InsertSeasonExternalID upserts a (seasonID, provider) → externalID mapping.
-// Thin wrapper around SeasonExternalIDRepository.Set for test readability.
+// InsertSeasonExternalID adds a (seasonID, provider, externalID) part mapping.
+// Thin wrapper around SeasonExternalIDRepository.Add for test readability.
 func InsertSeasonExternalID(t *testing.T, db *sql.DB, seasonID int64, provider, externalID string) {
 	t.Helper()
-	require.NoError(t, repository.NewSeasonExternalIDRepository(db).Set(context.Background(), seasonID, provider, externalID))
+	require.NoError(t, repository.NewSeasonExternalIDRepository(db).Add(context.Background(), seasonID, provider, externalID))
 }
 
 // GetSeasonExternalID reads the external_id for (seasonID, provider), or ""
