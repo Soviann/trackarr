@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -942,6 +943,68 @@ func TestTitleRepository_Merge_KeepsExistingSeasonAniList(t *testing.T) {
 	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
 	require.NoError(t, err)
 	assert.Equal(t, "111", got, "first writer wins — dest mapping preserved")
+}
+
+func TestTitleRepository_Merge_AppendsAniListPartOnCollision(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	// Dest has S1 already mapped to AniList part "100".
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	testutil.InsertSeasonExternalID(t, db, destS1, "anilist", "100")
+
+	// Source carries a single S1 with AniList "200"; offset 0 → collides onto dest S1.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 200)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(ctx, destS1, repository.ProviderAniList)
+	require.NoError(t, err)
+	require.Len(t, parts, 2, "both AniList parts must be present after merge")
+	ids := []string{parts[0].ExternalID, parts[1].ExternalID}
+	assert.ElementsMatch(t, []string{"100", "200"}, ids)
+}
+
+func TestTitleRepository_Merge_DeduplicatesAniListPartOnCollision(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	// Dest has S1 already mapped to AniList part "100".
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	testutil.InsertSeasonExternalID(t, db, destS1, "anilist", "100")
+
+	// Source also carries "100" → merging must deduplicate.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 100)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(ctx, destS1, repository.ProviderAniList)
+	require.NoError(t, err)
+	assert.Len(t, parts, 1, "duplicate AniList id must not create a second part")
 }
 
 func TestTitleRepository_Merge_NoAniListSkipsStamp(t *testing.T) {
