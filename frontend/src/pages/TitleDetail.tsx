@@ -16,6 +16,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { routeTo } from '../routes'
 import s from './TitleDetail.module.css'
 
@@ -57,6 +58,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showHistory, setShowHistory] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const sortedSeasons = useMemo(
     () => [...(title?.seasons ?? [])].sort((a, b) => a.season_number - b.season_number),
@@ -87,6 +89,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
   const handleRefresh = async () => {
     await apiFetch(`/titles/${title.id}/refresh`, { method: 'POST' })
+  }
+
+  // Pull-to-refresh: refetch the title so the spinner stays up until data lands.
+  const handlePullRefresh = async () => {
+    const updated = await apiFetch<Title>(`/titles/${title.id}`)
+    setData(updated)
   }
 
   const handleEpisodeToggle = async (episodeId: number) => {
@@ -148,6 +156,10 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   } as JSX.CSSProperties
 
   return (
+    <PullToRefresh
+      onRefresh={handlePullRefresh}
+      disabled={drawerOpen || showRating || showEdit || showRematch || showHistory}
+    >
     <div className={s.page} style={pageStyle}>
       {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
 
@@ -347,6 +359,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onRematch={() => setShowRematch(true)}
         onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
         onRefresh={handleRefresh}
+        onOpenChange={setDrawerOpen}
       />
 
       {/* Bottom sheets */}
@@ -379,5 +392,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onDone={() => { setRematchSeasonID(null); mutate() }}
       />
     </div>
+    </PullToRefresh>
   )
 }

@@ -11,11 +11,12 @@ interface ActionDrawerProps {
   onRematch: () => void
   onMerge: () => void
   onRefresh: () => Promise<void>
+  onOpenChange?: (open: boolean) => void
 }
 
 export function ActionDrawer({
   title, aniListUrl,
-  onRate, onEdit, onRematch, onMerge, onRefresh,
+  onRate, onEdit, onRematch, onMerge, onRefresh, onOpenChange,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -31,6 +32,12 @@ export function ActionDrawer({
       if (timerRef.current !== null) clearTimeout(timerRef.current)
     }
   }, [])
+
+  // Surface open state so the page can disable pull-to-refresh while the
+  // drawer's swipe-down-to-close gesture is active (they would otherwise fight).
+  useEffect(() => {
+    onOpenChange?.(open)
+  }, [open])
 
   const handleRefreshClick = async () => {
     if (refreshState !== 'idle') return
