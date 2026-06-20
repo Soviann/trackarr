@@ -28,7 +28,17 @@ func withSeasonParam(r *http.Request, seasonID int64) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
-func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
+// withSeasonAndExternalParam attaches both seasonID and externalID chi URL params.
+func withSeasonAndExternalParam(r *http.Request, seasonID int64, externalID string) *http.Request {
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("seasonID", strconv.FormatInt(seasonID, 10))
+	rctx.URLParams.Add("externalID", externalID)
+	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+}
+
+// --- AddAniListID ---
+
+func TestAddAniListID_PersistsAndEnqueues(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	h := handler.NewSeasonExternalHandler(db)
 
@@ -36,17 +46,18 @@ func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
 
 	body, _ := json.Marshal(map[string]string{"anilist_id": "145064"})
-	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req = withSeasonParam(req, seasonID)
 	rr := httptest.NewRecorder()
 
-	err := h.SetAniListID(rr, req)
+	err := h.AddAniListID(rr, req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	got, err := testutil.GetSeasonExternalID(t, db, seasonID, repository.ProviderAniList)
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), seasonID, repository.ProviderAniList)
 	require.NoError(t, err)
-	assert.Equal(t, "145064", got)
+	require.Len(t, parts, 1)
+	assert.Equal(t, "145064", parts[0].ExternalID)
 
 	tasks, err := repository.NewTaskRepository(db).ListPending()
 	require.NoError(t, err)
@@ -58,7 +69,28 @@ func TestSetSeasonAniListID_PersistsAndEnqueues(t *testing.T) {
 	assert.Equal(t, seasonID, p.SeasonID)
 }
 
-func TestSetSeasonAniListID_RejectsEmpty(t *testing.T) {
+func TestAddAniListID_Idempotent(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	h := handler.NewSeasonExternalHandler(db)
+
+	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+
+	for range 2 {
+		body, _ := json.Marshal(map[string]string{"anilist_id": "145064"})
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req = withSeasonParam(req, seasonID)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.AddAniListID(rr, req))
+		assert.Equal(t, http.StatusNoContent, rr.Code)
+	}
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), seasonID, repository.ProviderAniList)
+	require.NoError(t, err)
+	assert.Len(t, parts, 1)
+}
+
+func TestAddAniListID_RejectsEmpty(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	h := handler.NewSeasonExternalHandler(db)
 
@@ -66,11 +98,11 @@ func TestSetSeasonAniListID_RejectsEmpty(t *testing.T) {
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
 
 	body, _ := json.Marshal(map[string]string{"anilist_id": ""})
-	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req = withSeasonParam(req, seasonID)
 	rr := httptest.NewRecorder()
 
-	err := h.SetAniListID(rr, req)
+	err := h.AddAniListID(rr, req)
 	require.Error(t, err)
 
 	var apiErr *httputil.APIError
@@ -78,27 +110,56 @@ func TestSetSeasonAniListID_RejectsEmpty(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
 
-func TestDeleteSeasonAniListID_RemovesMappingNoEnqueue(t *testing.T) {
+// --- RemoveAniListID ---
+
+func TestRemoveAniListID_RemovesOnlyTargetPart(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	h := handler.NewSeasonExternalHandler(db)
 
 	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
 	seasonID := testutil.InsertSeason(t, db, titleID, 1)
 	testutil.InsertSeasonExternalID(t, db, seasonID, repository.ProviderAniList, "145064")
+	testutil.InsertSeasonExternalID(t, db, seasonID, repository.ProviderAniList, "166240")
 
 	req := httptest.NewRequest(http.MethodDelete, "/", nil)
-	req = withSeasonParam(req, seasonID)
+	req = withSeasonAndExternalParam(req, seasonID, "145064")
 	rr := httptest.NewRecorder()
 
-	err := h.ClearAniListID(rr, req)
+	err := h.RemoveAniListID(rr, req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	got, err := testutil.GetSeasonExternalID(t, db, seasonID, repository.ProviderAniList)
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), seasonID, repository.ProviderAniList)
 	require.NoError(t, err)
-	assert.Equal(t, "", got)
+	require.Len(t, parts, 1)
+	assert.Equal(t, "166240", parts[0].ExternalID)
+}
 
-	tasks, err := repository.NewTaskRepository(db).ListPending()
+// --- ReorderAniList ---
+
+func TestReorderAniList_SetsSortOrder(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	h := handler.NewSeasonExternalHandler(db)
+
+	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	testutil.InsertSeasonExternalID(t, db, seasonID, repository.ProviderAniList, "100")
+	testutil.InsertSeasonExternalID(t, db, seasonID, repository.ProviderAniList, "200")
+
+	// Without explicit order, 100 < 200 alphabetically so 100 comes first.
+	// Reorder to put 200 first.
+	body, _ := json.Marshal(map[string][]string{"ordered_ids": {"200", "100"}})
+	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewReader(body))
+	req = withSeasonParam(req, seasonID)
+	rr := httptest.NewRecorder()
+
+	err := h.ReorderAniList(rr, req)
 	require.NoError(t, err)
-	assert.Empty(t, tasks)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), seasonID, repository.ProviderAniList)
+	require.NoError(t, err)
+	require.Len(t, parts, 2)
+	assert.Equal(t, "200", parts[0].ExternalID)
+	assert.Equal(t, "100", parts[1].ExternalID)
 }

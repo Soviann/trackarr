@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/repository"
@@ -11,8 +12,8 @@ import (
 )
 
 // SeasonExternalHandler manages external-ID mappings for individual seasons
-// (currently AniList only). PUT upserts the mapping and enqueues a push task;
-// DELETE removes the mapping without enqueuing anything.
+// (currently AniList only). Supports adding parts, removing a specific part,
+// and reordering parts.
 type SeasonExternalHandler struct {
 	writeDB *sql.DB
 }
@@ -21,14 +22,13 @@ func NewSeasonExternalHandler(writeDB *sql.DB) *SeasonExternalHandler {
 	return &SeasonExternalHandler{writeDB: writeDB}
 }
 
-// SetAniListID upserts the AniList ID for a season and enqueues a push task.
-// PUT /api/titles/{titleID}/seasons/{seasonID}/anilist
-func (h *SeasonExternalHandler) SetAniListID(w http.ResponseWriter, r *http.Request) error {
+// AddAniListID appends an AniList part to a season and enqueues a push.
+// POST /api/titles/{titleID}/seasons/{seasonID}/anilist
+func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Request) error {
 	seasonID, err := httputil.ParseIDParam(r, "seasonID")
 	if err != nil {
 		return httputil.BadRequest("Invalid season ID")
 	}
-
 	var body struct {
 		AniListID string `json:"anilist_id"`
 	}
@@ -38,11 +38,9 @@ func (h *SeasonExternalHandler) SetAniListID(w http.ResponseWriter, r *http.Requ
 	if body.AniListID == "" {
 		return httputil.BadRequest("anilist_id required")
 	}
-
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
-		if err := repository.NewSeasonExternalIDWriter(tx).Upsert(
-			r.Context(), seasonID, repository.ProviderAniList, body.AniListID,
-		); err != nil {
+		if err := repository.NewSeasonExternalIDWriter(tx).Add(
+			r.Context(), seasonID, repository.ProviderAniList, body.AniListID); err != nil {
 			return err
 		}
 		service.EnqueueAniListSeasonPush(r.Context(), tx, seasonID)
@@ -50,27 +48,46 @@ func (h *SeasonExternalHandler) SetAniListID(w http.ResponseWriter, r *http.Requ
 	}); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
-// ClearAniListID removes the AniList ID mapping for a season.
-// DELETE /api/titles/{titleID}/seasons/{seasonID}/anilist
-func (h *SeasonExternalHandler) ClearAniListID(w http.ResponseWriter, r *http.Request) error {
+// RemoveAniListID removes one AniList part from a season.
+// DELETE /api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}
+func (h *SeasonExternalHandler) RemoveAniListID(w http.ResponseWriter, r *http.Request) error {
 	seasonID, err := httputil.ParseIDParam(r, "seasonID")
 	if err != nil {
 		return httputil.BadRequest("Invalid season ID")
 	}
-
-	// Pas de transaction : un DELETE seul n'a pas de side-effect à coordonner
-	// avec un enqueue (au contraire du PUT). Une exécution sur le pool suffit.
-	if err := repository.NewSeasonExternalIDRepository(h.writeDB).Delete(
-		r.Context(), seasonID, repository.ProviderAniList,
-	); err != nil {
+	externalID := chi.URLParam(r, "externalID")
+	if externalID == "" {
+		return httputil.BadRequest("external id required")
+	}
+	if err := repository.NewSeasonExternalIDRepository(h.writeDB).DeletePart(
+		r.Context(), seasonID, repository.ProviderAniList, externalID); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
 
+// ReorderAniList sets the explicit part order for a season.
+// PUT /api/titles/{titleID}/seasons/{seasonID}/anilist/order
+func (h *SeasonExternalHandler) ReorderAniList(w http.ResponseWriter, r *http.Request) error {
+	seasonID, err := httputil.ParseIDParam(r, "seasonID")
+	if err != nil {
+		return httputil.BadRequest("Invalid season ID")
+	}
+	var body struct {
+		OrderedIDs []string `json:"ordered_ids"`
+	}
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+	if err := repository.NewSeasonExternalIDRepository(h.writeDB).Reorder(
+		r.Context(), seasonID, repository.ProviderAniList, body.OrderedIDs); err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

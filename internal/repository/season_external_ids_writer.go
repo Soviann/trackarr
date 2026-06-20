@@ -38,21 +38,6 @@ func (w *SeasonExternalIDWriter) Add(ctx context.Context, seasonID int64, provid
 	return w.Stamp(ctx, seasonID, provider, externalID)
 }
 
-// Upsert inserts or deduplicates the (seasonID, provider, externalID) mapping.
-// With the new composite PK, conflicting on (season_id, provider, external_id)
-// means the same triple is a no-op; a different externalID adds a new part.
-// Task 7 will migrate callers of this method to Add; kept for now to avoid
-// breaking handler/season_external.go and service/title.go.
-func (w *SeasonExternalIDWriter) Upsert(ctx context.Context, seasonID int64, provider, externalID string) error {
-	if _, err := w.tx.ExecContext(ctx, `
-		INSERT INTO season_external_ids (season_id, provider, external_id)
-		VALUES (?, ?, ?)
-		ON CONFLICT(season_id, provider, external_id) DO NOTHING`, seasonID, provider, externalID); err != nil {
-		return fmt.Errorf("season_external_ids upsert: %w", err)
-	}
-	return nil
-}
-
 // Delete removes all (seasonID, provider) parts inside the caller's transaction.
 func (w *SeasonExternalIDWriter) Delete(ctx context.Context, seasonID int64, provider string) error {
 	if _, err := w.tx.ExecContext(ctx,
