@@ -224,6 +224,56 @@ func (w *TitleWriter) MarkRefreshed(ctx context.Context, id int64, at time.Time)
 	return nil
 }
 
+// AddMissingNames inserts names not already stored for the title, matched
+// case-insensitively on (name, language). Existing names — anime romaji and
+// merged-season aliases included — are never deleted, so a refresh can backfill
+// translations without clobbering them. Incoming names are forced non-primary:
+// a refreshed title already owns its primary; this only adds alternates. Runs
+// in the caller's transaction; the FTS mirror updates via the title_names
+// AFTER INSERT trigger.
+func (w *TitleWriter) AddMissingNames(ctx context.Context, titleID int64, names []model.TitleName) error {
+	if len(names) == 0 {
+		return nil
+	}
+	rows, err := w.tx.QueryContext(ctx, `SELECT name, language FROM title_names WHERE title_id = ?`, titleID)
+	if err != nil {
+		return fmt.Errorf("list existing names: %w", err)
+	}
+	seen := make(map[string]struct{})
+	for rows.Next() {
+		var name, lang string
+		if err := rows.Scan(&name, &lang); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan existing name: %w", err)
+		}
+		seen[nameKey(name, lang)] = struct{}{}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate existing names: %w", err)
+	}
+
+	var toInsert []model.TitleName
+	for _, n := range names {
+		if n.Name == "" {
+			continue
+		}
+		key := nameKey(n.Name, n.Language)
+		if _, ok := seen[key]; ok {
+			continue // already present, or a duplicate within this batch
+		}
+		seen[key] = struct{}{}
+		toInsert = append(toInsert, model.TitleName{Name: n.Name, Language: n.Language})
+	}
+	return w.insertNames(ctx, titleID, toInsert)
+}
+
+// nameKey builds the case-insensitive dedup key for a (name, language) pair.
+// The NUL separator keeps "ab"+"c" distinct from "a"+"bc".
+func nameKey(name, language string) string {
+	return strings.ToLower(strings.TrimSpace(name)) + "\x00" + language
+}
+
 // ReplaceNames wipes and re-inserts the names for a title. Must run in the
 // same transaction as the caller so readers never observe an empty set.
 func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []model.TitleName) error {

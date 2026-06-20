@@ -212,6 +212,14 @@ func extractMovieTMDB(d *tvdbMovieDetail) int64 {
 	return 0
 }
 
+// Names returns the en/fr translations of this series, keyed by language code.
+// Exported so the background refresh can backfill names without re-deriving the
+// extraction from the unexported detail type.
+func (d *tvdbSeriesDetail) Names() map[string]string { return extractSeriesNames(d) }
+
+// Names returns the en/fr translations of this movie, keyed by language code.
+func (d *tvdbMovieDetail) Names() map[string]string { return extractMovieNames(d) }
+
 // extractSeriesNames returns en/fr names from TVDB translations.
 func extractSeriesNames(d *tvdbSeriesDetail) map[string]string {
 	result := make(map[string]string)

@@ -249,6 +249,49 @@ func TestTitleRepository_Update(t *testing.T) {
 	assert.Equal(t, 8, *got.MyRating)
 }
 
+func TestTitleRepository_AddMissingNames(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeSeries, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{
+			{Name: "DanMachi", Language: "en", IsPrimary: true},
+			{Name: "Dungeon ni Deai", Language: "x-romaji"},
+		})
+
+	// Backfill: one new (fr), one already present case-insensitively (en),
+	// and a duplicate within the same batch.
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).AddMissingNames(context.Background(), id, []model.TitleName{
+			{Name: "La légende des Familias", Language: "fr"},
+			{Name: "danmachi", Language: "en"},                // dup of primary (different case) → skipped
+			{Name: "La légende des Familias", Language: "fr"}, // dup within batch → inserted once
+		})
+	})
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(id)
+	require.NoError(t, err)
+
+	// romaji preserved, fr added once, en not duplicated → 3 total.
+	assert.Len(t, got.Names, 3)
+
+	var fr []model.TitleName
+	var primaries int
+	for _, n := range got.Names {
+		if n.Language == "fr" {
+			fr = append(fr, n)
+		}
+		if n.IsPrimary {
+			primaries++
+		}
+	}
+	require.Len(t, fr, 1)
+	assert.Equal(t, "La légende des Familias", fr[0].Name)
+	assert.False(t, fr[0].IsPrimary, "backfilled names must not be primary")
+	assert.Equal(t, 1, primaries, "the original primary stays the only primary")
+}
+
 func TestTitleRepository_UpdateNoFields(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

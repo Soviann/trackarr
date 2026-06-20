@@ -238,6 +238,30 @@ func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *reposito
 	}
 }
 
+// syncTitleNames backfills alternate-language names for a title from one or more
+// source maps (language -> name), inserting only entries not already stored.
+// Never deletes, so anime romaji and merged-season aliases survive a refresh.
+// Best-effort: failures are logged, not propagated.
+func (s *BackgroundService) syncTitleNames(ctx context.Context, titleID int64, sources ...map[string]string) {
+	var names []model.TitleName
+	for _, src := range sources {
+		for lang, name := range src {
+			if name == "" {
+				continue
+			}
+			names = append(names, model.TitleName{Name: name, Language: lang})
+		}
+	}
+	if len(names) == 0 {
+		return
+	}
+	if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).AddMissingNames(ctx, titleID, names)
+	}); err != nil {
+		log.Printf("background: backfill names for title %d: %v", titleID, err)
+	}
+}
+
 // logTitleUpdate logs an error from a title update if non-nil.
 func logTitleUpdate(titleID int64, kind string, err error) {
 	if err != nil {
@@ -263,6 +287,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 			return
 		}
 		result.Refreshed = true
+		s.syncTitleNames(ctx, title.ID, details.Names())
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -294,6 +319,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 			return
 		}
 		result.Refreshed = true
+		s.syncTitleNames(ctx, title.ID, details.Names())
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -360,6 +386,13 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 		metaUpdate.TMDBRating = rating
 	}
 	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
+
+	// Backfill multilingual names (en/fr) — re-syncs translations missing on
+	// titles matched before translations were captured. Additive, so the
+	// anime romaji name set by matching survives.
+	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "movie"); err == nil {
+		s.syncTitleNames(ctx, title.ID, tmdbNames)
+	}
 
 	// Persist genres to title_genres table
 	if genres != "" {
@@ -449,6 +482,11 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		metaUpdate.NextAirEpisode = &airEp
 	}
 	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
+
+	// Backfill multilingual names (en/fr) — see refreshMovieFromTMDB.
+	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
+		s.syncTitleNames(ctx, title.ID, tmdbNames)
+	}
 
 	// Persist genres to title_genres table
 	if genres != "" {
