@@ -581,9 +581,9 @@ func (s *BackgroundService) refreshFromAniList(ctx context.Context, title *repos
 	}
 }
 
-// refreshAniListSeasonScores walks every season of the title that has an
-// AniList mapping and stores the current averageScore on
-// seasons.anilist_average_score.
+// refreshAniListSeasonScores walks every AniList part of every season of the
+// title and stores the current score, episode count, and start date on each
+// season_external_ids row (via ListPartsForTitle → UpdatePartMeta).
 //
 // Uses AniList's public GraphQL endpoint (no auth) — token-invalid handling
 // is unnecessary on the call itself. The early-return on the

@@ -155,34 +155,3 @@ func (r *SeasonExternalIDRepository) UpdatePartMeta(ctx context.Context, seasonI
 	}
 	return nil
 }
-
-// ListForTitle returns (season_id → primary external_id) for a title + provider.
-// Background service still uses this single-value form until a later task
-// migrates it to ListPartsForTitle.
-func (r *SeasonExternalIDRepository) ListForTitle(ctx context.Context, titleID int64, provider string) (map[int64]string, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT sei.season_id, sei.external_id
-		FROM season_external_ids sei
-		JOIN seasons s ON s.id = sei.season_id
-		WHERE s.title_id = ? AND sei.provider = ?
-		`+partOrderClause, titleID, provider)
-	if err != nil {
-		return nil, fmt.Errorf("season_external_ids list: %w", err)
-	}
-	defer rows.Close()
-
-	out := make(map[int64]string)
-	for rows.Next() {
-		var sid int64
-		var eid string
-		if err := rows.Scan(&sid, &eid); err != nil {
-			return nil, fmt.Errorf("season_external_ids scan: %w", err)
-		}
-		// Keep only the first (primary) part per season — later rows are
-		// additional split-cour parts that background.go ignores for now.
-		if _, exists := out[sid]; !exists {
-			out[sid] = eid
-		}
-	}
-	return out, rows.Err()
-}

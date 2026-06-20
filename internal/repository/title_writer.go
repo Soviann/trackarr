@@ -309,9 +309,11 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 			finalSeasonID = targetSeasonID
 		}
 
-		// Stamp the per-season AniList mapping once the dest season ID is known.
-		// First-writer-wins (Stamp does ON CONFLICT DO NOTHING) means a
-		// user-confirmed link on the dest is never clobbered by a later merge.
+		// Append the source's AniList id as a part on the dest season once its
+		// ID is known. Stamp does ON CONFLICT(season_id,provider,external_id) DO
+		// NOTHING: a different incoming id coexists as a new part (split-cour
+		// merges keep both entries), the same id is a no-op, and the dest's
+		// existing parts are never clobbered.
 		if aniListID != 0 {
 			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(aniListID, 10)); err != nil {
 				return err
