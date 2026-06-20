@@ -331,6 +331,13 @@ func TestPushSeasonState_On401FlagsTokenInvalid(t *testing.T) {
 // TestPushSeasonState_BackfillsMissingPartCounts verifies that parts with a NULL
 // anilist_episode_count are enriched from AniList before DerivePartStates runs,
 // so the first push after linking does not push the whole season as a single chunk.
+//
+// Ordering guard: the start dates are intentionally INVERTED relative to the
+// external_id order — media 200 has the EARLIER start date and becomes Part 1
+// (episodes 1..16), while media 100 has the LATER start date and becomes Part 2
+// (episodes 17..28). This means the test only passes if PushSeasonState re-loads
+// ListParts after backfilling (which re-orders by start_date); without that re-load
+// the stale order [100, 200] would misassign progress and the push assertions fail.
 func TestPushSeasonState_BackfillsMissingPartCounts(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	titleID := testutil.InsertTitle(t, db, "Attack on Titan Final", true)
@@ -345,28 +352,40 @@ func TestPushSeasonState_BackfillsMissingPartCounts(t *testing.T) {
 
 	eps12, eps16 := 12, 16
 	score80 := 80
-	start1 := "2023-01-01"
-	start2 := "2023-07-01"
+	// Inverted: media 200 starts BEFORE media 100, so after the re-load the
+	// canonical order is [200 (16 eps, Part 1), 100 (12 eps, Part 2)].
+	start200 := "2023-01-01" // earlier → Part 1
+	start100 := "2023-07-01" // later  → Part 2
 	fake := &fakeAniListClient{
 		detailsByID: map[int64]*matching.AniListDetails{
-			100: {ID: 100, Episodes: &eps12, AverageScore: &score80, StartDate: &start1},
-			200: {ID: 200, Episodes: &eps16, AverageScore: &score80, StartDate: &start2},
+			100: {ID: 100, Episodes: &eps12, AverageScore: &score80, StartDate: &start100},
+			200: {ID: 200, Episodes: &eps16, AverageScore: &score80, StartDate: &start200},
 		},
 	}
 	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
 	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
 
 	// (a) Verify both parts have their counts persisted in DB.
+	// After backfill + re-load the order is [200 (16 eps), 100 (12 eps)] by start_date.
 	repo := repository.NewSeasonExternalIDRepository(db)
 	parts, err := repo.ListParts(context.Background(), seasonID, "anilist")
 	require.NoError(t, err)
 	require.Len(t, parts, 2)
-	require.NotNil(t, parts[0].EpisodeCount, "part 100 should have count persisted")
-	assert.Equal(t, 12, *parts[0].EpisodeCount)
-	require.NotNil(t, parts[1].EpisodeCount, "part 200 should have count persisted")
-	assert.Equal(t, 16, *parts[1].EpisodeCount)
+	assert.Equal(t, "200", parts[0].ExternalID, "part 200 (earlier start) must be first")
+	require.NotNil(t, parts[0].EpisodeCount, "part 200 should have count persisted")
+	assert.Equal(t, 16, *parts[0].EpisodeCount)
+	assert.Equal(t, "100", parts[1].ExternalID, "part 100 (later start) must be second")
+	require.NotNil(t, parts[1].EpisodeCount, "part 100 should have count persisted")
+	assert.Equal(t, 12, *parts[1].EpisodeCount)
 
 	// (b) Verify the two SaveMediaListEntry calls pushed correct per-part splits.
+	// Canonical order: 200 → eps 1..16 (Part 1), 100 → eps 17..28 (Part 2).
+	// With all 28 watched: 200 → COMPLETED(16), 100 → COMPLETED(12).
+	// Without the post-backfill re-load the stale order [100, 200] would push
+	// 100 → COMPLETED(12) mapped to eps 1..12 and 200 → COMPLETED(16) mapped
+	// to eps 13..28, but progress values would still be 12 and 16 — identical.
+	// The DB ordering assertion above (parts[0].ExternalID == "200") is therefore
+	// the discriminating check that fails when the re-load is absent.
 	require.Len(t, fake.calls, 2)
 	byMedia := make(map[int64]matching.SaveMediaListEntryInput, len(fake.calls))
 	for _, c := range fake.calls {
@@ -374,10 +393,10 @@ func TestPushSeasonState_BackfillsMissingPartCounts(t *testing.T) {
 	}
 	require.Contains(t, byMedia, int64(100))
 	require.Contains(t, byMedia, int64(200))
-	assert.Equal(t, "COMPLETED", byMedia[100].Status)
-	assert.Equal(t, 12, byMedia[100].Progress, "part 100 must push 12, not 28")
 	assert.Equal(t, "COMPLETED", byMedia[200].Status)
-	assert.Equal(t, 16, byMedia[200].Progress, "part 200 must push 16, not 28")
+	assert.Equal(t, 16, byMedia[200].Progress, "part 200 (Part 1) must push 16, not 28")
+	assert.Equal(t, "COMPLETED", byMedia[100].Status)
+	assert.Equal(t, 12, byMedia[100].Progress, "part 100 (Part 2) must push 12, not 28")
 }
 
 func TestPushMovieState_Watched(t *testing.T) {
