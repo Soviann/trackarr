@@ -1,4 +1,7 @@
 -- 027_season_external_ids_multi.down.sql
+-- WARNING (dev-only rollback): collapsing back to PK (season_id, provider)
+-- keeps only the primary part per season (lowest sort_order, then external_id)
+-- and DROPS every additional split-cour part plus all per-part meta columns.
 PRAGMA foreign_keys=OFF;
 
 CREATE TABLE season_external_ids_old (

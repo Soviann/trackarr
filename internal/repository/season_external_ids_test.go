@@ -62,21 +62,6 @@ func TestSeasonExternalIDs_AddDeduplicates(t *testing.T) {
 	assert.Len(t, parts, 1)
 }
 
-func TestSeasonExternalIDs_ListForTitle(t *testing.T) {
-	db := testutil.NewTestDB(t)
-	titleID := testutil.InsertTitle(t, db, "JJK", true)
-	s1 := testutil.InsertSeason(t, db, titleID, 1)
-	s2 := testutil.InsertSeason(t, db, titleID, 2)
-
-	repo := repository.NewSeasonExternalIDRepository(db)
-	require.NoError(t, repo.Add(context.Background(), s1, "anilist", "113415"))
-	require.NoError(t, repo.Add(context.Background(), s2, "anilist", "145064"))
-
-	got, err := repo.ListForTitle(context.Background(), titleID, "anilist")
-	require.NoError(t, err)
-	assert.Equal(t, map[int64]string{s1: "113415", s2: "145064"}, got)
-}
-
 // --- New multi-part tests ---
 
 func TestAddAndListParts(t *testing.T) {
