@@ -48,8 +48,8 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   // l'ID que lors du premier rendu (quand seasonID vaut undefined).
   // Ce useEffect resynchronise la valeur à chaque changement de saison.
   useEffect(() => {
-    setSeasonAniListID(season?.anilist_id ?? '')
-  }, [seasonID, season?.anilist_id])
+    setSeasonAniListID('')
+  }, [seasonID])
 
   // Prefill the manual fields with the title's current IDs each time the sheet
   // opens, so the user sees and edits real values (blank = remove the ID).
@@ -134,34 +134,33 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     }
   }
 
-  const handleSaveSeasonAniList = async () => {
+  const handleAddPart = async () => {
     if (seasonID == null || !seasonAniListID.trim()) return
     setSaving(true)
     try {
       await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist`, {
-        method: 'PUT',
+        method: 'POST',
         body: JSON.stringify({ anilist_id: seasonAniListID.trim() }),
       })
+      setSeasonAniListID('')
       onDone()
-      onClose()
     } catch (err) {
-      console.error('Failed to save season AniList ID:', err)
+      console.error('Failed to add AniList part:', err)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleClearSeasonAniList = async () => {
+  const handleRemovePart = async (externalID: string) => {
     if (seasonID == null) return
     setSaving(true)
     try {
-      await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist`, {
+      await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist/${encodeURIComponent(externalID)}`, {
         method: 'DELETE',
       })
       onDone()
-      onClose()
     } catch (err) {
-      console.error('Failed to remove season AniList mapping:', err)
+      console.error('Failed to remove AniList part:', err)
     } finally {
       setSaving(false)
     }
@@ -171,38 +170,29 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? 'Link AniList season' : 'Rematch title'}>
       <div className={s.content}>
         {seasonID != null ? (
-          /* Season-mode: focused AniList ID input only */
           <>
-            <div className={s.status}>
-              Link AniList for S{season?.season_number ?? '?'}
-            </div>
+            <div className={s.status}>AniList parts for S{season?.season_number ?? '?'}</div>
             <div className={s.manualSection}>
+              {(season?.anilist_parts ?? []).map((p, i) => (
+                <div key={p.external_id} className={s.partManageRow}>
+                  <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
+                  <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
+                    Remove
+                  </button>
+                </div>
+              ))}
               <label className={s.fieldLabel}>
-                AniList ID
-                <input
-                  type="text"
-                  value={seasonAniListID}
+                Add AniList ID
+                <input type="text" value={seasonAniListID}
                   onInput={(e) => setSeasonAniListID((e.target as HTMLInputElement).value)}
-                  className={s.fieldInput}
-                  placeholder="e.g. 145064"
-                  autoFocus
-                />
+                  className={s.fieldInput} placeholder="e.g. 145064" autoFocus />
               </label>
-              <button
-                onClick={handleSaveSeasonAniList}
-                disabled={saving || !seasonAniListID.trim()}
-                className={s.saveButton}
-              >
-                <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save'}</span>
+              <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
+                <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
               </button>
-              {season?.anilist_id && (
-                <button onClick={handleClearSeasonAniList} disabled={saving} className={s.removeMapping}>
-                  Remove mapping
-                </button>
-              )}
             </div>
           </>
-        ) : (
+        ) : ( /* title-mode unchanged */
           /* Title-mode: existing TMDB search + manual IDs UI */
           <>
             {/* Search bar */}

@@ -245,3 +245,12 @@
   margin: 0;
   line-height: 1.4;
 }
+
+.partManageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
