@@ -828,6 +828,33 @@ func TestTitleRepository_Merge_TransfersMissingExternalIDs(t *testing.T) {
 	assert.Equal(t, plexKey, *got.PlexRatingKey)
 }
 
+func TestTitleRepository_Merge_DoesNotCopySourceNames(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2009,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Show", Language: "en", IsPrimary: true}})
+
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2010,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Show Season 2", Language: "en", IsPrimary: true}})
+
+	testutil.MergeTitles(t, db, destID, sourceID, 1)
+
+	got, err := repo.GetByID(destID)
+	require.NoError(t, err)
+	for _, n := range got.Names {
+		assert.NotEqual(t, "Show Season 2", n.Name, "source season name must not be copied onto the merged title")
+	}
+}
+
 func TestTitleRepository_Merge_PreservesExistingExternalIDs(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

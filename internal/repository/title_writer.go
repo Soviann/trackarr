@@ -234,8 +234,8 @@ func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []m
 }
 
 // Merge consolidates sourceID into destID. Moves seasons (shifting their
-// number by seasonOffset), names, watch events, and external IDs before
-// deleting the source title. All steps share the caller's transaction so
+// number by seasonOffset), watch events, and external IDs before deleting the
+// source title. Source names are deliberately dropped, not copied as aliases. All steps share the caller's transaction so
 // a partial merge cannot leak to readers. When aniListID is non-zero, the
 // moved/merged dest season is stamped with that AniList mapping in
 // season_external_ids (first writer wins — existing dest mappings are kept).
@@ -321,25 +321,11 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		}
 	}
 
-	// 2. Move names as aliases (is_primary=0); INSERT OR IGNORE dedupes against dest.
-	nameRows, err := w.tx.QueryContext(ctx, `SELECT name, language FROM title_names WHERE title_id = ?`, sourceID)
-	if err == nil {
-		type nameMove struct {
-			name string
-			lang string
-		}
-		var names []nameMove
-		for nameRows.Next() {
-			var nm nameMove
-			if err := nameRows.Scan(&nm.name, &nm.lang); err == nil {
-				names = append(names, nm)
-			}
-		}
-		nameRows.Close()
-		for _, nm := range names {
-			_, _ = w.tx.ExecContext(ctx, `INSERT OR IGNORE INTO title_names (title_id, name, language, is_primary) VALUES (?, ?, ?, 0)`, destID, nm.name, nm.lang)
-		}
-	}
+	// 2. Source names are intentionally NOT copied. Merges consolidate seasons
+	// of one series, so the source's names are just season labels ("Show
+	// Season 2") — copying them as aliases polluted the dest and surfaced as
+	// noise in search. Plex re-matching is by external ID (FindByExternalID),
+	// not by name, so dropping the aliases costs no dedup safety.
 
 	// 3. Move watch events.
 	if _, err := w.tx.ExecContext(ctx, `UPDATE watch_events SET title_id = ? WHERE title_id = ?`, destID, sourceID); err != nil {
