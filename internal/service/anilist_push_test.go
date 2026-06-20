@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
+	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 	"github.com/nicolasvasse/plextracker/internal/testutil"
@@ -26,11 +27,26 @@ func seq(a, b int) []int {
 type fakeAniListClient struct {
 	calls       []matching.SaveMediaListEntryInput
 	errToReturn error
+	// detailsByID is an optional map of AniList ID → details for GetAnimeDetails.
+	// When nil or id is missing, a default fixture is returned.
+	detailsByID map[int64]*matching.AniListDetails
 }
 
 func (f *fakeAniListClient) SaveMediaListEntry(_ context.Context, in matching.SaveMediaListEntryInput, _ string) error {
 	f.calls = append(f.calls, in)
 	return f.errToReturn
+}
+
+func (f *fakeAniListClient) GetAnimeDetails(_ context.Context, anilistID int64) (*matching.AniListDetails, error) {
+	if f.detailsByID != nil {
+		if d, ok := f.detailsByID[anilistID]; ok {
+			return d, nil
+		}
+	}
+	eps := 12
+	score := 80
+	start := "2023-01-01"
+	return &matching.AniListDetails{ID: anilistID, Episodes: &eps, AverageScore: &score, StartDate: &start}, nil
 }
 
 func TestDeriveSeasonState(t *testing.T) {
@@ -310,6 +326,58 @@ func TestPushSeasonState_On401FlagsTokenInvalid(t *testing.T) {
 
 	got, _ := testutil.GetSetting(t, db, "anilist_token_invalid")
 	assert.Equal(t, "true", got)
+}
+
+// TestPushSeasonState_BackfillsMissingPartCounts verifies that parts with a NULL
+// anilist_episode_count are enriched from AniList before DerivePartStates runs,
+// so the first push after linking does not push the whole season as a single chunk.
+func TestPushSeasonState_BackfillsMissingPartCounts(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Attack on Titan Final", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 4)
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 28)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 28)
+	// Insert both parts WITHOUT setting episode counts (simulates freshly linked season).
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "200")
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	eps12, eps16 := 12, 16
+	score80 := 80
+	start1 := "2023-01-01"
+	start2 := "2023-07-01"
+	fake := &fakeAniListClient{
+		detailsByID: map[int64]*matching.AniListDetails{
+			100: {ID: 100, Episodes: &eps12, AverageScore: &score80, StartDate: &start1},
+			200: {ID: 200, Episodes: &eps16, AverageScore: &score80, StartDate: &start2},
+		},
+	}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	// (a) Verify both parts have their counts persisted in DB.
+	repo := repository.NewSeasonExternalIDRepository(db)
+	parts, err := repo.ListParts(context.Background(), seasonID, "anilist")
+	require.NoError(t, err)
+	require.Len(t, parts, 2)
+	require.NotNil(t, parts[0].EpisodeCount, "part 100 should have count persisted")
+	assert.Equal(t, 12, *parts[0].EpisodeCount)
+	require.NotNil(t, parts[1].EpisodeCount, "part 200 should have count persisted")
+	assert.Equal(t, 16, *parts[1].EpisodeCount)
+
+	// (b) Verify the two SaveMediaListEntry calls pushed correct per-part splits.
+	require.Len(t, fake.calls, 2)
+	byMedia := make(map[int64]matching.SaveMediaListEntryInput, len(fake.calls))
+	for _, c := range fake.calls {
+		byMedia[c.MediaID] = c
+	}
+	require.Contains(t, byMedia, int64(100))
+	require.Contains(t, byMedia, int64(200))
+	assert.Equal(t, "COMPLETED", byMedia[100].Status)
+	assert.Equal(t, 12, byMedia[100].Progress, "part 100 must push 12, not 28")
+	assert.Equal(t, "COMPLETED", byMedia[200].Status)
+	assert.Equal(t, 16, byMedia[200].Progress, "part 200 must push 16, not 28")
 }
 
 func TestPushMovieState_Watched(t *testing.T) {

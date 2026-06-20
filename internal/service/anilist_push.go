@@ -24,6 +24,7 @@ const (
 // HTTP client.
 type aniListPushClient interface {
 	SaveMediaListEntry(ctx context.Context, in matching.SaveMediaListEntryInput, accessToken string) error
+	GetAnimeDetails(ctx context.Context, anilistID int64) (*matching.AniListDetails, error)
 }
 
 // AniListPushService pushes a season (or movie) state to AniList.
@@ -76,6 +77,32 @@ func (s *AniListPushService) PushSeasonState(ctx context.Context, seasonID int64
 	if len(parts) == 0 {
 		s.log.Debug("anilist push skipped: no season mapping", "season_id", seasonID)
 		return nil
+	}
+
+	backfilled := false
+	for i := range parts {
+		if parts[i].EpisodeCount != nil {
+			continue
+		}
+		id, perr := strconv.ParseInt(parts[i].ExternalID, 10, 64)
+		if perr != nil {
+			continue
+		}
+		details, derr := s.client.GetAnimeDetails(ctx, id)
+		if derr != nil {
+			s.log.Warn("anilist push: backfill part meta failed", "season_id", seasonID, "external_id", parts[i].ExternalID, "err", derr)
+			continue
+		}
+		if uerr := s.seasonIDs.UpdatePartMeta(ctx, seasonID, providerAniList, parts[i].ExternalID, details.AverageScore, details.Episodes, details.StartDate); uerr != nil {
+			s.log.Warn("anilist push: persist backfilled part meta failed", "season_id", seasonID, "external_id", parts[i].ExternalID, "err", uerr)
+		}
+		backfilled = true
+	}
+	if backfilled {
+		parts, err = s.seasonIDs.ListParts(ctx, seasonID, providerAniList)
+		if err != nil {
+			return err
+		}
 	}
 
 	season, err := s.seasons.GetWithProgress(ctx, seasonID)
