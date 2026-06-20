@@ -1,8 +1,11 @@
 package handler_test
 
 import (
+	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,13 +13,15 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
+	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
+	"github.com/nicolasvasse/plextracker/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupEpisodeHandler(t *testing.T) *handler.EpisodeHandler {
+func setupEpisodeHandler(t *testing.T) (*handler.EpisodeHandler, *sql.DB) {
 	t.Helper()
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -28,12 +33,15 @@ func setupEpisodeHandler(t *testing.T) *handler.EpisodeHandler {
 	episodeRepo := repository.NewEpisodeRepository(db)
 	eventRepo := repository.NewWatchEventRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), nil, nil)
-	return handler.NewEpisodeHandler(db, libSvc)
+	// Real BackfillService (nil TMDB) so the post-commit current-season cascade
+	// runs and the handler's reload-after-backfill path is exercised end-to-end.
+	backfill := service.NewBackfillService(db, nil)
+	libSvc := service.NewLibraryService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, service.NewNoopNotifier(), backfill, nil)
+	return handler.NewEpisodeHandler(db, libSvc, titleRepo), db
 }
 
 func TestEpisodeHandler_ToggleWatched_InvalidTitleID(t *testing.T) {
-	h := setupEpisodeHandler(t)
+	h, _ := setupEpisodeHandler(t)
 
 	r := chi.NewRouter()
 	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
@@ -46,7 +54,7 @@ func TestEpisodeHandler_ToggleWatched_InvalidTitleID(t *testing.T) {
 }
 
 func TestEpisodeHandler_ToggleWatched_InvalidEpisodeID(t *testing.T) {
-	h := setupEpisodeHandler(t)
+	h, _ := setupEpisodeHandler(t)
 
 	r := chi.NewRouter()
 	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
@@ -59,7 +67,7 @@ func TestEpisodeHandler_ToggleWatched_InvalidEpisodeID(t *testing.T) {
 }
 
 func TestEpisodeHandler_BatchMarkWatched_InvalidTitleID(t *testing.T) {
-	h := setupEpisodeHandler(t)
+	h, _ := setupEpisodeHandler(t)
 
 	r := chi.NewRouter()
 	r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(h.BatchMarkWatched))
@@ -73,7 +81,7 @@ func TestEpisodeHandler_BatchMarkWatched_InvalidTitleID(t *testing.T) {
 }
 
 func TestEpisodeHandler_BatchMarkWatched_InvalidJSON(t *testing.T) {
-	h := setupEpisodeHandler(t)
+	h, _ := setupEpisodeHandler(t)
 
 	r := chi.NewRouter()
 	r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(h.BatchMarkWatched))
@@ -84,4 +92,42 @@ func TestEpisodeHandler_BatchMarkWatched_InvalidJSON(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// TestEpisodeHandler_ToggleWatched_ResponseReflectsBackfillCascade guards the
+// bug where marking an episode watched cascaded the previous episodes to
+// watched server-side, but the PATCH response carried the pre-cascade title
+// snapshot — so the UI showed stale season state until the next interaction.
+// The handler now reloads the title after the post-commit backfill.
+func TestEpisodeHandler_ToggleWatched_ResponseReflectsBackfillCascade(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+
+	titleID := testutil.InsertTitle(t, db, "Cascade Show", false)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+	ep1 := testutil.GetOrCreateEpisode(t, db, seasonID, 1)
+	ep2 := testutil.GetOrCreateEpisode(t, db, seasonID, 2)
+	ep3 := testutil.GetOrCreateEpisode(t, db, seasonID, 3)
+
+	r := chi.NewRouter()
+	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
+
+	// Mark E03 watched — the backfill should cascade E01 and E02 to watched.
+	req := httptest.NewRequest(http.MethodPatch,
+		"/titles/"+strconv.FormatInt(titleID, 10)+"/episodes/"+strconv.FormatInt(ep3.ID, 10), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var got model.Title
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+	require.Len(t, got.Seasons, 1)
+
+	watched := map[int64]bool{}
+	for _, e := range got.Seasons[0].Episodes {
+		watched[e.ID] = e.Watched
+	}
+	// All three must be watched in the SAME response — not just E03.
+	assert.True(t, watched[ep1.ID], "E01 should be cascaded watched in the response")
+	assert.True(t, watched[ep2.ID], "E02 should be cascaded watched in the response")
+	assert.True(t, watched[ep3.ID], "E03 should be watched in the response")
 }

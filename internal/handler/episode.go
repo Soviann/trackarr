@@ -7,18 +7,21 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
 	"github.com/nicolasvasse/plextracker/internal/model"
+	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 )
 
 type EpisodeHandler struct {
-	db      *sql.DB
-	service *service.LibraryService
+	db         *sql.DB
+	service    *service.LibraryService
+	titlesRead *repository.TitleRepository // readDB — reload after post-commit backfill
 }
 
-func NewEpisodeHandler(db *sql.DB, svc *service.LibraryService) *EpisodeHandler {
+func NewEpisodeHandler(db *sql.DB, svc *service.LibraryService, titlesRead *repository.TitleRepository) *EpisodeHandler {
 	return &EpisodeHandler{
-		db:      db,
-		service: svc,
+		db:         db,
+		service:    svc,
+		titlesRead: titlesRead,
 	}
 }
 
@@ -54,6 +57,16 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 	// unrelated HTTP I/O (webpush).
 	h.service.TriggerBackfillForEpisode(r.Context(), titleID, ep)
 	h.service.SendRatingPrompt(r.Context(), prompt)
+
+	// The backfill above marks previous episodes watched in its own post-commit
+	// tx, so the `title` returned from ToggleEpisodeWatched predates the cascade.
+	// Reload from readDB so the response reflects every auto-checked episode and
+	// the client doesn't show stale season state.
+	if ep != nil && ep.Watched {
+		if reloaded, err := h.titlesRead.GetByID(titleID); err == nil && reloaded != nil {
+			title = reloaded
+		}
+	}
 
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil

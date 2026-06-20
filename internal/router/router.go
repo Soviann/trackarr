@@ -75,7 +75,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
-	episodes := handler.NewEpisodeHandler(writeDB, libSvc)
+	episodes := handler.NewEpisodeHandler(writeDB, libSvc, titleReadRepo)
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
 	admin.SetShutdownWG(shutdownWG)
 	covers := handler.NewCoverHandler(cfg.DataDir)
