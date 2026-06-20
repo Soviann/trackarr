@@ -73,4 +73,48 @@ describe('SeasonAniListStrip', () => {
     fireEvent.click(getByText('Link entry'))
     expect(onEdit).toHaveBeenCalledOnce()
   })
+
+  // anilist_parts multi-part tests
+  it('renders two "Part N" links with scores when anilist_parts has two entries', () => {
+    const season = makeSeason({
+      anilist_parts: [
+        { external_id: '111', score: 82, episode_count: 12, start_date: null, sort_order: 1 },
+        { external_id: '222', score: 90, episode_count: 13, start_date: null, sort_order: 2 },
+      ],
+    })
+    const { getAllByText, getByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)
+    const part1Links = getAllByText('Part 1')
+    const part2Links = getAllByText('Part 2')
+    // One is the partTag span, one is the anchor link text
+    expect(part1Links.length).toBeGreaterThanOrEqual(1)
+    expect(part2Links.length).toBeGreaterThanOrEqual(1)
+    // Verify links point to correct AniList URLs
+    const link1 = part1Links.find(el => el.tagName === 'A')
+    const link2 = part2Links.find(el => el.tagName === 'A')
+    expect(link1?.getAttribute('href')).toBe('https://anilist.co/anime/111')
+    expect(link2?.getAttribute('href')).toBe('https://anilist.co/anime/222')
+    // Scores rendered
+    expect(getByText('82%')).toBeTruthy()
+    expect(getByText('90%')).toBeTruthy()
+  })
+
+  it('renders single-link look (no "Part" label) when anilist_parts has one entry', () => {
+    const season = makeSeason({
+      anilist_parts: [
+        { external_id: '999', score: 75, episode_count: 12, start_date: null, sort_order: 1 },
+      ],
+    })
+    const { getByText, queryByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)
+    // Should show S2 (season fallback) not "Part 1"
+    expect(getByText('S2')).toBeTruthy()
+    expect(queryByText('Part 1')).toBeNull()
+    expect(getByText('75%')).toBeTruthy()
+  })
+
+  it('renders the unmapped state when anilist_parts is empty and no anilist_id', () => {
+    const season = makeSeason({ anilist_parts: [], anilist_id: null })
+    const { getByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)
+    expect(getByText('Not mapped for this season')).toBeTruthy()
+    expect(getByText('Link entry')).toBeTruthy()
+  })
 })
