@@ -258,11 +258,12 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 			seasonID := *edit.AniListSeasonID
 			writer := repository.NewSeasonExternalIDWriter(tx)
 			if edit.AniListID != nil {
-				if err := writer.Upsert(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(*edit.AniListID, 10)); err != nil {
+				if err := writer.Add(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(*edit.AniListID, 10)); err != nil {
 					return err
 				}
 				EnqueueAniListSeasonPush(ctx, tx, seasonID)
 			} else if err := writer.Delete(ctx, seasonID, repository.ProviderAniList); err != nil {
+				// Title-mode "blank AniList" clears all parts for that season.
 				return err
 			}
 		}

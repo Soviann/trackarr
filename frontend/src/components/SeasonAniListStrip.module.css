@@ -90,3 +90,26 @@
 .linkButton:hover {
   background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
+
+.partList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.partRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.partTag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}

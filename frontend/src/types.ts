@@ -69,6 +69,14 @@ export interface TitleName {
   is_primary: boolean
 }
 
+export interface AniListPart {
+  external_id: string
+  score: number | null
+  episode_count: number | null
+  start_date: string | null
+  sort_order: number | null
+}
+
 export interface Season {
   id: number
   title_id: number
@@ -76,6 +84,7 @@ export interface Season {
   total_episodes: number | null
   anilist_id?: string | null
   anilist_community_score?: number | null
+  anilist_parts?: AniListPart[]
   episode_count?: number
   watched_count?: number
   episodes: Episode[]

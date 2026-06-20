@@ -37,7 +37,8 @@ type AniListDetails struct {
 	AverageScore *int     `json:"averageScore"`
 	Description  string   `json:"description"` // synopsis, HTML stripped to plain text
 	Genres       []string `json:"genres"`
-	Duration     *int     `json:"duration"` // minutes per episode
+	Duration     *int     `json:"duration"`  // minutes per episode
+	StartDate    *string  `json:"startDate"` // ISO YYYY-MM-DD, nil if unknown
 }
 
 type AniListNames struct {
@@ -74,6 +75,7 @@ query ($id: Int) {
     genres
     description(asHtml: false)
     coverImage { extraLarge large }
+    startDate { year month day }
   }
 }
 `
@@ -155,6 +157,11 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 				ExtraLarge string `json:"extraLarge"`
 				Large      string `json:"large"`
 			} `json:"coverImage"`
+			StartDate struct {
+				Year  *int `json:"year"`
+				Month *int `json:"month"`
+				Day   *int `json:"day"`
+			} `json:"startDate"`
 		} `json:"Media"`
 	}
 
@@ -181,7 +188,26 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 		Description:  cleanAniListDescription(resp.Media.Description),
 		Genres:       resp.Media.Genres,
 		Duration:     resp.Media.Duration,
+		StartDate:    formatAniListDate(resp.Media.StartDate.Year, resp.Media.StartDate.Month, resp.Media.StartDate.Day),
 	}, nil
+}
+
+// formatAniListDate renders AniList's {year,month,day} as ISO YYYY-MM-DD,
+// zero-padding missing month/day to 01. Returns nil when year is absent
+// (undated entry) so ordering falls back to external_id.
+func formatAniListDate(y, m, d *int) *string {
+	if y == nil {
+		return nil
+	}
+	mm, dd := 1, 1
+	if m != nil {
+		mm = *m
+	}
+	if d != nil {
+		dd = *d
+	}
+	s := fmt.Sprintf("%04d-%02d-%02d", *y, mm, dd)
+	return &s
 }
 
 // GetNames returns romaji and English names for an anime.

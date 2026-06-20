@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strconv"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
+	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
@@ -24,6 +24,7 @@ const (
 // HTTP client.
 type aniListPushClient interface {
 	SaveMediaListEntry(ctx context.Context, in matching.SaveMediaListEntryInput, accessToken string) error
+	GetAnimeDetails(ctx context.Context, anilistID int64) (*matching.AniListDetails, error)
 }
 
 // AniListPushService pushes a season (or movie) state to AniList.
@@ -69,17 +70,39 @@ func (s *AniListPushService) PushSeasonState(ctx context.Context, seasonID int64
 		return err
 	}
 
-	mediaIDStr, err := s.seasonIDs.Get(ctx, seasonID, providerAniList)
+	parts, err := s.seasonIDs.ListParts(ctx, seasonID, providerAniList)
 	if err != nil {
 		return err
 	}
-	if mediaIDStr == "" {
+	if len(parts) == 0 {
 		s.log.Debug("anilist push skipped: no season mapping", "season_id", seasonID)
 		return nil
 	}
-	mediaID, err := strconv.ParseInt(mediaIDStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("anilist push: invalid media id %q: %w", mediaIDStr, err)
+
+	backfilled := false
+	for i := range parts {
+		if parts[i].EpisodeCount != nil {
+			continue
+		}
+		id, perr := strconv.ParseInt(parts[i].ExternalID, 10, 64)
+		if perr != nil {
+			continue
+		}
+		details, derr := s.client.GetAnimeDetails(ctx, id)
+		if derr != nil {
+			s.log.Warn("anilist push: backfill part meta failed", "season_id", seasonID, "external_id", parts[i].ExternalID, "err", derr)
+			continue
+		}
+		if uerr := s.seasonIDs.UpdatePartMeta(ctx, seasonID, providerAniList, parts[i].ExternalID, details.AverageScore, details.Episodes, details.StartDate); uerr != nil {
+			s.log.Warn("anilist push: persist backfilled part meta failed", "season_id", seasonID, "external_id", parts[i].ExternalID, "err", uerr)
+		}
+		backfilled = true
+	}
+	if backfilled {
+		parts, err = s.seasonIDs.ListParts(ctx, seasonID, providerAniList)
+		if err != nil {
+			return err
+		}
 	}
 
 	season, err := s.seasons.GetWithProgress(ctx, seasonID)
@@ -90,20 +113,26 @@ func (s *AniListPushService) PushSeasonState(ctx context.Context, seasonID int64
 	if err != nil {
 		return err
 	}
-
-	derivedStatus, progress := DeriveSeasonState(string(title.Status), season.TotalEpisodes, season.WatchedEpisodes)
-
-	var score *int
-	if ShouldPushRating(derivedStatus) && title.MyRating != nil {
-		score = title.MyRating
+	watched, err := s.seasons.WatchedEpisodeNumbers(ctx, seasonID)
+	if err != nil {
+		return err
 	}
 
-	return s.send(ctx, matching.SaveMediaListEntryInput{
-		MediaID:  mediaID,
-		Status:   derivedStatus,
-		Progress: progress,
-		Score:    score,
-	}, token, "season_id", seasonID)
+	for _, ps := range DerivePartStates(string(title.Status), parts, watched, season.TotalEpisodes) {
+		var score *int
+		if ps.Rating && title.MyRating != nil {
+			score = title.MyRating
+		}
+		if err := s.send(ctx, matching.SaveMediaListEntryInput{
+			MediaID:  ps.MediaID,
+			Status:   ps.Status,
+			Progress: ps.Progress,
+			Score:    score,
+		}, token, "season_id", seasonID); err != nil {
+			return err // a 401 is already swallowed inside send; a real error stops the rest
+		}
+	}
+	return nil
 }
 
 // PushMovieState pushes the current state of an anime movie to AniList using
@@ -208,6 +237,100 @@ func DeriveSeasonState(titleStatus string, totalEpisodes, watchedEpisodes int) (
 		return "DROPPED", progress
 	}
 	if watchedEpisodes == 0 {
+		if titleStatus == "plan_to_watch" {
+			return "PLANNING", 0
+		}
+		return "CURRENT", 0
+	}
+	return "CURRENT", progress
+}
+
+// PartPush is one part's derived AniList state, ready to send. MediaID is the
+// parsed AniList media id; Rating flags whether the status warrants a rating.
+type PartPush struct {
+	MediaID  int64
+	Status   string
+	Progress int
+	Rating   bool
+}
+
+// DerivePartStates splits a season's watched episodes across its ordered AniList
+// parts and derives each part's AniList state. Part i covers season episode
+// numbers (cum, cum+count]; the last part (and any part with an unknown count)
+// absorbs the remainder so a watched episode is never dropped. Parts with a
+// non-numeric ExternalID are skipped (the caller logs them); they never emit.
+func DerivePartStates(titleStatus string, parts []model.AniListPart, watched []int, seasonTotal int) []PartPush {
+	watchedSet := make(map[int]bool, len(watched))
+	maxWatched := 0
+	for _, n := range watched {
+		watchedSet[n] = true
+		if n > maxWatched {
+			maxWatched = n
+		}
+	}
+
+	out := make([]PartPush, 0, len(parts))
+	cum := 0
+	for i, p := range parts {
+		mediaID, err := strconv.ParseInt(p.ExternalID, 10, 64)
+		if err != nil {
+			continue // non-numeric ids are skipped; nothing to push
+		}
+		count := 0
+		if p.EpisodeCount != nil {
+			count = *p.EpisodeCount
+		}
+		last := i == len(parts)-1
+
+		// Effective count for state derivation. When AniList's count is unknown
+		// (nil/0 — e.g. a freshly linked season the daily refresh hasn't reached
+		// yet), fall back to the season's own remaining episode total so a
+		// fully-watched part still reaches COMPLETED — preserving pre-multi-part
+		// behaviour. Falls back further to the watched span if the season total
+		// is also unknown.
+		effectiveCount := count
+		if effectiveCount == 0 {
+			if rem := seasonTotal - cum; rem > 0 {
+				effectiveCount = rem
+			} else if rem := maxWatched - cum; rem > 0 {
+				effectiveCount = rem
+			}
+		}
+
+		// Range upper bound: cum+count for a known middle part; the last part
+		// (or an unknown-count part) absorbs everything remaining so no watched
+		// episode is dropped.
+		hi := cum + count
+		if last || count == 0 {
+			hi = cum + effectiveCount
+			if maxWatched > hi {
+				hi = maxWatched
+			}
+		}
+		inRange := 0
+		for ep := cum + 1; ep <= hi; ep++ {
+			if watchedSet[ep] {
+				inRange++
+			}
+		}
+		status, progress := derivePartState(titleStatus, effectiveCount, inRange)
+		out = append(out, PartPush{MediaID: mediaID, Status: status, Progress: progress, Rating: ShouldPushRating(status)})
+		cum += count
+	}
+	return out
+}
+
+// derivePartState mirrors DeriveSeasonState but scoped to one part's episode
+// range: COMPLETED wins when the part is fully watched.
+func derivePartState(titleStatus string, count, watchedInRange int) (status string, progress int) {
+	progress = watchedInRange
+	if count > 0 && watchedInRange >= count {
+		return "COMPLETED", count
+	}
+	if titleStatus == "dropped" {
+		return "DROPPED", progress
+	}
+	if watchedInRange == 0 {
 		if titleStatus == "plan_to_watch" {
 			return "PLANNING", 0
 		}

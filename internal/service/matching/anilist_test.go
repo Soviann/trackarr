@@ -52,6 +52,7 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 			malID := int64(21)
 			eps := 12
 			year := 2015
+			startYear, startMonth, startDay := 2023, 3, 4
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{
 					"Media": map[string]any{
@@ -67,6 +68,11 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 						"coverImage": map[string]string{
 							"extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YCDoj1EkAxFn.jpg",
 							"large":      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-YCDoj1EkAxFn.jpg",
+						},
+						"startDate": map[string]any{
+							"year":  startYear,
+							"month": startMonth,
+							"day":   startDay,
 						},
 					},
 				},
@@ -129,6 +135,8 @@ func TestAniListGetAnimeDetails(t *testing.T) {
 	assert.NotNil(t, details.Episodes)
 	assert.Equal(t, 12, *details.Episodes)
 	assert.Equal(t, "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YCDoj1EkAxFn.jpg", details.CoverURL)
+	assert.NotNil(t, details.StartDate)
+	assert.Equal(t, "2023-03-04", *details.StartDate)
 }
 
 func TestAniListSyncRating(t *testing.T) {

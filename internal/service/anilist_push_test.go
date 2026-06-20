@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nicolasvasse/plextracker/internal/model"
+	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 	"github.com/nicolasvasse/plextracker/internal/testutil"
@@ -11,14 +13,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func ptrInt(v int) *int { return &v }
+
+// seq returns []int{a, a+1, ..., b}.
+func seq(a, b int) []int {
+	out := make([]int, 0, b-a+1)
+	for i := a; i <= b; i++ {
+		out = append(out, i)
+	}
+	return out
+}
+
 type fakeAniListClient struct {
 	calls       []matching.SaveMediaListEntryInput
 	errToReturn error
+	// detailsByID is an optional map of AniList ID → details for GetAnimeDetails.
+	// When nil or id is missing, a default fixture is returned.
+	detailsByID map[int64]*matching.AniListDetails
 }
 
 func (f *fakeAniListClient) SaveMediaListEntry(_ context.Context, in matching.SaveMediaListEntryInput, _ string) error {
 	f.calls = append(f.calls, in)
 	return f.errToReturn
+}
+
+func (f *fakeAniListClient) GetAnimeDetails(_ context.Context, anilistID int64) (*matching.AniListDetails, error) {
+	if f.detailsByID != nil {
+		if d, ok := f.detailsByID[anilistID]; ok {
+			return d, nil
+		}
+	}
+	eps := 12
+	score := 80
+	start := "2023-01-01"
+	return &matching.AniListDetails{ID: anilistID, Episodes: &eps, AverageScore: &score, StartDate: &start}, nil
 }
 
 func TestDeriveSeasonState(t *testing.T) {
@@ -45,6 +73,117 @@ func TestDeriveSeasonState(t *testing.T) {
 			assert.Equal(t, tt.wantProgress, gotProgress)
 		})
 	}
+}
+
+// TestDerivePartStates_SingleNilCountCompletes guards the freshly-linked-season
+// regression: a single AniList part whose anilist_episode_count is still NULL
+// (the daily refresh hasn't reached it yet) must still reach COMPLETED when the
+// whole season is watched, by falling back to the season's own total.
+func TestDerivePartStates_SingleNilCountCompletes(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "123", EpisodeCount: nil},
+	}
+
+	// Fully watched (12/12) with seasonTotal=12 → COMPLETED + rating.
+	got := service.DerivePartStates("watching", parts, seq(1, 12), 12)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(123), got[0].MediaID)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.True(t, got[0].Rating)
+
+	// Partial (6/12) → CURRENT(6), no rating.
+	got = service.DerivePartStates("watching", parts, seq(1, 6), 12)
+	require.Len(t, got, 1)
+	assert.Equal(t, "CURRENT", got[0].Status)
+	assert.Equal(t, 6, got[0].Progress)
+	assert.False(t, got[0].Rating)
+}
+
+func TestDerivePartStates_TwoParts(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: ptrInt(16)},
+	}
+
+	// All 28 watched → both parts COMPLETED at their full counts.
+	got := service.DerivePartStates("watching", parts, seq(1, 28), 28)
+	require.Len(t, got, 2)
+	assert.Equal(t, int64(100), got[0].MediaID)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.True(t, got[0].Rating)
+	assert.Equal(t, int64(200), got[1].MediaID)
+	assert.Equal(t, "COMPLETED", got[1].Status)
+	assert.Equal(t, 16, got[1].Progress)
+	assert.True(t, got[1].Rating)
+
+	// Exactly part 1 watched → part1 COMPLETED(12), part2 CURRENT(0).
+	got = service.DerivePartStates("watching", parts, seq(1, 12), 28)
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 0, got[1].Progress)
+	assert.False(t, got[1].Rating)
+
+	// 18 watched → part1 COMPLETED(12), part2 CURRENT(6).
+	got = service.DerivePartStates("watching", parts, seq(1, 18), 28)
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 6, got[1].Progress)
+}
+
+func TestDerivePartStates_DroppedPartial(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: ptrInt(16)},
+	}
+
+	// Dropped title, part1 fully watched, part2 partial: COMPLETED still wins
+	// for the finished part; the unfinished part is DROPPED with its progress.
+	got := service.DerivePartStates("dropped", parts, seq(1, 18), 28)
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	assert.Equal(t, "DROPPED", got[1].Status)
+	assert.Equal(t, 6, got[1].Progress)
+	assert.True(t, got[1].Rating)
+}
+
+func TestDerivePartStates_OverflowAbsorbsRemainder(t *testing.T) {
+	// Part 2 has an unknown count → it absorbs every watched episode past
+	// part 1's range so nothing is dropped.
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "200", EpisodeCount: nil},
+	}
+
+	// seasonTotal=25 > maxWatched=20: the unknown-count part is NOT fully
+	// watched (remaining = 25-12 = 13, only 8 of them seen), so it stays
+	// CURRENT. (Passing seasonTotal=20 would legitimately complete it now.)
+	got := service.DerivePartStates("watching", parts, seq(1, 20), 25)
+	require.Len(t, got, 2)
+	assert.Equal(t, "COMPLETED", got[0].Status)
+	assert.Equal(t, 12, got[0].Progress)
+	// Unknown count falls back to the season's remaining (13) > watched (8),
+	// so the part is incomplete → CURRENT; remainder lands here, none dropped.
+	assert.Equal(t, "CURRENT", got[1].Status)
+	assert.Equal(t, 8, got[1].Progress)
+}
+
+func TestDerivePartStates_SkipsNonNumericID(t *testing.T) {
+	parts := []model.AniListPart{
+		{ExternalID: "100", EpisodeCount: ptrInt(12)},
+		{ExternalID: "not-a-number", EpisodeCount: ptrInt(16)},
+	}
+
+	got := service.DerivePartStates("watching", parts, seq(1, 28), 28)
+	// The non-numeric part is dropped entirely; only the parsed part emits.
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(100), got[0].MediaID)
 }
 
 func TestShouldPushRating(t *testing.T) {
@@ -83,6 +222,10 @@ func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
 	testutil.SetSeasonEpisodeCount(t, db, seasonID, 12)
 	testutil.MarkEpisodesWatched(t, db, seasonID, 12)
 	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "113415")
+	// Deliberately NO SetPartEpisodeCount: anilist_episode_count stays NULL, as
+	// for a freshly linked season the daily refresh hasn't reached. The fully
+	// watched season must still push COMPLETED + rating via the season-total
+	// fallback (the regression this fix restores).
 	testutil.SetTitleStatus(t, db, titleID, "watching")
 	testutil.SetTitleRating(t, db, titleID, 8)
 	testutil.SetSetting(t, db, "anilist_token", "test-token")
@@ -95,6 +238,38 @@ func TestPushSeasonState_CompletedPushesRating(t *testing.T) {
 	assert.Equal(t, "COMPLETED", fake.calls[0].Status)
 	require.NotNil(t, fake.calls[0].Score)
 	assert.Equal(t, 8, *fake.calls[0].Score)
+}
+
+func TestPushSeasonState_MultiPartSplitsProgress(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Attack on Titan", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 4)
+	// Final Season as one PlexTracker season of 28 episodes, mapped to two
+	// AniList parts (12 + 16). 18 watched → part1 COMPLETED(12), part2 CURRENT(6).
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 28)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 18)
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "200")
+	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "100", 12)
+	testutil.SetPartEpisodeCount(t, db, seasonID, "anilist", "200", 16)
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	fake := &fakeAniListClient{}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	require.Len(t, fake.calls, 2)
+	byMedia := make(map[int64]matching.SaveMediaListEntryInput, len(fake.calls))
+	for _, c := range fake.calls {
+		byMedia[c.MediaID] = c
+	}
+	require.Contains(t, byMedia, int64(100))
+	require.Contains(t, byMedia, int64(200))
+	assert.Equal(t, "COMPLETED", byMedia[100].Status)
+	assert.Equal(t, 12, byMedia[100].Progress)
+	assert.Equal(t, "CURRENT", byMedia[200].Status)
+	assert.Equal(t, 6, byMedia[200].Progress)
 }
 
 func TestPushSeasonState_SkipsWhenNoMapping(t *testing.T) {
@@ -151,6 +326,77 @@ func TestPushSeasonState_On401FlagsTokenInvalid(t *testing.T) {
 
 	got, _ := testutil.GetSetting(t, db, "anilist_token_invalid")
 	assert.Equal(t, "true", got)
+}
+
+// TestPushSeasonState_BackfillsMissingPartCounts verifies that parts with a NULL
+// anilist_episode_count are enriched from AniList before DerivePartStates runs,
+// so the first push after linking does not push the whole season as a single chunk.
+//
+// Ordering guard: the start dates are intentionally INVERTED relative to the
+// external_id order — media 200 has the EARLIER start date and becomes Part 1
+// (episodes 1..16), while media 100 has the LATER start date and becomes Part 2
+// (episodes 17..28). This means the test only passes if PushSeasonState re-loads
+// ListParts after backfilling (which re-orders by start_date); without that re-load
+// the stale order [100, 200] would misassign progress and the push assertions fail.
+func TestPushSeasonState_BackfillsMissingPartCounts(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleID := testutil.InsertTitle(t, db, "Attack on Titan Final", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 4)
+	testutil.SetSeasonEpisodeCount(t, db, seasonID, 28)
+	testutil.MarkEpisodesWatched(t, db, seasonID, 28)
+	// Insert both parts WITHOUT setting episode counts (simulates freshly linked season).
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "100")
+	testutil.InsertSeasonExternalID(t, db, seasonID, "anilist", "200")
+	testutil.SetTitleStatus(t, db, titleID, "watching")
+	testutil.SetSetting(t, db, "anilist_token", "test-token")
+
+	eps12, eps16 := 12, 16
+	score80 := 80
+	// Inverted: media 200 starts BEFORE media 100, so after the re-load the
+	// canonical order is [200 (16 eps, Part 1), 100 (12 eps, Part 2)].
+	start200 := "2023-01-01" // earlier → Part 1
+	start100 := "2023-07-01" // later  → Part 2
+	fake := &fakeAniListClient{
+		detailsByID: map[int64]*matching.AniListDetails{
+			100: {ID: 100, Episodes: &eps12, AverageScore: &score80, StartDate: &start100},
+			200: {ID: 200, Episodes: &eps16, AverageScore: &score80, StartDate: &start200},
+		},
+	}
+	svc := service.NewAniListPushService(db, fake, testutil.NopLogger())
+	require.NoError(t, svc.PushSeasonState(context.Background(), seasonID))
+
+	// (a) Verify both parts have their counts persisted in DB.
+	// After backfill + re-load the order is [200 (16 eps), 100 (12 eps)] by start_date.
+	repo := repository.NewSeasonExternalIDRepository(db)
+	parts, err := repo.ListParts(context.Background(), seasonID, "anilist")
+	require.NoError(t, err)
+	require.Len(t, parts, 2)
+	assert.Equal(t, "200", parts[0].ExternalID, "part 200 (earlier start) must be first")
+	require.NotNil(t, parts[0].EpisodeCount, "part 200 should have count persisted")
+	assert.Equal(t, 16, *parts[0].EpisodeCount)
+	assert.Equal(t, "100", parts[1].ExternalID, "part 100 (later start) must be second")
+	require.NotNil(t, parts[1].EpisodeCount, "part 100 should have count persisted")
+	assert.Equal(t, 12, *parts[1].EpisodeCount)
+
+	// (b) Verify the two SaveMediaListEntry calls pushed correct per-part splits.
+	// Canonical order: 200 → eps 1..16 (Part 1), 100 → eps 17..28 (Part 2).
+	// With all 28 watched: 200 → COMPLETED(16), 100 → COMPLETED(12).
+	// Without the post-backfill re-load the stale order [100, 200] would push
+	// 100 → COMPLETED(12) mapped to eps 1..12 and 200 → COMPLETED(16) mapped
+	// to eps 13..28, but progress values would still be 12 and 16 — identical.
+	// The DB ordering assertion above (parts[0].ExternalID == "200") is therefore
+	// the discriminating check that fails when the re-load is absent.
+	require.Len(t, fake.calls, 2)
+	byMedia := make(map[int64]matching.SaveMediaListEntryInput, len(fake.calls))
+	for _, c := range fake.calls {
+		byMedia[c.MediaID] = c
+	}
+	require.Contains(t, byMedia, int64(100))
+	require.Contains(t, byMedia, int64(200))
+	assert.Equal(t, "COMPLETED", byMedia[200].Status)
+	assert.Equal(t, 16, byMedia[200].Progress, "part 200 (Part 1) must push 16, not 28")
+	assert.Equal(t, "COMPLETED", byMedia[100].Status)
+	assert.Equal(t, 12, byMedia[100].Progress, "part 100 (Part 2) must push 12, not 28")
 }
 
 func TestPushMovieState_Watched(t *testing.T) {

@@ -136,27 +136,20 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	}
 	genreRows.Close()
 
-	// Load seasons. Detail path joins season_external_ids (anilist) and
-	// the per-season AniList score so the title detail UI can render the
-	// per-season info strip without an extra round-trip. The listing
-	// path (loadTitleRelationsLight) intentionally skips these fields.
+	// Load seasons plain (no JOIN on season_external_ids — a season may have
+	// multiple AniList parts, and a join would multiply rows). Parts are
+	// loaded separately below once this cursor is closed (MaxOpenConns=1).
 	seasonRows, err := r.db.Query(`
-		SELECT s.id, s.title_id, s.season_number, s.total_episodes,
-		       sei.external_id AS anilist_id,
-		       s.anilist_average_score
+		SELECT s.id, s.title_id, s.season_number, s.total_episodes
 		FROM seasons s
-		LEFT JOIN season_external_ids sei
-		       ON sei.season_id = s.id AND sei.provider = 'anilist'
 		WHERE s.title_id = ?
 		ORDER BY s.season_number`, id)
 	if err != nil {
 		return nil, fmt.Errorf("get seasons: %w", err)
 	}
-
 	for seasonRows.Next() {
 		var s model.Season
-		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes,
-			&s.AniListID, &s.AniListAverageScore); err != nil {
+		if err := seasonRows.Scan(&s.ID, &s.TitleID, &s.SeasonNumber, &s.TotalEpisodes); err != nil {
 			seasonRows.Close()
 			return nil, fmt.Errorf("scan season: %w", err)
 		}
@@ -168,6 +161,43 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		return nil, fmt.Errorf("iterate seasons: %w", err)
 	}
 	seasonRows.Close()
+
+	// Attach AniList parts (multiple per season for split-cour). Cursor above is
+	// closed first (MaxOpenConns=1). Derive the primary-part aliases for
+	// backward-compatible single-link consumers.
+	parts := map[int64][]model.AniListPart{}
+	pr, err := r.db.Query(`
+		SELECT sei.season_id, sei.external_id, sei.anilist_average_score,
+		       sei.anilist_episode_count, sei.anilist_start_date, sei.sort_order
+		FROM season_external_ids sei
+		JOIN seasons s ON s.id = sei.season_id
+		WHERE s.title_id = ? AND sei.provider = 'anilist'
+		ORDER BY (sei.sort_order IS NULL), sei.sort_order, (sei.anilist_start_date IS NULL), sei.anilist_start_date, sei.external_id`, id)
+	if err != nil {
+		return nil, fmt.Errorf("get season anilist parts: %w", err)
+	}
+	for pr.Next() {
+		var sid int64
+		var p model.AniListPart
+		if err := pr.Scan(&sid, &p.ExternalID, &p.Score, &p.EpisodeCount, &p.StartDate, &p.SortOrder); err != nil {
+			pr.Close()
+			return nil, fmt.Errorf("scan season anilist part: %w", err)
+		}
+		parts[sid] = append(parts[sid], p)
+	}
+	if err := pr.Err(); err != nil {
+		pr.Close()
+		return nil, fmt.Errorf("iterate season anilist parts: %w", err)
+	}
+	pr.Close()
+	for i := range title.Seasons {
+		ps := parts[title.Seasons[i].ID]
+		title.Seasons[i].AniListParts = ps
+		if len(ps) > 0 {
+			title.Seasons[i].AniListID = &ps[0].ExternalID
+			title.Seasons[i].AniListAverageScore = ps[0].Score
+		}
+	}
 
 	// Load all episodes in one query (seasons cursor is closed above; safe with MaxOpenConns=1)
 	epRows, err := r.db.Query(`

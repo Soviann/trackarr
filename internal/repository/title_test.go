@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -687,16 +688,18 @@ func TestTitleRepository_GetByID_EpisodesMultiSeason(t *testing.T) {
 func TestTitleRepository_GetByID_HydratesAniListSeasonFields(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
+	seiRepo := repository.NewSeasonExternalIDRepository(db)
+	ctx := t.Context()
 
 	titleID := testutil.InsertTitle(t, db, "Jujutsu Kaisen", true)
 
 	// S1 has an AniList mapping AND a community score → both fields populated.
 	s1 := testutil.InsertSeason(t, db, titleID, 1)
 	testutil.InsertSeasonExternalID(t, db, s1, "anilist", "113415")
-	_, err := db.Exec(`UPDATE seasons SET anilist_average_score = ? WHERE id = ?`, 86, s1)
-	require.NoError(t, err)
+	score := 86
+	require.NoError(t, seiRepo.UpdatePartMeta(ctx, s1, "anilist", "113415", &score, nil, nil))
 
-	// S2 has no mapping → both fields nil (LEFT JOIN must not skip the row).
+	// S2 has no mapping → both fields nil.
 	s2 := testutil.InsertSeason(t, db, titleID, 2)
 	_ = s2
 
@@ -704,7 +707,7 @@ func TestTitleRepository_GetByID_HydratesAniListSeasonFields(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got.Seasons, 2)
 
-	// Season 1 — mapped + scored
+	// Season 1 — mapped + scored; primary aliases derived from the single part.
 	require.NotNil(t, got.Seasons[0].AniListID)
 	assert.Equal(t, "113415", *got.Seasons[0].AniListID)
 	require.NotNil(t, got.Seasons[0].AniListAverageScore)
@@ -713,6 +716,45 @@ func TestTitleRepository_GetByID_HydratesAniListSeasonFields(t *testing.T) {
 	// Season 2 — unmapped, both fields stay nil
 	assert.Nil(t, got.Seasons[1].AniListID)
 	assert.Nil(t, got.Seasons[1].AniListAverageScore)
+}
+
+func TestTitleRepository_GetByID_HydratesMultiPartAniListSeason(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+	seiRepo := repository.NewSeasonExternalIDRepository(db)
+	ctx := t.Context()
+
+	titleID := testutil.InsertTitle(t, db, "Overlord", true)
+	s1 := testutil.InsertSeason(t, db, titleID, 1)
+
+	// Two parts: part B has an earlier start date than part A (to verify ordering).
+	testutil.InsertSeasonExternalID(t, db, s1, "anilist", "29722") // part A
+	testutil.InsertSeasonExternalID(t, db, s1, "anilist", "20000") // part B — earlier date
+
+	scoreA, epA := 85, 13
+	dateA := "2015-07-07"
+	require.NoError(t, seiRepo.UpdatePartMeta(ctx, s1, "anilist", "29722", &scoreA, &epA, &dateA))
+
+	scoreB, epB := 80, 13
+	dateB := "2014-01-07"
+	require.NoError(t, seiRepo.UpdatePartMeta(ctx, s1, "anilist", "20000", &scoreB, &epB, &dateB))
+
+	got, err := repo.GetByID(titleID)
+	require.NoError(t, err)
+	require.Len(t, got.Seasons, 1)
+
+	parts := got.Seasons[0].AniListParts
+	require.Len(t, parts, 2, "season must expose two AniList parts")
+
+	// Ordered by start_date asc: part B (2014) before part A (2015).
+	assert.Equal(t, "20000", parts[0].ExternalID)
+	assert.Equal(t, "29722", parts[1].ExternalID)
+
+	// Primary aliases derived from first part.
+	require.NotNil(t, got.Seasons[0].AniListID)
+	assert.Equal(t, "20000", *got.Seasons[0].AniListID)
+	require.NotNil(t, got.Seasons[0].AniListAverageScore)
+	assert.Equal(t, scoreB, *got.Seasons[0].AniListAverageScore)
 }
 
 func TestTitleRepository_List_PersonFilter(t *testing.T) {
@@ -901,6 +943,68 @@ func TestTitleRepository_Merge_KeepsExistingSeasonAniList(t *testing.T) {
 	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
 	require.NoError(t, err)
 	assert.Equal(t, "111", got, "first writer wins — dest mapping preserved")
+}
+
+func TestTitleRepository_Merge_AppendsAniListPartOnCollision(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	// Dest has S1 already mapped to AniList part "100".
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	testutil.InsertSeasonExternalID(t, db, destS1, "anilist", "100")
+
+	// Source carries a single S1 with AniList "200"; offset 0 → collides onto dest S1.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 200)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(ctx, destS1, repository.ProviderAniList)
+	require.NoError(t, err)
+	require.Len(t, parts, 2, "both AniList parts must be present after merge")
+	ids := []string{parts[0].ExternalID, parts[1].ExternalID}
+	assert.ElementsMatch(t, []string{"100", "200"}, ids)
+}
+
+func TestTitleRepository_Merge_DeduplicatesAniListPartOnCollision(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	// Dest has S1 already mapped to AniList part "100".
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	testutil.InsertSeasonExternalID(t, db, destS1, "anilist", "100")
+
+	// Source also carries "100" → merging must deduplicate.
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, sourceID, 1)
+
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 100)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(ctx, destS1, repository.ProviderAniList)
+	require.NoError(t, err)
+	assert.Len(t, parts, 1, "duplicate AniList id must not create a second part")
 }
 
 func TestTitleRepository_Merge_NoAniListSkipsStamp(t *testing.T) {

@@ -143,8 +143,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
 
 			seasonExternal := handler.NewSeasonExternalHandler(writeDB)
-			r.Put("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.SetAniListID))
-			r.Delete("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.ClearAniListID))
+			r.Post("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.AddAniListID))
+			r.Delete("/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}", httputil.WrapHandler(seasonExternal.RemoveAniListID))
+			r.Put("/titles/{titleID}/seasons/{seasonID}/anilist/order", httputil.WrapHandler(seasonExternal.ReorderAniList))
 
 			r.Post("/push/subscribe", httputil.WrapHandler(push.Subscribe))
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
