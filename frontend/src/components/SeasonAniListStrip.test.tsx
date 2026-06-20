@@ -75,7 +75,7 @@ describe('SeasonAniListStrip', () => {
   })
 
   // anilist_parts multi-part tests
-  it('renders two "Part N" links with scores when anilist_parts has two entries', () => {
+  it('renders two rows with "Part N" tag + "View on AniList" anchor when anilist_parts has two entries', () => {
     const season = makeSeason({
       anilist_parts: [
         { external_id: '111', score: 82, episode_count: 12, start_date: null, sort_order: 1 },
@@ -83,16 +83,18 @@ describe('SeasonAniListStrip', () => {
       ],
     })
     const { getAllByText, getByText } = render(<SeasonAniListStrip season={season} onEdit={vi.fn()} />)
-    const part1Links = getAllByText('Part 1')
-    const part2Links = getAllByText('Part 2')
-    // One is the partTag span, one is the anchor link text
-    expect(part1Links.length).toBeGreaterThanOrEqual(1)
-    expect(part2Links.length).toBeGreaterThanOrEqual(1)
+    // "Part N" appears as tag spans only (not as anchor text)
+    expect(getByText('Part 1')).toBeTruthy()
+    expect(getByText('Part 2')).toBeTruthy()
+    // Anchor text is "View on AniList" (x2 rows)
+    const viewLinks = getAllByText('View on AniList')
+    expect(viewLinks).toHaveLength(2)
     // Verify links point to correct AniList URLs
-    const link1 = part1Links.find(el => el.tagName === 'A')
-    const link2 = part2Links.find(el => el.tagName === 'A')
-    expect(link1?.getAttribute('href')).toBe('https://anilist.co/anime/111')
-    expect(link2?.getAttribute('href')).toBe('https://anilist.co/anime/222')
+    expect(viewLinks[0].getAttribute('href')).toBe('https://anilist.co/anime/111')
+    expect(viewLinks[1].getAttribute('href')).toBe('https://anilist.co/anime/222')
+    // "Part 1" / "Part 2" are NOT anchor elements (they are spans)
+    expect(getByText('Part 1').tagName).not.toBe('A')
+    expect(getByText('Part 2').tagName).not.toBe('A')
     // Scores rendered
     expect(getByText('82%')).toBeTruthy()
     expect(getByText('90%')).toBeTruthy()

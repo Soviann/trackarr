@@ -254,3 +254,31 @@
   font-size: 13px;
   color: var(--ink);
 }
+
+.partManageActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reorderControls {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.reorderControls button {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 5px;
+}
+
+.reorderControls button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

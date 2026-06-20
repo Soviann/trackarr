@@ -151,6 +151,27 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     }
   }
 
+  const handleReorder = async (index: number, direction: -1 | 1) => {
+    if (seasonID == null) return
+    const parts = season?.anilist_parts ?? []
+    const target = index + direction
+    if (target < 0 || target >= parts.length) return
+    const ids = parts.map((p) => p.external_id)
+    ;[ids[index], ids[target]] = [ids[target], ids[index]]
+    setSaving(true)
+    try {
+      await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist/order`, {
+        method: 'PUT',
+        body: JSON.stringify({ ordered_ids: ids }),
+      })
+      onDone()
+    } catch (err) {
+      console.error('Failed to reorder AniList parts:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleRemovePart = async (externalID: string) => {
     if (seasonID == null) return
     setSaving(true)
@@ -173,14 +194,25 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
           <>
             <div className={s.status}>AniList parts for S{season?.season_number ?? '?'}</div>
             <div className={s.manualSection}>
-              {(season?.anilist_parts ?? []).map((p, i) => (
-                <div key={p.external_id} className={s.partManageRow}>
-                  <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
-                  <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
-                    Remove
-                  </button>
-                </div>
-              ))}
+              {(season?.anilist_parts ?? []).map((p, i) => {
+                const parts = season?.anilist_parts ?? []
+                return (
+                  <div key={p.external_id} className={s.partManageRow}>
+                    <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
+                    <span className={s.partManageActions}>
+                      {parts.length > 1 && (
+                        <span className={s.reorderControls}>
+                          <button onClick={() => handleReorder(i, -1)} disabled={saving || i === 0} aria-label={`Move part ${i + 1} up`}>▲</button>
+                          <button onClick={() => handleReorder(i, 1)} disabled={saving || i === parts.length - 1} aria-label={`Move part ${i + 1} down`}>▼</button>
+                        </span>
+                      )}
+                      <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
+                        Remove
+                      </button>
+                    </span>
+                  </div>
+                )
+              })}
               <label className={s.fieldLabel}>
                 Add AniList ID
                 <input type="text" value={seasonAniListID}

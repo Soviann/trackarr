@@ -45,7 +45,7 @@ export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListS
             {multi && <span className={s.partTag}>Part {i + 1}</span>}
             <a href={aniListMediaUrl(p.external_id)} target="_blank" rel="noopener noreferrer"
                className={`${s.entryName} ${s.entryLink}`}>
-              {multi ? `Part ${i + 1}` : (entryName ?? `S${season.season_number}`)}
+              {multi ? 'View on AniList' : (entryName ?? `S${season.season_number}`)}
             </a>
             {p.score != null && <span className={s.score}>{p.score}%</span>}
           </span>

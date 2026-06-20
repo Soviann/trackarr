@@ -128,6 +128,86 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
     })
   })
 
+  it('calls PUT .../anilist/order with swapped ordered_ids when ▼ down button is clicked', async () => {
+    const parts = [makePart('145064', 78), makePart('145065', 90)]
+    const season = makeSeason(10, parts)
+    const title = makeTitle([season])
+    const onDone = vi.fn()
+
+    const { getAllByLabelText } = render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
+    )
+
+    // "Move part 1 down" moves index 0 → swap with index 1
+    const moveDownBtn = getAllByLabelText('Move part 1 down')[0]
+    fireEvent.click(moveDownBtn)
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/seasons/10/anilist/order',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ ordered_ids: ['145065', '145064'] }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+    })
+  })
+
+  it('calls PUT .../anilist/order with swapped ordered_ids when ▲ up button is clicked', async () => {
+    const parts = [makePart('145064', 78), makePart('145065', 90)]
+    const season = makeSeason(10, parts)
+    const title = makeTitle([season])
+    const onDone = vi.fn()
+
+    const { getAllByLabelText } = render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
+    )
+
+    // "Move part 2 up" moves index 1 → swap with index 0
+    const moveUpBtn = getAllByLabelText('Move part 2 up')[0]
+    fireEvent.click(moveUpBtn)
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/seasons/10/anilist/order',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ ordered_ids: ['145065', '145064'] }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+    })
+  })
+
+  it('disables ▲ on first row and ▼ on last row', () => {
+    const parts = [makePart('145064', 78), makePart('145065', 90)]
+    const season = makeSeason(10, parts)
+    const title = makeTitle([season])
+
+    const { getByLabelText } = render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
+    )
+
+    expect((getByLabelText('Move part 1 up') as HTMLButtonElement).disabled).toBe(true)
+    expect((getByLabelText('Move part 1 down') as HTMLButtonElement).disabled).toBe(false)
+    expect((getByLabelText('Move part 2 up') as HTMLButtonElement).disabled).toBe(false)
+    expect((getByLabelText('Move part 2 down') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('does not show reorder buttons when only one part', () => {
+    const parts = [makePart('145064', 78)]
+    const season = makeSeason(10, parts)
+    const title = makeTitle([season])
+
+    const { queryByLabelText } = render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
+    )
+
+    expect(queryByLabelText('Move part 1 up')).toBeNull()
+    expect(queryByLabelText('Move part 1 down')).toBeNull()
+  })
+
   it('does not call onClose after add — sheet stays open', async () => {
     const season = makeSeason(10, [])
     const title = makeTitle([season])
