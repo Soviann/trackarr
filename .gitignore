@@ -21,6 +21,7 @@ frontend/dist/
 
 # Simkl backup (sensitive)
 *.zip
+backups/
 
 # Environment (secrets)
 .env.local
