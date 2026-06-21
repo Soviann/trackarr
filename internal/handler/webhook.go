@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
+	"github.com/nicolasvasse/plextracker/internal/model"
 )
 
 // plexProcessor is the seam between the handler and PlexService — keeps the
@@ -22,6 +23,12 @@ import (
 // test target. *service.PlexService satisfies it.
 type plexProcessor interface {
 	ProcessWebhook(ctx context.Context, payload *plexwebhooks.Payload, rawPayload string) error
+}
+
+// jellyfinProcessor is the equivalent seam for Jellyfin webhooks.
+// *service.PlexService (built via NewJellyfinService) satisfies it.
+type jellyfinProcessor interface {
+	ProcessJellyfinWebhook(ctx context.Context, payload *model.JellyfinPayload, rawPayload string) error
 }
 
 // webhookProcessingTimeout caps how long a single Plex webhook may run.
@@ -38,12 +45,23 @@ const webhookProcessingTimeout = 30 * time.Second
 const webhookMaxBodyBytes int64 = 1 << 20
 
 type WebhookHandler struct {
-	plex   plexProcessor
-	secret string
+	plex           plexProcessor
+	secret         string
+	jellyfin       jellyfinProcessor
+	jellyfinSecret string
 }
 
 func NewWebhookHandler(plex plexProcessor, secret string) *WebhookHandler {
 	return &WebhookHandler{plex: plex, secret: secret}
+}
+
+// WithJellyfin wires the Jellyfin webhook path onto the same handler. Kept
+// separate from NewWebhookHandler so the Plex constructor (and its tests) stay
+// untouched. Returns the handler for chaining.
+func (h *WebhookHandler) WithJellyfin(jellyfin jellyfinProcessor, secret string) *WebhookHandler {
+	h.jellyfin = jellyfin
+	h.jellyfinSecret = secret
+	return h
 }
 
 func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) error {
@@ -68,6 +86,44 @@ func (h *WebhookHandler) HandlePlex(w http.ResponseWriter, r *http.Request) erro
 	defer cancel()
 
 	if err := h.plex.ProcessWebhook(ctx, payload, rawPayload); err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+// HandleJellyfin ingests a notification from the Jellyfin Webhook plugin's
+// Generic Destination. Unlike Plex, the body is always plain JSON (the template
+// we ship — see docs/user-guide.md), so there is no multipart branch.
+func (h *WebhookHandler) HandleJellyfin(w http.ResponseWriter, r *http.Request) error {
+	token := chi.URLParam(r, "secret")
+	if h.jellyfin == nil || h.jellyfinSecret == "" || subtle.ConstantTimeCompare([]byte(token), []byte(h.jellyfinSecret)) != 1 {
+		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, webhookMaxBodyBytes)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		var mbErr *http.MaxBytesError
+		if errors.As(err, &mbErr) {
+			log.Printf("jellyfin webhook: payload exceeds %d bytes", mbErr.Limit)
+			return httputil.NewAPIError(http.StatusRequestEntityTooLarge, "Payload too large")
+		}
+		log.Printf("jellyfin webhook: %v", err)
+		return httputil.BadRequest("Invalid request")
+	}
+
+	var payload model.JellyfinPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		log.Printf("jellyfin webhook: %v", err)
+		return httputil.BadRequest("Invalid request")
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), webhookProcessingTimeout)
+	defer cancel()
+
+	if err := h.jellyfin.ProcessJellyfinWebhook(ctx, &payload, string(body)); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

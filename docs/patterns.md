@@ -21,7 +21,8 @@ Update when adding routes, services, components, or commands.
 
 | Service | File | Purpose |
 |---|---|---|
-| PlexService | `internal/service/plex.go` | Webhook scrobble, delegates to TitleService + LibraryService |
+| PlexService | `internal/service/plex.go` | Webhook scrobble, delegates to TitleService + LibraryService. `source` field labels WatchEvents; shared by Jellyfin ingest |
+| JellyfinService | `internal/service/jellyfin.go` | `NewJellyfinService` = PlexService with `source=jellyfin`. `ProcessJellyfinWebhook` normalizes `model.JellyfinPayload` → `plexwebhooks.Payload` then reuses Plex pipeline. Only `PlaybackStop`+`PlayedToCompletion` ingested (→ scrobble); else ignored. Movies carry provider IDs (dedupe vs Plex); episodes match via `SeriesID`+name/year (episode provider IDs are NOT series-level, omitted) |
 | TitleService | `internal/service/title.go` | Title logic (creation, rematching, URL resolution, merging) |
 | LibraryService | `internal/service/library.go` | User library (marking watched, auto-complete, rating, notifications) |
 | BackfillService | `internal/service/backfill.go` | Episode backfill (metadata fetch, mark previous). **Opens own writeDB tx — never call from inside another tx; fire post-commit via `LibraryService.TriggerBackfillForEpisode`.** |
@@ -177,6 +178,7 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | POST | `/api/auth/dev` | DevLogin | No (debug only) |
 | POST | `/api/auth/logout` | Logout | No |
 | POST | `/api/webhook/plex/{secret}` | HandlePlex | No (secret in URL) |
+| POST | `/api/webhook/jellyfin/{secret}` | HandleJellyfin | No (secret in URL) |
 | GET | `/api/covers/{filename}` | Serve | No |
 | GET | `/api/titles` | List | Yes |
 | GET | `/api/genres` | List | Yes |

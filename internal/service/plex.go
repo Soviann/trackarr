@@ -48,6 +48,10 @@ type PlexService struct {
 	pipeline *matching.Pipeline // nil = skip matching, create with basic info
 	titleSvc *TitleService
 	libSvc   *LibraryService
+	// source labels every WatchEvent this service records. The full ingest
+	// pipeline is shared between Plex and Jellyfin (see ProcessJellyfinWebhook);
+	// only this discriminator differs.
+	source model.WatchEventSource
 }
 
 func NewPlexService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
@@ -57,6 +61,7 @@ func NewPlexService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleServ
 		pipeline: pipeline,
 		titleSvc: titleSvc,
 		libSvc:   libSvc,
+		source:   model.WatchEventSourcePlex,
 	}
 }
 
@@ -152,7 +157,7 @@ func (s *PlexService) handleEpisodePlayInTx(ctx context.Context, tx *sql.Tx, met
 	if _, err := events.Create(ctx, &model.WatchEvent{
 		TitleID:     title.ID,
 		EpisodeID:   &ep.ID,
-		Source:      model.WatchEventSourcePlex,
+		Source:      s.source,
 		PlexPayload: &rawPayload,
 	}); err != nil {
 		logger.Warn("create watch event", "episodeID", ep.ID, "err", err)
@@ -214,7 +219,7 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 		logger = logger.With("titleID", titleID)
 		logger.Info("created title from Plex movie")
 
-		prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, titleID, model.WatchEventSourcePlex, &rawPayload)
+		prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, titleID, s.source, &rawPayload)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +234,7 @@ func (s *PlexService) processMovieInTx(ctx context.Context, tx *sql.Tx, meta ple
 		s.enqueueEnrichmentTx(ctx, tx, title.ID, meta.Title, meta.Year, title.Type, ids, logger)
 	}
 
-	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, model.WatchEventSourcePlex, &rawPayload)
+	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, s.source, &rawPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +342,7 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, meta p
 		return nil, nil, fmt.Errorf("get/create episode: %w", err)
 	}
 
-	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, []int64{ep.SeasonID}, model.WatchEventSourcePlex, &rawPayload)
+	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, []int64{ep.SeasonID}, s.source, &rawPayload)
 	if err != nil {
 		return nil, nil, err
 	}

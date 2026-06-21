@@ -15,9 +15,31 @@ import (
 	plexwebhooks "github.com/hekmon/plexwebhooks"
 	"github.com/nicolasvasse/plextracker/internal/handler"
 	"github.com/nicolasvasse/plextracker/internal/handler/httputil"
+	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// fakeJellyfinProcessor stubs the Jellyfin processor seam for handler tests.
+type fakeJellyfinProcessor struct {
+	err        error
+	gotPayload *model.JellyfinPayload
+	gotRaw     string
+	calls      int
+}
+
+func (f *fakeJellyfinProcessor) ProcessJellyfinWebhook(_ context.Context, p *model.JellyfinPayload, raw string) error {
+	f.calls++
+	f.gotPayload = p
+	f.gotRaw = raw
+	return f.err
+}
+
+func newJellyfinRouter(h *handler.WebhookHandler) http.Handler {
+	r := chi.NewRouter()
+	r.Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(h.HandleJellyfin))
+	return r
+}
 
 // fakePlexProcessor stubs the PlexService dependency for handler tests.
 type fakePlexProcessor struct {
@@ -171,6 +193,55 @@ func TestWebhookHandler_EventTypePassthrough(t *testing.T) {
 			assert.Equal(t, ev, fake.gotPayload.Event)
 		})
 	}
+}
+
+func TestJellyfinHandler_WrongSecret(t *testing.T) {
+	h := handler.NewWebhookHandler(&fakePlexProcessor{}, "plexsecret").
+		WithJellyfin(&fakeJellyfinProcessor{}, "jfsecret")
+	req := httptest.NewRequest("POST", "/webhook/jellyfin/wrong", nil)
+	rr := httptest.NewRecorder()
+	newJellyfinRouter(h).ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestJellyfinHandler_NotConfigured(t *testing.T) {
+	// No WithJellyfin call → jellyfin processor is nil → always reject.
+	h := handler.NewWebhookHandler(&fakePlexProcessor{}, "plexsecret")
+	req := httptest.NewRequest("POST", "/webhook/jellyfin/anything", nil)
+	rr := httptest.NewRecorder()
+	newJellyfinRouter(h).ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestJellyfinHandler_Valid(t *testing.T) {
+	const raw = `{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True","provider_tmdb":"438631"}`
+	fake := &fakeJellyfinProcessor{}
+	h := handler.NewWebhookHandler(&fakePlexProcessor{}, "plexsecret").
+		WithJellyfin(fake, "jfsecret")
+	req := httptest.NewRequest("POST", "/webhook/jellyfin/jfsecret", strings.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newJellyfinRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, 1, fake.calls)
+	require.NotNil(t, fake.gotPayload)
+	assert.Equal(t, "Dune", fake.gotPayload.Name)
+	assert.Equal(t, "438631", fake.gotPayload.ProviderTMDB)
+	assert.Equal(t, raw, fake.gotRaw)
+}
+
+func TestJellyfinHandler_InvalidJSON(t *testing.T) {
+	fake := &fakeJellyfinProcessor{}
+	h := handler.NewWebhookHandler(&fakePlexProcessor{}, "plexsecret").
+		WithJellyfin(fake, "jfsecret")
+	req := httptest.NewRequest("POST", "/webhook/jellyfin/jfsecret", strings.NewReader("{not json"))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newJellyfinRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, 0, fake.calls)
 }
 
 func TestWebhookHandler_ProcessorError(t *testing.T) {

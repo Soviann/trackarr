@@ -6,6 +6,7 @@ type WatchEventSource string
 
 const (
 	WatchEventSourcePlex     WatchEventSource = "plex"
+	WatchEventSourceJellyfin WatchEventSource = "jellyfin"
 	WatchEventSourceManual   WatchEventSource = "manual"
 	WatchEventSourceBackfill WatchEventSource = "backfill"
 )

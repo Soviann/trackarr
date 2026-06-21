@@ -191,6 +191,47 @@ Les re-visionnages sont enregistrés dans l'historique mais ne changent pas l'é
 
 ---
 
+## Suivi automatique Jellyfin
+
+PlexTracker accepte aussi les webhooks de Jellyfin, en parallèle de Plex (les deux peuvent rester actifs). Le traitement est identique : un film ou épisode terminé est identifié, marqué vu, et déclenche une notification de notation. Les événements sont enregistrés avec la source `jellyfin`.
+
+**Seul un visionnage *terminé* compte** : PlexTracker n'agit que sur l'événement `PlaybackStop` dont l'indicateur « lu jusqu'à la fin » est vrai (équivalent du seuil ~90% de Plex). Les simples « lecture démarrée » et les arrêts en cours de visionnage sont ignorés.
+
+### Configuration côté Jellyfin
+
+1. Installer le plugin **Webhook** (Tableau de bord → Plugins → Catalogue → Webhook), puis redémarrer le serveur.
+2. Tableau de bord → Plugins → **Webhook** → **Add Generic Destination**.
+3. Renseigner :
+   - **Webhook URL** : `https://<adresse-plextracker>/api/webhook/jellyfin/<secret>` (le `<secret>` doit correspondre à la variable d'environnement `JELLYFIN_WEBHOOK_SECRET`).
+   - **Notification Type** : cocher **Playback Stop** (et **Playback Start** est inutile, laissé décoché).
+   - **Item Type** : cocher **Movies** et **Episodes**.
+   - **Send All Properties** : laissé décoché — on utilise le template ci-dessous.
+   - **Template** (corps JSON) : coller exactement
+     ```handlebars
+     {
+       "notification_type": "{{NotificationType}}",
+       "item_type": "{{ItemType}}",
+       "name": "{{{Name}}}",
+       "year": "{{Year}}",
+       "played_to_completion": "{{PlayedToCompletion}}",
+       "provider_imdb": "{{Provider_imdb}}",
+       "provider_tmdb": "{{Provider_tmdb}}",
+       "provider_tvdb": "{{Provider_tvdb}}",
+       "item_id": "{{ItemId}}",
+       "series_name": "{{{SeriesName}}}",
+       "series_id": "{{SeriesId}}",
+       "season": "{{SeasonNumber}}",
+       "episode": "{{EpisodeNumber}}"
+     }
+     ```
+   - **Request Header** (optionnel) : ajouter `Content-Type` = `application/json`.
+
+Toutes les valeurs sont volontairement entre guillemets : un champ absent (ex. `SeasonNumber` pour un film) se rend alors en chaîne vide sans casser le JSON.
+
+> **Note migration Plex → Jellyfin** : les films sont dédupliqués automatiquement avec les titres déjà créés par Plex (via les IDs TMDB/IMDb/TVDB du webhook). Les séries sont rapprochées par nom + année. Tant qu'un même titre n'est pas regardé activement sur les deux serveurs en même temps, aucun doublon n'est créé.
+
+---
+
 ## Notifications push
 
 PlexTracker envoie des notifications push (navigateur Chrome) dans deux cas :

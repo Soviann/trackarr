@@ -23,7 +23,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
-	r.Use(mw.RedactingLogger("/api/webhook/plex/"))
+	r.Use(mw.RedactingLogger("/api/webhook/plex/", "/api/webhook/jellyfin/"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(mw.SecurityHeaders)
@@ -58,6 +58,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
 	plexSvc := service.NewPlexService(writeDB, pipeline, titleSvc, libSvc)
+	jellyfinSvc := service.NewJellyfinService(writeDB, pipeline, titleSvc, libSvc)
 
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
@@ -79,7 +80,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
 	admin.SetShutdownWG(shutdownWG)
 	covers := handler.NewCoverHandler(cfg.DataDir)
-	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret)
+	webhooks := handler.NewWebhookHandler(plexSvc, cfg.PlexWebhookSecret).
+		WithJellyfin(jellyfinSvc, cfg.JellyfinWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
@@ -112,6 +114,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		// Plex webhook (secured by secret token in URL, rate-limited)
 		webhookRateLimit := mw.RateLimit(ctx, 60, time.Minute)
 		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
+		r.With(webhookRateLimit).Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(webhooks.HandleJellyfin))
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)
