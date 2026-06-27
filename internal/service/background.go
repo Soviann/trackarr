@@ -415,6 +415,8 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 		Overview: &overview,
 		Credits:  &credits,
 	}
+	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
+	metaUpdate.WatchProviders = &watchProviders
 	if runtime != nil {
 		metaUpdate.Runtime = runtime
 	}
@@ -504,6 +506,8 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		Overview: &overview,
 		Credits:  &credits,
 	}
+	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
+	metaUpdate.WatchProviders = &watchProviders
 	if runtime != nil {
 		metaUpdate.Runtime = runtime
 	}
