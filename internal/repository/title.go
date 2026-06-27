@@ -14,25 +14,27 @@ import (
 
 // ContinueWatchingItem represents a Watching title with episode progress.
 type ContinueWatchingItem struct {
-	ID              int64   `json:"id"`
-	Type            string  `json:"type"`
-	CoverURL        *string `json:"cover_url"`
-	Name            string  `json:"name"`
-	NextAirEpisode  *string `json:"next_air_episode"`
-	WatchedEpisodes int     `json:"watched_episodes"`
-	TotalEpisodes   int     `json:"total_episodes"`
-	LastWatchedAt   *string `json:"last_watched_at"`
+	ID              int64                 `json:"id"`
+	Type            string                `json:"type"`
+	CoverURL        *string               `json:"cover_url"`
+	Name            string                `json:"name"`
+	NextAirEpisode  *string               `json:"next_air_episode"`
+	WatchedEpisodes int                   `json:"watched_episodes"`
+	TotalEpisodes   int                   `json:"total_episodes"`
+	LastWatchedAt   *string               `json:"last_watched_at"`
+	WatchProviders  []model.WatchProvider `json:"watch_providers,omitempty"`
 }
 
 // UpcomingItem represents a title with an upcoming air date.
 type UpcomingItem struct {
-	ID             int64   `json:"id"`
-	Type           string  `json:"type"`
-	CoverURL       *string `json:"cover_url"`
-	Name           string  `json:"name"`
-	NextAirDate    string  `json:"next_air_date"`
-	NextAirEpisode *string `json:"next_air_episode"`
-	Status         string  `json:"status"`
+	ID             int64                 `json:"id"`
+	Type           string                `json:"type"`
+	CoverURL       *string               `json:"cover_url"`
+	Name           string                `json:"name"`
+	NextAirDate    string                `json:"next_air_date"`
+	NextAirEpisode *string               `json:"next_air_episode"`
+	Status         string                `json:"status"`
+	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
 }
 
 type TitleRepository struct {
@@ -495,7 +497,8 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 		       t.next_air_episode,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 1) AS watched_episodes,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) AS total_episodes,
-		       t.last_watched_at
+		       t.last_watched_at,
+		       t.watch_providers
 		FROM titles t
 		WHERE t.status = 'watching'
 		  AND (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0) > 0
@@ -510,10 +513,12 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 	var items []ContinueWatchingItem
 	for rows.Next() {
 		var item ContinueWatchingItem
+		var watchProvidersRaw *string
 		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name, &item.NextAirEpisode,
-			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt); err != nil {
+			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt, &watchProvidersRaw); err != nil {
 			return nil, fmt.Errorf("scan continue watching: %w", err)
 		}
+		item.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -528,7 +533,8 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	query := `
 		SELECT t.id, t.type, t.cover_url,
 		       COALESCE(` + displayNameExpr + `, '') AS name,
-		       t.next_air_date, t.next_air_episode, t.status
+		       t.next_air_date, t.next_air_episode, t.status,
+		       t.watch_providers
 		FROM titles t
 		WHERE t.status IN ('watching', 'plan_to_watch')
 		  AND t.next_air_date IS NOT NULL
@@ -544,10 +550,12 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	var items []UpcomingItem
 	for rows.Next() {
 		var item UpcomingItem
+		var watchProvidersRaw *string
 		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name,
-			&item.NextAirDate, &item.NextAirEpisode, &item.Status); err != nil {
+			&item.NextAirDate, &item.NextAirEpisode, &item.Status, &watchProvidersRaw); err != nil {
 			return nil, fmt.Errorf("scan upcoming: %w", err)
 		}
+		item.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
