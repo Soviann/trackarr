@@ -2,6 +2,7 @@ import { route } from 'preact-router'
 import type { TitleType } from '../types'
 import s from './PosterTile.module.css'
 import { CoverPlaceholder } from './CoverPlaceholder'
+import { PrimeBadge } from './PrimeBadge'
 
 export interface PosterTileItem {
   id: number
@@ -11,6 +12,7 @@ export interface PosterTileItem {
   sublabel: string
   sublabelVariant?: 'default' | 'amber' | 'teal' | 'muted'
   progressRatio?: number
+  onPrime?: boolean
 }
 
 interface Props {
@@ -31,6 +33,11 @@ export function PosterTile({ item }: Props) {
         {item.cover_url
           ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" loading="lazy" />
           : <CoverPlaceholder type={item.type} />}
+        {item.onPrime && (
+          <span className={s.primeBadge}>
+            <PrimeBadge />
+          </span>
+        )}
         {item.progressRatio !== undefined && (
           <div className={s.progressBar}>
             <div className={s.progressFill} style={{ width: `${item.progressRatio * 100}%` }} />
