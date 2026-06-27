@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -80,15 +81,17 @@ type TitleUpdate struct {
 	AccentHex         *string
 	SimklID           *int64
 	SimklSlug         *string
+	WatchProviders    *string // JSON array of model.WatchProvider; "[]" clears
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles WHERE id = ?`, id).
+	var watchProvidersRaw *string
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
-			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &title.AniListRating,
+			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
 			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
@@ -96,6 +99,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title.FirstWatchedAt = parseSQLiteTime(firstWatchedAtStr)
 	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 	title.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
+	title.WatchProviders = parseWatchProviders(watchProvidersRaw)
 
 	// Load names
 	rows, err := r.db.Query(`SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id = ?`, id)
@@ -385,6 +389,20 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	}
 
 	return r.GetByID(id)
+}
+
+// parseWatchProviders decodes the titles.watch_providers JSON column. A NULL
+// column, empty string, or malformed JSON yields an empty slice (never an error):
+// a bad availability blob must never fail a title read.
+func parseWatchProviders(raw *string) []model.WatchProvider {
+	if raw == nil || *raw == "" {
+		return nil
+	}
+	var providers []model.WatchProvider
+	if err := json.Unmarshal([]byte(*raw), &providers); err != nil {
+		return nil
+	}
+	return providers
 }
 
 // parseSQLiteTimeVal parses a SQLite datetime string into a time.Time.

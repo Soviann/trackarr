@@ -1238,3 +1238,25 @@ func TestTitleRepository_SimklID_NilWhenAbsent(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+func TestTitleRepo_WatchProvidersRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2016,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
+
+	providers := `[{"id":119,"name":"Amazon Prime Video"},{"id":8,"name":"Netflix"}]`
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(context.Background(), id, repository.TitleUpdate{WatchProviders: &providers})
+	})
+	require.NoError(t, err)
+
+	got, err := repository.NewTitleRepository(db).GetByID(id)
+	require.NoError(t, err)
+	require.Len(t, got.WatchProviders, 2)
+	assert.Equal(t, int64(119), got.WatchProviders[0].ID)
+	assert.Equal(t, "Amazon Prime Video", got.WatchProviders[0].Name)
+}

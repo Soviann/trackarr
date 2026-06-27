@@ -158,6 +158,10 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `credits = ?`)
 		args = append(args, *update.Credits)
 	}
+	if update.WatchProviders != nil {
+		sets = append(sets, `watch_providers = ?`)
+		args = append(args, *update.WatchProviders)
+	}
 	if update.AniListRating != nil {
 		sets = append(sets, `anilist_rating = ?`)
 		args = append(args, *update.AniListRating)
