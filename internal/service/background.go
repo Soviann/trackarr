@@ -157,7 +157,7 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 		}
 
 		title := &titles[i]
-		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) {
+		if !includeAll && (title.Status == model.TitleStatusCompleted || title.Status == model.TitleStatusDropped) && !needsEpisodeBackfill(title) {
 			continue
 		}
 
@@ -168,6 +168,17 @@ func (s *BackgroundService) refreshTitles(ctx context.Context, includeAll bool) 
 	}
 
 	return results
+}
+
+// needsEpisodeBackfill reports whether a completed/dropped title should be
+// refreshed anyway to fetch its episode list. The daily cron normally skips
+// completed/dropped titles, but one that was never TMDB-synced (no
+// total_episodes on any season) has no episode list at all — a Simkl-imported
+// "completed" series, or one only ever touched by scrobbles. Restricted to
+// non-movies with a TMDB id, the only source that can supply the list; without
+// it the title would be re-processed fruitlessly on every pass.
+func needsEpisodeBackfill(t *repository.TitleLite) bool {
+	return t.Type != model.TitleTypeMovie && t.TMDBID != nil && !t.HasSyncedSeasons
 }
 
 func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.TitleLite) RefreshResult {
@@ -215,6 +226,13 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		}
 	}
 
+	// Step 2b: enforce "a completed series has every episode watched". Runs after
+	// Step 1 has (re)populated the list, so episodes freshly backfilled for an
+	// import-completed title get marked too. Idempotent (only flips unwatched rows).
+	if title.Type != model.TitleTypeMovie && title.Status == model.TitleStatusCompleted {
+		s.completeEpisodes(ctx, title.ID)
+	}
+
 	// Step 3: stamp last_refreshed_at only if at least one external API
 	// actually answered. Network failures, rate limits, or "no external IDs"
 	// leave the timestamp frozen — that's the signal a user reads to decide
@@ -228,6 +246,24 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 	}
 
 	return result
+}
+
+// completeEpisodes marks every not-yet-watched episode of a completed title as
+// watched and accrues their watchtime. No watch_events are written: these are
+// historical/backfilled completions, so they must not pollute the activity feed
+// or fabricate viewing streaks (which read watch_events), while still counting
+// toward total watchtime (which sums titles.total_watch_minutes).
+func (s *BackgroundService) completeEpisodes(ctx context.Context, titleID int64) {
+	now := time.Now().UTC()
+	if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		n, err := repository.NewEpisodeWriter(tx).MarkAllWatchedForTitle(ctx, titleID, now)
+		if err != nil {
+			return err
+		}
+		return repository.NewTitleWriter(tx).AddWatchMinutesForEpisodes(ctx, titleID, n)
+	}); err != nil {
+		log.Printf("background: complete episodes for title %d: %v", titleID, err)
+	}
 }
 
 func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {

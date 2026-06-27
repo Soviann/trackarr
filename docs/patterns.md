@@ -98,7 +98,7 @@ Reader: `repository.MatchEventRepository.ListRecent(ctx, limit)` — returns eve
 **Seasons NOT created by enrichment.** Created only by refresh (`TaskTypeRefresh` → `refreshSeriesFromTMDB`, needs `TMDBID`) or watched-episode (`SeasonWriter.GetOrCreate`, `plex.go`). Consequences:
 - Just-matched series has 0 seasons until refresh/watch. API omits the field (`Seasons json:"seasons,omitempty"` → `undefined` client-side) — front-end must guard (e.g. `title.seasons ?? []`).
 - `handleEnrichment.enqueueSeasonBackfill` enqueues `refresh:<id>` for each matched non-movie with a TMDB ID → seasons appear immediately, not next cron.
-- Periodic `RefreshTitles` cron backfills existing titles regardless of `match_status` (skips completed/dropped).
+- Periodic `RefreshTitles` cron backfills existing titles regardless of `match_status`. Skips completed/dropped titles **except** those still missing a TMDB-synced episode list (`needsEpisodeBackfill`: non-movie + has `tmdb_id` + no season with `total_episodes`) — a Simkl-imported "completed" series or one only ever touched by scrobbles. Those get a one-time list backfill, then `total_episodes` flips the predicate and they're skipped again. After a refresh, `refreshTitle` Step 2b enforces **completed ⟹ every episode watched** (`completeEpisodes` → `EpisodeWriter.MarkAllWatchedForTitle` + `TitleWriter.AddWatchMinutesForEpisodes`); idempotent, writes no `watch_events` (keeps activity feed / streaks honest while still counting watchtime via `total_watch_minutes`). `dropped` titles get the list backfill but keep their real watched flags.
 
 ### AniList per-season push
 

@@ -506,3 +506,97 @@ func TestBackgroundService_RefreshSeries_NoStatusChangeNoPush(t *testing.T) {
 	assert.False(t, results[0].StatusChanged, "no status flip → no StatusChanged flag")
 	assert.Empty(t, push.calls, "no status flip → no push")
 }
+
+// --- Episode-list backfill for completed/dropped titles (heal) ---
+
+// A completed series that was never TMDB-synced (no total_episodes) must NOT be
+// skipped by the daily refresh — its episode list has to be fetched. And once
+// processed, the "completed ⟹ every episode watched" invariant is enforced.
+// This is the Goldorak case: imported completed with no episodes, then a couple
+// of scrobbles created sparse rows.
+func TestBackgroundService_HealsCompletedSeriesMissingEpisodeList(t *testing.T) {
+	svc, db, _, _, episodeRepo := setupBackgroundService(t)
+
+	tmdbID := int64(46252)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 1975,
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+		TMDBID: &tmdbID,
+	}, []model.TitleName{{Name: "Grendizer", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1) // total_episodes stays NULL
+	ep4 := testutil.GetOrCreateEpisode(t, db, season.ID, 4)
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 5)
+	testutil.MarkEpisodeWatched(t, db, ep4.ID, time.Now().UTC())
+
+	results := svc.RefreshTitles(context.Background())
+	require.Len(t, results, 1, "completed series lacking a synced episode list must NOT be skipped")
+
+	eps, _ := episodeRepo.GetBySeasonID(season.ID)
+	require.Len(t, eps, 2)
+	for _, e := range eps {
+		assert.Truef(t, e.Watched, "completed ⟹ every episode watched (E%d)", e.Episode)
+	}
+}
+
+// A completed series whose seasons already carry total_episodes (TMDB-synced)
+// stays skipped — no wasted re-fetch, and its episodes are left untouched.
+func TestBackgroundService_SkipsCompletedSeriesWithSyncedList(t *testing.T) {
+	svc, db, _, _, episodeRepo := setupBackgroundService(t)
+
+	tmdbID := int64(1399)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2011,
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+		TMDBID: &tmdbID,
+	}, []model.TitleName{{Name: "GoT", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	testutil.UpdateSeasonTotalEpisodes(t, db, season.ID, 2) // already synced
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 1)    // unwatched
+
+	results := svc.RefreshTitles(context.Background())
+	assert.Empty(t, results, "already-synced completed series stays skipped")
+
+	eps, _ := episodeRepo.GetBySeasonID(season.ID)
+	require.Len(t, eps, 1)
+	assert.False(t, eps[0].Watched, "skipped title is left untouched")
+}
+
+// A completed series with no TMDB id can't have its episode list fetched from
+// anywhere, so it stays skipped (avoids re-processing it on every cron pass).
+func TestBackgroundService_SkipsCompletedSeriesWithoutTMDB(t *testing.T) {
+	svc, db, _, _, _ := setupBackgroundService(t)
+
+	testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2000,
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "NoTMDB", Language: "en", IsPrimary: true}})
+
+	results := svc.RefreshTitles(context.Background())
+	assert.Empty(t, results, "no TMDB id → nothing can supply the episode list → skip")
+}
+
+// A dropped series lacking a synced list is also un-skipped (so its episode list
+// gets fetched), but the completed-only invariant must NOT mark its episodes
+// watched.
+func TestBackgroundService_DroppedSeriesNotForceWatched(t *testing.T) {
+	svc, db, _, _, episodeRepo := setupBackgroundService(t)
+
+	tmdbID := int64(999)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2018,
+		Status: model.TitleStatusDropped, MatchStatus: model.MatchStatusConfirmed,
+		TMDBID: &tmdbID,
+	}, []model.TitleName{{Name: "Dropped", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 1) // unwatched
+
+	results := svc.RefreshTitles(context.Background())
+	require.Len(t, results, 1, "dropped series lacking a synced list is still processed (list backfill)")
+
+	eps, _ := episodeRepo.GetBySeasonID(season.ID)
+	require.Len(t, eps, 1)
+	assert.False(t, eps[0].Watched, "dropped ⟹ watched flags untouched")
+}

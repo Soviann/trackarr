@@ -224,6 +224,24 @@ func (w *TitleWriter) MarkRefreshed(ctx context.Context, id int64, at time.Time)
 	return nil
 }
 
+// AddWatchMinutesForEpisodes grows total_watch_minutes by episodeCount × the
+// title's runtime. Used when a backfill marks historical episodes watched so
+// their watchtime is reflected in stats. No-op for a non-positive count or a
+// title with an unknown runtime. Does not bump updated_at (a metadata heal must
+// not poison "updated_at DESC" lists).
+func (w *TitleWriter) AddWatchMinutesForEpisodes(ctx context.Context, id int64, episodeCount int64) error {
+	if episodeCount <= 0 {
+		return nil
+	}
+	_, err := w.tx.ExecContext(ctx,
+		`UPDATE titles SET total_watch_minutes = total_watch_minutes + ? * COALESCE(runtime, 0) WHERE id = ?`,
+		episodeCount, id)
+	if err != nil {
+		return fmt.Errorf("add watch minutes for episodes: %w", err)
+	}
+	return nil
+}
+
 // AddMissingNames inserts names not already stored for the title, matched
 // case-insensitively on (name, language). Existing names — anime romaji and
 // merged-season aliases included — are never deleted, so a refresh can backfill

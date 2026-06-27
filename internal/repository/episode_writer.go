@@ -155,6 +155,27 @@ func (w *EpisodeWriter) MarkWatched(ctx context.Context, id int64, watchedAt tim
 	return nil
 }
 
+// MarkAllWatchedForTitle marks every not-yet-watched episode of a title as
+// watched at `at`, returning how many rows were newly flipped. Episodes already
+// watched keep their first_watched_at/last_watched_at untouched (so an in-flight
+// rewatch is preserved). Enforces the "completed series ⟹ every episode watched"
+// invariant during episode-list backfill — see BackgroundService.refreshTitle.
+func (w *EpisodeWriter) MarkAllWatchedForTitle(ctx context.Context, titleID int64, at time.Time) (int64, error) {
+	res, err := w.tx.ExecContext(ctx,
+		`UPDATE episodes
+		 SET watched = 1,
+		     first_watched_at = CASE WHEN first_watched_at IS NULL THEN ? ELSE first_watched_at END,
+		     last_watched_at  = CASE WHEN last_watched_at  IS NULL THEN ? ELSE last_watched_at  END
+		 WHERE watched = 0
+		   AND season_id IN (SELECT id FROM seasons WHERE title_id = ?)`,
+		at.UTC(), at.UTC(), titleID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("mark all watched for title: %w", err)
+	}
+	return res.RowsAffected()
+}
+
 // UpdateLastWatchedAt sets last_watched_at on an episode without touching first_watched_at.
 // Used for rewatch events (media.play on already-watched episodes).
 func (w *EpisodeWriter) UpdateLastWatchedAt(ctx context.Context, id int64, at time.Time) error {

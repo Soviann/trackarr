@@ -248,13 +248,19 @@ type TitleLite struct {
 	TVDBID       *int64
 	AniListID    *int64
 	PrimaryName  string
+	// HasSyncedSeasons is true when at least one of the title's seasons carries a
+	// total_episodes value — the marker that its episode list was fetched from
+	// TMDB. False means the list was never synced (Simkl-imported or scrobble-only),
+	// which lets the refresh backfill it even for completed/dropped titles.
+	HasSyncedSeasons bool
 }
 
 // titleLiteCols is the column list for TitleLite scans, embedding
 // displayNameExpr (which assumes the outer titles row is aliased `t`).
 const titleLiteCols = `t.id, t.type, t.is_anime, t.status, t.series_status, t.cover_url,
 		t.tmdb_id, t.tvdb_id, t.anilist_id,
-		COALESCE(` + displayNameExpr + `, '') AS name`
+		COALESCE(` + displayNameExpr + `, '') AS name,
+		EXISTS(SELECT 1 FROM seasons s WHERE s.title_id = t.id AND s.total_episodes IS NOT NULL) AS has_synced_seasons`
 
 func scanTitleLite(scanner interface {
 	Scan(dest ...any) error
@@ -263,6 +269,7 @@ func scanTitleLite(scanner interface {
 		&t.ID, &t.Type, &t.IsAnime, &t.Status, &t.SeriesStatus, &t.CoverURL,
 		&t.TMDBID, &t.TVDBID, &t.AniListID,
 		&t.PrimaryName,
+		&t.HasSyncedSeasons,
 	)
 }
 
