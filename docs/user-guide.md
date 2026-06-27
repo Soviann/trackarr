@@ -67,6 +67,7 @@ L'écran principal affiche tous les titres organisés par statut.
 
 - **Couverture** en haut, avec teinte dominante extraite (accent), bouton retour.
 - **Identité** : titre, année, durée/saisons, statut série, pills de genres, pastille de statut.
+- **Badge Prime** : les titres disponibles sur Amazon Prime Video sans supplément (France) affichent un badge bleu **prime** sur leur page de détail et sur les vignettes des pages Continue Watching et Coming Up. La disponibilité est mise à jour automatiquement au prochain rafraîchissement des métadonnées du titre.
 - **Carte « My rating »** : note personnelle (sur 10) à gauche ; à droite, les notes externes TMDB et AniList (en %) quand disponibles. Pas de note TVDB.
 - **Carte « Synopsis »** : résumé du titre avec bouton « Show more » / « Show less » pour développer.
 - **Carte « Cast & Crew »** : liste des acteurs principaux et de l'équipe (rôles). Taper un nom ouvre la page **Person** qui filtre la bibliothèque sur tous les titres où cette personne apparaît.
