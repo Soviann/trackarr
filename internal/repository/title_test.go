@@ -1238,3 +1238,76 @@ func TestTitleRepository_SimklID_NilWhenAbsent(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+func TestTitleRepo_WatchProvidersRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2016,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
+
+	providers := `[{"id":119,"name":"Amazon Prime Video"},{"id":8,"name":"Netflix"}]`
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(context.Background(), id, repository.TitleUpdate{WatchProviders: &providers})
+	})
+	require.NoError(t, err)
+
+	got, err := repository.NewTitleRepository(db).GetByID(id)
+	require.NoError(t, err)
+	require.Len(t, got.WatchProviders, 2)
+	assert.Equal(t, int64(119), got.WatchProviders[0].ID)
+	assert.Equal(t, "Amazon Prime Video", got.WatchProviders[0].Name)
+}
+
+func TestTitleRepo_ContinueWatching_IncludesProviders(t *testing.T) {
+	db := setupTestDB(t)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2016,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
+
+	// One season, one unwatched episode so the title qualifies for continue-watching.
+	s := testutil.GetOrCreateSeason(t, db, id, 1)
+	testutil.SeedEpisode(t, db, s.ID, 1, "2020-01-01", false)
+
+	providers := `[{"id":119,"name":"Amazon Prime Video"}]`
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(context.Background(), id, repository.TitleUpdate{WatchProviders: &providers})
+	})
+	require.NoError(t, err)
+
+	items, err := repository.NewTitleRepository(db).ListContinueWatching()
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Len(t, items[0].WatchProviders, 1)
+	assert.Equal(t, int64(119), items[0].WatchProviders[0].ID)
+}
+
+func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
+	db := setupTestDB(t)
+	nextAirDate := "2099-01-01"
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		NextAirDate: &nextAirDate,
+	}, []model.TitleName{{Name: "Upcoming Series", Language: "en", IsPrimary: true}})
+
+	providers := `[{"id":8,"name":"Netflix"}]`
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(context.Background(), id, repository.TitleUpdate{WatchProviders: &providers})
+	})
+	require.NoError(t, err)
+
+	items, err := repository.NewTitleRepository(db).ListUpcoming("2025-01-01")
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Len(t, items[0].WatchProviders, 1)
+	assert.Equal(t, int64(8), items[0].WatchProviders[0].ID)
+	assert.Equal(t, "Netflix", items[0].WatchProviders[0].Name)
+}

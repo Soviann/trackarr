@@ -5,7 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+
+	"github.com/nicolasvasse/plextracker/internal/model"
 )
+
+type TMDBWatchProvider struct {
+	ProviderID   int64  `json:"provider_id"`
+	ProviderName string `json:"provider_name"`
+}
+
+type tmdbWatchProviderCountry struct {
+	Flatrate []TMDBWatchProvider `json:"flatrate"`
+}
+
+type tmdbWatchProviders struct {
+	Results map[string]tmdbWatchProviderCountry `json:"results"`
+}
 
 type TMDBGenre struct {
 	ID   int64  `json:"id"`
@@ -30,33 +45,35 @@ type TMDBCrewMember struct {
 }
 
 type TMDBMovieDetails struct {
-	ID          int64        `json:"id"`
-	Title       string       `json:"title"`
-	Overview    string       `json:"overview"`
-	ReleaseDate string       `json:"release_date"`
-	PosterPath  *string      `json:"poster_path"`
-	IMDBID      string       `json:"imdb_id"`
-	Genres      []TMDBGenre  `json:"genres"`
-	Runtime     *int         `json:"runtime"`
-	VoteAverage float64      `json:"vote_average"`
-	Credits     *TMDBCredits `json:"credits"`
-	ExternalIDs *struct {
+	ID             int64               `json:"id"`
+	Title          string              `json:"title"`
+	Overview       string              `json:"overview"`
+	ReleaseDate    string              `json:"release_date"`
+	PosterPath     *string             `json:"poster_path"`
+	IMDBID         string              `json:"imdb_id"`
+	Genres         []TMDBGenre         `json:"genres"`
+	Runtime        *int                `json:"runtime"`
+	VoteAverage    float64             `json:"vote_average"`
+	Credits        *TMDBCredits        `json:"credits"`
+	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
+	ExternalIDs    *struct {
 		IMDBID string `json:"imdb_id"`
 		TVDBID int64  `json:"tvdb_id"`
 	} `json:"external_ids"`
 }
 
 type TMDBTVDetails struct {
-	ID             int64        `json:"id"`
-	Name           string       `json:"name"`
-	Overview       string       `json:"overview"`
-	Status         string       `json:"status"`
-	FirstAirDate   string       `json:"first_air_date"`
-	PosterPath     *string      `json:"poster_path"`
-	Genres         []TMDBGenre  `json:"genres"`
-	EpisodeRunTime []int        `json:"episode_run_time"`
-	VoteAverage    float64      `json:"vote_average"`
-	Credits        *TMDBCredits `json:"credits"`
+	ID             int64               `json:"id"`
+	Name           string              `json:"name"`
+	Overview       string              `json:"overview"`
+	Status         string              `json:"status"`
+	FirstAirDate   string              `json:"first_air_date"`
+	PosterPath     *string             `json:"poster_path"`
+	Genres         []TMDBGenre         `json:"genres"`
+	EpisodeRunTime []int               `json:"episode_run_time"`
+	VoteAverage    float64             `json:"vote_average"`
+	Credits        *TMDBCredits        `json:"credits"`
+	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
 	Seasons        []struct {
 		SeasonNumber int `json:"season_number"`
 		EpisodeCount int `json:"episode_count"`
@@ -99,7 +116,7 @@ type tmdbTranslationsResponse struct {
 
 func (c *TMDBClient) GetMovieDetails(ctx context.Context, tmdbID int64) (*TMDBMovieDetails, error) {
 	var details TMDBMovieDetails
-	params := url.Values{"append_to_response": {"external_ids,credits"}}
+	params := url.Values{"append_to_response": {"external_ids,credits,watch/providers"}}
 	if err := c.get(ctx, fmt.Sprintf("/movie/%d", tmdbID), params, &details); err != nil {
 		return nil, fmt.Errorf("get movie details: %w", err)
 	}
@@ -108,7 +125,7 @@ func (c *TMDBClient) GetMovieDetails(ctx context.Context, tmdbID int64) (*TMDBMo
 
 func (c *TMDBClient) GetTVDetails(ctx context.Context, tmdbID int64) (*TMDBTVDetails, error) {
 	var details TMDBTVDetails
-	params := url.Values{"append_to_response": {"external_ids,credits"}}
+	params := url.Values{"append_to_response": {"external_ids,credits,watch/providers"}}
 	if err := c.get(ctx, fmt.Sprintf("/tv/%d", tmdbID), params, &details); err != nil {
 		return nil, fmt.Errorf("get tv details: %w", err)
 	}
@@ -181,6 +198,21 @@ func ExtractTVMetadata(d *TMDBTVDetails) (genres, credits string, runtime *int, 
 		rating = &d.VoteAverage
 	}
 	return
+}
+
+// ExtractFlatrateProvidersFR returns the FR subscription-included ("flatrate")
+// providers as a JSON array string of model.WatchProvider, suitable for the
+// titles.watch_providers column. Returns "[]" when no FR flatrate data exists,
+// so a fetched-but-unavailable title is distinguishable from never-fetched (NULL).
+func ExtractFlatrateProvidersFR(wp *tmdbWatchProviders) string {
+	out := []model.WatchProvider{}
+	if wp != nil {
+		for _, p := range wp.Results["FR"].Flatrate {
+			out = append(out, model.WatchProvider{ID: p.ProviderID, Name: p.ProviderName})
+		}
+	}
+	b, _ := json.Marshal(out)
+	return string(b)
 }
 
 func marshalGenres(genres []TMDBGenre) string {

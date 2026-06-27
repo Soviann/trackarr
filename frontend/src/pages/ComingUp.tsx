@@ -3,6 +3,7 @@ import { apiFetch } from '../api'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { UpcomingTitle } from '../types'
+import { isOnPrime } from '../utils/providers'
 import s from './PresetLibrary.module.css'
 
 function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'teal' | 'muted' } {
@@ -25,6 +26,7 @@ function toTile(t: UpcomingTitle): PosterTileItem {
     name: t.name,
     sublabel: label,
     sublabelVariant: variant,
+    onPrime: isOnPrime(t.watch_providers),
   }
 }
 

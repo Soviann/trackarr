@@ -13,6 +13,8 @@ import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { RematchSheet } from '../components/RematchSheet'
 import { StatusBadge } from '../components/StatusBadge'
+import { PrimeBadge } from '../components/PrimeBadge'
+import { isOnPrime } from '../utils/providers'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
@@ -183,8 +185,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
           </div>
         )}
-        <div style={{ marginTop: '12px' }}>
+        <div style={{ marginTop: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
           <StatusBadge status={title.status} />
+          {isOnPrime(title.watch_providers) && <PrimeBadge />}
         </div>
       </div>
 

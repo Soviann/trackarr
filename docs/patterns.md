@@ -15,7 +15,7 @@ Update when adding routes, services, components, or commands.
 
 ### Models
 
-`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode; `total_watch_minutes`), TitleName, Season (EpisodeCount, WatchedCount), Episode, WatchEvent (WatchEventSource), Setting.
+`internal/model/` — Title (TitleType, TitleStatus, SeriesStatus, MatchStatus, NextEpisode; `total_watch_minutes`; `watch_providers` TEXT — JSON `[{id,name}]` FR subscription-included providers, NULL=never fetched/`[]`=none, exposed on `Title`/`ContinueWatchingItem`/`UpcomingItem`), TitleName, Season (EpisodeCount, WatchedCount), Episode, WatchEvent (WatchEventSource), Setting.
 
 ### Services
 
@@ -30,7 +30,7 @@ Update when adding routes, services, components, or commands.
 | CoverService | `internal/service/cover.go` | Owns cover image lifecycle: fetches from TMDB/TVDB/AniList with deadlines (a stalled CDN can't freeze the writeDB), persists filename via `TitleUpdate`, drives accent extraction (`colorextract/`). Shares the 2 rps `APILimiter` budget with TaskQueueWorker + BackgroundService. |
 | APILimiter | `internal/service/ratelimiter.go` | Global 2 rps token bucket guarding TMDB/TVDB/AniList HTTP calls across all background workers. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
-| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls). Name backfill: `syncTitleNames` → `AddMissingNames` inserts en/fr translations from TMDB (`GetTitleNames`) + TVDB (`details.Names()`) on refresh, additive (never deletes → anime romaji & merged-season aliases survive). AniList-only titles (no TMDB) still `ReplaceNames` (en+romaji) in `refreshFromAniList`. |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls). Name backfill: `syncTitleNames` → `AddMissingNames` inserts en/fr translations from TMDB (`GetTitleNames`) + TVDB (`details.Names()`) on refresh, additive (never deletes → anime romaji & merged-season aliases survive). AniList-only titles (no TMDB) still `ReplaceNames` (en+romaji) in `refreshFromAniList`. Watch providers: `refreshMovieFromTMDB`/`refreshSeriesFromTMDB` populate `watch_providers` via `matching.ExtractFlatrateProvidersFR`, which reads `watch/providers` data piggybacked on the existing detail `append_to_response`; parsed by `parseWatchProviders` (repository/title.go). |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
@@ -239,6 +239,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | `utils/badge.ts` | PWA app icon badge: `updateBadge()` reads `/api/titles/review-count` and calls `navigator.setAppBadge`. User toggle persisted in `localStorage` (`badge-enabled`). Called from `app.tsx` on auth + `MatchReview.tsx` after each action. |
 | `utils/haptic.ts` | `navigator.vibrate` wrapper with `HAPTIC_SHORT` / `HAPTIC_MEDIUM` / `HAPTIC_LONG` patterns. |
 | `utils/episodeRanges.ts` | Groups consecutive watched episodes into ranges (e.g. `S1 E1–4`) for the activity feed and per-title history. Folds duplicate episode_numbers (rewatches, dual webhook firings) into the current group. |
+| `utils/providers.ts` | `PRIME_PROVIDER_IDS = {9, 119}` (Amazon Prime FR). `isOnPrime(providers)` (takes a title's `watch_providers` list) returns true when it contains any PRIME id (excludes rent/buy id 10). |
 
 ### API & routing conventions (read before adding any URL literal)
 
@@ -290,6 +291,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | CollapsibleSection | `components/CollapsibleSection.tsx` | Collapsible header with lazy-load `onExpand` |
 | PosterStrip | `components/PosterStrip.tsx` | Horizontal scrollable poster strip (delegates card to `PosterTile`) |
 | PosterTile | `components/PosterTile.tsx` | Compact poster card with optional progress bar / badge / sublabel — used in strips and preset library grids |
+| PrimeBadge | `components/PrimeBadge.tsx` | Blue "prime" badge rendered on `PosterTile` (Continue Watching / Coming Up) and `TitleDetail` when `isOnPrime(title)` is true. Lazy: appears only after the title's next TMDB refresh. |
 | SeasonAniListStrip | `components/SeasonAniListStrip.tsx` | Active-season AniList info strip (community score, link, fix-match pencil) |
 | ConfirmationDrawer | `components/ConfirmationDrawer.tsx` | Confirm/cancel drawer for destructive bulk actions |
 | ErrorBanner | `components/ErrorBanner.tsx` | Inline error banner with optional retry |

@@ -1,3 +1,8 @@
+export interface WatchProvider {
+  id: number
+  name: string
+}
+
 export interface Settings {
   anilist_connected: boolean
   anilist_token_invalid: boolean
@@ -31,6 +36,7 @@ export interface Title {
   match_source: string | null
   overview: string | null
   genres: string[] | null
+  watch_providers?: WatchProvider[]
   runtime: number | null
   total_watch_minutes: number
   tmdb_rating: number | null
@@ -218,6 +224,7 @@ export interface ContinueWatchingTitle {
   watched_episodes: number
   total_episodes: number
   last_watched_at: string | null
+  watch_providers?: WatchProvider[]
 }
 
 export type MatchEventKind = 'auto_confirmed' | 'season_attached'
@@ -239,6 +246,7 @@ export interface UpcomingTitle {
   next_air_date: string
   next_air_episode: string | null
   status: string
+  watch_providers?: WatchProvider[]
 }
 
 export interface SeasonAuditProposal {

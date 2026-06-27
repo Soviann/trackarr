@@ -265,3 +265,23 @@ func TestTMDBSearchResultYear(t *testing.T) {
 	r = TMDBSearchResult{FirstAirDate: "2020-05-01"}
 	assert.Equal(t, 2020, r.Year())
 }
+
+func TestExtractFlatrateProvidersFR(t *testing.T) {
+	wp := &tmdbWatchProviders{Results: map[string]tmdbWatchProviderCountry{
+		"FR": {Flatrate: []TMDBWatchProvider{
+			{ProviderID: 119, ProviderName: "Amazon Prime Video"},
+			{ProviderID: 8, ProviderName: "Netflix"},
+		}},
+		"US": {Flatrate: []TMDBWatchProvider{{ProviderID: 9, ProviderName: "Amazon Prime Video"}}},
+	}}
+	got := ExtractFlatrateProvidersFR(wp)
+	assert.JSONEq(t, `[{"id":119,"name":"Amazon Prime Video"},{"id":8,"name":"Netflix"}]`, got)
+
+	// No FR entry → empty array, never null.
+	assert.Equal(t, "[]", ExtractFlatrateProvidersFR(&tmdbWatchProviders{Results: map[string]tmdbWatchProviderCountry{
+		"US": {Flatrate: []TMDBWatchProvider{{ProviderID: 9, ProviderName: "Amazon Prime Video"}}},
+	}}))
+
+	// Nil providers → empty array.
+	assert.Equal(t, "[]", ExtractFlatrateProvidersFR(nil))
+}

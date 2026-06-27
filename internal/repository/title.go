@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -13,25 +14,27 @@ import (
 
 // ContinueWatchingItem represents a Watching title with episode progress.
 type ContinueWatchingItem struct {
-	ID              int64   `json:"id"`
-	Type            string  `json:"type"`
-	CoverURL        *string `json:"cover_url"`
-	Name            string  `json:"name"`
-	NextAirEpisode  *string `json:"next_air_episode"`
-	WatchedEpisodes int     `json:"watched_episodes"`
-	TotalEpisodes   int     `json:"total_episodes"`
-	LastWatchedAt   *string `json:"last_watched_at"`
+	ID              int64                 `json:"id"`
+	Type            string                `json:"type"`
+	CoverURL        *string               `json:"cover_url"`
+	Name            string                `json:"name"`
+	NextAirEpisode  *string               `json:"next_air_episode"`
+	WatchedEpisodes int                   `json:"watched_episodes"`
+	TotalEpisodes   int                   `json:"total_episodes"`
+	LastWatchedAt   *string               `json:"last_watched_at"`
+	WatchProviders  []model.WatchProvider `json:"watch_providers,omitempty"`
 }
 
 // UpcomingItem represents a title with an upcoming air date.
 type UpcomingItem struct {
-	ID             int64   `json:"id"`
-	Type           string  `json:"type"`
-	CoverURL       *string `json:"cover_url"`
-	Name           string  `json:"name"`
-	NextAirDate    string  `json:"next_air_date"`
-	NextAirEpisode *string `json:"next_air_episode"`
-	Status         string  `json:"status"`
+	ID             int64                 `json:"id"`
+	Type           string                `json:"type"`
+	CoverURL       *string               `json:"cover_url"`
+	Name           string                `json:"name"`
+	NextAirDate    string                `json:"next_air_date"`
+	NextAirEpisode *string               `json:"next_air_episode"`
+	Status         string                `json:"status"`
+	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
 }
 
 type TitleRepository struct {
@@ -80,15 +83,17 @@ type TitleUpdate struct {
 	AccentHex         *string
 	SimklID           *int64
 	SimklSlug         *string
+	WatchProviders    *string // JSON array of model.WatchProvider; "[]" clears
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles WHERE id = ?`, id).
+	var watchProvidersRaw *string
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
-			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &title.AniListRating,
+			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
 			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
@@ -96,6 +101,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title.FirstWatchedAt = parseSQLiteTime(firstWatchedAtStr)
 	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 	title.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
+	title.WatchProviders = parseWatchProviders(watchProvidersRaw)
 
 	// Load names
 	rows, err := r.db.Query(`SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id = ?`, id)
@@ -387,6 +393,20 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	return r.GetByID(id)
 }
 
+// parseWatchProviders decodes the titles.watch_providers JSON column. A NULL
+// column, empty string, or malformed JSON yields an empty slice (never an error):
+// a bad availability blob must never fail a title read.
+func parseWatchProviders(raw *string) []model.WatchProvider {
+	if raw == nil || *raw == "" {
+		return nil
+	}
+	var providers []model.WatchProvider
+	if err := json.Unmarshal([]byte(*raw), &providers); err != nil {
+		return nil
+	}
+	return providers
+}
+
 // parseSQLiteTimeVal parses a SQLite datetime string into a time.Time.
 // SQLite stores datetimes in UTC without a timezone marker; time.Parse returns
 // UTC when no timezone is embedded, which is the expected behaviour here.
@@ -477,7 +497,8 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 		       t.next_air_episode,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 1) AS watched_episodes,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) AS total_episodes,
-		       t.last_watched_at
+		       t.last_watched_at,
+		       t.watch_providers
 		FROM titles t
 		WHERE t.status = 'watching'
 		  AND (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0) > 0
@@ -492,10 +513,12 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 	var items []ContinueWatchingItem
 	for rows.Next() {
 		var item ContinueWatchingItem
+		var watchProvidersRaw *string
 		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name, &item.NextAirEpisode,
-			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt); err != nil {
+			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt, &watchProvidersRaw); err != nil {
 			return nil, fmt.Errorf("scan continue watching: %w", err)
 		}
+		item.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -510,7 +533,8 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	query := `
 		SELECT t.id, t.type, t.cover_url,
 		       COALESCE(` + displayNameExpr + `, '') AS name,
-		       t.next_air_date, t.next_air_episode, t.status
+		       t.next_air_date, t.next_air_episode, t.status,
+		       t.watch_providers
 		FROM titles t
 		WHERE t.status IN ('watching', 'plan_to_watch')
 		  AND t.next_air_date IS NOT NULL
@@ -526,10 +550,12 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	var items []UpcomingItem
 	for rows.Next() {
 		var item UpcomingItem
+		var watchProvidersRaw *string
 		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name,
-			&item.NextAirDate, &item.NextAirEpisode, &item.Status); err != nil {
+			&item.NextAirDate, &item.NextAirEpisode, &item.Status, &watchProvidersRaw); err != nil {
 			return nil, fmt.Errorf("scan upcoming: %w", err)
 		}
+		item.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {

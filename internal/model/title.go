@@ -59,41 +59,49 @@ const (
 	MatchStatusUnconfirmed   MatchStatus = "unconfirmed"
 )
 
+// WatchProvider is a streaming service that carries a title at no extra cost
+// (subscription-included / TMDB "flatrate") in the configured region.
+type WatchProvider struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
 type Title struct {
-	ID                int64         `json:"id"`
-	Type              TitleType     `json:"type"`
-	IsAnime           bool          `json:"is_anime"`
-	Year              int           `json:"year"`
-	CoverURL          *string       `json:"cover_url"`
-	IMDBID            *string       `json:"imdb_id"`
-	AniListID         *int64        `json:"anilist_id"`
-	TMDBID            *int64        `json:"tmdb_id"`
-	TVDBID            *int64        `json:"tvdb_id"`
-	PlexRatingKey     *string       `json:"plex_rating_key"`
-	MyRating          *int          `json:"my_rating"`
-	Status            TitleStatus   `json:"status"`
-	SeriesStatus      *SeriesStatus `json:"series_status"`
-	MatchStatus       MatchStatus   `json:"match_status"`
-	OriginalTitle     *string       `json:"original_title"`
-	MatchSource       *string       `json:"match_source"`
-	Overview          *string       `json:"overview"`
-	Genres            []string      `json:"genres,omitempty"`
-	Runtime           *int          `json:"runtime"`
-	TotalWatchMinutes int           `json:"total_watch_minutes"`
-	TMDBRating        *float64      `json:"tmdb_rating"`
-	Credits           *string       `json:"credits"`
-	AniListRating     *int          `json:"anilist_rating"`
-	ReleaseDate       *string       `json:"release_date"`
-	NextAirDate       *string       `json:"next_air_date,omitempty"`
-	NextAirEpisode    *string       `json:"next_air_episode,omitempty"`
-	FirstWatchedAt    *time.Time    `json:"first_watched_at,omitempty"`
-	LastWatchedAt     *time.Time    `json:"last_watched_at,omitempty"`
-	LastRefreshedAt   *time.Time    `json:"last_refreshed_at,omitempty"`
-	AccentHex         *string       `json:"accent_hex,omitempty"`
-	SimklID           *int64        `json:"simkl_id,omitempty"`
-	SimklSlug         *string       `json:"simkl_slug,omitempty"`
-	CreatedAt         time.Time     `json:"created_at"`
-	UpdatedAt         time.Time     `json:"updated_at"`
+	ID                int64           `json:"id"`
+	Type              TitleType       `json:"type"`
+	IsAnime           bool            `json:"is_anime"`
+	Year              int             `json:"year"`
+	CoverURL          *string         `json:"cover_url"`
+	IMDBID            *string         `json:"imdb_id"`
+	AniListID         *int64          `json:"anilist_id"`
+	TMDBID            *int64          `json:"tmdb_id"`
+	TVDBID            *int64          `json:"tvdb_id"`
+	PlexRatingKey     *string         `json:"plex_rating_key"`
+	MyRating          *int            `json:"my_rating"`
+	Status            TitleStatus     `json:"status"`
+	SeriesStatus      *SeriesStatus   `json:"series_status"`
+	MatchStatus       MatchStatus     `json:"match_status"`
+	OriginalTitle     *string         `json:"original_title"`
+	MatchSource       *string         `json:"match_source"`
+	Overview          *string         `json:"overview"`
+	Genres            []string        `json:"genres,omitempty"`
+	WatchProviders    []WatchProvider `json:"watch_providers,omitempty"`
+	Runtime           *int            `json:"runtime"`
+	TotalWatchMinutes int             `json:"total_watch_minutes"`
+	TMDBRating        *float64        `json:"tmdb_rating"`
+	Credits           *string         `json:"credits"`
+	AniListRating     *int            `json:"anilist_rating"`
+	ReleaseDate       *string         `json:"release_date"`
+	NextAirDate       *string         `json:"next_air_date,omitempty"`
+	NextAirEpisode    *string         `json:"next_air_episode,omitempty"`
+	FirstWatchedAt    *time.Time      `json:"first_watched_at,omitempty"`
+	LastWatchedAt     *time.Time      `json:"last_watched_at,omitempty"`
+	LastRefreshedAt   *time.Time      `json:"last_refreshed_at,omitempty"`
+	AccentHex         *string         `json:"accent_hex,omitempty"`
+	SimklID           *int64          `json:"simkl_id,omitempty"`
+	SimklSlug         *string         `json:"simkl_slug,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 
 	// CaughtUp is true when this watching series has watched every aired
 	// episode. Derived at query time by the list/search SQL (not stored);
