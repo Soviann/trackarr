@@ -95,8 +95,7 @@
     ]
   },
   "enabledPlugins": {
-    "commit-commands@claude-plugins-official": false,
-    "gopls-lsp@claude-plugins-official": true
+    "commit-commands@claude-plugins-official": false
   },
   "sandbox": {
     "enabled": false,
