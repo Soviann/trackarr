@@ -95,6 +95,8 @@ Kinds (`model.MatchEventKind`):
 Writer: `repository.NewMatchEventWriter(tx).Create(ctx, titleID, kind, detail)`.
 Reader: `repository.MatchEventRepository.ListRecent(ctx, limit)` — returns events with `cover_url` join.
 
+**`year`/`release_date` backfilled ONLY by enrichment, NOT by refresh.** `buildEnrichmentUpdate` (`taskqueue.go`) writes `release_date` from the pipeline result and derives `year` via `releaseYear(result.ReleaseDate)` (v0.34.1). The refresh path (`refreshMovieFromTMDB`/`refreshSeriesFromTMDB`, `background.go`) refreshes cover/overview/genres/rating/status but **never** touches `year` or `release_date`. Consequence: a `year=0` title is repaired by a **rematch** (`POST /titles/{id}/rematch`, which enqueues enrichment) — a plain refresh will not fix it. Re-supplying the existing `tmdb_id` to rematch is enough to re-enrich, but it also sets `match_status=confirmed` + `match_source=manual`.
+
 **Seasons NOT created by enrichment.** Created only by refresh (`TaskTypeRefresh` → `refreshSeriesFromTMDB`, needs `TMDBID`) or watched-episode (`SeasonWriter.GetOrCreate`, `plex.go`). Consequences:
 - Just-matched series has 0 seasons until refresh/watch. API omits the field (`Seasons json:"seasons,omitempty"` → `undefined` client-side) — front-end must guard (e.g. `title.seasons ?? []`).
 - `handleEnrichment.enqueueSeasonBackfill` enqueues `refresh:<id>` for each matched non-movie with a TMDB ID → seasons appear immediately, not next cron.
