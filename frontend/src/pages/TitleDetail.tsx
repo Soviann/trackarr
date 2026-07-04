@@ -12,6 +12,7 @@ import { ActionDrawer } from '../components/ActionDrawer'
 import { RatingPrompt } from '../components/RatingPrompt'
 import { EditSheet } from '../components/EditSheet'
 import { RematchSheet } from '../components/RematchSheet'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { StatusBadge } from '../components/StatusBadge'
 import { PrimeBadge } from '../components/PrimeBadge'
 import { isOnPrime } from '../utils/providers'
@@ -20,6 +21,7 @@ import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholde
 import { TitleHistory } from '../components/TitleHistory'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { routeTo } from '../routes'
+import { useTitleStore } from '../store'
 import s from './TitleDetail.module.css'
 
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
@@ -61,6 +63,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const invalidate = useTitleStore((st) => st.invalidate)
 
   const sortedSeasons = useMemo(
     () => [...(title?.seasons ?? [])].sort((a, b) => a.season_number - b.season_number),
@@ -138,6 +142,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     } catch (e) {
       setActionError('Failed to save changes')
       mutate()
+    }
+  }
+
+  // Deleting removes the whole title (seasons, episodes, history). We can't stay
+  // on a page whose subject no longer exists, so route back to the library and
+  // invalidate its cache so the deleted title drops out of the list.
+  const handleDelete = async () => {
+    try {
+      await apiFetch(`/titles/${title.id}`, { method: 'DELETE' })
+      invalidate()
+      route(routeTo.home())
+    } catch (e) {
+      setActionError('Failed to delete title')
+      throw e // keep the confirmation drawer open so the user can retry
     }
   }
 
@@ -377,7 +395,18 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onRematch={() => setShowRematch(true)}
         onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
         onRefresh={handleRefresh}
+        onDelete={() => setShowDeleteConfirm(true)}
         onOpenChange={setDrawerOpen}
+      />
+
+      <ConfirmationDrawer
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title={`Delete "${name}"?`}
+        description="This removes the title and all its watch history. This cannot be undone."
+        confirmText="Delete"
+        isDangerous
       />
 
       {/* Bottom sheets */}

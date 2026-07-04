@@ -183,6 +183,11 @@
   border-color: var(--status-crit);
 }
 
+.moreBtnDanger {
+  color: var(--status-crit);
+  border-color: var(--status-crit);
+}
+
 .bottomPad {
   height: 4px;
 }

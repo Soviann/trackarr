@@ -11,12 +11,13 @@ interface ActionDrawerProps {
   onRematch: () => void
   onMerge: () => void
   onRefresh: () => Promise<void>
+  onDelete: () => void
   onOpenChange?: (open: boolean) => void
 }
 
 export function ActionDrawer({
   title, aniListUrl,
-  onRate, onEdit, onRematch, onMerge, onRefresh, onOpenChange,
+  onRate, onEdit, onRematch, onMerge, onRefresh, onDelete, onOpenChange,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -170,6 +171,7 @@ export function ActionDrawer({
             >
               {refreshState === 'loading' ? '...' : refreshState === 'success' ? '✓ Done' : refreshState === 'error' ? '✗ Failed' : 'Refresh'}
             </button>
+            <button onClick={onDelete} className={clsx(s.moreBtn, s.moreBtnDanger)}>Delete</button>
           </div>
         )}
 

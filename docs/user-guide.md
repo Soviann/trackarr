@@ -80,7 +80,8 @@ L'écran principal affiche tous les titres organisés par statut.
 - **Tiroir « Actions »** (poignée glissable au-dessus de la navbar) :
   - **★ Rate** : ouvre le prompt de notation
   - **Edit** : ouvre l'édition de type / statut / nom affiché
-  - **More** : déploie Rematch, Merge, Refresh
+  - **More** : déploie Rematch, Merge, Refresh, Delete
+    - **Delete** (rouge) : supprime le titre et tout son historique de visionnage après confirmation, puis renvoie à la bibliothèque. Irréversible.
   - **Liens externes** (sur leur propre ligne) :
     - **IMDb** quand un `imdb_id` est connu
     - **TVDB** quand un `tvdb_id` est connu
