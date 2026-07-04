@@ -515,7 +515,23 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 	if result.ReleaseDate != "" {
 		update.ReleaseDate = &result.ReleaseDate
 	}
+	// Year is user-visible (tiles, search) but was historically only written at
+	// import time, so a missing or stale value could never heal. Derive it from
+	// the resolved release date on every (re)match.
+	if y := releaseYear(result.ReleaseDate); y != 0 && y != payload.Year {
+		update.Year = &y
+	}
 	return update
+}
+
+// releaseYear extracts the year from a TMDB/TVDB release date, 0 when absent
+// or malformed.
+func releaseYear(releaseDate string) int {
+	t, err := time.Parse("2006-01-02", releaseDate)
+	if err != nil {
+		return 0
+	}
+	return t.Year()
 }
 
 // recalcWatchtime refreshes total_watch_minutes when runtime was (re)learned.

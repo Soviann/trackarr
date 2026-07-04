@@ -166,6 +166,10 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `anilist_rating = ?`)
 		args = append(args, *update.AniListRating)
 	}
+	if update.Year != nil {
+		sets = append(sets, `year = ?`)
+		args = append(args, *update.Year)
+	}
 	if update.ReleaseDate != nil {
 		sets = append(sets, `release_date = ?`)
 		args = append(args, *update.ReleaseDate)

@@ -77,6 +77,7 @@ type TitleUpdate struct {
 	TMDBRating        *float64
 	Credits           *string
 	AniListRating     *int
+	Year              *int
 	ReleaseDate       *string
 	NextAirDate       *string
 	NextAirEpisode    *string

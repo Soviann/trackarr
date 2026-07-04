@@ -57,6 +57,29 @@ func TestBuildEnrichmentUpdate_LocksAndPreservesMatch(t *testing.T) {
 	})
 }
 
+func TestBuildEnrichmentUpdate_YearFromReleaseDate(t *testing.T) {
+	t.Run("year derived from release date when it differs", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{ReleaseDate: "1989-10-02"}, service.EnrichmentPayload{Year: 0})
+		require.NotNil(t, u.Year)
+		assert.Equal(t, 1989, *u.Year)
+	})
+
+	t.Run("year untouched when already matching", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{ReleaseDate: "1989-10-02"}, service.EnrichmentPayload{Year: 1989})
+		assert.Nil(t, u.Year)
+	})
+
+	t.Run("no release date leaves year untouched", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{}, service.EnrichmentPayload{Year: 0})
+		assert.Nil(t, u.Year)
+	})
+
+	t.Run("malformed release date leaves year untouched", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{ReleaseDate: "octobre 1989"}, service.EnrichmentPayload{Year: 0})
+		assert.Nil(t, u.Year)
+	})
+}
+
 // fakeAniListPusher records PushSeasonState/PushMovieState invocations so
 // dispatch tests can assert the worker routes each task kind to the right
 // method with the payload decoded correctly.
