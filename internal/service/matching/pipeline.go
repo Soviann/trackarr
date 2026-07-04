@@ -346,12 +346,17 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 	// Only seed when input.Title is non-empty — the URL-resolve flow passes
 	// no title, and an empty placeholder marked is_primary=true masks the
 	// real English name later added from TMDB translations/details.
+	seededPlaceholder := ""
 	if len(result.Names) == 0 && input.Title != "" {
+		seededPlaceholder = input.Title
 		result.Names = []model.TitleName{{Name: input.Title, Language: "en", IsPrimary: true}}
 	}
 
 	tmdbRes, tvdbRes := p.fetchTMDBAndTVDBParallel(ctx, result)
 	mergeMetadata(result, tmdbRes, tvdbRes)
+	if seededPlaceholder != "" {
+		result.Names = resolvePlaceholderPrimary(result.Names, seededPlaceholder)
+	}
 	reconcileIDs(result, tmdbRes, tvdbRes)
 
 	// AniList cover as last resort
@@ -370,6 +375,47 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 //   - IsAnime: stays true if already set; promoted to true when TVDB tags it.
 //   - Names: union of TMDB+TVDB language maps (TMDB wins on duplicate language);
 //     "en" entries are flagged IsPrimary.
+//
+// resolvePlaceholderPrimary settles the primary-name conflict the seeded
+// placeholder creates: seeded before the TMDB/TVDB fetch, the input title is
+// flagged is_primary "en" even when the source name isn't English (Simkl
+// exports carry localized titles). PrimaryName() returns the FIRST primary
+// row, so without this pass the placeholder outranks the real English name
+// forever. Once a fetched English name is present, the placeholder is dropped
+// when that name duplicates it and demoted to a plain alias otherwise; with
+// no fetched English name it stays primary as the only usable display name.
+func resolvePlaceholderPrimary(names []model.TitleName, placeholder string) []model.TitleName {
+	seedIdx := -1
+	for i, n := range names {
+		if n.Name == placeholder && n.Language == "en" && n.IsPrimary {
+			seedIdx = i
+			break
+		}
+	}
+	if seedIdx == -1 {
+		return names
+	}
+
+	fetchedEnglish, duplicate := false, false
+	for i, n := range names {
+		if i == seedIdx || n.Language != "en" || !n.IsPrimary {
+			continue
+		}
+		fetchedEnglish = true
+		if n.Name == placeholder {
+			duplicate = true
+		}
+	}
+	if !fetchedEnglish {
+		return names
+	}
+	if duplicate {
+		return append(names[:seedIdx], names[seedIdx+1:]...)
+	}
+	names[seedIdx].IsPrimary = false
+	return names
+}
+
 func mergeMetadata(result *MatchResult, tmdbRes tmdbFetchResult, tvdbRes tvdbFetchResult) {
 	if tmdbRes.overview != "" || tvdbRes.overview != "" {
 		if len(tvdbRes.overview) > len(tmdbRes.overview) {

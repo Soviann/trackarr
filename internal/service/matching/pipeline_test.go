@@ -606,3 +606,46 @@ func TestPipeline_NilClients(t *testing.T) {
 	assert.Equal(t, MatchSourceNone, result.MatchSource)
 	assert.Equal(t, "Test", result.Names[0].Name)
 }
+
+func TestResolvePlaceholderPrimary(t *testing.T) {
+	seed := func() model.TitleName {
+		return model.TitleName{Name: "El libro de la selva", Language: "en", IsPrimary: true}
+	}
+
+	t.Run("demoted to alias when a fetched English name arrives", func(t *testing.T) {
+		names := resolvePlaceholderPrimary([]model.TitleName{
+			seed(),
+			{Name: "The Jungle Book", Language: "en", IsPrimary: true},
+			{Name: "Le Livre de la Jungle", Language: "fr", IsPrimary: false},
+		}, "El libro de la selva")
+		require.Len(t, names, 3)
+		assert.False(t, names[0].IsPrimary, "placeholder must not outrank the fetched English name")
+		assert.True(t, names[1].IsPrimary)
+	})
+
+	t.Run("dropped when the fetched English name duplicates it", func(t *testing.T) {
+		names := resolvePlaceholderPrimary([]model.TitleName{
+			seed(),
+			{Name: "El libro de la selva", Language: "en", IsPrimary: true},
+		}, "El libro de la selva")
+		require.Len(t, names, 1)
+		assert.True(t, names[0].IsPrimary)
+	})
+
+	t.Run("kept primary when no English name was fetched", func(t *testing.T) {
+		names := resolvePlaceholderPrimary([]model.TitleName{
+			seed(),
+			{Name: "Le Livre de la Jungle", Language: "fr", IsPrimary: false},
+		}, "El libro de la selva")
+		require.Len(t, names, 2)
+		assert.True(t, names[0].IsPrimary, "placeholder stays primary as the only display name")
+	})
+
+	t.Run("no placeholder present is a no-op", func(t *testing.T) {
+		names := resolvePlaceholderPrimary([]model.TitleName{
+			{Name: "The Jungle Book", Language: "en", IsPrimary: true},
+		}, "El libro de la selva")
+		require.Len(t, names, 1)
+		assert.True(t, names[0].IsPrimary)
+	})
+}
