@@ -274,6 +274,39 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	}, nil
 }
 
+// CountryCount holds an ISO-3166-1 origin country and how many titles carry it.
+type CountryCount struct {
+	Country string `json:"country"`
+	Count   int    `json:"count"`
+}
+
+// ListOriginCountries returns the distinct origin countries present in the
+// library with title counts, ordered by count desc then code asc. NULL/empty
+// origins are excluded so the filter only offers countries that exist.
+func (r *TitleRepository) ListOriginCountries() ([]CountryCount, error) {
+	rows, err := r.db.Query(`
+		SELECT origin_country, COUNT(*) AS count
+		FROM titles
+		WHERE origin_country IS NOT NULL AND origin_country != ''
+		GROUP BY origin_country
+		ORDER BY count DESC, origin_country ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list origin countries: %w", err)
+	}
+	defer rows.Close()
+
+	var out []CountryCount
+	for rows.Next() {
+		var c CountryCount
+		if err := rows.Scan(&c.Country, &c.Count); err != nil {
+			return nil, fmt.Errorf("scan origin country: %w", err)
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 // GetStatusCounts returns global match status counts for the library banner.
 func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
 	var counts StatusCounts

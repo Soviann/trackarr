@@ -634,3 +634,17 @@ func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error
 	httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
 	return nil
 }
+
+// Countries returns the distinct origin countries in the library with counts,
+// for the country filter chip.
+func (h *TitleHandler) Countries(w http.ResponseWriter, r *http.Request) error {
+	countries, err := h.titlesRead.ListOriginCountries()
+	if err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+	if countries == nil {
+		countries = []repository.CountryCount{}
+	}
+	httputil.WriteJSON(w, http.StatusOK, countries)
+	return nil
+}
