@@ -129,6 +129,20 @@ export function App() {
   const handleGenreOpChange = useCallback((op: 'AND' | 'OR') => {
     setFilter({ genre_op: op })
   }, [setFilter])
+
+  const handleCountryToggle = useCallback((iso: string) => {
+    const current = filter.origin_country ?? []
+    const next = current.includes(iso) ? current.filter(c => c !== iso) : [...current, iso]
+    setFilter({ origin_country: next.length > 0 ? next : undefined })
+  }, [filter.origin_country, setFilter])
+
+  const handleMyRatingMinChange = useCallback((v: string) => {
+    setFilter({ my_rating_min: v || undefined })
+  }, [setFilter])
+
+  const handleTmdbRatingMinChange = useCallback((v: string) => {
+    setFilter({ tmdb_rating_min: v || undefined })
+  }, [setFilter])
   const hideNavbar = currentPath.startsWith('/login')
   const pathname = currentPath.split('?')[0]
   const isSearch = pathname === '/search'
@@ -163,6 +177,12 @@ export function App() {
       genreOp={filter.genre_op ?? 'OR'}
       onGenreToggle={handleGenreToggle}
       onGenreOpChange={handleGenreOpChange}
+      selectedCountries={filter.origin_country ?? []}
+      onCountryToggle={handleCountryToggle}
+      myRatingMin={filter.my_rating_min ?? ''}
+      tmdbRatingMin={filter.tmdb_rating_min ?? ''}
+      onMyRatingMinChange={handleMyRatingMinChange}
+      onTmdbRatingMinChange={handleTmdbRatingMinChange}
     />
   ) : null
 
