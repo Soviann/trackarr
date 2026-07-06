@@ -194,6 +194,10 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `simkl_slug = ?`)
 		args = append(args, *update.SimklSlug)
 	}
+	if update.OriginCountry != nil {
+		sets = append(sets, `origin_country = ?`)
+		args = append(args, *update.OriginCountry)
+	}
 
 	if len(sets) == 0 {
 		return nil

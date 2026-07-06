@@ -26,19 +26,20 @@ func (r *AniListSearchResult) DisplayTitle() string {
 }
 
 type AniListDetails struct {
-	ID           int64    `json:"id"`
-	MALID        *int64   `json:"idMal"`
-	RomajiTitle  string   `json:"romajiTitle"`
-	EnglishTitle string   `json:"englishTitle"`
-	Episodes     *int     `json:"episodes"`
-	Format       string   `json:"format"`
-	SeasonYear   *int     `json:"seasonYear"`
-	CoverURL     string   `json:"coverURL"` // extraLarge or large
-	AverageScore *int     `json:"averageScore"`
-	Description  string   `json:"description"` // synopsis, HTML stripped to plain text
-	Genres       []string `json:"genres"`
-	Duration     *int     `json:"duration"`  // minutes per episode
-	StartDate    *string  `json:"startDate"` // ISO YYYY-MM-DD, nil if unknown
+	ID              int64    `json:"id"`
+	MALID           *int64   `json:"idMal"`
+	RomajiTitle     string   `json:"romajiTitle"`
+	EnglishTitle    string   `json:"englishTitle"`
+	Episodes        *int     `json:"episodes"`
+	Format          string   `json:"format"`
+	SeasonYear      *int     `json:"seasonYear"`
+	CoverURL        string   `json:"coverURL"` // extraLarge or large
+	AverageScore    *int     `json:"averageScore"`
+	Description     string   `json:"description"` // synopsis, HTML stripped to plain text
+	Genres          []string `json:"genres"`
+	Duration        *int     `json:"duration"`        // minutes per episode
+	StartDate       *string  `json:"startDate"`       // ISO YYYY-MM-DD, nil if unknown
+	CountryOfOrigin *string  `json:"countryOfOrigin"` // ISO-3166-1 alpha-2, nil if AniList has none
 }
 
 type AniListNames struct {
@@ -73,6 +74,7 @@ query ($id: Int) {
     seasonYear
     averageScore
     genres
+    countryOfOrigin
     description(asHtml: false)
     coverImage { extraLarge large }
     startDate { year month day }
@@ -146,14 +148,15 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 				Romaji  string `json:"romaji"`
 				English string `json:"english"`
 			} `json:"title"`
-			Episodes     *int     `json:"episodes"`
-			Duration     *int     `json:"duration"`
-			Format       string   `json:"format"`
-			SeasonYear   *int     `json:"seasonYear"`
-			AverageScore *int     `json:"averageScore"`
-			Genres       []string `json:"genres"`
-			Description  string   `json:"description"`
-			CoverImage   struct {
+			Episodes        *int     `json:"episodes"`
+			Duration        *int     `json:"duration"`
+			Format          string   `json:"format"`
+			SeasonYear      *int     `json:"seasonYear"`
+			AverageScore    *int     `json:"averageScore"`
+			Genres          []string `json:"genres"`
+			CountryOfOrigin string   `json:"countryOfOrigin"`
+			Description     string   `json:"description"`
+			CoverImage      struct {
 				ExtraLarge string `json:"extraLarge"`
 				Large      string `json:"large"`
 			} `json:"coverImage"`
@@ -176,20 +179,30 @@ func (c *AniListClient) GetAnimeDetails(ctx context.Context, anilistID int64) (*
 	}
 
 	return &AniListDetails{
-		ID:           resp.Media.ID,
-		MALID:        resp.Media.MALID,
-		RomajiTitle:  resp.Media.Title.Romaji,
-		EnglishTitle: resp.Media.Title.English,
-		Episodes:     resp.Media.Episodes,
-		Format:       resp.Media.Format,
-		SeasonYear:   resp.Media.SeasonYear,
-		CoverURL:     coverURL,
-		AverageScore: resp.Media.AverageScore,
-		Description:  cleanAniListDescription(resp.Media.Description),
-		Genres:       resp.Media.Genres,
-		Duration:     resp.Media.Duration,
-		StartDate:    formatAniListDate(resp.Media.StartDate.Year, resp.Media.StartDate.Month, resp.Media.StartDate.Day),
+		ID:              resp.Media.ID,
+		MALID:           resp.Media.MALID,
+		RomajiTitle:     resp.Media.Title.Romaji,
+		EnglishTitle:    resp.Media.Title.English,
+		Episodes:        resp.Media.Episodes,
+		Format:          resp.Media.Format,
+		SeasonYear:      resp.Media.SeasonYear,
+		CoverURL:        coverURL,
+		AverageScore:    resp.Media.AverageScore,
+		Description:     cleanAniListDescription(resp.Media.Description),
+		Genres:          resp.Media.Genres,
+		Duration:        resp.Media.Duration,
+		StartDate:       formatAniListDate(resp.Media.StartDate.Year, resp.Media.StartDate.Month, resp.Media.StartDate.Day),
+		CountryOfOrigin: normalizeCountry(resp.Media.CountryOfOrigin),
 	}, nil
+}
+
+// normalizeCountry uppercases/trims an ISO-3166-1 code, returning nil when empty.
+func normalizeCountry(c string) *string {
+	c = strings.ToUpper(strings.TrimSpace(c))
+	if c == "" {
+		return nil
+	}
+	return &c
 }
 
 // formatAniListDate renders AniList's {year,month,day} as ISO YYYY-MM-DD,

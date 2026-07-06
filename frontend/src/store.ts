@@ -46,15 +46,16 @@ type TitleFilter = {
   include_no_release?: string
   genres?: string[]
   genre_op?: 'AND' | 'OR'
+  origin_country?: string[]
+  my_rating_min?: string
+  tmdb_rating_min?: string
 }
 
-function buildFilterParams(filter: TitleFilter, sort?: SortState): URLSearchParams {
-  const params = new URLSearchParams()
-  if (filter.status) params.set('status', filter.status)
+// Serializes the filter fields shared by library + search into params.
+// Excludes sort/search/status which the callers set with page-specific logic.
+function appendFilterParams(params: URLSearchParams, filter: TitleFilter) {
   if (filter.type) params.set('type', filter.type)
   if (filter.is_anime) params.set('is_anime', filter.is_anime)
-  if (filter.search) params.set('search', filter.search)
-  if (filter.match_status) params.set('match_status', filter.match_status)
   if (filter.series_status) params.set('series_status', filter.series_status)
   if (filter.decade) params.set('decade', filter.decade)
   if (filter.release_from) params.set('release_from', filter.release_from)
@@ -64,6 +65,19 @@ function buildFilterParams(filter: TitleFilter, sort?: SortState): URLSearchPara
     filter.genres.forEach(g => params.append('genres', g))
     if (filter.genre_op) params.set('genre_op', filter.genre_op)
   }
+  if (filter.origin_country && filter.origin_country.length > 0) {
+    filter.origin_country.forEach(c => params.append('origin_country', c))
+  }
+  if (filter.my_rating_min) params.set('my_rating_min', filter.my_rating_min)
+  if (filter.tmdb_rating_min) params.set('tmdb_rating_min', filter.tmdb_rating_min)
+}
+
+function buildFilterParams(filter: TitleFilter, sort?: SortState): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filter.status) params.set('status', filter.status)
+  if (filter.search) params.set('search', filter.search)
+  if (filter.match_status) params.set('match_status', filter.match_status)
+  appendFilterParams(params, filter)
   if (sort) {
     params.set('sort', sort.field)
     params.set('order', sort.order)
@@ -230,17 +244,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       const params = new URLSearchParams()
       params.set('search', trimmed)
       if (filter.status) params.set('status', filter.status)
-      if (filter.type) params.set('type', filter.type)
-      if (filter.is_anime) params.set('is_anime', filter.is_anime)
-      if (filter.series_status) params.set('series_status', filter.series_status)
-      if (filter.decade) params.set('decade', filter.decade)
-      if (filter.release_from) params.set('release_from', filter.release_from)
-      if (filter.release_to) params.set('release_to', filter.release_to)
-      if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
-      if (filter.genres && filter.genres.length > 0) {
-        filter.genres.forEach(g => params.append('genres', g))
-        if (filter.genre_op) params.set('genre_op', filter.genre_op)
-      }
+      appendFilterParams(params, filter)
 
       const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
       params.set('limit', String(limit))
@@ -273,17 +277,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       const params = new URLSearchParams()
       params.set('search', trimmed)
       if (filter.status) params.set('status', filter.status)
-      if (filter.type) params.set('type', filter.type)
-      if (filter.is_anime) params.set('is_anime', filter.is_anime)
-      if (filter.series_status) params.set('series_status', filter.series_status)
-      if (filter.decade) params.set('decade', filter.decade)
-      if (filter.release_from) params.set('release_from', filter.release_from)
-      if (filter.release_to) params.set('release_to', filter.release_to)
-      if (filter.include_no_release) params.set('include_no_release', filter.include_no_release)
-      if (filter.genres && filter.genres.length > 0) {
-        filter.genres.forEach(g => params.append('genres', g))
-        if (filter.genre_op) params.set('genre_op', filter.genre_op)
-      }
+      appendFilterParams(params, filter)
 
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', String(offset))

@@ -178,6 +178,28 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.Person = &p
 	}
 
+	if raw := r.URL.Query()["origin_country"]; len(raw) > 0 {
+		countries := make([]string, 0, len(raw))
+		for _, c := range raw {
+			if c = strings.ToUpper(strings.TrimSpace(c)); c != "" {
+				countries = append(countries, c)
+			}
+		}
+		if len(countries) > 0 {
+			filter.OriginCountries = countries
+		}
+	}
+	if v := r.URL.Query().Get("my_rating_min"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
+			filter.MyRatingMin = &n
+		}
+	}
+	if v := r.URL.Query().Get("tmdb_rating_min"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 10 {
+			filter.TMDBRatingMin = &f
+		}
+	}
+
 	result, err := h.titlesRead.List(filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
@@ -632,5 +654,19 @@ func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error
 		return fmt.Errorf("review count: %w", err)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
+	return nil
+}
+
+// Countries returns the distinct origin countries in the library with counts,
+// for the country filter chip.
+func (h *TitleHandler) Countries(w http.ResponseWriter, r *http.Request) error {
+	countries, err := h.titlesRead.ListOriginCountries()
+	if err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+	if countries == nil {
+		countries = []repository.CountryCount{}
+	}
+	httputil.WriteJSON(w, http.StatusOK, countries)
 	return nil
 }

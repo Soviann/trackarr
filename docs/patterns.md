@@ -30,7 +30,7 @@ Update when adding routes, services, components, or commands.
 | CoverService | `internal/service/cover.go` | Owns cover image lifecycle: fetches from TMDB/TVDB/AniList with deadlines (a stalled CDN can't freeze the writeDB), persists filename via `TitleUpdate`, drives accent extraction (`colorextract/`). Shares the 2 rps `APILimiter` budget with TaskQueueWorker + BackgroundService. |
 | APILimiter | `internal/service/ratelimiter.go` | Global 2 rps token bucket guarding TMDB/TVDB/AniList HTTP calls across all background workers. |
 | PushNotifier | `internal/service/push.go` | Web Push VAPID (interface: PushService + noopNotifier) |
-| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls). Name backfill: `syncTitleNames` → `AddMissingNames` inserts en/fr translations from TMDB (`GetTitleNames`) + TVDB (`details.Names()`) on refresh, additive (never deletes → anime romaji & merged-season aliases survive). AniList-only titles (no TMDB) still `ReplaceNames` (en+romaji) in `refreshFromAniList`. Watch providers: `refreshMovieFromTMDB`/`refreshSeriesFromTMDB` populate `watch_providers` via `matching.ExtractFlatrateProvidersFR`, which reads `watch/providers` data piggybacked on the existing detail `append_to_response`; parsed by `parseWatchProviders` (repository/title.go). |
+| BackgroundService | `internal/service/background.go` | Daily refresh (TMDB sync, auto-complete, push triggers, per-part AniList meta — score/episode_count/start_date — via `ListPartsForTitle` → `UpdatePartMeta`; 401 flags `anilist_token_invalid` and aborts remaining calls). Name backfill: `syncTitleNames` → `AddMissingNames` inserts en/fr translations from TMDB (`GetTitleNames`) + TVDB (`details.Names()`) on refresh, additive (never deletes → anime romaji & merged-season aliases survive). AniList-only titles (no TMDB) still `ReplaceNames` (en+romaji) in `refreshFromAniList`. Watch providers: `refreshMovieFromTMDB`/`refreshSeriesFromTMDB` populate `watch_providers` via `matching.ExtractFlatrateProvidersFR`, which reads `watch/providers` data piggybacked on the existing detail `append_to_response`; parsed by `parseWatchProviders` (repository/title.go). Origin country: `refreshMovieFromTMDB`/`refreshSeriesFromTMDB` populate `titles.origin_country` (ISO-3166-1 alpha-2, uppercase) from TMDB `origin_country` via `matching.ExtractOriginCountry`; `refreshFromAniList` populates it from AniList `countryOfOrigin`. NULL = never determined; existing library backfilled by running `POST /api/admin/refresh-all`. |
 | SimklImporter | `internal/service/simkl.go` | Simkl backup import (zip/JSON) |
 | Pipeline | `internal/service/matching/pipeline.go` | Orchestrates matching Steps 1-5. URL resolution (TMDB, IMDb, AniList, TVDB slugs) |
 | TMDBClient | `internal/service/matching/tmdb*.go` | TMDB API: search, details, covers, find-by-id |
@@ -144,7 +144,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 
 | Repository | Reader (DBTX) | Writer (*sql.Tx, ctx) |
 |---|---|---|
-| Title | `List`, `ListAll`, `GetByID`, `FindByExternalID`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchUpdateStatus` |
+| Title | `List`, `ListAll`, `GetByID`, `FindByExternalID`, `ListOriginCountries` (distinct `origin_country` + count, excludes NULL/empty, ordered by count desc then code asc — mirrors Genre's `ListWithCounts`), search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchUpdateStatus` |
 | Season | `GetByID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | Episode | `GetBySeasonID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `UpdateLastWatchedAt` |
 | WatchEvent | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
@@ -158,7 +158,7 @@ Test writes go through `internal/testutil` helpers (`CreateTitle`, `UpdateTitle`
 | ActivityRepository | `List` (paginated watch events) |
 | HistoryRepository | `GetByTitleID` (per-title watch log) |
 
-TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp. Genres in `title_genres` join table (migration 016), loaded separately (MaxOpenConns=1).
+TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres/GenreOp/OriginCountries/MyRatingMin/TMDBRatingMin. Genres in `title_genres` join table (migration 016), loaded separately (MaxOpenConns=1). `OriginCountries []string` → OR'd `origin_country IN (...)`; `MyRatingMin *int` → `my_rating >= ?`; `TMDBRatingMin *float64` → `tmdb_rating >= ?`. Applied in `List` and `searchTitles`, NOT `fuzzySearch` (same precedent as genre/release filters). `titles.origin_country` (migration 031) is a nullable ISO-3166-1 alpha-2 uppercase column.
 
 ### Database
 
@@ -184,6 +184,7 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 | GET | `/api/covers/{filename}` | Serve | No |
 | GET | `/api/titles` | List | Yes |
 | GET | `/api/genres` | List | Yes |
+| GET | `/api/countries` | Countries | Yes |
 | GET | `/api/titles/continue-watching` | ContinueWatching | Yes |
 | GET | `/api/titles/upcoming` | Upcoming | Yes |
 | GET | `/api/titles/review-count` | ReviewCount | Yes |
@@ -228,6 +229,8 @@ TitleFilter: Limit/Offset/UpToDate/WatchingBehind/SeriesStatus/Sort/Order/Genres
 
 Source of truth for routes: `internal/router/router.go`. Read handler files for request/response shapes.
 
+`GET /api/titles` extra query params: `origin_country` (repeated), `my_rating_min` (int 1-10), `tmdb_rating_min` (float 0-10). Invalid/out-of-range values silently ignored.
+
 ## Frontend (Preact)
 
 Design tokens: `frontend/src/theme.ts` (JS) + `frontend/src/tokens.css` (CSS custom properties). CSS Modules for all components. `clsx` for conditional classes. API client in `frontend/src/api.ts`. Types in `frontend/src/types.ts`.
@@ -242,6 +245,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | `utils/haptic.ts` | `navigator.vibrate` wrapper with `HAPTIC_SHORT` / `HAPTIC_MEDIUM` / `HAPTIC_LONG` patterns. |
 | `utils/episodeRanges.ts` | Groups consecutive watched episodes into ranges (e.g. `S1 E1–4`) for the activity feed and per-title history. Folds duplicate episode_numbers (rewatches, dual webhook firings) into the current group. |
 | `utils/providers.ts` | `PRIME_PROVIDER_IDS = {9, 119}` (Amazon Prime FR). `isOnPrime(providers)` (takes a title's `watch_providers` list) returns true when it contains any PRIME id (excludes rent/buy id 10). |
+| `lib/country.ts` | `countryFlag`/`countryName`/`countryLabel` for an ISO-3166-1 alpha-2 code, via native `Intl.DisplayNames` (no library dependency). Backs the FilterDrawer country chips and `CountryCount` (`types.ts`) options from `/api/countries`. |
 
 ### API & routing conventions (read before adding any URL literal)
 
@@ -259,7 +263,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | Hook | File | Purpose |
 |---|---|---|
 | `useApi` | `hooks/useApi.ts` | Fetch wrapper with loading/error/mutate |
-| `useTitleStore` | `store.ts` | Zustand: paginated title fetch, filter, sort (localStorage), loadMore, cache |
+| `useTitleStore` | `store.ts` | Zustand: paginated title fetch, filter, sort (localStorage), loadMore, cache. `TitleFilter` fields: `origin_country?: string[]`, `my_rating_min?: string`, `tmdb_rating_min?: string`. Serialized via shared `appendFilterParams` helper (also used by both search-store param builders) — add new filter params there, not per-callsite. |
 | `useSearchStore` | `store.ts` | Zustand: search query/results/scroll, TMDB toggle |
 | `useServiceWorker` | `hooks/useServiceWorker.ts` | Registers `/sw.js` once authenticated (gates on `isAuthed` so unauthenticated visits don't install the SW). |
 | `usePush` | `hooks/usePush.ts` | Push subscription via the SW registration (VAPID) |
@@ -272,7 +276,7 @@ Shared utilities split between `frontend/src/utils.ts` (formatters, name resolve
 | TitleHistory | `components/TitleHistory.tsx` | Watch history overlay per title (uses `episodeRanges` to fold consecutive episodes) |
 | Navbar | `components/Navbar.tsx` | 4-tab bottom nav |
 | SearchBar | `components/SearchBar.tsx` | Sticky bottom search input bound to `useSearchStore` (auto-focus, optional TMDB toggle). Mounted in `app.tsx` only on `/search` (gated by `isSearch === pathname === '/search'`). The merge flow hides the TMDB toggle (`showTMDBToggle={!mergeSourceId}`). |
-| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres). Status chips are the canonical status filter (no separate tab strip): All, Plan, Watching, Caught up, Completed, Dropped. Collapsed view surfaces active filter chips. |
+| FilterDrawer | `components/FilterDrawer.tsx` | Collapsible filter drawer (sort/status/type/series status/release date/genres/country/rating). Status chips are the canonical status filter (no separate tab strip): All, Plan, Watching, Caught up, Completed, Dropped. Country: multi-select chips (OR semantics), options from `/api/countries`, flag+name via `lib/country.ts`. Rating: two rating-minimum `<select>`s (My rating, TMDB) — each ANDs with other filters; when both set, a title must clear BOTH. Collapsed view surfaces active filter chips. |
 | TitleCard | `components/TitleCard.tsx` | Horizontal card with progress + quick mark badge. Stamps a `TypeBadge` (size `sm`). |
 | PosterCard | `components/PosterCard.tsx` | Poster grid card (2:3, gradient overlay). Stamps a `TypeBadge` overlay. |
 | TypeBadge | `components/TypeBadge.tsx` | Movie/series glyph (with `typeIcons.tsx` config). Used by `PosterCard` and `TitleCard` to distinguish the two at a glance in lists. |

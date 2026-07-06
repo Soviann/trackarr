@@ -115,6 +115,23 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		}
 	}
 
+	if len(filter.OriginCountries) > 0 {
+		placeholders := make([]string, len(filter.OriginCountries))
+		for i, c := range filter.OriginCountries {
+			placeholders[i] = "?"
+			args = append(args, c)
+		}
+		conditions = append(conditions, `t.origin_country IN (`+strings.Join(placeholders, ",")+`)`)
+	}
+	if filter.MyRatingMin != nil {
+		conditions = append(conditions, `t.my_rating >= ?`)
+		args = append(args, *filter.MyRatingMin)
+	}
+	if filter.TMDBRatingMin != nil {
+		conditions = append(conditions, `t.tmdb_rating >= ?`)
+		args = append(args, *filter.TMDBRatingMin)
+	}
+
 	if len(conditions) > 0 {
 		query += ` WHERE ` + strings.Join(conditions, ` AND `)
 	}

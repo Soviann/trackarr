@@ -47,6 +47,10 @@ L'écran principal affiche tous les titres organisés par statut.
 
 **Filtres de statut** : ouvrir le tiroir de filtres pour basculer entre All, Plan, Watching, Caught up, Completed, Dropped. Les filtres actifs sont rappelés sur la barre du tiroir replié.
 
+**Filtre par pays d'origine** : dans le tiroir de filtres, une section de chips permet de sélectionner un ou plusieurs pays (ex: Corée du Sud, Japon). Sélectionner plusieurs pays les combine en "ou" (un titre correspondant à n'importe lequel des pays cochés s'affiche). Utile combiné au filtre **Type** — ex: séries coréennes uniquement, films japonais uniquement. Le pays d'un titre est déterminé automatiquement lors du rafraîchissement de ses métadonnées ; pour les titres déjà en bibliothèque et sans pays renseigné, lancer une fois **Admin → Refresh All** pour le récupérer (les nouveaux titres l'obtiennent automatiquement dès leur ajout).
+
+**Filtre par note minimale** : deux sélecteurs dans le tiroir de filtres permettent de fixer une note minimale — **My rating** (votre note personnelle) et **TMDB** (note communautaire). Chaque seuil se combine en "et" avec les autres filtres actifs ; si les deux seuils sont fixés en même temps, un titre doit franchir les deux pour s'afficher.
+
 **Tri** : le tiroir de filtres propose 6 options de tri (dernière mise à jour, titre, date de sortie, note, date d'ajout, dernier visionnage). Taper un chip l'active ; taper à nouveau inverse la direction (↑/↓). Le tri est masqué pendant la recherche et persiste via localStorage.
 
 **Badge film/série** : un petit pictogramme se superpose à chaque vignette pour distinguer d'un coup d'œil les films des séries (en grille comme en cartes horizontales).

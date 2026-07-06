@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import clsx from 'clsx'
-import type { TitleStatus, TitleType, SeriesStatus, GenreCount } from '../types'
+import type { TitleStatus, TitleType, SeriesStatus, GenreCount, CountryCount } from '../types'
 import type { SortField, SortOrder, SortState } from '../store'
 import { apiFetch } from '../api'
+import { countryLabel } from '../lib/country'
 import s from './FilterDrawer.module.css'
 
 const STORAGE_KEY_HOME = 'filter-drawer-open-home'
@@ -36,6 +37,12 @@ interface FilterDrawerProps {
   genreOp: 'AND' | 'OR'
   onGenreToggle: (genre: string) => void
   onGenreOpChange: (op: 'AND' | 'OR') => void
+  selectedCountries: string[]
+  onCountryToggle: (iso: string) => void
+  myRatingMin: string
+  tmdbRatingMin: string
+  onMyRatingMinChange: (v: string) => void
+  onTmdbRatingMinChange: (v: string) => void
 }
 
 const statusFilters: { id: StatusFilter; label: string }[] = [
@@ -100,6 +107,8 @@ export function FilterDrawer({
   decade, releaseFrom, releaseTo, includeNoRelease,
   onDecadeChange, onReleaseFromChange, onReleaseToChange, onIncludeNoReleaseChange,
   selectedGenres, genreOp, onGenreToggle, onGenreOpChange,
+  selectedCountries, onCountryToggle, myRatingMin, tmdbRatingMin,
+  onMyRatingMinChange, onTmdbRatingMinChange,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
     if (!defaultOpen) return false
@@ -117,6 +126,10 @@ export function FilterDrawer({
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
   const genreBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const genreInputRef = useRef<HTMLInputElement>(null)
+  const [countries, setCountries] = useState<CountryCount[]>([])
+  useEffect(() => {
+    apiFetch<CountryCount[]>('/countries').then(setCountries).catch(() => { /* ignore */ })
+  }, [])
 
   useEffect(() => { openRef.current = open }, [open])
   useEffect(() => { dragYRef.current = dragY }, [dragY])
@@ -218,6 +231,11 @@ export function FilterDrawer({
   if (selectedGenres.length > 0) {
     activeTags.push(`${selectedGenres.length} genre${selectedGenres.length > 1 ? 's' : ''}`)
   }
+  if (selectedCountries.length > 0) {
+    activeTags.push(selectedCountries.map(countryLabel).join(', '))
+  }
+  if (myRatingMin) activeTags.push(`My ★≥${myRatingMin}`)
+  if (tmdbRatingMin) activeTags.push(`TMDB≥${tmdbRatingMin}`)
 
   return (
     <div
@@ -386,6 +404,47 @@ export function FilterDrawer({
             </>
           )
         })()}
+
+        {countries.length > 0 && (
+          <>
+            <div className={s.filterLabel}>Country</div>
+            <div className={s.filterRow}>
+              {countries.map(c => (
+                <button
+                  key={c.country}
+                  className={clsx(s.chip, selectedCountries.includes(c.country) && s.chipActive)}
+                  onClick={() => onCountryToggle(c.country)}
+                >
+                  {countryLabel(c.country)} <span className={s.genreDropdownCount}>{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className={s.filterLabel}>Rating</div>
+        <div className={s.filterRow}>
+          <select
+            className={s.select}
+            value={myRatingMin}
+            onChange={(e) => onMyRatingMinChange((e.target as HTMLSelectElement).value)}
+          >
+            <option value="">My rating: any</option>
+            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+              <option key={n} value={String(n)}>My rating ≥ {n}</option>
+            ))}
+          </select>
+          <select
+            className={s.select}
+            value={tmdbRatingMin}
+            onChange={(e) => onTmdbRatingMinChange((e.target as HTMLSelectElement).value)}
+          >
+            <option value="">TMDB: any</option>
+            {[5,6,7,8,9].map(n => (
+              <option key={n} value={String(n)}>TMDB ≥ {n}</option>
+            ))}
+          </select>
+        </div>
 
         <div className={s.filterLabel}>Release date</div>
         <div className={s.filterRow}>

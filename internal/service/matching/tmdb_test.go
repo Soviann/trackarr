@@ -285,3 +285,17 @@ func TestExtractFlatrateProvidersFR(t *testing.T) {
 	// Nil providers → empty array.
 	assert.Equal(t, "[]", ExtractFlatrateProvidersFR(nil))
 }
+
+func TestExtractOriginCountry(t *testing.T) {
+	assert.Nil(t, ExtractOriginCountry(nil))
+	assert.Nil(t, ExtractOriginCountry([]string{}))
+	assert.Nil(t, ExtractOriginCountry([]string{""}))
+
+	got := ExtractOriginCountry([]string{"KR", "US"})
+	assert.NotNil(t, got)
+	assert.Equal(t, "KR", *got)
+
+	got = ExtractOriginCountry([]string{"jp"})
+	assert.NotNil(t, got)
+	assert.Equal(t, "JP", *got) // uppercased
+}

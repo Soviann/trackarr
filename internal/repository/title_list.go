@@ -47,6 +47,9 @@ type TitleFilter struct {
 	Genres           []string // filter by these genres
 	GenreOp          string   // "AND" | "OR", defaults to "OR"
 	Person           *string  // filter by credit name (json_each on credits column)
+	OriginCountries  []string // OR match on origin_country
+	MyRatingMin      *int     // my_rating >= this
+	TMDBRatingMin    *float64 // tmdb_rating >= this
 }
 
 const DefaultPageSize = 50
@@ -176,6 +179,23 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		args = append(args, *filter.Person)
 	}
 
+	if len(filter.OriginCountries) > 0 {
+		placeholders := make([]string, len(filter.OriginCountries))
+		for i, c := range filter.OriginCountries {
+			placeholders[i] = "?"
+			args = append(args, c)
+		}
+		conditions = append(conditions, `t.origin_country IN (`+strings.Join(placeholders, ",")+`)`)
+	}
+	if filter.MyRatingMin != nil {
+		conditions = append(conditions, `t.my_rating >= ?`)
+		args = append(args, *filter.MyRatingMin)
+	}
+	if filter.TMDBRatingMin != nil {
+		conditions = append(conditions, `t.tmdb_rating >= ?`)
+		args = append(args, *filter.TMDBRatingMin)
+	}
+
 	whereClause := ""
 	if len(conditions) > 0 {
 		whereClause = ` WHERE ` + strings.Join(conditions, ` AND `)
@@ -252,6 +272,39 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		Total:   total,
 		HasMore: offset+len(titles) < total,
 	}, nil
+}
+
+// CountryCount holds an ISO-3166-1 origin country and how many titles carry it.
+type CountryCount struct {
+	Country string `json:"country"`
+	Count   int    `json:"count"`
+}
+
+// ListOriginCountries returns the distinct origin countries present in the
+// library with title counts, ordered by count desc then code asc. NULL/empty
+// origins are excluded so the filter only offers countries that exist.
+func (r *TitleRepository) ListOriginCountries() ([]CountryCount, error) {
+	rows, err := r.db.Query(`
+		SELECT origin_country, COUNT(*) AS count
+		FROM titles
+		WHERE origin_country IS NOT NULL AND origin_country != ''
+		GROUP BY origin_country
+		ORDER BY count DESC, origin_country ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list origin countries: %w", err)
+	}
+	defer rows.Close()
+
+	var out []CountryCount
+	for rows.Next() {
+		var c CountryCount
+		if err := rows.Scan(&c.Country, &c.Count); err != nil {
+			return nil, fmt.Errorf("scan origin country: %w", err)
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 // GetStatusCounts returns global match status counts for the library banner.

@@ -157,6 +157,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Get("/stats/activity", httputil.WrapHandler(activity.List))
 			r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
 			r.Get("/genres", httputil.WrapHandler(genres.List))
+			r.Get("/countries", httputil.WrapHandler(titles.Countries))
 
 			r.Get("/titles/{id}/history", httputil.WrapHandler(history.Get))
 

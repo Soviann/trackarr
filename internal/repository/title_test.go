@@ -249,6 +249,20 @@ func TestTitleRepository_Update(t *testing.T) {
 	assert.Equal(t, 8, *got.MyRating)
 }
 
+func TestTitleRepository_Update_SetsOriginCountry(t *testing.T) {
+	db := setupTestDB(t)
+
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	kr := "KR"
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{OriginCountry: &kr})
+
+	var got *string
+	require.NoError(t, db.QueryRow(`SELECT origin_country FROM titles WHERE id = ?`, id).Scan(&got))
+	require.NotNil(t, got)
+	assert.Equal(t, "KR", *got)
+}
+
 func TestTitleRepository_AddMissingNames(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)
@@ -1310,4 +1324,43 @@ func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
 	require.Len(t, items[0].WatchProviders, 1)
 	assert.Equal(t, int64(8), items[0].WatchProviders[0].ID)
 	assert.Equal(t, "Netflix", items[0].WatchProviders[0].Name)
+}
+
+func TestTitleRepository_List_FilterByOriginCountry(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	kr, jp, us := "KR", "JP", "US"
+
+	idKR := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "K Drama", Language: "en", IsPrimary: true}})
+	idJP := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "JP Film", Language: "en", IsPrimary: true}})
+	idUS := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "US Show", Language: "en", IsPrimary: true}})
+
+	testutil.UpdateTitle(t, db, idKR, repository.TitleUpdate{OriginCountry: &kr})
+	testutil.UpdateTitle(t, db, idJP, repository.TitleUpdate{OriginCountry: &jp})
+	testutil.UpdateTitle(t, db, idUS, repository.TitleUpdate{OriginCountry: &us})
+
+	result, err := repo.List(repository.TitleFilter{OriginCountries: []string{"KR", "JP"}})
+	require.NoError(t, err)
+	assert.Equal(t, 2, result.Total)
+	names := []string{result.Titles[0].PrimaryName(), result.Titles[1].PrimaryName()}
+	assert.ElementsMatch(t, []string{"K Drama", "JP Film"}, names)
+}
+
+func TestTitleRepository_List_FilterByRatingMinimums(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	great, mid := 9, 6
+	tmdbRating := 8.5
+	unratedTMDB := 9.0
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, MyRating: &great, TMDBRating: &tmdbRating}, []model.TitleName{{Name: "Great", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, MyRating: &mid, TMDBRating: &tmdbRating}, []model.TitleName{{Name: "Mid", Language: "en", IsPrimary: true}})
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBRating: &unratedTMDB}, []model.TitleName{{Name: "Unrated", Language: "en", IsPrimary: true}})
+
+	min := 8
+	result, err := repo.List(repository.TitleFilter{MyRatingMin: &min})
+	require.NoError(t, err)
+	require.Len(t, result.Titles, 1) // only "Great"; NULL my_rating excluded
+	assert.Equal(t, "Great", result.Titles[0].PrimaryName())
 }
