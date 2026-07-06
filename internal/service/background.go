@@ -423,6 +423,9 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 	if rating != nil {
 		metaUpdate.TMDBRating = rating
 	}
+	if oc := matching.ExtractOriginCountry(details.OriginCountry); oc != nil {
+		metaUpdate.OriginCountry = oc
+	}
 	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
 	// Backfill multilingual names (en/fr) — re-syncs translations missing on
@@ -520,6 +523,9 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		airEp := fmt.Sprintf("S%d E%d", details.NextEpisodeToAir.SeasonNumber, details.NextEpisodeToAir.EpisodeNumber)
 		metaUpdate.NextAirDate = &airDate
 		metaUpdate.NextAirEpisode = &airEp
+	}
+	if oc := matching.ExtractOriginCountry(details.OriginCountry); oc != nil {
+		metaUpdate.OriginCountry = oc
 	}
 	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
@@ -640,6 +646,9 @@ func (s *BackgroundService) refreshFromAniList(ctx context.Context, title *repos
 	}
 	if details.Duration != nil {
 		update.Runtime = details.Duration
+	}
+	if details.CountryOfOrigin != nil {
+		update.OriginCountry = details.CountryOfOrigin
 	}
 	logTitleUpdate(title.ID, "anilist metadata", s.updateTitle(ctx, title.ID, update))
 
