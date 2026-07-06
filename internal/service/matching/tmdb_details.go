@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/nicolasvasse/plextracker/internal/model"
 )
@@ -52,6 +53,7 @@ type TMDBMovieDetails struct {
 	PosterPath     *string             `json:"poster_path"`
 	IMDBID         string              `json:"imdb_id"`
 	Genres         []TMDBGenre         `json:"genres"`
+	OriginCountry  []string            `json:"origin_country"`
 	Runtime        *int                `json:"runtime"`
 	VoteAverage    float64             `json:"vote_average"`
 	Credits        *TMDBCredits        `json:"credits"`
@@ -70,6 +72,7 @@ type TMDBTVDetails struct {
 	FirstAirDate   string              `json:"first_air_date"`
 	PosterPath     *string             `json:"poster_path"`
 	Genres         []TMDBGenre         `json:"genres"`
+	OriginCountry  []string            `json:"origin_country"`
 	EpisodeRunTime []int               `json:"episode_run_time"`
 	VoteAverage    float64             `json:"vote_average"`
 	Credits        *TMDBCredits        `json:"credits"`
@@ -198,6 +201,19 @@ func ExtractTVMetadata(d *TMDBTVDetails) (genres, credits string, runtime *int, 
 		rating = &d.VoteAverage
 	}
 	return
+}
+
+// ExtractOriginCountry returns the first non-empty ISO-3166-1 code from a TMDB
+// origin_country array, uppercased, or nil when none is present. TMDB may list
+// several countries for co-productions; we keep the first as the primary origin.
+func ExtractOriginCountry(codes []string) *string {
+	for _, c := range codes {
+		c = strings.ToUpper(strings.TrimSpace(c))
+		if c != "" {
+			return &c
+		}
+	}
+	return nil
 }
 
 // ExtractFlatrateProvidersFR returns the FR subscription-included ("flatrate")
