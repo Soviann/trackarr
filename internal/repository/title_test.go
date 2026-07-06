@@ -249,6 +249,20 @@ func TestTitleRepository_Update(t *testing.T) {
 	assert.Equal(t, 8, *got.MyRating)
 }
 
+func TestTitleRepository_Update_SetsOriginCountry(t *testing.T) {
+	db := setupTestDB(t)
+
+	id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	kr := "KR"
+	testutil.UpdateTitle(t, db, id, repository.TitleUpdate{OriginCountry: &kr})
+
+	var got *string
+	require.NoError(t, db.QueryRow(`SELECT origin_country FROM titles WHERE id = ?`, id).Scan(&got))
+	require.NotNil(t, got)
+	assert.Equal(t, "KR", *got)
+}
+
 func TestTitleRepository_AddMissingNames(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewTitleRepository(db)

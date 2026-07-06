@@ -85,6 +85,7 @@ type TitleUpdate struct {
 	SimklID           *int64
 	SimklSlug         *string
 	WatchProviders    *string // JSON array of model.WatchProvider; "[]" clears
+	OriginCountry     *string // ISO-3166-1 alpha-2; sets titles.origin_country
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
