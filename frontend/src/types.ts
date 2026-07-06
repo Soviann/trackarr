@@ -60,6 +60,11 @@ export interface GenreCount {
   count: number
 }
 
+export interface CountryCount {
+  country: string
+  count: number
+}
+
 export interface NextEpisode {
   id: number
   season_id: number
