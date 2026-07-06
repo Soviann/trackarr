@@ -178,6 +178,20 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.Person = &p
 	}
 
+	if countries := r.URL.Query()["origin_country"]; len(countries) > 0 {
+		filter.OriginCountries = countries
+	}
+	if v := r.URL.Query().Get("my_rating_min"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
+			filter.MyRatingMin = &n
+		}
+	}
+	if v := r.URL.Query().Get("tmdb_rating_min"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 10 {
+			filter.TMDBRatingMin = &f
+		}
+	}
+
 	result, err := h.titlesRead.List(filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
