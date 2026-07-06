@@ -301,6 +301,15 @@
   z-index: 10;
 }
 
+/* Open the dropdown upward instead of down — used by the Country autocomplete,
+   which sits low in the drawer where a downward list runs under the navbar. */
+.dropUp {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
 .genreDropdownItem {
   display: flex;
   align-items: center;

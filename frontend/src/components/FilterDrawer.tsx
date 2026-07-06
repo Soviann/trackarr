@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import type { TitleStatus, TitleType, SeriesStatus, GenreCount, CountryCount } from '../types'
 import type { SortField, SortOrder, SortState } from '../store'
 import { apiFetch } from '../api'
-import { countryLabel } from '../lib/country'
+import { countryLabel, isRealCountry } from '../lib/country'
 import s from './FilterDrawer.module.css'
 
 const STORAGE_KEY_HOME = 'filter-drawer-open-home'
@@ -127,6 +127,11 @@ export function FilterDrawer({
   const genreBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const genreInputRef = useRef<HTMLInputElement>(null)
   const [countries, setCountries] = useState<CountryCount[]>([])
+  const [countrySearch, setCountrySearch] = useState('')
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
+  const countryBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countryInputRef = useRef<HTMLInputElement>(null)
+  const countryDropdownRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     apiFetch<CountryCount[]>('/countries').then(setCountries).catch(() => { /* ignore */ })
   }, [])
@@ -146,9 +151,9 @@ export function FilterDrawer({
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (!openRef.current) return
-    // Skip drag tracking when starting inside the scrollable genre dropdown
+    // Skip drag tracking when starting inside a scrollable autocomplete dropdown
     const target = e.target as Node | null
-    if (target && genreDropdownRef.current?.contains(target)) return
+    if (target && (genreDropdownRef.current?.contains(target) || countryDropdownRef.current?.contains(target))) return
     touchStartY.current = e.touches[0].clientY
   }, [])
 
@@ -405,22 +410,83 @@ export function FilterDrawer({
           )
         })()}
 
-        {countries.length > 0 && (
-          <>
-            <div className={s.filterLabel}>Country</div>
-            <div className={s.filterRow}>
-              {countries.map(c => (
-                <button
-                  key={c.country}
-                  className={clsx(s.chip, selectedCountries.includes(c.country) && s.chipActive)}
-                  onClick={() => onCountryToggle(c.country)}
+        {countries.some(c => isRealCountry(c.country)) && (() => {
+          const q = countrySearch.toLowerCase()
+          const filteredCountries = countries
+            .filter(c => isRealCountry(c.country))
+            .filter(c => !selectedCountries.includes(c.country))
+            .filter(c => !q || countryLabel(c.country).toLowerCase().includes(q) || c.country.toLowerCase().includes(q))
+          return (
+            <>
+              <div className={s.filterLabel}>Country</div>
+              {selectedCountries.length > 0 && (
+                <div className={s.genreOpRow}>
+                  <button
+                    className={s.clearGenresBtn}
+                    onClick={() => selectedCountries.forEach(c => onCountryToggle(c))}
+                  >Clear</button>
+                </div>
+              )}
+              <div className={s.genreDropdownWrapper}>
+                <div
+                  className={s.genreAutocomplete}
+                  onClick={() => countryInputRef.current?.focus()}
                 >
-                  {countryLabel(c.country)} <span className={s.genreDropdownCount}>{c.count}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+                  {selectedCountries.map(c => (
+                    <span key={c} className={s.genreTag}>
+                      {countryLabel(c)}
+                      <button
+                        className={s.genreTagRemove}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { e.stopPropagation(); onCountryToggle(c) }}
+                      >&times;</button>
+                    </span>
+                  ))}
+                  <input
+                    ref={countryInputRef}
+                    type="text"
+                    className={s.genreInput}
+                    placeholder={selectedCountries.length === 0 ? 'Search countries…' : ''}
+                    value={countrySearch}
+                    onInput={(e) => setCountrySearch((e.target as HTMLInputElement).value)}
+                    onFocus={() => {
+                      if (countryBlurTimeout.current) clearTimeout(countryBlurTimeout.current)
+                      setCountryDropdownOpen(true)
+                    }}
+                    onBlur={() => {
+                      countryBlurTimeout.current = setTimeout(() => setCountryDropdownOpen(false), 150)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setCountryDropdownOpen(false)
+                        ;(e.target as HTMLInputElement).blur()
+                      }
+                    }}
+                  />
+                </div>
+                {countryDropdownOpen && filteredCountries.length > 0 && (
+                  <div ref={countryDropdownRef} className={clsx(s.genreDropdown, s.dropUp)}>
+                    {filteredCountries.map(c => (
+                      <div
+                        key={c.country}
+                        className={s.genreDropdownItem}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          onCountryToggle(c.country)
+                          setCountrySearch('')
+                          countryInputRef.current?.focus()
+                        }}
+                      >
+                        <span>{countryLabel(c.country)}</span>
+                        <span className={s.genreDropdownCount}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        })()}
 
         <div className={s.filterLabel}>Rating</div>
         <div className={s.filterRow}>
