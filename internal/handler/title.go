@@ -178,8 +178,16 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		filter.Person = &p
 	}
 
-	if countries := r.URL.Query()["origin_country"]; len(countries) > 0 {
-		filter.OriginCountries = countries
+	if raw := r.URL.Query()["origin_country"]; len(raw) > 0 {
+		countries := make([]string, 0, len(raw))
+		for _, c := range raw {
+			if c = strings.ToUpper(strings.TrimSpace(c)); c != "" {
+				countries = append(countries, c)
+			}
+		}
+		if len(countries) > 0 {
+			filter.OriginCountries = countries
+		}
 	}
 	if v := r.URL.Query().Get("my_rating_min"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
