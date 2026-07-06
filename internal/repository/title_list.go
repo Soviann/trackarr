@@ -47,6 +47,9 @@ type TitleFilter struct {
 	Genres           []string // filter by these genres
 	GenreOp          string   // "AND" | "OR", defaults to "OR"
 	Person           *string  // filter by credit name (json_each on credits column)
+	OriginCountries  []string // OR match on origin_country
+	MyRatingMin      *int     // my_rating >= this
+	TMDBRatingMin    *float64 // tmdb_rating >= this
 }
 
 const DefaultPageSize = 50
@@ -174,6 +177,23 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	if filter.Person != nil {
 		conditions = append(conditions, `t.credits IS NOT NULL AND EXISTS (SELECT 1 FROM json_each(t.credits) je WHERE json_extract(je.value, '$.name') = ?)`)
 		args = append(args, *filter.Person)
+	}
+
+	if len(filter.OriginCountries) > 0 {
+		placeholders := make([]string, len(filter.OriginCountries))
+		for i, c := range filter.OriginCountries {
+			placeholders[i] = "?"
+			args = append(args, c)
+		}
+		conditions = append(conditions, `t.origin_country IN (`+strings.Join(placeholders, ",")+`)`)
+	}
+	if filter.MyRatingMin != nil {
+		conditions = append(conditions, `t.my_rating >= ?`)
+		args = append(args, *filter.MyRatingMin)
+	}
+	if filter.TMDBRatingMin != nil {
+		conditions = append(conditions, `t.tmdb_rating >= ?`)
+		args = append(args, *filter.TMDBRatingMin)
 	}
 
 	whereClause := ""
