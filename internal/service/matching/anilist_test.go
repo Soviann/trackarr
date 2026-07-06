@@ -62,9 +62,10 @@ func newTestAniListServer(t *testing.T) (*httptest.Server, *AniListClient) {
 							"romaji":  "One Punch Man",
 							"english": "One Punch Man",
 						},
-						"episodes":   eps,
-						"format":     "TV",
-						"seasonYear": year,
+						"episodes":        eps,
+						"format":          "TV",
+						"seasonYear":      year,
+						"countryOfOrigin": "jp",
 						"coverImage": map[string]string{
 							"extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YCDoj1EkAxFn.jpg",
 							"large":      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-YCDoj1EkAxFn.jpg",
@@ -137,6 +138,8 @@ func TestAniListGetAnimeDetails(t *testing.T) {
 	assert.Equal(t, "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YCDoj1EkAxFn.jpg", details.CoverURL)
 	assert.NotNil(t, details.StartDate)
 	assert.Equal(t, "2023-03-04", *details.StartDate)
+	assert.NotNil(t, details.CountryOfOrigin)
+	assert.Equal(t, "JP", *details.CountryOfOrigin)
 }
 
 func TestAniListSyncRating(t *testing.T) {

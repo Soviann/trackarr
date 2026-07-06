@@ -4,7 +4,35 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestNormalizeCountry(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want *string
+	}{
+		{"empty", "", nil},
+		{"whitespace only", "   ", nil},
+		{"lowercase gets uppercased", "jp", strPtr("JP")},
+		{"trims surrounding whitespace", "  KR  ", strPtr("KR")},
+		{"already uppercase", "CN", strPtr("CN")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeCountry(tt.in)
+			if tt.want == nil {
+				assert.Nil(t, got)
+				return
+			}
+			require.NotNil(t, got)
+			assert.Equal(t, *tt.want, *got)
+		})
+	}
+}
+
+func strPtr(s string) *string { return &s }
 
 func TestCleanAniListDescription(t *testing.T) {
 	tests := []struct {
