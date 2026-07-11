@@ -45,9 +45,13 @@ func CombineMergedStatus(older, newest TitleStatus) TitleStatus {
 type SeriesStatus string
 
 const (
-	SeriesStatusReturning    SeriesStatus = "returning"
-	SeriesStatusEnded        SeriesStatus = "ended"
-	SeriesStatusCancelled    SeriesStatus = "cancelled"
+	SeriesStatusReturning SeriesStatus = "returning"
+	SeriesStatusEnded     SeriesStatus = "ended"
+	SeriesStatusCancelled SeriesStatus = "cancelled"
+	// SeriesStatusInProduction is the "announced but not yet aired" bucket. The
+	// stored value is "in_production" (fixed by the migration-001 CHECK
+	// constraint) but it covers every pre-air TMDB status — In Production,
+	// Planned, and Pilot — surfaced to users as the "Not started" filter chip.
 	SeriesStatusInProduction SeriesStatus = "in_production"
 )
 

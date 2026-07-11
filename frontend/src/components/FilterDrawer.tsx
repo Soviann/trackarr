@@ -74,7 +74,7 @@ const seriesStatusFilters: { id: SeriesStatusFilter; label: string }[] = [
   { id: 'returning', label: 'Returning' },
   { id: 'ended', label: 'Ended' },
   { id: 'cancelled', label: 'Cancelled' },
-  { id: 'in_production', label: 'In prod.' },
+  { id: 'in_production', label: 'Not started' },
 ]
 
 const decadeOptions = [

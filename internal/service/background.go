@@ -729,7 +729,7 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 		status = model.SeriesStatusCancelled
 	case "Returning Series":
 		status = model.SeriesStatusReturning
-	case "In Production":
+	case "In Production", "Planned", "Pilot":
 		status = model.SeriesStatusInProduction
 	default:
 		return nil
