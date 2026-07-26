@@ -11,7 +11,7 @@ interface MatchReviewCardProps {
 }
 
 const matchSourceLabels: Record<string, string> = {
-  plex_ids: 'Matched via Plex metadata',
+  plex_ids: 'Matched via Scrobble metadata',
   crossref: 'Matched via cross-reference DB',
   tmdb_search: 'Matched via TMDB search',
   anilist_search: 'Matched via AniList',
@@ -85,7 +85,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           {/* Original title comparison */}
           {showOriginalTitle && (
             <div className={s.originalTitle}>
-              Plex: "{title.original_title}" → "{name}"
+              Original: "{title.original_title}" → "{name}"
             </div>
           )}
 

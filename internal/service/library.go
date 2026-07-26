@@ -380,3 +380,40 @@ func (s *LibraryService) CheckAutoComplete(ctx context.Context, db *sql.DB, titl
 
 	return nil
 }
+
+// checkSeriesCompleted checks if the given season/episode is the last episode
+// of the last season of an ended or cancelled series (via TMDB).
+func checkSeriesCompleted(ctx context.Context, tmdb *matching.TMDBClient, tmdbID int64, seasonNum, episodeNum int) (bool, *model.SeriesStatus) {
+	details, err := tmdb.GetTVDetails(ctx, tmdbID)
+	if err != nil {
+		return false, nil
+	}
+
+	// Check series status — only auto-complete for ended/cancelled
+	seriesStatus := mapTMDBSeriesStatus(details)
+	if seriesStatus == nil {
+		return false, nil
+	}
+	if *seriesStatus != model.SeriesStatusEnded && *seriesStatus != model.SeriesStatusCancelled {
+		return false, nil
+	}
+
+	// Find the last season (highest number, excluding specials S00)
+	lastSeasonNum := 0
+	lastSeasonEpisodeCount := 0
+	for _, s := range details.Seasons {
+		if s.SeasonNumber == 0 {
+			continue
+		}
+		if s.SeasonNumber > lastSeasonNum {
+			lastSeasonNum = s.SeasonNumber
+			lastSeasonEpisodeCount = s.EpisodeCount
+		}
+	}
+
+	if lastSeasonNum == 0 || lastSeasonEpisodeCount == 0 {
+		return false, nil
+	}
+
+	return seasonNum == lastSeasonNum && episodeNum == lastSeasonEpisodeCount, seriesStatus
+}

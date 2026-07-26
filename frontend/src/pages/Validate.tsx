@@ -232,7 +232,7 @@ export function Validate({ path }: { path?: string }) {
               <div className={s.resultMeta}>
                 {currentTitle.type} · {currentTitle.year}
                 {currentTitle.original_title && currentTitle.original_title !== getName(currentTitle) && (
-                  <div className={s.originalLabel}>Plex: {currentTitle.original_title}</div>
+                  <div className={s.originalLabel}>Original: {currentTitle.original_title}</div>
                 )}
               </div>
             </div>

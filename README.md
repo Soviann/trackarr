@@ -1,10 +1,10 @@
 # PlexTracker
 
-Application personnelle de suivi de visionnage. Remplace Simkl comme tracker central pour les films, séries et anime regardés sur Plex.
+Application personnelle de suivi de visionnage. Remplace Simkl comme tracker central pour les films, séries et anime regardés sur Jellyfin.
 
 ## Fonctionnalités
 
-- **Suivi automatique Plex** via webhooks (scrobble à ~90% de visionnage)
+- **Suivi automatique Jellyfin** via webhooks (scrobble à la fin de visionnage)
 - **Bibliothèque** avec filtres par statut (en cours, terminé, abandonné, à regarder)
 - **Progression** en un coup d'œil : barre de progression, prochain épisode
 - **Notes** (1-10) par titre et par saison, avec liens IMDb et sync AniList

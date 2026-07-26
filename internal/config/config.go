@@ -21,7 +21,6 @@ type Config struct {
 	VAPIDPublicKey         string
 	VAPIDPrivateKey        string
 	VAPIDSubject           string
-	PlexWebhookSecret      string
 	JellyfinWebhookSecret  string
 	DebugLogin             bool
 	DebugLoginUser         string
@@ -43,7 +42,6 @@ func Load() (*Config, error) {
 		VAPIDPublicKey:         os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey:        os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:           os.Getenv("VAPID_SUBJECT"),
-		PlexWebhookSecret:      os.Getenv("PLEX_WEBHOOK_SECRET"),
 		JellyfinWebhookSecret:  os.Getenv("JELLYFIN_WEBHOOK_SECRET"),
 		DisableBackgroundTasks: os.Getenv("DISABLE_BACKGROUND_TASKS") == "true",
 	}

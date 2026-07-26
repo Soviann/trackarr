@@ -228,7 +228,7 @@ const sections: FaqSection[] = [
     label: 'Adding & maintenance',
     items: [
       {
-        q: 'How do I add a title that isn’t on Plex yet?',
+        q: 'How do I add a title manually?',
         a: (
           <>
             Bottom nav → <strong>Add</strong>. Three options:

@@ -29,7 +29,7 @@ func Serve(distFS embed.FS) error {
 
 	// Structured logging defaults: TextHandler at Info, stdout. Single-user
 	// project, console-readable output beats JSON. Set before any work so
-	// every migrated caller (taskqueue, plex webhook…) shares the same sink.
+	// every migrated caller (taskqueue, webhook…) shares the same sink.
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})))
@@ -105,7 +105,7 @@ func Serve(distFS embed.FS) error {
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 
 	// shutdownWG tracks background goroutines (ticker, task queue worker, async
-	// Plex enrichment, RefreshOne) so Serve() can wait for them to exit before
+	// media enrichment, RefreshOne) so Serve() can wait for them to exit before
 	// closing the database. Without this, Shutdown returns while in-flight
 	// transactions are still running → "database is closed" errors and tasks
 	// left in status=running.

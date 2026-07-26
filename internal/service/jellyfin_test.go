@@ -1,15 +1,57 @@
-package service
+package service_test
 
 import (
+	"context"
+	"database/sql"
 	"testing"
 
-	plexwebhooks "github.com/hekmon/plexwebhooks"
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
+	"github.com/nicolasvasse/plextracker/internal/repository"
+	"github.com/nicolasvasse/plextracker/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeJellyfinPayload_Movie(t *testing.T) {
+type jellyfinTestEnv struct {
+	db        *sql.DB
+	svc       *service.JellyfinService
+	titleRepo *repository.TitleRepository
+}
+
+func setupJellyfinTest(t *testing.T) *jellyfinTestEnv {
+	t.Helper()
+	writeDB, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(writeDB))
+
+	t.Cleanup(func() {
+		writeDB.Close()
+	})
+
+	titleRepo := repository.NewTitleRepository(writeDB)
+	seasonRepo := repository.NewSeasonRepository(writeDB)
+	episodeRepo := repository.NewEpisodeRepository(writeDB)
+	eventRepo := repository.NewWatchEventRepository(writeDB)
+	settingRepo := repository.NewSettingRepository(writeDB)
+	taskRepo := repository.NewTaskRepository(writeDB)
+
+	pushSvc := service.NewNoopNotifier()
+	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, nil)
+	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, nil, nil)
+
+	jfSvc := service.NewJellyfinService(writeDB, nil, titleSvc, libSvc)
+
+	return &jellyfinTestEnv{
+		db:        writeDB,
+		svc:       jfSvc,
+		titleRepo: titleRepo,
+	}
+}
+
+func TestProcessJellyfinWebhook_Movie(t *testing.T) {
+	env := setupJellyfinTest(t)
+
 	jf := &model.JellyfinPayload{
 		NotificationType:   "PlaybackStop",
 		ItemType:           "Movie",
@@ -18,24 +60,29 @@ func TestNormalizeJellyfinPayload_Movie(t *testing.T) {
 		PlayedToCompletion: "True",
 		ProviderIMDB:       "tt0133093",
 		ProviderTMDB:       "603",
-		ItemID:             "abc123",
+		ItemID:             "movie-item-123",
 	}
 
-	payload, ok := normalizeJellyfinPayload(jf)
-	require.True(t, ok)
-	assert.Equal(t, plexwebhooks.EventTypeScrobble, payload.Event)
-	assert.Equal(t, plexwebhooks.MediaTypeMovie, payload.Metadata.Type)
-	assert.Equal(t, "The Matrix", payload.Metadata.Title)
-	assert.Equal(t, 1999, payload.Metadata.Year)
-	assert.Equal(t, "abc123", payload.Metadata.RatingKey)
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
 
-	// GUIDs must be parseable by the shared ParseGUIDs helper.
-	ids := ParseGUIDs(payload.Metadata.GUIDExternal)
-	assert.Equal(t, "tt0133093", ids.IMDB)
-	assert.Equal(t, int64(603), ids.TMDB)
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+
+	movie := res.Titles[0]
+	assert.Equal(t, "The Matrix", movie.PrimaryName())
+	assert.Equal(t, model.TitleTypeMovie, movie.Type)
+	assert.Equal(t, model.TitleStatusCompleted, movie.Status)
+	require.NotNil(t, movie.IMDBID)
+	assert.Equal(t, "tt0133093", *movie.IMDBID)
+	require.NotNil(t, movie.TMDBID)
+	assert.Equal(t, int64(603), *movie.TMDBID)
 }
 
-func TestNormalizeJellyfinPayload_Episode(t *testing.T) {
+func TestProcessJellyfinWebhook_Episode(t *testing.T) {
+	env := setupJellyfinTest(t)
+
 	jf := &model.JellyfinPayload{
 		NotificationType:   "PlaybackStop",
 		ItemType:           "Episode",
@@ -48,18 +95,35 @@ func TestNormalizeJellyfinPayload_Episode(t *testing.T) {
 		Episode:            "1",
 	}
 
-	payload, ok := normalizeJellyfinPayload(jf)
-	require.True(t, ok)
-	assert.Equal(t, plexwebhooks.MediaTypeEpisode, payload.Metadata.Type)
-	assert.Equal(t, "Game of Thrones", payload.Metadata.GrandparentTitle)
-	assert.Equal(t, "series-guid-1", payload.Metadata.GrandparentRatingKey)
-	assert.Equal(t, 1, payload.Metadata.ParentIndex)
-	assert.Equal(t, 1, payload.Metadata.Index)
-	// Episode-level provider IDs must NOT leak in as series IDs.
-	assert.Empty(t, ParseGUIDs(payload.Metadata.GUIDExternal).IMDB)
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+
+	show := res.Titles[0]
+	assert.Equal(t, "Game of Thrones", show.PrimaryName())
+	assert.Equal(t, model.TitleTypeSeries, show.Type)
+	assert.Equal(t, model.TitleStatusWatching, show.Status)
+
+	var seasonID int64
+	var seasonNum int
+	err = env.db.QueryRow(`SELECT id, season_number FROM seasons WHERE title_id = ?`, show.ID).Scan(&seasonID, &seasonNum)
+	require.NoError(t, err)
+	assert.Equal(t, 1, seasonNum)
+
+	var epNum int
+	var watched bool
+	err = env.db.QueryRow(`SELECT episode, watched FROM episodes WHERE season_id = ?`, seasonID).Scan(&epNum, &watched)
+	require.NoError(t, err)
+	assert.Equal(t, 1, epNum)
+	assert.True(t, watched)
 }
 
-func TestNormalizeJellyfinPayload_Ignored(t *testing.T) {
+func TestProcessJellyfinWebhook_Ignored(t *testing.T) {
+	env := setupJellyfinTest(t)
+
 	cases := []struct {
 		name string
 		jf   *model.JellyfinPayload
@@ -69,10 +133,15 @@ func TestNormalizeJellyfinPayload_Ignored(t *testing.T) {
 		{"completion flag empty", &model.JellyfinPayload{NotificationType: "PlaybackStop", ItemType: "Movie", PlayedToCompletion: ""}},
 		{"unsupported item type", &model.JellyfinPayload{NotificationType: "PlaybackStop", ItemType: "Audio", PlayedToCompletion: "True"}},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, ok := normalizeJellyfinPayload(tc.jf)
-			assert.False(t, ok)
+			err := env.svc.ProcessJellyfinWebhook(context.Background(), tc.jf, "{}")
+			require.NoError(t, err)
+
+			res, err := env.titleRepo.List(repository.TitleFilter{})
+			require.NoError(t, err)
+			assert.Empty(t, res.Titles)
 		})
 	}
 }

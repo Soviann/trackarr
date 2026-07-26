@@ -2,11 +2,11 @@
 
 ## Qu'est-ce que PlexTracker ?
 
-PlexTracker est une application personnelle de suivi de visionnage. Elle remplace Simkl comme tracker central pour les films, séries et anime regardés sur Plex.
+PlexTracker est une application personnelle de suivi de visionnage. Elle remplace Simkl comme tracker central pour les films, séries et anime regardés sur Jellyfin.
 
 ### Ce que fait PlexTracker
 
-- **Suivi automatique** : chaque film ou épisode terminé sur Plex est automatiquement enregistré via webhook
+- **Suivi automatique** : chaque film ou épisode terminé sur Jellyfin est automatiquement enregistré via webhook
 - **Bibliothèque** : vue d'ensemble de tout ce qui est en cours, terminé, abandonné ou à regarder
 - **Progression** : savoir en un coup d'œil où on en est dans chaque série
 - **Notes** : noter les titres (1-10), avec liens vers IMDb et synchronisation automatique vers AniList
@@ -186,24 +186,16 @@ Changer le statut en "Terminé" marque tous les épisodes comme vus. Changer en 
 
 ---
 
-## Suivi automatique Plex
+## Suivi automatique Jellyfin
 
-PlexTracker écoute les webhooks Plex. Quand un film ou épisode atteint ~90% de visionnage, Plex envoie un événement `media.scrobble` et PlexTracker :
+PlexTracker écoute les webhooks de Jellyfin. Lorsqu'un film ou un épisode est terminé, Jellyfin envoie une notification Webhook (événement `PlaybackStop`) et PlexTracker :
 
-1. Identifie le titre (par IDs Plex, TMDB, IMDb, ou via le pipeline de matching)
+1. Identifie le titre (par IDs TMDB/IMDb/TVDB ou via le pipeline de matching)
 2. Marque l'épisode/film comme vu
 3. Met à jour le statut si nécessaire (tout vu + série terminée → "Completed")
 4. Envoie une notification push si c'est une fin de saison ou un film (pour proposer de noter)
 
-Les re-visionnages sont enregistrés dans l'historique mais ne changent pas l'état "vu" de l'épisode.
-
----
-
-## Suivi automatique Jellyfin
-
-PlexTracker accepte aussi les webhooks de Jellyfin, en parallèle de Plex (les deux peuvent rester actifs). Le traitement est identique : un film ou épisode terminé est identifié, marqué vu, et déclenche une notification de notation. Les événements sont enregistrés avec la source `jellyfin`.
-
-**Seul un visionnage *terminé* compte** : PlexTracker n'agit que sur l'événement `PlaybackStop` dont l'indicateur « lu jusqu'à la fin » est vrai (équivalent du seuil ~90% de Plex). Les simples « lecture démarrée » et les arrêts en cours de visionnage sont ignorés.
+**Seul un visionnage *terminé* compte** : PlexTracker n'agit que sur l'événement `PlaybackStop` dont l'indicateur « lu jusqu'à la fin » (`PlayedToCompletion`) est vrai. Les simples « lecture démarrée » et les arrêts en cours de visionnage sont ignorés.
 
 ### Configuration côté Jellyfin
 

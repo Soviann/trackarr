@@ -26,10 +26,10 @@ func NewTitleService(db *sql.DB, titles *repository.TitleRepository, tasks *repo
 	return &TitleService{db: db, titles: titles, tasks: tasks, pipeline: pipeline}
 }
 
-// CreateFromPlex constructs a new title from Plex metadata and starts matching.
+// CreateFromScrobble constructs a new title from scrobble metadata and starts matching.
 // Caller owns the transaction so the create (or the "existing title found"
 // update-in-place branch) shares atomicity with the surrounding webhook work.
-func (s *TitleService) CreateFromPlex(ctx context.Context, tx *sql.Tx, title string, year int, ids PlexExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus) (int64, error) {
+func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title string, year int, ids ExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus) (int64, error) {
 	titles := repository.NewTitleRepository(tx)
 	writer := repository.NewTitleWriter(tx)
 	t := &model.Title{

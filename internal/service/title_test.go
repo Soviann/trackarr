@@ -52,13 +52,13 @@ func TestTitleService_CreateFromPlex_DuplicateDetection(t *testing.T) {
 
 	svc := service.NewTitleService(db, titleRepo, taskRepo, pipeline)
 
-	// 3. Create from Plex (matches existing TMDB ID)
-	ids := service.PlexExternalIDs{} // Empty IDs, let pipeline match
+	// 3. Create from Scrobble (matches existing TMDB ID)
+	ids := service.ExternalIDs{} // Empty IDs, let pipeline match
 	ratingKey := "plex-123"
 	tx, err := db.Begin()
 	require.NoError(t, err)
 	defer tx.Rollback() //nolint:errcheck
-	newID, err := svc.CreateFromPlex(context.Background(), tx, "In the Land of Leadale", 2022, ids, model.TitleTypeSeries, ratingKey, nil, model.TitleStatusWatching)
+	newID, err := svc.CreateFromScrobble(context.Background(), tx, "In the Land of Leadale", 2022, ids, model.TitleTypeSeries, ratingKey, nil, model.TitleStatusWatching)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 

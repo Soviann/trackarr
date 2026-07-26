@@ -3,101 +3,282 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log/slog"
-	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
-	plexwebhooks "github.com/hekmon/plexwebhooks"
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
+	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-// NewJellyfinService returns a webhook ingest service that records events with
-// source=jellyfin. It deliberately reuses the entire Plex ingest pipeline
-// (find/create/match/enrich); only the recorded WatchEvent source differs. The
-// Jellyfin payload is normalised into the internal Plex shape by
-// ProcessJellyfinWebhook before reaching the shared logic.
-func NewJellyfinService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
-	s := NewPlexService(db, pipeline, titleSvc, libSvc)
-	s.log = slog.With("subsystem", "jellyfin")
-	s.source = model.WatchEventSourceJellyfin
-	return s
+type ExternalIDs struct {
+	IMDB string
+	TMDB int64
+	TVDB int64
 }
 
-// ProcessJellyfinWebhook ingests a Jellyfin Webhook-plugin notification. It
-// normalises the payload and, when the event represents a completed playback,
-// runs it through the shared Plex pipeline.
-func (s *PlexService) ProcessJellyfinWebhook(ctx context.Context, jf *model.JellyfinPayload, rawPayload string) error {
-	payload, ok := normalizeJellyfinPayload(jf)
-	if !ok {
+type JellyfinService struct {
+	log      *slog.Logger
+	db       *sql.DB
+	pipeline *matching.Pipeline
+	titleSvc *TitleService
+	libSvc   *LibraryService
+	source   model.WatchEventSource
+}
+
+func NewJellyfinService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *JellyfinService {
+	return &JellyfinService{
+		log:      slog.With("subsystem", "jellyfin"),
+		db:       db,
+		pipeline: pipeline,
+		titleSvc: titleSvc,
+		libSvc:   libSvc,
+		source:   model.WatchEventSourceJellyfin,
+	}
+}
+
+// ProcessJellyfinWebhook ingests a Jellyfin Webhook-plugin notification.
+// It normalises the payload and, when the event represents a completed playback,
+// processes the scrobble into the database.
+func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.JellyfinPayload, rawPayload string) error {
+	if !strings.EqualFold(jf.NotificationType, "PlaybackStop") || !parseJellyfinBool(jf.PlayedToCompletion) {
 		return nil
 	}
-	return s.ProcessWebhook(ctx, payload, rawPayload)
-}
 
-// normalizeJellyfinPayload converts a Jellyfin webhook into the internal Plex
-// payload shape. ok=false means the event must be ignored — anything that is not
-// a *completed* playback of a movie or episode (PlaybackStart, paused/aborted
-// stops, unsupported item types). Completion-based ingestion mirrors Plex's
-// media.scrobble semantics: a title counts as watched only when actually
-// finished, and every completion (including a rewatch) yields one scrobble.
-func normalizeJellyfinPayload(jf *model.JellyfinPayload) (*plexwebhooks.Payload, bool) {
-	// Only completed stops count. Jellyfin's PlayedToCompletion flag is the
-	// equivalent of Plex's ~90% scrobble threshold.
-	if !strings.EqualFold(jf.NotificationType, "PlaybackStop") || !parseJellyfinBool(jf.PlayedToCompletion) {
-		return nil, false
-	}
-
-	meta := plexwebhooks.Metadata{
-		Year: atoiSafe(jf.Year),
+	year := atoiSafe(jf.Year)
+	ids := ExternalIDs{
+		IMDB: strings.TrimSpace(jf.ProviderIMDB),
+		TMDB: int64(atoiSafe(jf.ProviderTMDB)),
+		TVDB: int64(atoiSafe(jf.ProviderTVDB)),
 	}
 
 	switch strings.ToLower(jf.ItemType) {
 	case "movie":
-		meta.Type = plexwebhooks.MediaTypeMovie
-		meta.Title = jf.Name
-		meta.RatingKey = jf.ItemID
-		// Movie provider IDs identify the film and dedupe against Plex-created titles.
-		meta.GUIDExternal = jellyfinGUIDs(jf.ProviderIMDB, jf.ProviderTMDB, jf.ProviderTVDB)
+		return s.processMovie(ctx, jf, year, ids, rawPayload)
 	case "episode":
-		meta.Type = plexwebhooks.MediaTypeEpisode
-		meta.Title = jf.Name
-		meta.GrandparentTitle = jf.SeriesName
-		// SeriesID is the stable per-series key (Plex's GrandparentRatingKey
-		// equivalent). Episode-level provider IDs are NOT the series' IDs, so they
-		// are intentionally omitted: the series is matched via this key plus the
-		// name/year search in the matching pipeline.
-		meta.GrandparentRatingKey = jf.SeriesID
-		meta.ParentIndex = atoiSafe(jf.Season)
-		meta.Index = atoiSafe(jf.Episode)
+		return s.processEpisode(ctx, jf, year, ids, rawPayload)
 	default:
-		return nil, false
+		return nil
 	}
-
-	return &plexwebhooks.Payload{Event: plexwebhooks.EventTypeScrobble, Metadata: meta}, true
 }
 
-// jellyfinGUIDs builds the Plex-style GUID list (imdb://, tmdb://, tvdb://) that
-// ParseGUIDs consumes, skipping any empty provider ID.
-func jellyfinGUIDs(imdb, tmdb, tvdb string) []*url.URL {
-	var out []*url.URL
-	add := func(scheme, val string) {
-		if val == "" {
-			return
+func (s *JellyfinService) processMovie(ctx context.Context, jf *model.JellyfinPayload, year int, ids ExternalIDs, rawPayload string) error {
+	logger := s.log.With("itemID", jf.ItemID, "title", jf.Name)
+	var ratingPrompt *RatingPrompt
+
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		prompt, err := s.processMovieInTx(ctx, tx, jf, year, ids, rawPayload, logger)
+		if err != nil {
+			return err
 		}
-		if u, err := url.Parse(scheme + "://" + val); err == nil {
-			out = append(out, u)
-		}
+		ratingPrompt = prompt
+		return nil
+	}); err != nil {
+		return err
 	}
-	add("imdb", imdb)
-	add("tmdb", tmdb)
-	add("tvdb", tvdb)
-	return out
+
+	s.libSvc.SendRatingPrompt(ctx, ratingPrompt)
+	return nil
 }
 
-// parseJellyfinBool accepts the .NET Handlebars boolean rendering ("True"/"False")
-// as well as the usual "true"/"1" forms. Anything else (including empty) is false.
+func (s *JellyfinService) processMovieInTx(ctx context.Context, tx *sql.Tx, jf *model.JellyfinPayload, year int, ids ExternalIDs, rawPayload string, logger *slog.Logger) (*RatingPrompt, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	var imdbID *string
+	var tmdbID *int64
+	ratingKey := jf.ItemID
+
+	if ids.IMDB != "" {
+		imdbID = &ids.IMDB
+	}
+	if ids.TMDB != 0 {
+		tmdbID = &ids.TMDB
+	}
+
+	movieType := model.TitleTypeMovie
+	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, &movieType)
+	if err != nil {
+		titleID, err := s.titleSvc.CreateFromScrobble(ctx, tx, jf.Name, year, ids, model.TitleTypeMovie, ratingKey, nil, model.TitleStatusCompleted)
+		if err != nil {
+			return nil, fmt.Errorf("create movie: %w", err)
+		}
+		logger = logger.With("titleID", titleID)
+		logger.Info("created title from Jellyfin movie")
+
+		prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, titleID, s.source, &rawPayload)
+		if err != nil {
+			return nil, err
+		}
+		if err := titlesW.UpdateLastWatchedAt(ctx, titleID, time.Now().UTC()); err != nil {
+			return nil, err
+		}
+		return prompt, nil
+	}
+	logger = logger.With("titleID", title.ID)
+
+	if needsEnrichment(title) {
+		s.enqueueEnrichmentTx(ctx, tx, title.ID, jf.Name, year, title.Type, ids, logger)
+	}
+
+	prompt, err := s.libSvc.MarkMovieWatched(ctx, tx, title.ID, s.source, &rawPayload)
+	if err != nil {
+		return nil, err
+	}
+	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+	return prompt, nil
+}
+
+func (s *JellyfinService) processEpisode(ctx context.Context, jf *model.JellyfinPayload, year int, ids ExternalIDs, rawPayload string) error {
+	seriesName := jf.SeriesName
+	if seriesName == "" {
+		seriesName = jf.Name
+	}
+	logger := s.log.With("seriesID", jf.SeriesID, "series", seriesName, "season", jf.Season, "episode", jf.Episode)
+
+	var autoCompleteCheck *autoCompleteRequest
+	var ratingPrompt *RatingPrompt
+
+	if err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		req, prompt, err := s.processEpisodeInTx(ctx, tx, jf, seriesName, year, ids, rawPayload, logger)
+		if err != nil {
+			return err
+		}
+		autoCompleteCheck = req
+		ratingPrompt = prompt
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	s.libSvc.SendRatingPrompt(ctx, ratingPrompt)
+
+	if autoCompleteCheck != nil {
+		if err := s.libSvc.CheckAutoComplete(ctx, s.db, autoCompleteCheck.titleID, autoCompleteCheck.tmdbID, autoCompleteCheck.seasonNum, autoCompleteCheck.episodeNum); err != nil {
+			logger.Warn("auto-complete check", "titleID", autoCompleteCheck.titleID, "err", err)
+		}
+	}
+	return nil
+}
+
+type autoCompleteRequest struct {
+	titleID    int64
+	tmdbID     int64
+	seasonNum  int
+	episodeNum int
+}
+
+func (s *JellyfinService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, jf *model.JellyfinPayload, seriesName string, year int, ids ExternalIDs, rawPayload string, logger *slog.Logger) (*autoCompleteRequest, *RatingPrompt, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	seasons := repository.NewSeasonWriter(tx)
+	episodes := repository.NewEpisodeWriter(tx)
+
+	grandparentKey := jf.SeriesID
+	var imdbID *string
+	var tmdbID *int64
+
+	if ids.IMDB != "" {
+		imdbID = &ids.IMDB
+	}
+	if ids.TMDB != 0 {
+		tmdbID = &ids.TMDB
+	}
+
+	seasonNum := atoiSafe(jf.Season)
+	episodeNum := atoiSafe(jf.Episode)
+
+	title, err := titles.FindByExternalID(imdbID, tmdbID, &grandparentKey, nil, nil)
+	if err != nil {
+		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ids, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching)
+		if createErr != nil {
+			return nil, nil, fmt.Errorf("create series: %w", createErr)
+		}
+		logger = logger.With("titleID", titleID)
+		logger.Info("created title from Jellyfin episode")
+		title = &model.Title{ID: titleID, Status: model.TitleStatusWatching}
+	} else {
+		logger = logger.With("titleID", title.ID)
+		if title.Status != model.TitleStatusCompleted && title.Status != model.TitleStatusWatching {
+			watchingStatus := model.TitleStatusWatching
+			if updateErr := titlesW.Update(ctx, title.ID, repository.TitleUpdate{Status: &watchingStatus}); updateErr != nil {
+				logger.Warn("update status to watching", "err", updateErr)
+			}
+		}
+		if needsEnrichment(title) {
+			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, year, title.Type, ids, logger)
+		}
+	}
+
+	season, err := seasons.GetOrCreate(ctx, title.ID, seasonNum)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get/create season: %w", err)
+	}
+
+	ep, err := episodes.GetOrCreate(ctx, season.ID, episodeNum)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get/create episode: %w", err)
+	}
+
+	_, prompt, err := s.libSvc.MarkEpisodesWatched(ctx, tx, title.ID, []int64{ep.ID}, []int64{ep.SeasonID}, s.source, &rawPayload)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := titlesW.UpdateLastWatchedAt(ctx, title.ID, time.Now().UTC()); err != nil {
+		logger.Warn("update title last_watched_at", "err", err)
+	}
+
+	backfillTMDBID := title.TMDBID
+	if backfillTMDBID == nil {
+		backfillTMDBID = &ids.TMDB
+	}
+	if backfillTMDBID != nil && *backfillTMDBID != 0 {
+		return &autoCompleteRequest{
+			titleID:    title.ID,
+			tmdbID:     *backfillTMDBID,
+			seasonNum:  seasonNum,
+			episodeNum: episodeNum,
+		}, prompt, nil
+	}
+
+	return nil, prompt, nil
+}
+
+func needsEnrichment(title *model.Title) bool {
+	return title.TMDBID == nil && title.AniListID == nil
+}
+
+func (s *JellyfinService) enqueueEnrichmentTx(ctx context.Context, tx *sql.Tx, titleID int64, titleName string, year int, titleType model.TitleType, ids ExternalIDs, logger *slog.Logger) {
+	if s.pipeline == nil {
+		return
+	}
+	payload, err := json.Marshal(EnrichmentPayload{
+		TitleID:   titleID,
+		TitleName: titleName,
+		Year:      year,
+		TitleType: titleType,
+		IMDBID:    ids.IMDB,
+		TMDBID:    ids.TMDB,
+		TVDBID:    ids.TVDB,
+	})
+	if err != nil {
+		logger.Error("marshal enrichment payload", "err", err)
+		return
+	}
+	dedupKey := fmt.Sprintf("enrichment:%d", titleID)
+	if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payload), &dedupKey); err != nil {
+		logger.Error("enqueue enrichment", "err", err)
+	}
+	logger.Info("enrichment enqueued")
+}
+
 func parseJellyfinBool(s string) bool {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "true", "1":
@@ -107,8 +288,6 @@ func parseJellyfinBool(s string) bool {
 	}
 }
 
-// atoiSafe parses an integer, returning 0 for empty or non-numeric input (a
-// Handlebars variable absent for the item type renders as "").
 func atoiSafe(s string) int {
 	n, err := strconv.Atoi(strings.TrimSpace(s))
 	if err != nil {
