@@ -616,8 +616,8 @@ func (p *Pipeline) resolveIDsFromSources(ctx context.Context, result *MatchResul
 		}
 	}
 
-	// Try AniList search only for anime or series (movies don't appear on AniList)
-	if result.AniListID == 0 && p.anilist != nil && (input.IsAnime || result.TitleType == model.TitleTypeSeries) {
+	// Try AniList search only when anime flag is set
+	if result.AniListID == 0 && p.anilist != nil && (input.IsAnime || result.IsAnime) {
 		searchResults, err := p.anilist.SearchAnime(ctx, input.Title)
 		if err != nil {
 			log.Printf("anilist enrichment search failed: %v", err)
@@ -802,7 +802,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		}
 		for _, g := range out.genres {
 			lower := strings.ToLower(g)
-			if lower == "anime" || lower == "animation" {
+			if lower == "anime" {
 				out.isAnime = true
 				break
 			}
@@ -834,7 +834,7 @@ func (p *Pipeline) fetchTVDBData(ctx context.Context, result *MatchResult, out *
 		}
 		for _, g := range out.genres {
 			lower := strings.ToLower(g)
-			if lower == "anime" || lower == "animation" {
+			if lower == "anime" {
 				out.isAnime = true
 				break
 			}

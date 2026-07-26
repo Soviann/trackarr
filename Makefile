@@ -119,6 +119,6 @@ ssh-logs: ## Pull logs du conteneur plextracker du NAS vers data/plextracker.log
 
 ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de prod)
 	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
-		sshpass -p "$$NAS_PASSWORD" scp -P $$NAS_PORT data/plextracker.db $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db'
+		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT data/plextracker.db $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db'
 	@$(call NAS_SSH,/usr/local/bin/docker restart plextracker)
 	@echo "Database pushed to NAS and container restarted"
