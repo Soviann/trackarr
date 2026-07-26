@@ -78,10 +78,18 @@ const seriesStatusFilters: { id: SeriesStatusFilter; label: string }[] = [
 ]
 
 const decadeOptions = [
-  { value: '', label: 'All' },
-  { value: '2000', label: '2000s' },
-  { value: '2010', label: '2010s' },
+  { value: '', label: 'Decade: All' },
   { value: '2020', label: '2020s' },
+  { value: '2010', label: '2010s' },
+  { value: '2000', label: '2000s' },
+  { value: '1990', label: '1990s' },
+  { value: '1980', label: '1980s' },
+  { value: '1970', label: '1970s' },
+  { value: '1960', label: '1960s' },
+  { value: '1950', label: '1950s' },
+  { value: '1940', label: '1940s' },
+  { value: '1930', label: '1930s' },
+  { value: '1920', label: '1920s' },
 ]
 
 function Chip<T>({ filter, active, onClick }: {

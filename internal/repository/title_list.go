@@ -129,22 +129,22 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	}
 	if filter.ReleaseFrom != nil {
 		if filter.IncludeNoRelease {
-			conditions = append(conditions, `(t.release_date >= ? OR t.release_date IS NULL)`)
+			conditions = append(conditions, `(COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) >= ? OR (t.release_date IS NULL AND t.year = 0))`)
 		} else {
-			conditions = append(conditions, `t.release_date >= ?`)
+			conditions = append(conditions, `COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) >= ?`)
 		}
 		args = append(args, *filter.ReleaseFrom)
 	}
 	if filter.ReleaseTo != nil {
 		if filter.IncludeNoRelease {
-			conditions = append(conditions, `(t.release_date <= ? OR t.release_date IS NULL)`)
+			conditions = append(conditions, `(COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) <= ? OR (t.release_date IS NULL AND t.year = 0))`)
 		} else {
-			conditions = append(conditions, `t.release_date <= ?`)
+			conditions = append(conditions, `COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) <= ?`)
 		}
 		args = append(args, *filter.ReleaseTo)
 	}
 	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
-		conditions = append(conditions, `t.release_date IS NOT NULL`)
+		conditions = append(conditions, `(t.release_date IS NOT NULL AND t.release_date != '' OR t.year > 0)`)
 	}
 	if filter.IsAnime != nil {
 		conditions = append(conditions, `t.is_anime = ?`)

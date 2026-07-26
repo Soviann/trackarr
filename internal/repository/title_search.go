@@ -417,22 +417,22 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	}
 	if filter.ReleaseFrom != nil {
 		if filter.IncludeNoRelease {
-			query += ` AND (t.release_date >= ? OR t.release_date IS NULL)`
+			query += ` AND (COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) >= ? OR (t.release_date IS NULL AND t.year = 0))`
 		} else {
-			query += ` AND t.release_date >= ?`
+			query += ` AND COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) >= ?`
 		}
 		args = append(args, *filter.ReleaseFrom)
 	}
 	if filter.ReleaseTo != nil {
 		if filter.IncludeNoRelease {
-			query += ` AND (t.release_date <= ? OR t.release_date IS NULL)`
+			query += ` AND (COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) <= ? OR (t.release_date IS NULL AND t.year = 0))`
 		} else {
-			query += ` AND t.release_date <= ?`
+			query += ` AND COALESCE(NULLIF(t.release_date, ''), CASE WHEN t.year > 0 THEN printf('%04d-01-01', t.year) ELSE NULL END) <= ?`
 		}
 		args = append(args, *filter.ReleaseTo)
 	}
 	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
-		query += ` AND t.release_date IS NOT NULL`
+		query += ` AND (t.release_date IS NOT NULL AND t.release_date != '' OR t.year > 0)`
 	}
 
 	tRows, err := r.db.Query(query, args...)

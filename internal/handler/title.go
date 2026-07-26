@@ -156,9 +156,15 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if rf := r.URL.Query().Get("release_from"); rf != "" {
+		if len(rf) == 4 {
+			rf += "-01-01"
+		}
 		filter.ReleaseFrom = &rf
 	}
 	if rt := r.URL.Query().Get("release_to"); rt != "" {
+		if len(rt) == 4 {
+			rt += "-12-31"
+		}
 		filter.ReleaseTo = &rt
 	}
 	filter.IncludeNoRelease = true // default: include titles without release date
