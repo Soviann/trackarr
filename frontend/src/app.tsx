@@ -109,12 +109,12 @@ export function App() {
   }, [setFilter])
 
   const handleReleaseFromChange = useCallback((d: string) => {
-    setFilter({ release_from: d || undefined, decade: undefined })
-  }, [setFilter])
+    setFilter({ release_from: d || undefined, decade: d ? undefined : filter.decade })
+  }, [filter.decade, setFilter])
 
   const handleReleaseToChange = useCallback((d: string) => {
-    setFilter({ release_to: d || undefined, decade: undefined })
-  }, [setFilter])
+    setFilter({ release_to: d || undefined, decade: d ? undefined : filter.decade })
+  }, [filter.decade, setFilter])
 
   const handleIncludeNoReleaseChange = useCallback((include: boolean) => {
     setFilter({ include_no_release: include ? undefined : 'false' })

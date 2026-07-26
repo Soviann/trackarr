@@ -528,10 +528,6 @@ export function FilterDrawer({
             onChange={(e) => {
               const val = (e.target as HTMLSelectElement).value
               onDecadeChange(val || null)
-              if (val) {
-                onReleaseFromChange('')
-                onReleaseToChange('')
-              }
             }}
           >
             {decadeOptions.map((opt) => (
