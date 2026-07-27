@@ -373,3 +373,39 @@ func TestMerge_CancelledContext(t *testing.T) {
 	require.NoError(t, getErr)
 	assert.Equal(t, sourceID, src.ID)
 }
+
+func TestMerge_ReconcilesLastWatchedAt(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest Title", Language: "en", IsPrimary: true}})
+
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2021,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source Title", Language: "en", IsPrimary: true}})
+
+	// Insert watch event for source
+	_, err = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (?, 'jellyfin', '2026-07-26 21:28:44')`, sourceID)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.Merge(context.Background(), db, destID, sourceID, nil))
+
+	dest, err := titleRepo.GetByID(destID)
+	require.NoError(t, err)
+	require.NotNil(t, dest.LastWatchedAt, "last_watched_at must be updated from moved watch_events")
+	assert.Equal(t, "2026-07-26 21:28:44", dest.LastWatchedAt.Format("2006-01-02 15:04:05"))
+}

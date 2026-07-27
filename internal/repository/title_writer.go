@@ -452,6 +452,27 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		}
 	}
 
+	// 4c. Reconcile watch timestamps (last_watched_at, first_watched_at).
+	// Ensures the dest title adopts the newest watch timestamp from both titles and moved watch events.
+	if _, err := w.tx.ExecContext(ctx, `UPDATE titles SET
+		last_watched_at = (
+			SELECT MAX(lw) FROM (
+				SELECT last_watched_at AS lw FROM titles WHERE id IN (?, ?) AND last_watched_at IS NOT NULL
+				UNION ALL
+				SELECT created_at AS lw FROM watch_events WHERE title_id IN (?, ?)
+			)
+		),
+		first_watched_at = (
+			SELECT MIN(fw) FROM (
+				SELECT first_watched_at AS fw FROM titles WHERE id IN (?, ?) AND first_watched_at IS NOT NULL
+				UNION ALL
+				SELECT created_at AS fw FROM watch_events WHERE title_id IN (?, ?)
+			)
+		)
+		WHERE id = ?`, destID, sourceID, destID, sourceID, destID, sourceID, destID, sourceID, destID); err != nil {
+		return fmt.Errorf("reconcile watch timestamps: %w", err)
+	}
+
 	// 5. Delete source title; FK cascades handle whatever we haven't moved.
 	if _, err := w.tx.ExecContext(ctx, `DELETE FROM titles WHERE id = ?`, sourceID); err != nil {
 		return fmt.Errorf("delete source title: %w", err)
