@@ -347,13 +347,18 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 	if err != nil {
 		return err
 	}
+	dest, err := s.titles.GetByID(destID)
+	if err != nil {
+		return err
+	}
 
 	sourceName := source.PrimaryName()
+	destName := dest.PrimaryName()
 
 	seasonOffset := 0
 	if explicitOffset != nil {
 		seasonOffset = *explicitOffset
-	} else if source.IsAnime && s.pipeline != nil {
+	} else if (source.IsAnime || dest.IsAnime) && s.pipeline != nil {
 		if ident, err := s.pipeline.IdentifyAnimeSeason(ctx, sourceName, source.Year); err == nil && ident.IsSeason {
 			log.Printf("fusion: Gemini identified sequel season %d for %q", ident.SeasonNumber, sourceName)
 			seasonOffset = ident.SeasonNumber - 1
@@ -363,19 +368,23 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 	}
 
 	// Resolve the per-season AniList ID to stamp on the moved/merged dest
-	// season. Trust the source's existing mapping first; fall back to an
-	// AniList name search so a sequel imported without an ID still gets
+	// season. Trust existing mappings (dest first, then source); fall back to an
+	// AniList name search so an anime imported without an ID still gets
 	// stamped. Both lookups are best-effort: a failure here must not abort
 	// the merge itself — the user can always fix the link afterwards.
 	var aniListID int64
-	if source.AniListID != nil {
+	switch {
+	case dest.AniListID != nil:
+		aniListID = *dest.AniListID
+	case source.AniListID != nil:
 		aniListID = *source.AniListID
-	} else if source.IsAnime && s.pipeline != nil {
-		id, err := s.pipeline.SearchAniListByName(ctx, sourceName)
-		if err != nil {
-			log.Printf("fusion: AniList search failed for %q: %v", sourceName, err)
-		} else {
+	case (source.IsAnime || dest.IsAnime) && s.pipeline != nil:
+		if id, err := s.pipeline.SearchAniListByName(ctx, destName); err == nil && id != 0 {
 			aniListID = id
+		} else if id, err := s.pipeline.SearchAniListByName(ctx, sourceName); err == nil && id != 0 {
+			aniListID = id
+		} else if err != nil {
+			log.Printf("fusion: AniList search failed for %q: %v", sourceName, err)
 		}
 	}
 

@@ -331,6 +331,11 @@ func TestMerge_ReSearchesAniListWhenSourceLacksID(t *testing.T) {
 	got, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
 	require.NoError(t, err)
 	assert.Equal(t, "123", got)
+
+	destTitle, err := titleRepo.GetByID(destID)
+	require.NoError(t, err)
+	require.NotNil(t, destTitle.AniListID)
+	assert.Equal(t, int64(123), *destTitle.AniListID, "anilist_id backfilled on destination title row")
 }
 
 func TestMerge_CancelledContext(t *testing.T) {

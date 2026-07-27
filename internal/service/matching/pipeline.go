@@ -359,6 +359,26 @@ func (p *Pipeline) enrichFromIDs(ctx context.Context, result *MatchResult, input
 	}
 	reconcileIDs(result, tmdbRes, tvdbRes)
 
+	// If title is anime (either from input, AniList, or TMDB/TVDB metadata)
+	// and AniListID is still missing, search AniList by title to resolve link.
+	if result.AniListID == 0 && p.anilist != nil && (input.IsAnime || result.IsAnime) {
+		searchTitle := input.Title
+		if searchTitle == "" {
+			for _, n := range result.Names {
+				if n.IsPrimary && n.Name != "" {
+					searchTitle = n.Name
+					break
+				}
+			}
+		}
+		if searchTitle != "" {
+			if searchResults, err := p.anilist.SearchAnime(ctx, searchTitle); err == nil && len(searchResults) > 0 {
+				result.AniListID = searchResults[0].ID
+				result.IsAnime = true
+			}
+		}
+	}
+
 	// AniList cover as last resort
 	if result.CoverFile == "" && p.anilist != nil && result.AniListID != 0 {
 		p.downloadAniListCover(ctx, result)
@@ -447,7 +467,7 @@ func mergeMetadata(result *MatchResult, tmdbRes tmdbFetchResult, tvdbRes tvdbFet
 		result.ReleaseDate = tvdbRes.releaseDate
 	}
 
-	if !result.IsAnime && tvdbRes.isAnime {
+	if !result.IsAnime && (tmdbRes.isAnime || tvdbRes.isAnime) {
 		result.IsAnime = true
 	}
 
@@ -644,6 +664,7 @@ type tmdbFetchResult struct {
 	imdbID      string
 	tvdbID      int64
 	names       map[string]string
+	isAnime     bool
 }
 
 // tvdbFetchResult holds data fetched from TVDB in a goroutine.
@@ -657,6 +678,26 @@ type tvdbFetchResult struct {
 	coverFile   string
 	isAnime     bool
 	releaseDate string // year only (e.g. "2008"), used as fallback when TMDB has no date
+}
+
+func isJapaneseAnimation(countries []string, genres []string) bool {
+	hasJP := false
+	for _, c := range countries {
+		if strings.EqualFold(strings.TrimSpace(c), "JP") {
+			hasJP = true
+			break
+		}
+	}
+	if !hasJP {
+		return false
+	}
+	for _, g := range genres {
+		lower := strings.ToLower(g)
+		if lower == "animation" || lower == "anime" {
+			return true
+		}
+	}
+	return false
 }
 
 // mergeGenres unions TMDB and TVDB genre slices, deduplicating case-insensitively.
@@ -714,6 +755,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = details.Overview
 		_, credits, runtime, rating := ExtractMovieMetadata(details)
 		out.genres = extractGenreNames(details.Genres)
+		out.isAnime = isJapaneseAnimation(details.OriginCountry, out.genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating
@@ -756,6 +798,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = details.Overview
 		_, credits, runtime, rating := ExtractTVMetadata(details)
 		out.genres = extractGenreNames(details.Genres)
+		out.isAnime = isJapaneseAnimation(details.OriginCountry, out.genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating

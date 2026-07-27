@@ -21,6 +21,7 @@ import (
 // background service trivially testable without spinning up an httptest server.
 type aniListSeasonScoreClient interface {
 	GetAnimeDetails(ctx context.Context, anilistID int64) (*matching.AniListDetails, error)
+	SearchAnime(ctx context.Context, query string) ([]matching.AniListSearchResult, error)
 }
 
 type BackgroundService struct {
@@ -210,6 +211,11 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 	// one bad mapping never breaks the rest of the refresh.
 	if s.anilist != nil && title.IsAnime {
 		s.refreshAniListSeasonScores(ctx, title, &result)
+	}
+
+	// Step 1e: AniList ID auto-backfill for anime titles missing an AniList link.
+	if s.anilist != nil && title.IsAnime && title.AniListID == nil {
+		s.backfillAniListID(ctx, title, &result)
 	}
 
 	// Step 2: Auto-complete if series ended and all episodes watched
@@ -716,6 +722,29 @@ func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, titl
 				log.Printf("background anilist score: persist season %d part %s: %v", seasonID, part.ExternalID, err)
 			}
 			_ = s.limiter.Wait(ctx)
+		}
+	}
+}
+
+func (s *BackgroundService) backfillAniListID(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+	if s.anilist == nil || title.PrimaryName == "" {
+		return
+	}
+	results, err := s.anilist.SearchAnime(ctx, title.PrimaryName)
+	if err != nil || len(results) == 0 {
+		return
+	}
+	anilistID := results[0].ID
+	result.Refreshed = true
+	logTitleUpdate(title.ID, "anilist_id backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{AniListID: &anilistID}))
+	title.AniListID = &anilistID
+
+	partsBySeason, err := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, providerAniList)
+	if err == nil && len(partsBySeason) == 0 {
+		var seasonID int64
+		err := s.writeDB.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = 1`, title.ID).Scan(&seasonID)
+		if err == nil {
+			_ = s.seasonExtIDs.Add(ctx, seasonID, providerAniList, strconv.FormatInt(anilistID, 10))
 		}
 	}
 }

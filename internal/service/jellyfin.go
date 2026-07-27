@@ -181,22 +181,16 @@ func (s *JellyfinService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, jf
 	episodes := repository.NewEpisodeWriter(tx)
 
 	grandparentKey := jf.SeriesID
-	var imdbID *string
-	var tmdbID *int64
-
-	if ids.IMDB != "" {
-		imdbID = &ids.IMDB
-	}
-	if ids.TMDB != 0 {
-		tmdbID = &ids.TMDB
-	}
-
 	seasonNum := atoiSafe(jf.Season)
 	episodeNum := atoiSafe(jf.Episode)
 
-	title, err := titles.FindByExternalID(imdbID, tmdbID, &grandparentKey, nil, nil)
+	seriesType := model.TitleTypeSeries
+	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, &seriesType)
 	if err != nil {
-		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ids, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching)
+		// For an episode scrobble, ids contains episode-level provider IDs.
+		// Pass empty ExternalIDs so CreateFromScrobble uses seriesName + year in the
+		// matching pipeline to resolve true series-level external IDs.
+		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching)
 		if createErr != nil {
 			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}
@@ -212,7 +206,7 @@ func (s *JellyfinService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, jf
 			}
 		}
 		if needsEnrichment(title) {
-			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, year, title.Type, ids, logger)
+			s.enqueueEnrichmentTx(ctx, tx, title.ID, seriesName, year, title.Type, ExternalIDs{}, logger)
 		}
 	}
 

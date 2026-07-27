@@ -145,3 +145,33 @@ func TestProcessJellyfinWebhook_Ignored(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessJellyfinWebhook_EpisodeProviderIDsNotSetAsSeriesIDs(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	jf := &model.JellyfinPayload{
+		NotificationType:   "PlaybackStop",
+		ItemType:           "Episode",
+		Name:               "Episode 1",
+		Year:               "2026",
+		PlayedToCompletion: "True",
+		ProviderIMDB:       "tt41303506", // Episode IMDb ID
+		ProviderTVDB:       "11580706",   // Episode TVDB ID
+		SeriesName:         "The Appraiser Series",
+		SeriesID:           "series-guid-appraiser",
+		Season:             "1",
+		Episode:            "1",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+
+	show := res.Titles[0]
+	assert.Equal(t, "The Appraiser Series", show.PrimaryName())
+	assert.Nil(t, show.IMDBID, "Episode IMDb ID must not be assigned to series row")
+	assert.Nil(t, show.TVDBID, "Episode TVDB ID must not be assigned to series row")
+}

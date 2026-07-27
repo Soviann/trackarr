@@ -90,10 +90,11 @@ func newBackgroundServiceWithTMDB(t *testing.T, tmdb *matching.TMDBClient) (*ser
 // scoreByID maps an AniList media id to the averageScore the fake should
 // return; errByID overrides the response with an error for that id.
 type fakeAniListSeasonScoreClient struct {
-	scoreByID   map[int64]int
-	errByID     map[int64]error
-	detailsByID map[int64]*matching.AniListDetails
-	calls       []int64
+	scoreByID    map[int64]int
+	errByID      map[int64]error
+	detailsByID  map[int64]*matching.AniListDetails
+	searchResult map[string][]matching.AniListSearchResult
+	calls        []int64
 }
 
 func (f *fakeAniListSeasonScoreClient) GetAnimeDetails(_ context.Context, id int64) (*matching.AniListDetails, error) {
@@ -109,6 +110,13 @@ func (f *fakeAniListSeasonScoreClient) GetAnimeDetails(_ context.Context, id int
 		return &matching.AniListDetails{ID: id, AverageScore: &s}, nil
 	}
 	return &matching.AniListDetails{ID: id}, nil
+}
+
+func (f *fakeAniListSeasonScoreClient) SearchAnime(_ context.Context, query string) ([]matching.AniListSearchResult, error) {
+	if res, ok := f.searchResult[query]; ok {
+		return res, nil
+	}
+	return nil, nil
 }
 
 func setupBackgroundService(t *testing.T) (*service.BackgroundService, *sql.DB, *repository.TitleRepository, *repository.SeasonRepository, *repository.EpisodeRepository) {
@@ -290,6 +298,30 @@ func TestRefreshByID_AniListOnly_SourcesMetadata(t *testing.T) {
 	assert.Equal(t, 80, *got.AniListRating)
 	require.NotNil(t, got.Runtime)
 	assert.Equal(t, 24, *got.Runtime)
+}
+
+func TestBackgroundService_AutoBackfillsAniListIDForAnime(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, IsAnime: true, Year: 2024,
+		Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Frieren", Language: "en", IsPrimary: true}})
+	s1 := testutil.InsertSeason(t, db, id, 1)
+	_ = s1
+
+	svc.SetAniList(&fakeAniListSeasonScoreClient{
+		searchResult: map[string][]matching.AniListSearchResult{
+			"Frieren": {{ID: 154587, EnglishTitle: "Sousou no Frieren"}},
+		},
+	})
+
+	require.NoError(t, svc.RefreshByID(context.Background(), id))
+
+	got, err := titleRepo.GetByID(id)
+	require.NoError(t, err)
+	require.NotNil(t, got.AniListID)
+	assert.Equal(t, int64(154587), *got.AniListID)
 }
 
 func TestBackgroundService_RefreshAniListScores_PersistsPerSeason(t *testing.T) {

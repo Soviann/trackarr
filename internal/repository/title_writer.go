@@ -425,6 +425,12 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		return fmt.Errorf("transfer external ids: %w", err)
 	}
 
+	if aniListID != 0 {
+		if _, err := w.tx.ExecContext(ctx, `UPDATE titles SET anilist_id = COALESCE(anilist_id, ?), is_anime = 1 WHERE id = ?`, aniListID, destID); err != nil {
+			return fmt.Errorf("update dest anilist_id: %w", err)
+		}
+	}
+
 	// 4b. Reconcile the watch status. The dest keeps its row, so without this it
 	// would silently retain its own status and discard the source's (e.g. a
 	// dropped sequel merged into a completed S1 would stay "completed"). The
