@@ -52,6 +52,20 @@ func (c *CoverService) Dir() string {
 	return filepath.Join(c.dataDir, "covers")
 }
 
+// HasCoverFile returns true if coverURL points to an existing file on disk in the covers directory.
+func (c *CoverService) HasCoverFile(coverURL string) bool {
+	if c == nil || coverURL == "" {
+		return false
+	}
+	filename := filepath.Base(coverURL)
+	if filename == "" || filename == "." || filename == "/" {
+		return false
+	}
+	path := filepath.Join(c.Dir(), filename)
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // SetAPILimiter replaces the default limiter with a shared one so cover fetch
 // shares the 2rps budget with BackgroundService and TaskQueueWorker.
 func (c *CoverService) SetAPILimiter(limiter *APILimiter) {
@@ -114,7 +128,7 @@ func (c *CoverService) FetchMissingCovers(ctx context.Context) int {
 		}
 
 		title := &titles[i]
-		if title.CoverURL != nil {
+		if title.CoverURL != nil && c.HasCoverFile(*title.CoverURL) {
 			continue
 		}
 

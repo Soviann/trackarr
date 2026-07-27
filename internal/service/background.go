@@ -311,6 +311,16 @@ func logTitleUpdate(titleID int64, kind string, err error) {
 	}
 }
 
+func (s *BackgroundService) hasValidCover(title *repository.TitleLite) bool {
+	if title == nil || title.CoverURL == nil || *title.CoverURL == "" {
+		return false
+	}
+	if s.covers != nil && !s.covers.HasCoverFile(*title.CoverURL) {
+		return false
+	}
+	return true
+}
+
 // refreshFromTVDB fetches TVDB data for titles that have a TVDB ID.
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 // For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
@@ -330,7 +340,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		}
 		result.Refreshed = true
 		s.syncTitleNames(ctx, title.ID, details.Names())
-		if title.CoverURL == nil && details.Image != "" {
+		if !s.hasValidCover(title) && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
@@ -404,8 +414,8 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 	}
 	result.Refreshed = true
 
-	// Update cover if missing
-	if title.CoverURL == nil && details.PosterPath != nil {
+	// Update cover if missing or file deleted on disk
+	if !s.hasValidCover(title) && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
@@ -454,7 +464,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 	}
 
 	// Fallback: AniList cover
-	if title.CoverURL == nil && title.AniListID != nil {
+	if !s.hasValidCover(title) && title.AniListID != nil {
 		s.covers.DownloadAniListCover(ctx, title)
 	}
 
@@ -498,8 +508,8 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		}
 	}
 
-	// Update cover if missing
-	if title.CoverURL == nil && details.PosterPath != nil {
+	// Update cover if missing or file deleted on disk
+	if !s.hasValidCover(title) && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
@@ -553,7 +563,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 	}
 
 	// Fallback: AniList cover
-	if title.CoverURL == nil && title.AniListID != nil {
+	if !s.hasValidCover(title) && title.AniListID != nil {
 		s.covers.DownloadAniListCover(ctx, title)
 	}
 
