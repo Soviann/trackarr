@@ -108,8 +108,16 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 		if newTotal < 0 {
 			newTotal = 0
 		}
-		_ = titlesW.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal})
+		update := repository.TitleUpdate{TotalWatchMinutes: &newTotal}
+		if !ep.Watched && title.Status == model.TitleStatusCompleted {
+			watching := model.TitleStatusWatching
+			update.Status = &watching
+		}
+		_ = titlesW.Update(ctx, titleID, update)
 		title.TotalWatchMinutes = newTotal
+		if update.Status != nil {
+			title.Status = *update.Status
+		}
 	}
 
 	var prompt *RatingPrompt

@@ -202,3 +202,41 @@ func TestMarkMovieWatched_NonAnimeMovie_NoPushEnqueued(t *testing.T) {
 
 	assert.Empty(t, collectPendingTasks(t, db))
 }
+
+func TestToggleEpisodeWatched_UnwatchCompletedSeriesRevertsToWatching(t *testing.T) {
+	libSvc, db := setupLibraryService(t)
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     true,
+			Year:        2024,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: "Completed Anime", Language: "en", IsPrimary: true}},
+	)
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	
+	ctx := context.Background()
+	// Pre-mark episode watched bypassing libSvc
+	_, err := db.Exec(`UPDATE episodes SET watched = 1 WHERE id = ?`, ep.ID)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE titles SET status = 'completed' WHERE id = ?`, titleID)
+	require.NoError(t, err)
+
+	// Now unwatch it using the library service
+	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		returnedTitle, toggledEp, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep.ID)
+		require.NoError(t, err)
+		assert.False(t, toggledEp.Watched)
+		assert.Equal(t, model.TitleStatusWatching, returnedTitle.Status, "returned title should reflect 'watching' status")
+		return nil
+	}))
+
+	// Verify in DB
+	row := db.QueryRow(`SELECT status FROM titles WHERE id = ?`, titleID)
+	var finalStatus model.TitleStatus
+	require.NoError(t, row.Scan(&finalStatus))
+	assert.Equal(t, model.TitleStatusWatching, finalStatus, "DB should reflect 'watching' status")
+}
