@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat'
-import { useRef } from 'preact/hooks'
+import { useRef, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import type { Title } from '../types'
 import { getName, formatSortCaption } from '../utils'
@@ -23,6 +23,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   const sortField = useTitleStore(st => st.sort.field)
   const sortCaption = formatSortCaption(title, sortField)
   const name = getName(title)
+  const [imgError, setImgError] = useState(false)
 
   // Track whether a long-press just fired so we can swallow the
   // synthetic click that the browser dispatches after pointer-up.
@@ -66,13 +67,14 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
       onClick={handleClick}
     >
       <div className={s.poster}>
-        {title.cover_url ? (
+        {title.cover_url && !imgError ? (
           <img
             src={`/api/covers/${title.cover_url}`}
             className={s.coverImage}
             loading="lazy"
             decoding="async"
             alt={name}
+            onError={() => setImgError(true)}
           />
         ) : (
           <CoverPlaceholder type={title.type} />

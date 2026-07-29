@@ -44,6 +44,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
   const sortField = useTitleStore(s => s.sort.field)
   const sortCaption = showSortCaption ? formatSortCaption(title, sortField) : null
   const [toggling, setToggling] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
 
@@ -72,13 +73,14 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
     <a href={routeTo.title(title.id)} onClick={(e) => { e.preventDefault(); route(routeTo.title(title.id)) }} className={s.card}>
       {/* Cover */}
       <div className={s.cover}>
-        {title.cover_url ? (
+        {title.cover_url && !imgError ? (
           <img
             src={`/api/covers/${title.cover_url}`}
             className={s.coverImage}
             loading="lazy"
             decoding="async"
             alt={name}
+            onError={() => setImgError(true)}
           />
         ) : (
           <CoverPlaceholder type={title.type} iconSize="20px" />
