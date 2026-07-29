@@ -103,7 +103,10 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		auth := handler.NewAuthHandler(cfg.JWTSecret, cfg.GoogleAllowedEmail, cfg.GoogleClientID, cfg.CookieSecure)
 		if cfg.DebugLogin && cfg.DebugLoginUser != "" && cfg.DebugLoginPassword != "" {
 			auth.WithDevLogin(cfg.DebugLoginUser, cfg.DebugLoginPassword)
-			r.With(authRateLimit).Post("/auth/dev", httputil.WrapHandler(auth.DevLogin))
+			r.Group(func(r chi.Router) {
+				r.Use(authRateLimit)
+				r.Post("/auth/dev", httputil.WrapHandler(auth.DevLogin))
+			})
 			log.Println("⚠️  Dev login enabled — POST /api/auth/dev")
 		}
 		r.With(authRateLimit).Post("/auth/google", httputil.WrapHandler(auth.GoogleCallback))
