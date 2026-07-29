@@ -93,7 +93,7 @@ Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/
 After UI/UX changes, verify in-browser via `cmux browser --surface surface:7 ...` against `http://localhost:8080` (prod is `surface:28`; already logged in, never open a new browser surface): confirm changed screens, check console for errors, navigate other pages for regressions. If broken: fix → re-verify. Never claim done without visual confirmation. The PWA service worker caches aggressively — append `?t=$(date +%s)` to the URL to bust the cache after a frontend change. Frontend changes need air to re-embed `frontend/dist`: touch `main.go` after `make test-front` to force a Go rebuild.
 
 ## Git
-- Trailer: `Co-Built-By: Claude (<random funny quip>)` — vary each time
+- Trailer: `Co-Built-By: [Model Name] (<random funny quip>)` — vary each time (e.g. Gemini, Claude)
 
 ## Recommended Plugins
 `cc-skills-golang`. Browser automation: cmux browser (no plugin needed; Chrome DevTools MCP is disabled).

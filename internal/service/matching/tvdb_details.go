@@ -329,4 +329,3 @@ func (c *TVDBClient) GetSeriesEpisodes(ctx context.Context, tvdbID int64) (map[i
 	}
 	return result, nil
 }
-

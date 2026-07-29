@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 	"sync"
 	"time"
 
@@ -272,14 +271,6 @@ func (s *BackgroundService) completeEpisodes(ctx context.Context, titleID int64)
 	}
 }
 
-func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if title.Type == model.TitleTypeMovie {
-		s.refreshMovieFromTMDB(ctx, title, result)
-	} else {
-		s.refreshSeriesFromTMDB(ctx, title, result)
-	}
-}
-
 // syncTitleNames backfills alternate-language names for a title from one or more
 // source maps (language -> name), inserting only entries not already stored.
 // Never deletes, so anime romaji and merged-season aliases survive a refresh.
@@ -325,414 +316,62 @@ func (s *BackgroundService) hasValidCover(title *repository.TitleLite) bool {
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 // For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
 // For titles without a TMDB ID, overview and genres are also persisted from TVDB.
-func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if title.TVDBID == nil {
-		return
-	}
-	tvdbID := *title.TVDBID
 
-	update := repository.TitleUpdate{}
-	if title.Type == model.TitleTypeMovie {
-		details, err := s.tvdb.GetMovieDetails(ctx, tvdbID)
-		if err != nil {
-			log.Printf("background tvdb movie refresh %d: %v", title.ID, err)
-			return
-		}
-		result.Refreshed = true
-		s.syncTitleNames(ctx, title.ID, details.Names())
-		if !s.hasValidCover(title) && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
-				update.CoverURL = &filename
-			}
-		}
-		if title.TMDBID == nil {
-			if details.Overview != "" {
-				ov := details.Overview
-				update.Overview = &ov
-			}
-			var genreList []string
-			for _, g := range details.Genres {
-				if g.Name != "" {
-					genreList = append(genreList, g.Name)
-				}
-			}
-			if len(genreList) > 0 {
-				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
-				}); err != nil {
-					log.Printf("background: save tvdb genres for title %d: %v", title.ID, err)
-				}
-			}
-		}
-	} else {
-		details, err := s.tvdb.GetSeriesDetails(ctx, tvdbID)
-		if err != nil {
-			log.Printf("background tvdb series refresh %d: %v", title.ID, err)
-			return
-		}
-		result.Refreshed = true
-		s.syncTitleNames(ctx, title.ID, details.Names())
-		if title.CoverURL == nil && details.Image != "" {
-			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
-				update.CoverURL = &filename
-			}
-		}
-		if title.TMDBID == nil {
-			if details.Overview != "" {
-				ov := details.Overview
-				update.Overview = &ov
-			}
-			var genreList []string
-			for _, g := range details.Genres {
-				if g.Name != "" {
-					genreList = append(genreList, g.Name)
-				}
-			}
-			if len(genreList) > 0 {
-				if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-					return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
-				}); err != nil {
-					log.Printf("background: save tvdb genres for title %d: %v", title.ID, err)
-				}
-			}
-		}
-	}
-	if update.CoverURL != nil || update.Overview != nil {
-		logTitleUpdate(title.ID, "tvdb refresh", s.updateTitle(ctx, title.ID, update))
-		if update.CoverURL != nil {
-			s.covers.ExtractAndStoreAccent(ctx, title.ID, *update.CoverURL)
-		}
-	}
-}
+// Update cover if missing or file deleted on disk
 
-func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
-	if err != nil {
-		result.Error = err
-		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
-		return
-	}
-	result.Refreshed = true
+// Update metadata from TMDB details
 
-	// Update cover if missing or file deleted on disk
-	if !s.hasValidCover(title) && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
-		if err == nil {
-			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
-			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
-			title.CoverURL = &coverPath
-		}
-	}
+// Backfill multilingual names (en/fr) — re-syncs translations missing on
+// titles matched before translations were captured. Additive, so the
+// anime romaji name set by matching survives.
 
-	// Update metadata from TMDB details
-	genres, credits, runtime, rating := matching.ExtractMovieMetadata(details)
-	overview := details.Overview
-	metaUpdate := repository.TitleUpdate{
-		Overview: &overview,
-		Credits:  &credits,
-	}
-	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
-	metaUpdate.WatchProviders = &watchProviders
-	if runtime != nil {
-		metaUpdate.Runtime = runtime
-	}
-	if rating != nil {
-		metaUpdate.TMDBRating = rating
-	}
-	if oc := matching.ExtractOriginCountry(details.OriginCountry); oc != nil {
-		metaUpdate.OriginCountry = oc
-	}
-	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
+// Persist genres to title_genres table
 
-	// Backfill multilingual names (en/fr) — re-syncs translations missing on
-	// titles matched before translations were captured. Additive, so the
-	// anime romaji name set by matching survives.
-	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "movie"); err == nil {
-		s.syncTitleNames(ctx, title.ID, tmdbNames)
-	}
+// Fallback: AniList cover
 
-	// Persist genres to title_genres table
-	if genres != "" {
-		var genreList []string
-		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-				return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
-			}); err != nil {
-				log.Printf("background: save genres for title %d: %v", title.ID, err)
-			}
-		}
-	}
+// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
 
-	// Fallback: AniList cover
-	if !s.hasValidCover(title) && title.AniListID != nil {
-		s.covers.DownloadAniListCover(ctx, title)
-	}
+// Detect series status change
 
-	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
-	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-		tvdbID := details.ExternalIDs.TVDBID
-		logTitleUpdate(title.ID, "movie tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
-		title.TVDBID = &tvdbID
-	}
-}
+// Update cover if missing or file deleted on disk
 
-func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
-	if err != nil {
-		result.Error = err
-		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
-		return
-	}
-	result.Refreshed = true
+// Update metadata from TMDB details
 
-	// Detect series status change
-	newStatus := mapTMDBSeriesStatus(details)
-	if newStatus != nil && (title.SeriesStatus == nil || *newStatus != *title.SeriesStatus) {
-		result.StatusChanged = true
-		if title.SeriesStatus != nil {
-			result.OldStatus = *title.SeriesStatus
-		}
-		result.NewStatus = *newStatus
-		logTitleUpdate(title.ID, "series status", s.updateTitle(ctx, title.ID, repository.TitleUpdate{SeriesStatus: newStatus}))
-		title.SeriesStatus = newStatus
+// Populate next_air_date and next_air_episode from TMDB next_episode_to_air
 
-		if (*newStatus == model.SeriesStatusEnded || *newStatus == model.SeriesStatusCancelled) && IsNotificationEnabled(s.settings, NotifSeriesEnded) {
-			if err := s.push.SendNotification(
-				ctx,
-				"PlexTracker",
-				fmt.Sprintf("%s — Series ended", title.PrimaryName),
-				fmt.Sprintf("/title/%d", title.ID),
-			); err != nil {
-				log.Printf("series-ended push failed for title %d: %v", title.ID, err)
-			}
-		}
-	}
+// Backfill multilingual names (en/fr) — see refreshMovieFromTMDB.
 
-	// Update cover if missing or file deleted on disk
-	if !s.hasValidCover(title) && details.PosterPath != nil {
-		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
-		if err == nil {
-			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
-			s.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
-			title.CoverURL = &coverPath
-		}
-	}
+// Persist genres to title_genres table
 
-	// Update metadata from TMDB details
-	genres, credits, runtime, rating := matching.ExtractTVMetadata(details)
-	overview := details.Overview
-	metaUpdate := repository.TitleUpdate{
-		Overview: &overview,
-		Credits:  &credits,
-	}
-	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
-	metaUpdate.WatchProviders = &watchProviders
-	if runtime != nil {
-		metaUpdate.Runtime = runtime
-	}
-	if rating != nil {
-		metaUpdate.TMDBRating = rating
-	}
-	// Populate next_air_date and next_air_episode from TMDB next_episode_to_air
-	if details.NextEpisodeToAir != nil && details.NextEpisodeToAir.AirDate != "" {
-		airDate := details.NextEpisodeToAir.AirDate
-		airEp := fmt.Sprintf("S%d E%d", details.NextEpisodeToAir.SeasonNumber, details.NextEpisodeToAir.EpisodeNumber)
-		metaUpdate.NextAirDate = &airDate
-		metaUpdate.NextAirEpisode = &airEp
-	}
-	if oc := matching.ExtractOriginCountry(details.OriginCountry); oc != nil {
-		metaUpdate.OriginCountry = oc
-	}
-	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
+// Fallback: AniList cover
 
-	// Backfill multilingual names (en/fr) — see refreshMovieFromTMDB.
-	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
-		s.syncTitleNames(ctx, title.ID, tmdbNames)
-	}
+// Backfill TVDB ID early if available from TMDB external IDs
 
-	// Persist genres to title_genres table
-	if genres != "" {
-		var genreList []string
-		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
-			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-				return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
-			}); err != nil {
-				log.Printf("background: save genres for title %d: %v", title.ID, err)
-			}
-		}
-	}
+// Sync seasons and episodes — prefer TVDB if available
 
-	// Fallback: AniList cover
-	if !s.hasValidCover(title) && title.AniListID != nil {
-		s.covers.DownloadAniListCover(ctx, title)
-	}
+// Fallback: sync seasons and episodes from TMDB
 
-	// Backfill TVDB ID early if available from TMDB external IDs
-	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
-		tvdbID := details.ExternalIDs.TVDBID
-		logTitleUpdate(title.ID, "series tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
-		title.TVDBID = &tvdbID
-	}
+// Skip specials
 
-	// Sync seasons and episodes — prefer TVDB if available
-	syncedFromTVDB := false
-	if s.tvdb != nil && title.TVDBID != nil {
-		syncedFromTVDB = s.refreshSeriesFromTVDB(ctx, title, result)
-	}
-
-	if !syncedFromTVDB {
-		// Fallback: sync seasons and episodes from TMDB
-		for _, tmdbSeason := range details.Seasons {
-			if err := ctx.Err(); err != nil {
-				return
-			}
-
-			if tmdbSeason.SeasonNumber == 0 {
-				continue // Skip specials
-			}
-
-			// Fetch individual episodes outside the write transaction to keep
-			// TMDB HTTP latency off the sole write connection.
-			tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
-			if err != nil {
-				continue
-			}
-
-			entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
-			for i, ep := range tmdbEpisodes {
-				entries[i] = repository.EpisodeUpsert{
-					EpisodeNumber: ep.EpisodeNumber,
-					Name:          ep.Name,
-					AirDate:       ep.AirDate,
-				}
-			}
-
-			_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-				season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
-				if err != nil {
-					return err
-				}
-				return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
-			})
-
-			_ = s.limiter.Wait(ctx)
-		}
-	}
-}
+// Fetch individual episodes outside the write transaction to keep
+// TMDB HTTP latency off the sole write connection.
 
 // refreshSeriesFromTVDB syncs season and episode listings from TVDB.
 // Returns true if TVDB season sync succeeded.
-func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) bool {
-	if s.tvdb == nil || title.TVDBID == nil {
-		return false
-	}
-	tvdbID := *title.TVDBID
 
-	episodesBySeason, err := s.tvdb.GetSeriesEpisodes(ctx, tvdbID)
-	if err != nil {
-		log.Printf("background tvdb series episodes refresh %d: %v", title.ID, err)
-		return false
-	}
-	result.Refreshed = true
-
-	for seasonNum, episodes := range episodesBySeason {
-		if err := ctx.Err(); err != nil {
-			return true
-		}
-		if seasonNum == 0 {
-			continue // Skip specials
-		}
-
-		entries := make([]repository.EpisodeUpsert, len(episodes))
-		for i, ep := range episodes {
-			entries[i] = repository.EpisodeUpsert{
-				EpisodeNumber: ep.Number,
-				Name:          ep.Name,
-				AirDate:       ep.Aired,
-			}
-		}
-
-		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, seasonNum, len(episodes))
-			if err != nil {
-				return err
-			}
-			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
-		})
-	}
-
-	return true
-}
+// Skip specials
 
 // refreshFromAniList sources a title's metadata (names, synopsis, genres,
 // rating, runtime, cover) from AniList. Used for titles that have an AniList ID
 // but no TMDB — niche anime absent from TMDB. AniList is then the authority, so
 // it OVERWRITES existing values (which are often stale, left over from a removed
 // wrong TMDB match). Best-effort: each piece is logged and skipped on failure.
-func (s *BackgroundService) refreshFromAniList(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if s.anilist == nil || title.AniListID == nil {
-		return
-	}
-	details, err := s.anilist.GetAnimeDetails(ctx, *title.AniListID)
-	if err != nil {
-		result.Error = err
-		return
-	}
-	result.Refreshed = true
 
-	// Names: English primary (fall back to romaji), romaji as alternate.
-	primary := details.EnglishTitle
-	if primary == "" {
-		primary = details.RomajiTitle
-	}
-	var names []model.TitleName
-	if primary != "" {
-		names = append(names, model.TitleName{Name: primary, Language: "en", IsPrimary: true})
-	}
-	if details.RomajiTitle != "" && details.RomajiTitle != primary {
-		names = append(names, model.TitleName{Name: details.RomajiTitle, Language: "x-romaji"})
-	}
-	if len(names) > 0 {
-		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			return repository.NewTitleWriter(tx).ReplaceNames(ctx, title.ID, names)
-		}); err != nil {
-			log.Printf("background: anilist names for title %d: %v", title.ID, err)
-		} else {
-			title.PrimaryName = primary
-			result.TitleName = primary
-		}
-	}
+// Names: English primary (fall back to romaji), romaji as alternate.
 
-	update := repository.TitleUpdate{}
-	if details.Description != "" {
-		update.Overview = &details.Description
-	}
-	if details.AverageScore != nil {
-		update.AniListRating = details.AverageScore
-	}
-	if details.Duration != nil {
-		update.Runtime = details.Duration
-	}
-	if details.CountryOfOrigin != nil {
-		update.OriginCountry = details.CountryOfOrigin
-	}
-	logTitleUpdate(title.ID, "anilist metadata", s.updateTitle(ctx, title.ID, update))
-
-	if len(details.Genres) > 0 {
-		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, details.Genres)
-		}); err != nil {
-			log.Printf("background: anilist genres for title %d: %v", title.ID, err)
-		}
-	}
-
-	// Cover from AniList when missing. SetExternalIDs clears the stale cover when
-	// the TMDB/TVDB sources are removed, so this fills it on the next refresh
-	// without re-downloading every cycle.
-	if title.CoverURL == nil {
-		s.covers.DownloadAniListCover(ctx, title)
-	}
-}
+// Cover from AniList when missing. SetExternalIDs clears the stale cover when
+// the TMDB/TVDB sources are removed, so this fills it on the next refresh
+// without re-downloading every cycle.
 
 // refreshAniListSeasonScores walks every AniList part of every season of the
 // title and stores the current score, episode count, and start date on each
@@ -745,69 +384,6 @@ func (s *BackgroundService) refreshFromAniList(ctx context.Context, title *repos
 // AniList traffic so the admin reconnect banner is the loudest signal until
 // the user acts on it. Errors are logged per mapping; one bad season cannot
 // break the others.
-func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if invalid, _ := s.settings.Get(settingAniListTokenInvalid); invalid == "true" {
-		return
-	}
-
-	partsBySeason, err := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, providerAniList)
-	if err != nil {
-		log.Printf("background anilist score: list parts for title %d: %v", title.ID, err)
-		return
-	}
-	if len(partsBySeason) == 0 {
-		return
-	}
-
-	for seasonID, parts := range partsBySeason {
-		for _, part := range parts {
-			if err := ctx.Err(); err != nil {
-				return
-			}
-			anilistID, err := strconv.ParseInt(part.ExternalID, 10, 64)
-			if err != nil {
-				log.Printf("background anilist score: invalid mapping %q for season %d: %v", part.ExternalID, seasonID, err)
-				continue
-			}
-			details, err := s.anilist.GetAnimeDetails(ctx, anilistID)
-			if err != nil {
-				log.Printf("background anilist score: fetch %d: %v", anilistID, err)
-				_ = s.limiter.Wait(ctx)
-				continue
-			}
-			result.Refreshed = true
-			if err := s.seasonExtIDs.UpdatePartMeta(
-				ctx, seasonID, providerAniList, part.ExternalID,
-				details.AverageScore, details.Episodes, details.StartDate); err != nil {
-				log.Printf("background anilist score: persist season %d part %s: %v", seasonID, part.ExternalID, err)
-			}
-			_ = s.limiter.Wait(ctx)
-		}
-	}
-}
-
-func (s *BackgroundService) backfillAniListID(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if s.anilist == nil || title.PrimaryName == "" {
-		return
-	}
-	results, err := s.anilist.SearchAnime(ctx, title.PrimaryName)
-	if err != nil || len(results) == 0 {
-		return
-	}
-	anilistID := results[0].ID
-	result.Refreshed = true
-	logTitleUpdate(title.ID, "anilist_id backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{AniListID: &anilistID}))
-	title.AniListID = &anilistID
-
-	partsBySeason, err := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, providerAniList)
-	if err == nil && len(partsBySeason) == 0 {
-		var seasonID int64
-		err := s.writeDB.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = 1`, title.ID).Scan(&seasonID)
-		if err == nil {
-			_ = s.seasonExtIDs.Add(ctx, seasonID, providerAniList, strconv.FormatInt(anilistID, 10))
-		}
-	}
-}
 
 func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 	var status model.SeriesStatus

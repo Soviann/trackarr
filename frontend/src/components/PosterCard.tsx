@@ -5,7 +5,7 @@ import type { Title } from '../types'
 import { getName, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
-import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import { CoverPlaceholder } from './CoverPlaceholder'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 import { useLongPress } from '../hooks/useLongPress'
@@ -65,11 +65,18 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
       onPointerDown={handlePointerDown}
       onClick={handleClick}
     >
-      <div
-        className={s.poster}
-        style={{ background: coverBackground(title.cover_url, title.type) }}
-      >
-        {!title.cover_url && <CoverPlaceholder type={title.type} />}
+      <div className={s.poster}>
+        {title.cover_url ? (
+          <img
+            src={`/api/covers/${title.cover_url}`}
+            className={s.coverImage}
+            loading="lazy"
+            decoding="async"
+            alt={name}
+          />
+        ) : (
+          <CoverPlaceholder type={title.type} />
+        )}
         <div className={`${s.typeBadge}${selecting ? ` ${s.typeBadgeShifted}` : ''}`}>
           <TypeBadge type={title.type} />
         </div>
