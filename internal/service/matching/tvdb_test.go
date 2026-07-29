@@ -120,6 +120,22 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 		_, _ = w.Write([]byte("fake-tvdb-image"))
 	})
 
+	// Series episodes
+	mux.HandleFunc("/series/81189/episodes/official", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": "success",
+			"data": map[string]any{
+				"episodes": []map[string]any{
+					{"id": 101, "seriesId": 81189, "name": "Pilot", "aired": "2008-01-20", "number": 1, "seasonNumber": 1},
+					{"id": 102, "seriesId": 81189, "name": "Cat's in the Bag...", "aired": "2008-01-27", "number": 2, "seasonNumber": 1},
+				},
+			},
+			"links": map[string]any{
+				"next": nil,
+			},
+		})
+	})
+
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
@@ -127,6 +143,18 @@ func newTestTVDBServer(t *testing.T) (*httptest.Server, *TVDBClient) {
 	client.SetBaseURL(server.URL)
 
 	return server, client
+}
+
+func TestTVDBGetSeriesEpisodes(t *testing.T) {
+	_, client := newTestTVDBServer(t)
+	require.NoError(t, client.Login(context.Background()))
+
+	episodes, err := client.GetSeriesEpisodes(context.Background(), 81189)
+	require.NoError(t, err)
+	require.Contains(t, episodes, 1)
+	assert.Len(t, episodes[1], 2)
+	assert.Equal(t, "Pilot", episodes[1][0].Name)
+	assert.Equal(t, 1, episodes[1][0].Number)
 }
 
 func TestTVDBLogin(t *testing.T) {

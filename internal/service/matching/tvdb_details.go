@@ -281,3 +281,52 @@ func extractMovieOverview(d *tvdbMovieDetail) string {
 	}
 	return d.Overview
 }
+
+// TVDBEpisode holds episode information from TVDB v4.
+type TVDBEpisode struct {
+	ID           int64  `json:"id"`
+	SeriesID     int64  `json:"seriesId"`
+	Name         string `json:"name"`
+	Aired        string `json:"aired"`
+	Number       int    `json:"number"`
+	SeasonNumber int    `json:"seasonNumber"`
+}
+
+type tvdbSeriesEpisodesResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		Episodes []TVDBEpisode `json:"episodes"`
+	} `json:"data"`
+	Links struct {
+		Next *string `json:"next"`
+	} `json:"links"`
+}
+
+// GetSeriesEpisodes retrieves official aired-order episodes for a series from TVDB v4.
+// Returns episodes grouped by season_number.
+func (c *TVDBClient) GetSeriesEpisodes(ctx context.Context, tvdbID int64) (map[int][]TVDBEpisode, error) {
+	result := make(map[int][]TVDBEpisode)
+	page := 0
+	for {
+		params := url.Values{"page": {strconv.Itoa(page)}}
+		var resp tvdbSeriesEpisodesResponse
+		if err := c.get(ctx, fmt.Sprintf("/series/%d/episodes/official", tvdbID), params, &resp); err != nil {
+			return nil, fmt.Errorf("tvdb series episodes (id=%d page=%d): %w", tvdbID, page, err)
+		}
+		if len(resp.Data.Episodes) == 0 {
+			break
+		}
+		for _, ep := range resp.Data.Episodes {
+			result[ep.SeasonNumber] = append(result[ep.SeasonNumber], ep)
+		}
+		if resp.Links.Next == nil || *resp.Links.Next == "" {
+			break
+		}
+		page++
+		if page > 20 { // Safety cap
+			break
+		}
+	}
+	return result, nil
+}
+

@@ -317,7 +317,7 @@ Une fois par jour, PlexTracker parcourt automatiquement la bibliothèque pour ma
 | Action | Détail |
 |---|---|
 | **Statut de la série** | Vérifie sur TMDB/AniList si le statut a changé (ex: en cours → terminée, nouvelle saison annoncée) |
-| **Nouveaux épisodes** | Récupère les épisodes récemment ajoutés sur TMDB/AniList et les crée dans la base |
+| **Nouveaux épisodes** | Récupère les épisodes récemment ajoutés sur TVDB (prioritaire si disponible), TMDB ou AniList et les crée dans la base |
 | **Couvertures** | Télécharge les images de couverture manquantes depuis TMDB |
 | **Noms multilingues** | Récupère les titres en français, anglais, romaji (AniList) s'ils manquent |
 | **Complétion automatique** | Si une série est terminée/annulée et que tous les épisodes sont vus → passe en "Completed" |

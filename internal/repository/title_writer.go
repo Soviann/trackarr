@@ -320,6 +320,11 @@ func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []m
 // moved/merged dest season is stamped with that AniList mapping in
 // season_external_ids (first writer wins — existing dest mappings are kept).
 func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonOffset int, aniListID int64) error {
+	var destIsAnime, sourceIsAnime bool
+	_ = w.tx.QueryRowContext(ctx, `SELECT is_anime FROM titles WHERE id = ?`, destID).Scan(&destIsAnime)
+	_ = w.tx.QueryRowContext(ctx, `SELECT is_anime FROM titles WHERE id = ?`, sourceID).Scan(&sourceIsAnime)
+	isAnime := destIsAnime || sourceIsAnime
+
 	// 1. Move seasons. Guards against UNIQUE(title_id, season_number) by
 	// merging colliding seasons instead of re-parenting blindly.
 	rows, err := w.tx.QueryContext(ctx, `SELECT id, season_number FROM seasons WHERE title_id = ?`, sourceID)
@@ -374,9 +379,25 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 			return fmt.Errorf("check season collision %d: %w", m.id, err)
 		default:
 			// Collision: merge episodes into the existing target season.
-			// UPDATE OR IGNORE skips episodes whose number already exists in the target season.
-			if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
-				return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+			if isAnime {
+				var maxTargetEp int
+				if err := w.tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(episode), 0) FROM episodes WHERE season_id = ?`, targetSeasonID).Scan(&maxTargetEp); err != nil {
+					return fmt.Errorf("get target max episode: %w", err)
+				}
+				if maxTargetEp > 0 {
+					if _, err := w.tx.ExecContext(ctx, `UPDATE episodes SET episode = episode + ?, season_id = ? WHERE season_id = ?`, maxTargetEp, targetSeasonID, m.id); err != nil {
+						return fmt.Errorf("offset and move episodes into season %d: %w", targetSeasonID, err)
+					}
+				} else {
+					if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
+						return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+					}
+				}
+			} else {
+				// UPDATE OR IGNORE skips episodes whose number already exists in the target season.
+				if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
+					return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+				}
 			}
 			// Remaining source episodes are duplicates; their watch_events.episode_id
 			// gets set to NULL via ON DELETE SET NULL so history is kept.

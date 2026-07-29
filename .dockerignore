@@ -41,6 +41,7 @@ docker-compose.dev.yml
 docs
 CHANGELOG.md
 CLAUDE.md
+AGENTS.md
 README.md
 *.md
 

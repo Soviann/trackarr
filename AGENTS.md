@@ -1,4 +1,4 @@
-# CLAUDE.md — Mandatory rules
+# AGENTS.md — Mandatory rules
 
 <!-- TEMPLATE:START — managed by sync-template-config.
      Cross-project rules only: approach, plans process, quality, token optimization,
@@ -9,8 +9,8 @@
 
 ## Approach
 - Surface uncertainty: ask when unsure, name competing interpretations, flag simpler alternatives instead of picking silently. Read only files you'll edit.
-- Key context: CLAUDE.md, MEMORY.md, `docs/patterns.md` — update `docs/patterns.md` with anything future sessions would need Explore/Grep to rediscover.
-- CLAUDE.md and `docs/patterns.md` must be optimized for LLM use and token efficiency, without loss of information/instruction.
+- Key context: AGENTS.md, MEMORY.md, `docs/patterns.md` — update `docs/patterns.md` with anything future sessions would need Explore/Grep to rediscover.
+- AGENTS.md and `docs/patterns.md` must be optimized for LLM use and token efficiency, without loss of information/instruction.
 - Complex tasks: plan → approval → implement. Large changes: verifiable chunks.
 - Act on user instructions directly — no exploratory glob/grep when user names the target.
 - Don't verify existence of items already known from plan or memory.
@@ -43,7 +43,7 @@
 - Merges: `--no-ff`
 
 ## Language
-LLM-destined files (CLAUDE.md, SKILL.md, plan/spec files, agent files): English. Everything else (commits, docs/comments, user-facing strings): per project preference (see PROJECT block).
+LLM-destined files (AGENTS.md, SKILL.md, plan/spec files, agent files): English. Everything else (commits, docs/comments, user-facing strings): per project preference (see PROJECT block).
 
 ## Recommended Plugins
 `soviann-tools/*` (commit-conventions, parsing-decisions, phased-development, session-continuity, soviann-conventions) — default workflow. Plus: `context7`, `superpowers`, `pr-review-toolkit`, `hookify`, `code-simplifier`.

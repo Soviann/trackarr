@@ -8,7 +8,7 @@ if echo "$STAGED" | grep -q "^docs/plans/"; then
   echo "Blocked: docs/plans/ staged files detected:" >&2
   echo "$STAGED" | grep "^docs/plans/" >&2
   echo "" >&2
-  echo "CLAUDE.md forbids committing plans. Run: git reset docs/plans/" >&2
+  echo "AGENTS.md forbids committing plans. Run: git reset docs/plans/" >&2
   exit 2
 fi
 

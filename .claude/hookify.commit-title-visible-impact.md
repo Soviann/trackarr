@@ -8,7 +8,7 @@ action: block
 
 **STOP — Review your commit title.**
 
-The title MUST describe **visible impact**, NOT implementation details. See CLAUDE.md § Git for rules and examples.
+The title MUST describe **visible impact**, NOT implementation details. See AGENTS.md § Git for rules and examples.
 
 Self-check:
 - Mentions a class/method/variable name? → REWRITE

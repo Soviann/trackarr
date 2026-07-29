@@ -1061,6 +1061,51 @@ func TestTitleRepository_Merge_AppendsAniListPartOnCollision(t *testing.T) {
 	assert.ElementsMatch(t, []string{"100", "200"}, ids)
 }
 
+func TestTitleRepository_Merge_AnimeEpisodeOffsetOnCollision(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	// Dest is an anime series with S1 having 13 episodes (1..13).
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest Anime", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+	for ep := 1; ep <= 13; ep++ {
+		_, err := db.ExecContext(ctx, `INSERT INTO episodes (season_id, episode) VALUES (?, ?)`, destS1, ep)
+		require.NoError(t, err)
+	}
+
+	// Source is an anime series with S1 having 13 episodes (1..13).
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source Anime", Language: "en", IsPrimary: true}})
+	sourceS1 := testutil.InsertSeason(t, db, sourceID, 1)
+	for ep := 1; ep <= 13; ep++ {
+		_, err := db.ExecContext(ctx, `INSERT INTO episodes (season_id, episode) VALUES (?, ?)`, sourceS1, ep)
+		require.NoError(t, err)
+	}
+
+	// Merge source into dest at offset 0 (colliding on S1).
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 0, 159322)
+
+	// Dest S1 should now have 26 episodes (1..26).
+	var count int
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM episodes WHERE season_id = ?`, destS1).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 26, count, "episodes from source should be offset and appended to dest season")
+
+	var maxEp int
+	err = db.QueryRowContext(ctx, `SELECT MAX(episode) FROM episodes WHERE season_id = ?`, destS1).Scan(&maxEp)
+	require.NoError(t, err)
+	assert.Equal(t, 26, maxEp)
+}
+
 func TestTitleRepository_Merge_DeduplicatesAniListPartOnCollision(t *testing.T) {
 	db := setupTestDB(t)
 	ctx := context.Background()

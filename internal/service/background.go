@@ -567,51 +567,101 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		s.covers.DownloadAniListCover(ctx, title)
 	}
 
-	// Sync seasons and episodes — season + its episodes share one transaction
-	// so a crash between season upsert and episode upsert cannot leave
-	// total_episodes out of sync with the actual episode rows.
-	for _, tmdbSeason := range details.Seasons {
-		if err := ctx.Err(); err != nil {
-			return
-		}
-
-		if tmdbSeason.SeasonNumber == 0 {
-			continue // Skip specials
-		}
-
-		// Fetch individual episodes outside the write transaction to keep
-		// TMDB HTTP latency off the sole write connection.
-		tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
-		if err != nil {
-			continue
-		}
-
-		entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
-		for i, ep := range tmdbEpisodes {
-			entries[i] = repository.EpisodeUpsert{
-				EpisodeNumber: ep.EpisodeNumber,
-				Name:          ep.Name,
-				AirDate:       ep.AirDate,
-			}
-		}
-
-		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
-			if err != nil {
-				return err
-			}
-			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
-		})
-
-		_ = s.limiter.Wait(ctx)
-	}
-
-	// Cross-reference TVDB ID if not yet stored (avoids a duplicate TMDB fetch in refreshFromTVDB)
+	// Backfill TVDB ID early if available from TMDB external IDs
 	if title.TVDBID == nil && details.ExternalIDs != nil && details.ExternalIDs.TVDBID != 0 {
 		tvdbID := details.ExternalIDs.TVDBID
 		logTitleUpdate(title.ID, "series tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
+
+	// Sync seasons and episodes — prefer TVDB if available
+	syncedFromTVDB := false
+	if s.tvdb != nil && title.TVDBID != nil {
+		syncedFromTVDB = s.refreshSeriesFromTVDB(ctx, title, result)
+	}
+
+	if !syncedFromTVDB {
+		// Fallback: sync seasons and episodes from TMDB
+		for _, tmdbSeason := range details.Seasons {
+			if err := ctx.Err(); err != nil {
+				return
+			}
+
+			if tmdbSeason.SeasonNumber == 0 {
+				continue // Skip specials
+			}
+
+			// Fetch individual episodes outside the write transaction to keep
+			// TMDB HTTP latency off the sole write connection.
+			tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
+			if err != nil {
+				continue
+			}
+
+			entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
+			for i, ep := range tmdbEpisodes {
+				entries[i] = repository.EpisodeUpsert{
+					EpisodeNumber: ep.EpisodeNumber,
+					Name:          ep.Name,
+					AirDate:       ep.AirDate,
+				}
+			}
+
+			_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+				season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
+				if err != nil {
+					return err
+				}
+				return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+			})
+
+			_ = s.limiter.Wait(ctx)
+		}
+	}
+}
+
+// refreshSeriesFromTVDB syncs season and episode listings from TVDB.
+// Returns true if TVDB season sync succeeded.
+func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) bool {
+	if s.tvdb == nil || title.TVDBID == nil {
+		return false
+	}
+	tvdbID := *title.TVDBID
+
+	episodesBySeason, err := s.tvdb.GetSeriesEpisodes(ctx, tvdbID)
+	if err != nil {
+		log.Printf("background tvdb series episodes refresh %d: %v", title.ID, err)
+		return false
+	}
+	result.Refreshed = true
+
+	for seasonNum, episodes := range episodesBySeason {
+		if err := ctx.Err(); err != nil {
+			return true
+		}
+		if seasonNum == 0 {
+			continue // Skip specials
+		}
+
+		entries := make([]repository.EpisodeUpsert, len(episodes))
+		for i, ep := range episodes {
+			entries[i] = repository.EpisodeUpsert{
+				EpisodeNumber: ep.Number,
+				Name:          ep.Name,
+				AirDate:       ep.Aired,
+			}
+		}
+
+		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, seasonNum, len(episodes))
+			if err != nil {
+				return err
+			}
+			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+		})
+	}
+
+	return true
 }
 
 // refreshFromAniList sources a title's metadata (names, synopsis, genres,
