@@ -146,7 +146,7 @@ func (s *BackgroundService) refreshAniListSeasonScores(ctx context.Context, titl
 }
 
 func (s *BackgroundService) backfillAniListID(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
-	if s.anilist == nil || title.PrimaryName == "" {
+	if s.anilist == nil || title.PrimaryName == "" || !title.IsAnime {
 		return
 	}
 	results, err := s.anilist.SearchAnime(ctx, title.PrimaryName)

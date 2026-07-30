@@ -1,0 +1,3 @@
+-- This migration drops incorrect anilist_id data which cannot be safely restored
+-- without querying external APIs again.
+-- Down migration is intentionally left blank.
