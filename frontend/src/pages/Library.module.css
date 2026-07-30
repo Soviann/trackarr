@@ -208,7 +208,7 @@
 .selectAllBtn { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; }
 .selectCount { font-size: 12px; color: var(--ink-dim); }
 .cancelBtn { font-size: 12px; font-weight: 600; color: var(--ink-dim); background: none; border: none; cursor: pointer; }
-.actionBar { position: fixed; bottom: 56px; left: 0; right: 0; background: var(--bg-elev2); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+.actionBar { position: fixed; bottom: calc(56px + env(safe-area-inset-bottom)); left: 0; right: 0; background: var(--bg-elev2); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 110; }
 .actionBarLabel { flex: 1; font-size: 12px; color: var(--ink-dim); }
 .actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: none; cursor: pointer; }
 .actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--status-crit) 20%, transparent); color: var(--status-crit); border: none; cursor: pointer; }
