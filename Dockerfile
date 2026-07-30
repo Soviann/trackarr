@@ -17,7 +17,7 @@ RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
 
 # Runtime
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates gosu && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y ca-certificates gosu curl && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /bin/false appuser \
     && mkdir -p /data && chown appuser:appuser /data
 COPY --from=backend /app/plextracker /usr/local/bin/plextracker

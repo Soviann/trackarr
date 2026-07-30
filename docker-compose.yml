@@ -14,3 +14,9 @@ services:
     environment:
       - DATA_DIR=/data
       - DISABLE_BACKGROUND_TASKS=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
