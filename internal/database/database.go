@@ -126,6 +126,17 @@ func Migrate(db *sql.DB) error {
 	}
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		// Auto-recover from dirty migration 34 caused by bad CTE syntax
+		if err.Error() == "Dirty database version 34. Fix and force version." {
+			log.Printf("database: dirty state detected, forcing previous version (33) and retrying...")
+			if err := m.Force(33); err != nil {
+				return fmt.Errorf("force migration: %w", err)
+			}
+			if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+				return fmt.Errorf("retry run migrations: %w", err)
+			}
+			return nil
+		}
 		return fmt.Errorf("run migrations: %w", err)
 	}
 
