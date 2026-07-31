@@ -319,11 +319,18 @@ func (w *TitleWriter) ReplaceNames(ctx context.Context, titleID int64, names []m
 // a partial merge cannot leak to readers. When aniListID is non-zero, the
 // moved/merged dest season is stamped with that AniList mapping in
 // season_external_ids (first writer wins — existing dest mappings are kept).
-func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonOffset int, aniListID int64) error {
+func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonOffset int, destAniListID, sourceAniListID int64) error {
 	var destIsAnime, sourceIsAnime bool
 	_ = w.tx.QueryRowContext(ctx, `SELECT is_anime FROM titles WHERE id = ?`, destID).Scan(&destIsAnime)
 	_ = w.tx.QueryRowContext(ctx, `SELECT is_anime FROM titles WHERE id = ?`, sourceID).Scan(&sourceIsAnime)
 	isAnime := destIsAnime || sourceIsAnime
+
+	if destAniListID != 0 {
+		var destS1ID int64
+		if err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = 1`, destID).Scan(&destS1ID); err == nil {
+			_ = NewSeasonExternalIDWriter(w.tx).Stamp(ctx, destS1ID, ProviderAniList, strconv.FormatInt(destAniListID, 10))
+		}
+	}
 
 	// 1. Move seasons. Guards against UNIQUE(title_id, season_number) by
 	// merging colliding seasons instead of re-parenting blindly.
@@ -410,13 +417,13 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 			finalSeasonID = targetSeasonID
 		}
 
-		// Append the source's AniList id as a part on the dest season once its
-		// ID is known. Stamp does ON CONFLICT(season_id,provider,external_id) DO
-		// NOTHING: a different incoming id coexists as a new part (split-cour
-		// merges keep both entries), the same id is a no-op, and the dest's
-		// existing parts are never clobbered.
-		if aniListID != 0 {
-			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(aniListID, 10)); err != nil {
+		// Stamp the moved season with sourceAniListID (or destAniListID fallback).
+		seasonAniListID := sourceAniListID
+		if seasonAniListID == 0 {
+			seasonAniListID = destAniListID
+		}
+		if seasonAniListID != 0 {
+			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(seasonAniListID, 10)); err != nil {
 				return err
 			}
 		}
@@ -446,8 +453,19 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		return fmt.Errorf("transfer external ids: %w", err)
 	}
 
-	if aniListID != 0 {
-		if _, err := w.tx.ExecContext(ctx, `UPDATE titles SET anilist_id = COALESCE(anilist_id, ?), is_anime = 1 WHERE id = ?`, aniListID, destID); err != nil {
+	primaryAniListID := destAniListID
+	if primaryAniListID == 0 {
+		primaryAniListID = sourceAniListID
+	}
+	if primaryAniListID != 0 || isAnime {
+		var updateAniList *int64
+		if primaryAniListID != 0 {
+			updateAniList = &primaryAniListID
+		}
+		if _, err := w.tx.ExecContext(ctx, `UPDATE titles SET
+			anilist_id = COALESCE(anilist_id, ?),
+			is_anime   = CASE WHEN ? = 1 THEN 1 ELSE is_anime END
+			WHERE id = ?`, updateAniList, isAnime, destID); err != nil {
 			return fmt.Errorf("update dest anilist_id: %w", err)
 		}
 	}

@@ -118,7 +118,7 @@ func ReplaceTitleNames(t *testing.T, db *sql.DB, id int64, names []model.TitleNa
 func MergeTitles(t *testing.T, db *sql.DB, destID, sourceID int64, seasonOffset int) {
 	t.Helper()
 	require.NoError(t, database.WithTx(db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0)
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0, 0)
 	}))
 }
 
@@ -127,14 +127,14 @@ func MergeTitles(t *testing.T, db *sql.DB, destID, sourceID int64, seasonOffset 
 func MergeTitlesWithAniList(t *testing.T, db *sql.DB, destID, sourceID int64, seasonOffset int, aniListID int64) {
 	t.Helper()
 	require.NoError(t, database.WithTx(db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, aniListID)
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0, aniListID)
 	}))
 }
 
 // MergeTitlesErr is the error-returning variant.
 func MergeTitlesErr(db *sql.DB, destID, sourceID int64, seasonOffset int) error {
 	return database.WithTx(db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0)
+		return repository.NewTitleWriter(tx).Merge(context.Background(), destID, sourceID, seasonOffset, 0, 0)
 	})
 }
 

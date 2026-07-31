@@ -409,3 +409,52 @@ func TestMerge_ReconcilesLastWatchedAt(t *testing.T) {
 	require.NotNil(t, dest.LastWatchedAt, "last_watched_at must be updated from moved watch_events")
 	assert.Equal(t, "2026-07-26 21:28:44", dest.LastWatchedAt.Format("2006-01-02 15:04:05"))
 }
+
+func TestMerge_PreservesSourceAniListIDOnMovedSeason(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	destAniList := int64(100000)
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		AniListID:   &destAniList,
+	}, []model.TitleName{{Name: "Witch Hat Atelier", Language: "en", IsPrimary: true}})
+	destS1 := testutil.InsertSeason(t, db, destID, 1)
+
+	sourceAniList := int64(185123)
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2025,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		AniListID:   &sourceAniList,
+	}, []model.TitleName{{Name: "Witch Hat Atelier Season 2", Language: "en", IsPrimary: true}})
+	sourceS1 := testutil.InsertSeason(t, db, sourceID, 1)
+	_ = sourceS1
+
+	offset := 1
+	require.NoError(t, svc.Merge(context.Background(), db, destID, sourceID, &offset))
+
+	// Verify Season 1 retains destAniList (100000)
+	s1AniList, err := testutil.GetSeasonExternalID(t, db, destS1, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "100000", s1AniList, "Season 1 must retain dest AniList ID")
+
+	// Verify Season 2 receives sourceAniList (185123)
+	var destS2 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 2`, destID).Scan(&destS2))
+	s2AniList, err := testutil.GetSeasonExternalID(t, db, destS2, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "185123", s2AniList, "Season 2 must receive source AniList ID")
+}
