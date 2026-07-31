@@ -217,7 +217,7 @@ func TestToggleEpisodeWatched_UnwatchCompletedSeriesRevertsToWatching(t *testing
 	)
 	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	ep := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
-	
+
 	ctx := context.Background()
 	// Pre-mark episode watched bypassing libSvc
 	_, err := db.Exec(`UPDATE episodes SET watched = 1 WHERE id = ?`, ep.ID)

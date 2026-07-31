@@ -20,3 +20,21 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  antigravity-daemon:
+    image: python:3.11-slim
+    container_name: plextracker-antigravity
+    command: python3 /scripts/server.py
+    environment:
+      - PUID=1026
+      - PGID=100
+      - TZ=Europe/Paris
+      - PORT=8191
+      - ENV_FILE=/volume1/docker/plextracker/antigravity/.env.local
+      - WORKSPACE_DIR=/volume1/docker/plextracker/antigravity/workspace
+    volumes:
+      - /volume1/docker/plextracker/antigravity:/volume1/docker/plextracker/antigravity
+      - ./scripts/github-pr-daemon:/scripts
+    ports:
+      - 8191:8191
+    restart: unless-stopped

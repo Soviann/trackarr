@@ -4,6 +4,7 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { ContinueWatchingTitle } from '../types'
 import { isOnPrime } from '../utils/providers'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './PresetLibrary.module.css'
 
 function toTile(t: ContinueWatchingTitle): PosterTileItem {
@@ -19,6 +20,7 @@ function toTile(t: ContinueWatchingTitle): PosterTileItem {
 }
 
 export function ContinueWatching(_props: { path?: string }) {
+  useScrollRestoration('continueWatching')
   const [items, setItems] = useState<ContinueWatchingTitle[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)

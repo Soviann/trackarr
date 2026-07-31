@@ -33,7 +33,10 @@ function getMetadata(t: Title) {
   return parts.join(' \u00b7 ')
 }
 
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
+
 export function Search({ path: _ }: { path?: string }) {
+  useScrollRestoration('search')
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
   const results = useSearchStore(s => s.results)

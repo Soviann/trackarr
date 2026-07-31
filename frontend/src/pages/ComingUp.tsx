@@ -4,6 +4,7 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { UpcomingTitle } from '../types'
 import { isOnPrime } from '../utils/providers'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './PresetLibrary.module.css'
 
 function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'teal' | 'muted' } {
@@ -31,6 +32,7 @@ function toTile(t: UpcomingTitle): PosterTileItem {
 }
 
 export function ComingUp(_props: { path?: string }) {
+  useScrollRestoration('comingUp')
   const [items, setItems] = useState<UpcomingTitle[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)

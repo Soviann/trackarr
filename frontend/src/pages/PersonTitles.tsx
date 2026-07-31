@@ -4,7 +4,10 @@ import { TitleCard } from '../components/TitleCard'
 import { ErrorBanner } from '../components/ErrorBanner'
 import s from './PersonTitles.module.css'
 
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
+
 export function PersonTitles({ name }: { path?: string; name?: string }) {
+  useScrollRestoration(`person-${name ?? ''}`)
   const { data, error, loading, mutate } = useApi<PaginatedResponse>(
     name ? `/titles?person=${encodeURIComponent(name)}&limit=200` : null,
   )
