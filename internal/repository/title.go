@@ -440,13 +440,13 @@ func parseSQLiteTime(s *string) *time.Time {
 	return &t
 }
 
-// HasUnwatchedEpisodes returns true if the title has at least one unwatched episode.
+// HasUnwatchedEpisodes returns true if the title has at least one aired unwatched episode.
 func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
-	const query = `
+	query := `
 		SELECT EXISTS(
 			SELECT 1 FROM episodes e
 			JOIN seasons s ON e.season_id = s.id
-			WHERE s.title_id = ? AND e.watched = 0
+			WHERE s.title_id = ? AND e.watched = 0 AND ` + airedEpisode + `
 		)`
 	var exists bool
 	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
@@ -490,7 +490,7 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 	return used, nil
 }
 
-// ListContinueWatching returns Watching titles that have at least one unwatched episode,
+// ListContinueWatching returns Watching titles that have at least one aired unwatched episode,
 // ordered by last_watched_at DESC. Display name priority: fr → en → (x-romaji → ja when anime) → any.
 func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error) {
 	query := `
@@ -503,7 +503,7 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 		       t.watch_providers
 		FROM titles t
 		WHERE t.status = 'watching'
-		  AND (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0) > 0
+		  AND EXISTS (SELECT 1 FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0 AND ` + airedEpisode + `)
 		ORDER BY t.last_watched_at DESC`
 
 	rows, err := r.db.Query(query)

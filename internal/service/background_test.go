@@ -201,9 +201,8 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
 	testutil.UpdateSeasonTotalEpisodes(t, db, season.ID, 2)
 
-	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
-	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 2) // ep2 unwatched
-	testutil.MarkEpisodeWatched(t, db, ep1.ID, time.Now().UTC())
+	_ = testutil.SeedEpisode(t, db, season.ID, 1, "2024-01-01", true)
+	_ = testutil.SeedEpisode(t, db, season.ID, 2, "2024-01-08", false) // ep2 unwatched
 
 	results := svc.RefreshTitles(context.Background())
 

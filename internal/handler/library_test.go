@@ -40,8 +40,8 @@ func TestLibraryHandler_ContinueWatching(t *testing.T) {
 	)
 	season := testutil.UpsertSeason(t, db, watchingID, 1, 3)
 	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
-		{EpisodeNumber: 1, Name: "Ep1"},
-		{EpisodeNumber: 2, Name: "Ep2"},
+		{EpisodeNumber: 1, Name: "Ep1", AirDate: "2024-01-01"},
+		{EpisodeNumber: 2, Name: "Ep2", AirDate: "2024-01-08"},
 	})
 
 	// Create a Completed title — should not appear

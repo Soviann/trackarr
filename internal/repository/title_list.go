@@ -16,11 +16,11 @@ const existsAired = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season
 
 const existsAiredUnwatched = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season_id = s.id WHERE s.title_id = t.id AND ` + airedEpisode + ` AND e.watched = 0)`
 
-// caughtUpCond: watching series with ≥1 aired episode and no aired-unwatched episode.
-const caughtUpCond = `t.status = 'watching' AND (t.type != 'movie' OR t.is_anime = 1) AND ` + existsAired + ` AND NOT ` + existsAiredUnwatched
+// caughtUpCond: watching series with no aired-unwatched episode.
+const caughtUpCond = `t.status = 'watching' AND (t.type != 'movie' OR t.is_anime = 1) AND NOT ` + existsAiredUnwatched
 
 // watchingBehindCond: the exact complement over watching titles.
-const watchingBehindCond = `t.status = 'watching' AND ((t.type = 'movie' AND t.is_anime = 0) OR NOT ` + existsAired + ` OR ` + existsAiredUnwatched + `)`
+const watchingBehindCond = `t.status = 'watching' AND ((t.type = 'movie' AND t.is_anime = 0) OR ` + existsAiredUnwatched + `)`
 
 // titleSelectCols is the canonical title column list for list/search queries,
 // with the derived caught_up flag appended. Centralized so the three query
