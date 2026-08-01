@@ -8,7 +8,11 @@ export function useScrollRestoration(key: string) {
   useEffect(() => {
     // Restore scroll position if it exists
     const savedY = scrollPositions.get(key)
+    let currentY = window.scrollY
+    const originalPath = window.location.pathname
+
     if (savedY !== undefined) {
+      currentY = savedY // Initialize to saved position so we don't save 0 if user leaves without scrolling
       isRestoring.current = true
       window.scrollTo(0, savedY)
       // Wait a frame to ensure Preact has flushed DOM updates
@@ -19,12 +23,11 @@ export function useScrollRestoration(key: string) {
         }, 50)
       })
     }
-
-    let currentY = window.scrollY
     
     const onScroll = () => {
       // Don't save the 0 position if we're in the middle of restoring a saved position
-      if (!isRestoring.current) {
+      // Also ignore if the route has changed, to prevent saving 0 when DOM shrinks on navigation
+      if (!isRestoring.current && window.location.pathname === originalPath) {
         currentY = window.scrollY
       }
     }
