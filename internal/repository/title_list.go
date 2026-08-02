@@ -12,8 +12,6 @@ import (
 // episodes never falsely block "caught up".
 const airedEpisode = `e.air_date IS NOT NULL AND e.air_date != '' AND e.air_date <= date('now')`
 
-const existsAired = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season_id = s.id WHERE s.title_id = t.id AND ` + airedEpisode + `)`
-
 const existsAiredUnwatched = `EXISTS (SELECT 1 FROM seasons s JOIN episodes e ON e.season_id = s.id WHERE s.title_id = t.id AND ` + airedEpisode + ` AND e.watched = 0)`
 
 // caughtUpCond: watching series with no aired-unwatched episode.
