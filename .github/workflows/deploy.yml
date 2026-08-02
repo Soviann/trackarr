@@ -42,6 +42,7 @@ jobs:
           command_timeout: 15m
           script: |
             export PATH="/usr/local/bin:$PATH"
+            mkdir -p /volume1/docker/plextracker/antigravity
             /volume1/docker/plextracker/scripts/nas-update.sh
 
       - name: Collect diagnostics on failure
