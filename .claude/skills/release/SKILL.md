@@ -24,8 +24,12 @@ Create a new PlexTracker release.
 7. **Tag**: `git tag vX.Y.Z`
 8. **Push**: `git push origin main --tags`
 
-Deploy triggers automatically via `.github/workflows/deploy.yml`.
-
+9. **Monitor Deployment**:
+   - The push triggers `.github/workflows/deploy.yml`.
+   - Find the triggered run using `gh run list --workflow=deploy.yml --limit 1`.
+   - **MUST DO**: You must actively watch the release/deploy until it succeeds or fails (`gh run watch <run-id>`).
+   - If the run fails, fetch the failed logs (`gh run view <run-id> --log-failed`), diagnose the issue, and present it to the user.
+   - If it succeeds, notify the user that the deployment is successfully complete.
 ## Rules
 
 - **Never ask** the user which version bump — decide from the changes
