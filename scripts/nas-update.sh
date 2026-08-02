@@ -36,6 +36,8 @@ try_deploy() {
 
     docker compose down 2>&1 | tee -a "$LOG_FILE"
 
+    mkdir -p "$APP_DIR/antigravity"
+
     if ! docker compose up -d --build --wait 2>&1 | tee -a "$LOG_FILE"; then
         log "ERREUR: docker compose up --build a échoué (conteneur non healthy)."
         return 1
