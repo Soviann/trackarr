@@ -1184,6 +1184,34 @@ func TestTitleRepository_Merge_DeletesSource(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestTitleRepository_Merge_SourceHasNoSeasons_CreatesTargetSeason(t *testing.T) {
+	db := setupTestDB(t)
+
+	destID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dest", Language: "en", IsPrimary: true}})
+	_ = testutil.InsertSeason(t, db, destID, 1)
+
+	// sourceID has 0 season rows (e.g. an AniList-only title created without TMDB/TVDB episodes).
+	sourceID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Source (AniList Only)", Language: "en", IsPrimary: true}})
+
+	// Merge with seasonOffset = 3 (target season 4) and sourceAniListID = 171110.
+	testutil.MergeTitlesWithAniList(t, db, destID, sourceID, 3, 171110)
+
+	// Season 4 should be synthesized on destID and stamped with 171110.
+	var destS4 int64
+	require.NoError(t, db.QueryRow(`SELECT id FROM seasons WHERE title_id = ? AND season_number = 4`, destID).Scan(&destS4))
+	got, err := testutil.GetSeasonExternalID(t, db, destS4, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "171110", got)
+}
+
 // Reported bug: merging a dropped S2 (source, becomes the newest season) into a
 // completed S1 (dest) must make the series dropped, not stay completed.
 func TestTitleRepository_Merge_NewestDroppedWins(t *testing.T) {

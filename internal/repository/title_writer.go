@@ -372,59 +372,81 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		return fmt.Errorf("get dest max season: %w", err)
 	}
 
-	for _, m := range moves {
-		var targetSeasonID int64
-		err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, destID, m.newNum).Scan(&targetSeasonID)
-		var finalSeasonID int64
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id); err != nil {
-				return fmt.Errorf("move season %d: %w", m.id, err)
-			}
-			finalSeasonID = m.id
-		case err != nil:
-			return fmt.Errorf("check season collision %d: %w", m.id, err)
-		default:
-			// Collision: merge episodes into the existing target season.
-			if isAnime {
-				var maxTargetEp int
-				if err := w.tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(episode), 0) FROM episodes WHERE season_id = ?`, targetSeasonID).Scan(&maxTargetEp); err != nil {
-					return fmt.Errorf("get target max episode: %w", err)
-				}
-				if maxTargetEp > 0 {
-					if _, err := w.tx.ExecContext(ctx, `UPDATE episodes SET episode = episode + ?, season_id = ? WHERE season_id = ?`, maxTargetEp, targetSeasonID, m.id); err != nil {
-						return fmt.Errorf("offset and move episodes into season %d: %w", targetSeasonID, err)
-					}
-				} else {
-					if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
-						return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
-					}
-				}
-			} else {
-				// UPDATE OR IGNORE skips episodes whose number already exists in the target season.
-				if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
-					return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
-				}
-			}
-			// Remaining source episodes are duplicates; their watch_events.episode_id
-			// gets set to NULL via ON DELETE SET NULL so history is kept.
-			if _, err := w.tx.ExecContext(ctx, `DELETE FROM episodes WHERE season_id = ?`, m.id); err != nil {
-				return fmt.Errorf("delete duplicate episodes from season %d: %w", m.id, err)
-			}
-			if _, err := w.tx.ExecContext(ctx, `DELETE FROM seasons WHERE id = ?`, m.id); err != nil {
-				return fmt.Errorf("delete merged season %d: %w", m.id, err)
-			}
-			finalSeasonID = targetSeasonID
+	if len(moves) == 0 {
+		// Source title has no season rows (e.g. an AniList-only title without TMDB/TVDB episodes).
+		// Synthesize a target season for destID if seasonOffset > 0 or sourceAniListID != 0.
+		targetNum := 1 + seasonOffset
+		if seasonOffset == 0 && maxDest > 0 {
+			targetNum = maxDest
 		}
-
-		// Stamp the moved season with sourceAniListID (or destAniListID fallback).
+		season, err := NewSeasonWriter(w.tx).GetOrCreate(ctx, destID, targetNum)
+		if err != nil {
+			return fmt.Errorf("create season %d for season-less source merge: %w", targetNum, err)
+		}
 		seasonAniListID := sourceAniListID
 		if seasonAniListID == 0 {
 			seasonAniListID = destAniListID
 		}
 		if seasonAniListID != 0 {
-			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(seasonAniListID, 10)); err != nil {
+			if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, season.ID, ProviderAniList, strconv.FormatInt(seasonAniListID, 10)); err != nil {
 				return err
+			}
+		}
+	} else {
+		for _, m := range moves {
+			var targetSeasonID int64
+			err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, destID, m.newNum).Scan(&targetSeasonID)
+			var finalSeasonID int64
+			switch {
+			case errors.Is(err, sql.ErrNoRows):
+				if _, err := w.tx.ExecContext(ctx, `UPDATE seasons SET title_id = ?, season_number = ? WHERE id = ?`, destID, m.newNum, m.id); err != nil {
+					return fmt.Errorf("move season %d: %w", m.id, err)
+				}
+				finalSeasonID = m.id
+			case err != nil:
+				return fmt.Errorf("check season collision %d: %w", m.id, err)
+			default:
+				// Collision: merge episodes into the existing target season.
+				if isAnime {
+					var maxTargetEp int
+					if err := w.tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(episode), 0) FROM episodes WHERE season_id = ?`, targetSeasonID).Scan(&maxTargetEp); err != nil {
+						return fmt.Errorf("get target max episode: %w", err)
+					}
+					if maxTargetEp > 0 {
+						if _, err := w.tx.ExecContext(ctx, `UPDATE episodes SET episode = episode + ?, season_id = ? WHERE season_id = ?`, maxTargetEp, targetSeasonID, m.id); err != nil {
+							return fmt.Errorf("offset and move episodes into season %d: %w", targetSeasonID, err)
+						}
+					} else {
+						if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
+							return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+						}
+					}
+				} else {
+					// UPDATE OR IGNORE skips episodes whose number already exists in the target season.
+					if _, err := w.tx.ExecContext(ctx, `UPDATE OR IGNORE episodes SET season_id = ? WHERE season_id = ?`, targetSeasonID, m.id); err != nil {
+						return fmt.Errorf("merge episodes into season %d: %w", targetSeasonID, err)
+					}
+				}
+				// Remaining source episodes are duplicates; their watch_events.episode_id
+				// gets set to NULL via ON DELETE SET NULL so history is kept.
+				if _, err := w.tx.ExecContext(ctx, `DELETE FROM episodes WHERE season_id = ?`, m.id); err != nil {
+					return fmt.Errorf("delete duplicate episodes from season %d: %w", m.id, err)
+				}
+				if _, err := w.tx.ExecContext(ctx, `DELETE FROM seasons WHERE id = ?`, m.id); err != nil {
+					return fmt.Errorf("delete merged season %d: %w", m.id, err)
+				}
+				finalSeasonID = targetSeasonID
+			}
+
+			// Stamp the moved season with sourceAniListID (or destAniListID fallback).
+			seasonAniListID := sourceAniListID
+			if seasonAniListID == 0 {
+				seasonAniListID = destAniListID
+			}
+			if seasonAniListID != 0 {
+				if err := NewSeasonExternalIDWriter(w.tx).Stamp(ctx, finalSeasonID, ProviderAniList, strconv.FormatInt(seasonAniListID, 10)); err != nil {
+					return err
+				}
 			}
 		}
 	}
