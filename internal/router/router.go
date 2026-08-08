@@ -22,7 +22,7 @@ import (
 func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline, shutdownWG *sync.WaitGroup) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.RealIP)
+	r.Use(middleware.RealIP) //nolint:staticcheck // Chi deprecated RealIP in v5.3
 	r.Use(mw.RedactingLogger("/api/webhook/jellyfin/"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))

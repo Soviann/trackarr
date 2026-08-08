@@ -11,8 +11,8 @@
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
     "@testing-library/preact": "^3.2.4",
-    "jsdom": "^29.0.1",
-    "typescript": "^6.0.2",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
     "vite": "^8.0.3",
     "vitest": "^4.1.10"
   }
