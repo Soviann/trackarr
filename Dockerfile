@@ -1,5 +1,5 @@
 # Frontend build
-FROM node:22-bookworm AS frontend
+FROM node:25-bookworm AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY frontend/ .
 RUN npx vite build
 
 # Backend build
-FROM golang:1.24-bookworm AS backend
+FROM golang:1.26-bookworm AS backend
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
