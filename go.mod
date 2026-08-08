@@ -6,7 +6,7 @@ toolchain go1.24.13
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
