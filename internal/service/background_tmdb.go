@@ -139,6 +139,12 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		metaUpdate.TMDBRating = rating
 	}
 
+	if title.Status == model.TitleStatusCompleted && (details.NextEpisodeToAir != nil || (newStatus != nil && *newStatus == model.SeriesStatusReturning)) {
+		watching := model.TitleStatusWatching
+		metaUpdate.Status = &watching
+		title.Status = model.TitleStatusWatching
+	}
+
 	if details.NextEpisodeToAir != nil && details.NextEpisodeToAir.AirDate != "" {
 		airDate := details.NextEpisodeToAir.AirDate
 		airEp := fmt.Sprintf("S%d E%d", details.NextEpisodeToAir.SeasonNumber, details.NextEpisodeToAir.EpisodeNumber)
@@ -181,12 +187,25 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 	}
 
 	if !syncedFromTVDB {
+		var ptSeasons []model.Season
+		if fullTitle, err := s.titles.GetByID(title.ID); err == nil && fullTitle != nil {
+			ptSeasons = fullTitle.Seasons
+		}
+		ptSeasonMap := make(map[int]*model.Season)
+		maxPTSeasonNum := 0
+		for i := range ptSeasons {
+			ptSeasonMap[ptSeasons[i].SeasonNumber] = &ptSeasons[i]
+			if ptSeasons[i].SeasonNumber > maxPTSeasonNum {
+				maxPTSeasonNum = ptSeasons[i].SeasonNumber
+			}
+		}
+
+		partsBySeason, _ := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, providerAniList)
 
 		for _, tmdbSeason := range details.Seasons {
 			if err := ctx.Err(); err != nil {
 				return
 			}
-
 			if tmdbSeason.SeasonNumber == 0 {
 				continue
 			}
@@ -194,6 +213,76 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 			tmdbEpisodes, err := s.tmdb.GetTVSeasonEpisodes(ctx, *title.TMDBID, tmdbSeason.SeasonNumber)
 			if err != nil {
 				continue
+			}
+
+			// Determine target Plextracker season number:
+			// 1. Direct match: ptSeasonMap has tmdbSeason.SeasonNumber AND (no higher maxPTSeasonNum or not anime)
+			// 2. AniList start_date / external_id match for anime seasons
+			// 3. Fallback: map by start_date or tmdbSeason.SeasonNumber
+			targetSeasonNum := tmdbSeason.SeasonNumber
+
+			if title.IsAnime && len(ptSeasons) > 0 {
+				// Check if TMDB season air date matches a mapped AniList part's start date
+				if tmdbSeason.AirDate != "" {
+					for seasonID, parts := range partsBySeason {
+						for _, part := range parts {
+							if part.StartDate != nil && *part.StartDate == tmdbSeason.AirDate {
+								for _, pts := range ptSeasons {
+									if pts.ID == seasonID {
+										targetSeasonNum = pts.SeasonNumber
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// If TMDB Season 1 contains combined episodes for multiple Plextracker seasons (S1, S2, S3...)
+				if tmdbSeason.SeasonNumber == 1 && len(tmdbEpisodes) > 0 && maxPTSeasonNum > 1 {
+					cum := 0
+					for _, pts := range ptSeasons {
+						if cum >= len(tmdbEpisodes) {
+							break
+						}
+						epCount := 0
+						if pts.TotalEpisodes != nil {
+							epCount = *pts.TotalEpisodes
+						}
+						if parts, ok := partsBySeason[pts.ID]; ok && len(parts) > 0 && parts[0].EpisodeCount != nil {
+							epCount = *parts[0].EpisodeCount
+						}
+						if epCount <= 0 {
+							epCount = len(tmdbEpisodes) - cum
+						}
+
+						end := cum + epCount
+						if end > len(tmdbEpisodes) {
+							end = len(tmdbEpisodes)
+						}
+
+						slice := tmdbEpisodes[cum:end]
+						entries := make([]repository.EpisodeUpsert, len(slice))
+						for i, ep := range slice {
+							entries[i] = repository.EpisodeUpsert{
+								EpisodeNumber: i + 1,
+								Name:          ep.Name,
+								AirDate:       ep.AirDate,
+							}
+						}
+						currPTS := pts
+						_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+							season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, currPTS.SeasonNumber, len(slice))
+							if err != nil {
+								return err
+							}
+							return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+						})
+						cum = end
+					}
+					_ = s.limiter.Wait(ctx)
+					continue
+				}
 			}
 
 			entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
@@ -206,7 +295,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 			}
 
 			_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-				season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, tmdbSeason.SeasonNumber, tmdbSeason.EpisodeCount)
+				season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, targetSeasonNum, tmdbSeason.EpisodeCount)
 				if err != nil {
 					return err
 				}

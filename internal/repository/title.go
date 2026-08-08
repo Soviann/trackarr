@@ -538,7 +538,7 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 		       t.next_air_date, t.next_air_episode, t.status,
 		       t.watch_providers
 		FROM titles t
-		WHERE t.status IN ('watching', 'plan_to_watch')
+		WHERE (t.status IN ('watching', 'plan_to_watch') OR (t.status = 'completed' AND t.series_status = 'returning'))
 		  AND t.next_air_date IS NOT NULL
 		  AND t.next_air_date >= ?
 		ORDER BY t.next_air_date ASC`

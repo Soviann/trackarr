@@ -55,8 +55,9 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 			Name:         "Breaking Bad",
 			FirstAirDate: "2008-01-20",
 			Seasons: []struct {
-				SeasonNumber int `json:"season_number"`
-				EpisodeCount int `json:"episode_count"`
+				SeasonNumber int    `json:"season_number"`
+				EpisodeCount int    `json:"episode_count"`
+				AirDate      string `json:"air_date"`
 			}{
 				{SeasonNumber: 1, EpisodeCount: 7},
 				{SeasonNumber: 2, EpisodeCount: 13},

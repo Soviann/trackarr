@@ -78,8 +78,9 @@ type TMDBTVDetails struct {
 	Credits        *TMDBCredits        `json:"credits"`
 	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
 	Seasons        []struct {
-		SeasonNumber int `json:"season_number"`
-		EpisodeCount int `json:"episode_count"`
+		SeasonNumber int    `json:"season_number"`
+		EpisodeCount int    `json:"episode_count"`
+		AirDate      string `json:"air_date"`
 	} `json:"seasons"`
 	ExternalIDs *struct {
 		IMDBID string `json:"imdb_id"`

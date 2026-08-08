@@ -184,6 +184,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		})
 	})
 
+	// Top-level cover route to support legacy /covers/{filename} URLs without /api prefix
+	r.Get("/covers/{filename}", covers.Serve)
+
 	// SPA catch-all
 	r.Handle("/*", handler.SPAHandler(distFS))
 
