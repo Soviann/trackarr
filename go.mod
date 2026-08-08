@@ -1,8 +1,6 @@
 module github.com/nicolasvasse/plextracker
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.25.0
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
@@ -12,7 +10,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/image v0.27.0
+	golang.org/x/image v0.44.0
 	golang.org/x/time v0.12.0
 )
 
