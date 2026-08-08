@@ -6,7 +6,7 @@
     "clsx": "^2.1.1",
     "preact": "^10.29.0",
     "preact-router": "^4.1.2",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
