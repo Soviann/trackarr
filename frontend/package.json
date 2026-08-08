@@ -9,11 +9,11 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.10.5",
+    "@preact/preset-vite": "^2.10.6",
     "@testing-library/preact": "^3.2.4",
     "jsdom": "^30.0.1",
     "typescript": "^7.0.2",
-    "vite": "^8.0.3",
+    "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
 }
