@@ -353,3 +353,6 @@ function load<T>(key: string): T | null {
 
 ### Frontend Tests
 `make test-front` — vitest + jsdom + @testing-library/preact.
+
+### Dependabot
+Configured in `.github/dependabot.yml`. Automates weekly dependency updates for `gomod` (`/`), `npm` (`/frontend`), `github-actions` (`/`), and `docker` (`/`).
