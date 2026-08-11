@@ -320,6 +320,7 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		MyRating    *int               `json:"my_rating"`
 		Type        *model.TitleType   `json:"type"`
 		IsAnime     *bool              `json:"is_anime"`
+		ArrIgnored  *bool              `json:"arr_ignored"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
@@ -337,6 +338,7 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		MyRating:    body.MyRating,
 		Type:        body.Type,
 		IsAnime:     body.IsAnime,
+		ArrIgnored:  body.ArrIgnored,
 	}
 
 	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {

@@ -27,6 +27,8 @@ export const ROUTE_PATHS = {
   adminSeasonAudit: '/admin/season-audit',
   adminNotifications: '/admin/notifications',
   adminAniList: '/admin/anilist',
+  adminArr: '/admin/arr',
+  adminArrQueue: '/admin/arr/queue',
   adminHelp: '/admin/help',
   anilistCallback: '/anilist/callback',
 } as const
@@ -48,6 +50,8 @@ export const routeTo = {
   adminSeasonAudit: () => '/admin/season-audit',
   adminNotifications: () => '/admin/notifications',
   adminAniList: () => '/admin/anilist',
+  adminArr: () => '/admin/arr',
+  adminArrQueue: () => '/admin/arr/queue',
   adminHelp: () => '/admin/help',
   anilistCallback: () => '/anilist/callback',
 } as const

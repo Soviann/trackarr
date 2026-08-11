@@ -9,6 +9,7 @@ import s from './Admin.module.css'
 interface AdminCounts {
   pending_validations: number
   dead_tasks: number
+  arr_queue: number
 }
 
 const cards = [
@@ -64,6 +65,35 @@ const cards = [
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    ),
+  },
+  {
+    id: 'arr',
+    label: 'Radarr / Sonarr',
+    description: 'Manage defaults',
+    path: '/admin/arr',
+    color: colors.statusWarn,
+    countKey: null,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0Z" />
+        <path d="M12 2v20" />
+        <path d="M2 12h20" />
+      </svg>
+    ),
+  },
+  {
+    id: 'arr_queue',
+    label: 'Arr Queue',
+    description: 'Pending pushes',
+    path: '/admin/arr/queue',
+    color: colors.statusWarn,
+    countKey: 'arr_queue' as const,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
       </svg>
     ),
   },

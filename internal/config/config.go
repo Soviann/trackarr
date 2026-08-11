@@ -22,6 +22,10 @@ type Config struct {
 	VAPIDPrivateKey        string
 	VAPIDSubject           string
 	JellyfinWebhookSecret  string
+	RadarrURL              string
+	RadarrAPIKey           string
+	SonarrURL              string
+	SonarrAPIKey           string
 	DebugLogin             bool
 	DebugLoginUser         string
 	DebugLoginPassword     string
@@ -43,6 +47,10 @@ func Load() (*Config, error) {
 		VAPIDPrivateKey:        os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:           os.Getenv("VAPID_SUBJECT"),
 		JellyfinWebhookSecret:  os.Getenv("JELLYFIN_WEBHOOK_SECRET"),
+		RadarrURL:              os.Getenv("RADARR_URL"),
+		RadarrAPIKey:           os.Getenv("RADARR_API_KEY"),
+		SonarrURL:              os.Getenv("SONARR_URL"),
+		SonarrAPIKey:           os.Getenv("SONARR_API_KEY"),
 		DisableBackgroundTasks: os.Getenv("DISABLE_BACKGROUND_TASKS") == "true",
 	}
 

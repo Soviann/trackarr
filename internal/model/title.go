@@ -104,6 +104,9 @@ type Title struct {
 	AccentHex         *string         `json:"accent_hex,omitempty"`
 	SimklID           *int64          `json:"simkl_id,omitempty"`
 	SimklSlug         *string         `json:"simkl_slug,omitempty"`
+	RadarrID          *int64          `json:"radarr_id,omitempty"`
+	SonarrID          *int64          `json:"sonarr_id,omitempty"`
+	ArrIgnored        bool            `json:"arr_ignored"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 

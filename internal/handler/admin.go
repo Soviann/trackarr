@@ -54,9 +54,15 @@ func (h *AdminHandler) Counts(w http.ResponseWriter, r *http.Request) error {
 		return httputil.InternalError("count pending validations", err)
 	}
 
+	arrQueue, err := h.titles.ListArrQueue()
+	if err != nil {
+		return httputil.InternalError("count arr queue", err)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, map[string]int{
 		"dead_tasks":          deadCount,
 		"pending_validations": statusCounts.PendingReview,
+		"arr_queue":           len(arrQueue),
 	})
 	return nil
 }
@@ -221,5 +227,58 @@ func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error 
 	}()
 
 	w.WriteHeader(http.StatusAccepted)
+	return nil
+}
+
+// GetArrSettings returns Radarr/Sonarr default settings.
+func (h *AdminHandler) GetArrSettings(w http.ResponseWriter, r *http.Request) error {
+	keys := []string{
+		"radarr_std_monitored", "radarr_std_search", "radarr_std_root_folder", "radarr_std_quality_profile",
+		"radarr_anime_monitored", "radarr_anime_search", "radarr_anime_root_folder", "radarr_anime_quality_profile",
+		"sonarr_std_monitored", "sonarr_std_search", "sonarr_std_root_folder", "sonarr_std_quality_profile",
+		"sonarr_anime_monitored", "sonarr_anime_search", "sonarr_anime_root_folder", "sonarr_anime_quality_profile",
+	}
+
+	prefs := make(map[string]string)
+	for _, k := range keys {
+		if val, err := h.settings.Get(k); err == nil {
+			prefs[k] = val
+		} else {
+			prefs[k] = ""
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, prefs)
+	return nil
+}
+
+// UpdateArrSettings updates Radarr/Sonarr default settings.
+func (h *AdminHandler) UpdateArrSettings(w http.ResponseWriter, r *http.Request) error {
+	var prefs map[string]string
+	if err := httputil.ReadJSON(r, &prefs, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid JSON")
+	}
+
+	allowedKeys := map[string]bool{
+		"radarr_std_monitored": true, "radarr_std_search": true, "radarr_std_root_folder": true, "radarr_std_quality_profile": true,
+		"radarr_anime_monitored": true, "radarr_anime_search": true, "radarr_anime_root_folder": true, "radarr_anime_quality_profile": true,
+		"sonarr_std_monitored": true, "sonarr_std_search": true, "sonarr_std_root_folder": true, "sonarr_std_quality_profile": true,
+		"sonarr_anime_monitored": true, "sonarr_anime_search": true, "sonarr_anime_root_folder": true, "sonarr_anime_quality_profile": true,
+	}
+
+	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		writer := repository.NewSettingWriter(tx)
+		for key, val := range prefs {
+			if allowedKeys[key] {
+				if err := writer.Set(r.Context(), key, val); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return httputil.InternalError("save arr settings", err)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

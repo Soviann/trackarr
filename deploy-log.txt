@@ -1,0 +1,1706 @@
+ci / build-frontend	UNKNOWN STEP	﻿2026-08-02T07:06:39.9077991Z Current runner version: '2.336.0'
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9158669Z ##[group]Runner Image Provisioner
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9159962Z Hosted Compute Agent
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9160832Z Version: 20260707.563
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9161921Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9163030Z Build Date: 2026-07-07T19:33:50Z
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9164182Z Worker ID: {57064609-e01e-47ba-a147-53fbfb2d0717}
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9185650Z Azure Region: northcentralus
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9186956Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9189183Z ##[group]Operating System
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9190288Z Ubuntu
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9191197Z 24.04.4
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9191987Z LTS
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9192817Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9193758Z ##[group]Runner Image
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9194707Z Image: ubuntu-24.04
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9196212Z Version: 20260720.247.2
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9198249Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260720.247/images/ubuntu/Ubuntu2404-Readme.md
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9200705Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260720.247
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9202240Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9204076Z ##[group]GITHUB_TOKEN Permissions
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9227644Z Contents: write
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9228739Z Metadata: read
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9229598Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9233065Z Secret source: Actions
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:39.9234844Z Prepare workflow directory
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:40.0227334Z Prepare all required actions
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:40.0361571Z Getting action download info
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:40.2938105Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.4310942Z Download action repository 'actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e' (SHA:48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.5331730Z Download action repository 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.7652172Z Uses: Soviann/plextracker/.github/workflows/ci.yml@refs/tags/v0.41.1 (ac699d10a7bcb7f311d73972bf0d290fffcb0b18)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.7658680Z Complete job name: ci / build-frontend
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8609493Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8611271Z with:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8612110Z   repository: Soviann/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8620546Z   token: ***
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8621364Z   ssh-strict: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8622211Z   ssh-user: git
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8623055Z   persist-credentials: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8623987Z   clean: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8624837Z   sparse-checkout-cone-mode: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8625973Z   fetch-depth: 1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8626804Z   fetch-tags: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8627674Z   show-progress: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8628550Z   lfs: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8629342Z   submodules: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8630234Z   set-safe-directory: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:41.8631377Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0248514Z Syncing repository: Soviann/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0253365Z ##[group]Getting Git version info
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0256681Z Working directory is '/home/runner/work/plextracker/plextracker'
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0454808Z [command]/usr/bin/git version
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0456696Z git version 2.54.0
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0461477Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0470198Z Temporarily overriding HOME='/home/runner/work/_temp/15e99946-0593-4602-a06e-5d523b98694a' before making global git config changes
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0474472Z Adding repository directory to the temporary git global config as a safe directory
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0487116Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0492338Z Deleting the contents of '/home/runner/work/plextracker/plextracker'
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0505712Z ##[group]Initializing the repository
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0508444Z [command]/usr/bin/git init /home/runner/work/plextracker/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0648188Z hint: Using 'master' as the name for the initial branch. This default branch name
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0651988Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0656276Z hint: to use in all of your new repositories, which will suppress this warning,
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0662337Z hint: call:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0664163Z hint:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0666116Z hint: 	git config --global init.defaultBranch <name>
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0668710Z hint:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0670699Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0674138Z hint: 'development'. The just-created branch can be renamed via this command:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0677307Z hint:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0679247Z hint: 	git branch -m <name>
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0680989Z hint:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0683401Z hint: Disable this message with "git config set advice.defaultBranchName false"
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0687280Z Initialized empty Git repository in /home/runner/work/plextracker/plextracker/.git/
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0694351Z [command]/usr/bin/git remote add origin https://github.com/Soviann/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0738136Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.0740639Z ##[group]Disabling automatic garbage collection
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1050154Z [command]/usr/bin/git config --local gc.auto 0
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1070898Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1073303Z ##[group]Setting up auth
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1075652Z Removing SSH command configuration
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1078652Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1086952Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1497265Z Removing HTTP extra header
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1500396Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1719108Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1892802Z Removing includeIf entries pointing to credentials config files
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1896527Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.1937587Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2210966Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2264321Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2317338Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2358098Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2405079Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2445165Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2448471Z ##[group]Fetching the repository
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.2455226Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +refs/tags/v0.41.1:refs/tags/v0.41.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8257418Z From https://github.com/Soviann/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8258532Z  * [new tag]         v0.41.1    -> v0.41.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8303858Z [command]/usr/bin/git tag --list v0.41.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8340678Z v0.41.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8348662Z [command]/usr/bin/git rev-parse refs/tags/v0.41.1^{commit}
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8381941Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8388428Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8389620Z ##[group]Determining the checkout info
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8390901Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8395149Z [command]/usr/bin/git sparse-checkout disable
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8450540Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8486256Z ##[group]Checking out the ref
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8490509Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.41.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8806680Z Note: switching to 'refs/tags/v0.41.1'.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8807675Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8808323Z You are in 'detached HEAD' state. You can look around, make experimental
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8809685Z changes and commit them, and you can discard any commits you make in this
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8810846Z state without impacting any branches by switching back to a branch.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8811685Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8812383Z If you want to create a new branch to retain commits you create, you may
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8813542Z do so (now or later) by using -c with the switch command. Example:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8814261Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8814742Z   git switch -c <new-branch-name>
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8815314Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8816330Z Or undo this operation with:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8817176Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8817570Z   git switch -
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8818052Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8818617Z Turn off this advice by setting config variable advice.detachedHead to false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8819337Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8819882Z HEAD is now at ac699d1 chore: remove unused existsAired constant
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8823073Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8868881Z [command]/usr/bin/git log -1 --format=%H
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.8901247Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9196780Z ##[group]Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9197368Z with:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9197731Z   node-version: 22
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9198098Z   cache: npm
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9198521Z   cache-dependency-path: frontend/package-lock.json
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9199007Z   check-latest: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9201503Z   token: ***
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9201888Z   package-manager-cache: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:42.9202306Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.0848468Z Found in cache @ /opt/hostedtoolcache/node/22.23.1/x64
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.0850553Z ##[group]Environment details
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.6857852Z node: v22.23.1
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.6859063Z npm: 10.9.8
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.6859529Z yarn: 1.22.22
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.6860445Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.6901107Z [command]/opt/hostedtoolcache/node/22.23.1/x64/bin/npm config get cache
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.8505157Z /home/runner/.npm
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:43.9715835Z Cache hit for: node-cache-Linux-x64-npm-9a4458fc095e43e000c125ba1ab7cd2b4578edad76007c80d15967dad61e2936
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.7504491Z Received 43571775 of 43571775 (100.0%), 65.1 MBs/sec
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.7507598Z Cache Size: ~42 MB (43571775 B)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.7529881Z [command]/usr/bin/tar -xf /home/runner/work/_temp/549d40d5-4745-4bf1-8a7a-1e884b46b260/cache.tzst -P -C /home/runner/work/plextracker/plextracker --use-compress-program unzstd
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9032323Z Cache restored successfully
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9077951Z Cache restored from key: node-cache-Linux-x64-npm-9a4458fc095e43e000c125ba1ab7cd2b4578edad76007c80d15967dad61e2936
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9290001Z ##[group]Run cd frontend && npm ci
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9290439Z [36;1mcd frontend && npm ci[0m
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9351032Z shell: /usr/bin/bash -e {0}
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:44.9351369Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3056831Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3082523Z added 234 packages, and audited 235 packages in 4s
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3098551Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3136523Z 87 packages are looking for funding
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3147721Z   run `npm fund` for details
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3397020Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3426505Z 4 vulnerabilities (1 low, 3 high)
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3427156Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3446208Z To address all issues, run:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3466481Z   npm audit fix
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3466945Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.3486241Z Run `npm audit` for details.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.4243049Z ##[group]Run cd frontend && npx vite build
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.4243638Z [36;1mcd frontend && npx vite build[0m
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.4307372Z shell: /usr/bin/bash -e {0}
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:49.4307807Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:50.6617853Z [36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:50.6906872Z [2K
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.2761110Z transforming...✓ 121 modules transformed.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.3407342Z rendering chunks...
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.3725643Z computing gzip size...
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.3987444Z dist/index.html                           1.51 kB │ gzip:  0.61 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.3988527Z dist/assets/stats-CJkClb0Z.css            4.62 kB │ gzip:  1.28 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4197993Z dist/assets/match-review-kOuq_pYu.css     5.54 kB │ gzip:  1.54 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4299646Z dist/assets/filter-drawer-BFlQVO74.css    5.82 kB │ gzip:  1.42 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4301333Z dist/assets/admin-CNhmLZdN.css           15.33 kB │ gzip:  3.01 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4302910Z dist/assets/index-CkV0sAH1.css           49.41 kB │ gzip:  9.72 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4304136Z dist/assets/stats-Ce6GPcC9.js             9.68 kB │ gzip:  3.35 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4305910Z dist/assets/filter-drawer-CNV1wlDl.js    12.04 kB │ gzip:  4.15 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4528156Z dist/assets/match-review-Bsnglbg8.js     14.10 kB │ gzip:  4.92 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4529617Z dist/assets/admin-12JmcaGw.js            48.34 kB │ gzip: 16.53 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4572872Z dist/assets/index-B6Hbmbeg.js           106.16 kB │ gzip: 32.62 kB
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4575863Z 
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4576187Z [32m✓ built in 709ms[39m
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4682528Z ##[group]Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4683198Z with:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4683510Z   name: frontend-dist
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4683867Z   path: frontend/dist
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4684221Z   if-no-files-found: warn
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4684599Z   compression-level: 6
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4684949Z   overwrite: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4685304Z   include-hidden-files: false
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4685932Z   archive: true
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.4686253Z ##[endgroup]
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.8093325Z With the provided path, there will be 23 files uploaded
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.8094232Z Artifact name is valid!
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.8094779Z Root directory input is valid!
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.9710692Z Uploading artifact: frontend-dist.zip
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:51.9715134Z Beginning upload of artifact content to blob storage
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.3343729Z Uploaded bytes 168286
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.3564460Z Finished uploading artifact content to blob storage!
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.3594057Z SHA256 digest of uploaded artifact is 1bfbb49c2ec6d5de4d3be1e015b6285f235b661a0d046ed6d5a6a16419022336
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.3607096Z Finalizing artifact upload
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.5882716Z Artifact frontend-dist successfully finalized. Artifact ID 8829992127
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.5897632Z Artifact frontend-dist has been successfully uploaded! Final size is 168286 bytes. Artifact ID is 8829992127
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.5906955Z Artifact download URL: https://github.com/Soviann/plextracker/actions/runs/30737167117/artifacts/8829992127
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.6116004Z Post job cleanup.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.7966915Z Cache hit occurred on the primary key node-cache-Linux-x64-npm-9a4458fc095e43e000c125ba1ab7cd2b4578edad76007c80d15967dad61e2936, not saving cache.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.8166189Z Post job cleanup.
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.9624852Z [command]/usr/bin/git version
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.9762622Z git version 2.54.0
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.9867230Z Temporarily overriding HOME='/home/runner/work/_temp/46c7fdc4-e419-4c29-8063-d52f947a05c3' before making global git config changes
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.9878213Z Adding repository directory to the temporary git global config as a safe directory
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:52.9907279Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0083393Z Removing SSH command configuration
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0107970Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0127682Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0719011Z Removing HTTP extra header
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0726801Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.0791191Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1441460Z Removing includeIf entries pointing to credentials config files
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1498067Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1525079Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1568474Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1586306Z includeif.gitdir:/github/workspace/.git.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1606405Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1660973Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1666781Z /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1706196Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1739196Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1753368Z /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1787839Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.1916795Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2054399Z /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2127676Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2353060Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2472311Z /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2527544Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.2717287Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.3523941Z Removing credentials config '/home/runner/work/_temp/git-credentials-062918f1-d8c6-47ee-a68c-3b12f4aa6cf2.config'
+ci / build-frontend	UNKNOWN STEP	2026-08-02T07:06:53.3697453Z Cleaning up orphan processes
+ci / lint-backend	UNKNOWN STEP	﻿2026-08-02T07:06:58.2527708Z Current runner version: '2.336.0'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2571961Z ##[group]Runner Image Provisioner
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2573307Z Hosted Compute Agent
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2574177Z Version: 20260707.563
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2575165Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2576344Z Build Date: 2026-07-07T19:33:50Z
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2577387Z Worker ID: {d025396a-c47e-49f7-807f-2654aca19edb}
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2578589Z Azure Region: centralus
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2579475Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2581923Z ##[group]Operating System
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2583078Z Ubuntu
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2583862Z 24.04.4
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2584709Z LTS
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2585522Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2586400Z ##[group]Runner Image
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2587453Z Image: ubuntu-24.04
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2588313Z Version: 20260720.247.2
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2590481Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260720.247/images/ubuntu/Ubuntu2404-Readme.md
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2593264Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260720.247
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2594969Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2596654Z ##[group]GITHUB_TOKEN Permissions
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2599471Z Contents: write
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2600368Z Metadata: read
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2601587Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2604760Z Secret source: Actions
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.2606636Z Prepare workflow directory
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.3217187Z Prepare all required actions
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.3346881Z Getting action download info
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.6287391Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:58.7916381Z Download action repository 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c' (SHA:3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:59.2944228Z Download action repository 'actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c' (SHA:4a3601121dd01d1626a1e23e37211e3254c1c06c)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:06:59.8242861Z Download action repository 'golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20' (SHA:1e7e51e771db61008b38414a730f564565cf7c20)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.4971624Z Uses: Soviann/plextracker/.github/workflows/ci.yml@refs/tags/v0.41.1 (ac699d10a7bcb7f311d73972bf0d290fffcb0b18)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.4977427Z Complete job name: ci / lint-backend
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5855181Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5857101Z with:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5857969Z   repository: Soviann/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5867277Z   token: ***
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5868131Z   ssh-strict: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5869010Z   ssh-user: git
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5869890Z   persist-credentials: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5871206Z   clean: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5872095Z   sparse-checkout-cone-mode: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5873158Z   fetch-depth: 1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5874034Z   fetch-tags: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5874963Z   show-progress: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5875861Z   lfs: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5876687Z   submodules: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5877586Z   set-safe-directory: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.5878883Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7176785Z Syncing repository: Soviann/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7182051Z ##[group]Getting Git version info
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7184532Z Working directory is '/home/runner/work/plextracker/plextracker'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7191124Z [command]/usr/bin/git version
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7221921Z git version 2.54.0
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7275711Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7287112Z Temporarily overriding HOME='/home/runner/work/_temp/53bda75e-7680-431f-9897-37f5517fe914' before making global git config changes
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7291792Z Adding repository directory to the temporary git global config as a safe directory
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7299168Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7399519Z Deleting the contents of '/home/runner/work/plextracker/plextracker'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7403989Z ##[group]Initializing the repository
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7406467Z [command]/usr/bin/git init /home/runner/work/plextracker/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7497561Z hint: Using 'master' as the name for the initial branch. This default branch name
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7507200Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7536913Z hint: to use in all of your new repositories, which will suppress this warning,
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7542063Z hint: call:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7572879Z hint:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7574567Z hint: 	git config --global init.defaultBranch <name>
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7577408Z hint:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7579267Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7582588Z hint: 'development'. The just-created branch can be renamed via this command:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7585079Z hint:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7586493Z hint: 	git branch -m <name>
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7588111Z hint:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7590060Z hint: Disable this message with "git config set advice.defaultBranchName false"
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7593429Z Initialized empty Git repository in /home/runner/work/plextracker/plextracker/.git/
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7598773Z [command]/usr/bin/git remote add origin https://github.com/Soviann/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7658493Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7661726Z ##[group]Disabling automatic garbage collection
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7664218Z [command]/usr/bin/git config --local gc.auto 0
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7763009Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7766103Z ##[group]Setting up auth
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7779652Z Removing SSH command configuration
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7805207Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.7854579Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8302838Z Removing HTTP extra header
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8305852Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8386071Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8723721Z Removing includeIf entries pointing to credentials config files
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8730069Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.8778367Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9083565Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9147192Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9182024Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9229414Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9272045Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9314233Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9317170Z ##[group]Fetching the repository
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:00.9328676Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +refs/tags/v0.41.1:refs/tags/v0.41.1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7150579Z From https://github.com/Soviann/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7152940Z  * [new tag]         v0.41.1    -> v0.41.1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7156563Z [command]/usr/bin/git tag --list v0.41.1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7157779Z v0.41.1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7161454Z [command]/usr/bin/git rev-parse refs/tags/v0.41.1^{commit}
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7162718Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7169105Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7170468Z ##[group]Determining the checkout info
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7172914Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7181577Z [command]/usr/bin/git sparse-checkout disable
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7230835Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7266011Z ##[group]Checking out the ref
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7270475Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.41.1
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7592952Z Note: switching to 'refs/tags/v0.41.1'.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7594262Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7595463Z You are in 'detached HEAD' state. You can look around, make experimental
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7596953Z changes and commit them, and you can discard any commits you make in this
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7598653Z state without impacting any branches by switching back to a branch.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7600097Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7601996Z If you want to create a new branch to retain commits you create, you may
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7604959Z do so (now or later) by using -c with the switch command. Example:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7605896Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7606841Z   git switch -c <new-branch-name>
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7607625Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7608486Z Or undo this operation with:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7609150Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7609977Z   git switch -
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7610520Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7612232Z Turn off this advice by setting config variable advice.detachedHead to false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7613348Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7614346Z HEAD is now at ac699d1 chore: remove unused existsAired constant
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7617938Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7655491Z [command]/usr/bin/git log -1 --format=%H
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.7688450Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8044988Z ##[group]Run actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8045497Z with:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8045754Z   name: frontend-dist
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8046045Z   path: frontend/dist
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8046332Z   merge-multiple: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8046636Z   repository: Soviann/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8046950Z   run-id: 30737167117
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8047222Z   skip-decompress: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8047526Z   digest-mismatch: error
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.8047806Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:01.9561593Z Downloading single artifact
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.0962233Z Preparing to download the following artifacts:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.0963895Z - frontend-dist (ID: 8829992127, Size: 168286, Expected Digest: sha256:1bfbb49c2ec6d5de4d3be1e015b6285f235b661a0d046ed6d5a6a16419022336)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.3754414Z Redirecting to blob download url: https://productionresultssa15.blob.core.windows.net/actions-results/83d0fd02-62f6-43fd-9155-c01fd4bc229e/workflow-job-run-96ae5cfb-fa24-5315-8f27-abf874fef3b9/artifacts/f3a918e98d3e1bd24ff7789f715913d1e23ac11f0efa875caa55a923ea0c0765.zip
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.3757258Z Starting download of artifact to: /home/runner/work/plextracker/plextracker/frontend/dist
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.5214131Z (node:2038) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.5239506Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6322071Z SHA256 digest of downloaded artifact is 1bfbb49c2ec6d5de4d3be1e015b6285f235b661a0d046ed6d5a6a16419022336
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6341039Z Artifact download completed successfully.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6359594Z Total of 1 artifact(s) downloaded
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6425191Z Download artifact has finished successfully
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6708276Z ##[group]Run actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6708688Z with:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6708898Z   go-version: 1.24
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6709125Z   check-latest: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6712027Z   token: ***
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6712246Z   cache: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.6712455Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.8248880Z Setup go version spec 1.24
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.8434131Z Found in cache @ /opt/hostedtoolcache/go/1.24.13/x64
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.8435404Z Added go to the path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:02.8439481Z Successfully set up Go version 1.24
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:03.4981354Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOMODCACHE
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:03.5018499Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOCACHE
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:03.5019206Z /home/runner/go/pkg/mod
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:03.5019625Z /home/runner/.cache/go-build
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:03.6374825Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:04.6232989Z Received 58607167 of 58607167 (100.0%), 67.9 MBs/sec
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:04.6234088Z Cache Size: ~56 MB (58607167 B)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:04.6263711Z [command]/usr/bin/tar -xf /home/runner/work/_temp/3f9ed053-5461-4293-8ef0-5ad9d0724e75/cache.tzst -P -C /home/runner/work/plextracker/plextracker --use-compress-program unzstd
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.1921838Z Cache restored successfully
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.1957147Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.1986501Z go version go1.24.13 linux/amd64
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.1986826Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.1987275Z ##[group]go env
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3452377Z AR='ar'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3453165Z CC='gcc'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3453784Z CGO_CFLAGS='-O2 -g'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3454338Z CGO_CPPFLAGS=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3454862Z CGO_CXXFLAGS='-O2 -g'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3455406Z CGO_ENABLED='1'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3455929Z CGO_FFLAGS='-O2 -g'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3456484Z CGO_LDFLAGS='-O2 -g'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3457001Z CXX='g++'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3457504Z GCCGO='gccgo'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3458002Z GO111MODULE=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3458512Z GOAMD64='v1'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3458999Z GOARCH='amd64'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3459495Z GOAUTH='netrc'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3459980Z GOBIN=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3460506Z GOCACHE='/home/runner/.cache/go-build'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3461376Z GOCACHEPROG=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3461892Z GODEBUG=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3462411Z GOENV='/home/runner/.config/go/env'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3462994Z GOEXE=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3463476Z GOEXPERIMENT=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3464017Z GOFIPS140='off'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3464495Z GOFLAGS=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3465679Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build510018538=/tmp/go-build -gno-record-gcc-switches'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3466923Z GOHOSTARCH='amd64'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3467436Z GOHOSTOS='linux'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3467951Z GOINSECURE=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3468652Z GOMOD='/home/runner/work/plextracker/plextracker/go.mod'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3469509Z GOMODCACHE='/home/runner/go/pkg/mod'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3470110Z GONOPROXY=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3470774Z GONOSUMDB=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3471355Z GOOS='linux'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3471870Z GOPATH='/home/runner/go'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3472415Z GOPRIVATE=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3473016Z GOPROXY='https://proxy.golang.org,direct'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3473725Z GOROOT='/opt/hostedtoolcache/go/1.24.13/x64'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3474373Z GOSUMDB='sum.golang.org'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3474923Z GOTELEMETRY='local'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3475551Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3476210Z GOTMPDIR=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3477026Z GOTOOLCHAIN='local'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3477784Z GOTOOLDIR='/opt/hostedtoolcache/go/1.24.13/x64/pkg/tool/linux_amd64'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3478610Z GOVCS=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3479358Z GOVERSION='go1.24.13'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3479927Z GOWORK=''
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3480455Z PKG_CONFIG='pkg-config'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3481487Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3482608Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3687617Z ##[group]Run golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3688078Z with:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3688291Z   version: v2.11.4
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3688519Z   install-mode: binary
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3688760Z   install-only: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3691756Z   github-token: ***
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3692006Z   verify: true
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3692240Z   only-new-issues: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3692494Z   skip-cache: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3692724Z   skip-save-cache: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3692978Z   cache-invalidation-interval: 7
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3693281Z   problem-matchers: false
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3693518Z env:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3693717Z   GOTOOLCHAIN: local
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.3693950Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.5476097Z ##[group]Restore cache
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.5480154Z (node:2098) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.5481502Z Checking for go.mod: go.mod
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.5511953Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.7001470Z Cache hit for: golangci-lint.cache-Linux-2952-0b9a7874b78bb3ae7483262231166d3c1dbfe16b
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:05.7122145Z (node:2098) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.0286282Z Received 252688 of 252688 (100.0%), 1.3 MBs/sec
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.0287336Z Cache Size: ~0 MB (252688 B)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.0316579Z [command]/usr/bin/tar -xf /home/runner/work/_temp/35badb1c-bf76-40ad-89d6-9d6ec43e4c37/cache.tzst -P -C /home/runner/work/plextracker/plextracker --use-compress-program unzstd
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1124711Z Cache restored successfully
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1161973Z Restored cache for golangci-lint from key 'golangci-lint.cache-Linux-2952-0b9a7874b78bb3ae7483262231166d3c1dbfe16b' in 566ms
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1192313Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1193118Z ##[group]Install
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1194437Z Finding needed golangci-lint version...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1195230Z Installation mode: binary
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1196257Z Installing golangci-lint binary v2.11.4...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.1197597Z Downloading binary https://github.com/golangci/golangci-lint/releases/download/v2.11.4/golangci-lint-2.11.4-linux-amd64.tar.gz ...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.4852932Z [command]/usr/bin/tar xz --overwrite --warning=no-unknown-keyword --overwrite -C /home/runner -f /home/runner/work/_temp/4c2bc5b8-f4d9-40b1-8dc4-4c9b482197dc
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.8024111Z Installed golangci-lint into /home/runner/golangci-lint-2.11.4-linux-amd64/golangci-lint in 688ms
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.8037954Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.8038852Z ##[group]run golangci-lint
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.8040498Z Running [/home/runner/golangci-lint-2.11.4-linux-amd64/golangci-lint config path] in [/home/runner/work/plextracker/plextracker] ...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:06.8864089Z Running [/home/runner/golangci-lint-2.11.4-linux-amd64/golangci-lint config verify] in [/home/runner/work/plextracker/plextracker] ...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:07.0716554Z Running [/home/runner/golangci-lint-2.11.4-linux-amd64/golangci-lint run] in [/home/runner/work/plextracker/plextracker] ...
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3717265Z 0 issues.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3717825Z 
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3718320Z golangci-lint found no issues
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3718949Z Ran golangci-lint in 13300ms
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3720020Z ##[endgroup]
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.3989164Z Post job cleanup.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.5666779Z Cache hit occurred on the primary key golangci-lint.cache-Linux-2952-0b9a7874b78bb3ae7483262231166d3c1dbfe16b, not saving cache.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.5668638Z (node:2318) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.5670141Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.5955367Z Post job cleanup.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.7972280Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOCACHE
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.8051314Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOMODCACHE
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.8112908Z /home/runner/.cache/go-build
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.8149108Z /home/runner/go/pkg/mod
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.8160111Z Cache hit occurred on the primary key setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24, not saving cache.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.8399805Z Post job cleanup.
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.9602399Z [command]/usr/bin/git version
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.9741484Z git version 2.54.0
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.9901959Z Temporarily overriding HOME='/home/runner/work/_temp/e16c5906-b14c-42cf-8e14-e5a2952679a3' before making global git config changes
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.9929555Z Adding repository directory to the temporary git global config as a safe directory
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:20.9950920Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.0048567Z Removing SSH command configuration
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.0061768Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.0222244Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.0979291Z Removing HTTP extra header
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.0980567Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1082836Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1861789Z Removing includeIf entries pointing to credentials config files
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1866127Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1941706Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1965704Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1966706Z includeif.gitdir:/github/workspace/.git.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1967537Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1969824Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.1991502Z /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2013716Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2083170Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2129520Z /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2142329Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2187874Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2217366Z /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2232064Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2268721Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2300459Z /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2311376Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2354860Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2615135Z Removing credentials config '/home/runner/work/_temp/git-credentials-73d079a1-a458-4cdf-bec0-2b9bf2ff721c.config'
+ci / lint-backend	UNKNOWN STEP	2026-08-02T07:07:21.2775770Z Cleaning up orphan processes
+ci / test-backend	UNKNOWN STEP	﻿2026-08-02T07:06:58.3430082Z Current runner version: '2.336.0'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3459474Z ##[group]Runner Image Provisioner
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3460479Z Hosted Compute Agent
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3461138Z Version: 20260707.563
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3462286Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3463137Z Build Date: 2026-07-07T19:33:50Z
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3463905Z Worker ID: {188ce9b4-bc7d-4774-905d-1eaf7968ee11}
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3464914Z Azure Region: centralus
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3465581Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3467235Z ##[group]Operating System
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3467961Z Ubuntu
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3468541Z 24.04.4
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3469250Z LTS
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3469860Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3470460Z ##[group]Runner Image
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3471226Z Image: ubuntu-24.04
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3472059Z Version: 20260720.247.2
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3473630Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260720.247/images/ubuntu/Ubuntu2404-Readme.md
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3475397Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260720.247
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3476572Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3477901Z ##[group]GITHUB_TOKEN Permissions
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3480512Z Contents: write
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3481215Z Metadata: read
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3482247Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3484689Z Secret source: Actions
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.3486274Z Prepare workflow directory
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.4497074Z Prepare all required actions
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.4624074Z Getting action download info
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:06:58.7311919Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:00.4991702Z Download action repository 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c' (SHA:3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:00.9296738Z Download action repository 'actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c' (SHA:4a3601121dd01d1626a1e23e37211e3254c1c06c)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.6766741Z Uses: Soviann/plextracker/.github/workflows/ci.yml@refs/tags/v0.41.1 (ac699d10a7bcb7f311d73972bf0d290fffcb0b18)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.6770034Z Complete job name: ci / test-backend
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7291673Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7292305Z with:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7292679Z   repository: Soviann/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7294909Z   token: ***
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7295179Z   ssh-strict: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7295477Z   ssh-user: git
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7295747Z   persist-credentials: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7296035Z   clean: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7296338Z   sparse-checkout-cone-mode: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7296644Z   fetch-depth: 1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7296928Z   fetch-tags: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7297202Z   show-progress: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7297450Z   lfs: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7297747Z   submodules: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7298011Z   set-safe-directory: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.7298441Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8278613Z Syncing repository: Soviann/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8296520Z ##[group]Getting Git version info
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8298238Z Working directory is '/home/runner/work/plextracker/plextracker'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8300524Z [command]/usr/bin/git version
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8392530Z git version 2.54.0
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8395584Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8401969Z Temporarily overriding HOME='/home/runner/work/_temp/23bcca62-cf7a-42d7-a6ea-9d11c02cf8c1' before making global git config changes
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8404283Z Adding repository directory to the temporary git global config as a safe directory
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8405177Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8498327Z Deleting the contents of '/home/runner/work/plextracker/plextracker'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8500878Z ##[group]Initializing the repository
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.8502127Z [command]/usr/bin/git init /home/runner/work/plextracker/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9253625Z hint: Using 'master' as the name for the initial branch. This default branch name
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9258115Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9258887Z hint: to use in all of your new repositories, which will suppress this warning,
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9259513Z hint: call:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9259890Z hint:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9260369Z hint: 	git config --global init.defaultBranch <name>
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9260817Z hint:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9261504Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9262339Z hint: 'development'. The just-created branch can be renamed via this command:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9262903Z hint:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9263266Z hint: 	git branch -m <name>
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9263646Z hint:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9264141Z hint: Disable this message with "git config set advice.defaultBranchName false"
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9264933Z Initialized empty Git repository in /home/runner/work/plextracker/plextracker/.git/
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9266459Z [command]/usr/bin/git remote add origin https://github.com/Soviann/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9289103Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9290151Z ##[group]Disabling automatic garbage collection
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9292386Z [command]/usr/bin/git config --local gc.auto 0
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9318578Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9319542Z ##[group]Setting up auth
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9320540Z Removing SSH command configuration
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9325285Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9353268Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9623230Z Removing HTTP extra header
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9624297Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9635911Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9805248Z Removing includeIf entries pointing to credentials config files
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9806556Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:01.9830485Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.0008257Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.1133088Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2083112Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2115424Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2254020Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2256994Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2258029Z ##[group]Fetching the repository
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.2259222Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +refs/tags/v0.41.1:refs/tags/v0.41.1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9383205Z From https://github.com/Soviann/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9384471Z  * [new tag]         v0.41.1    -> v0.41.1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9404925Z [command]/usr/bin/git tag --list v0.41.1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9426480Z v0.41.1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9434277Z [command]/usr/bin/git rev-parse refs/tags/v0.41.1^{commit}
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9457751Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9460493Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9461987Z ##[group]Determining the checkout info
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9463046Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9466342Z [command]/usr/bin/git sparse-checkout disable
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9552055Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9569313Z ##[group]Checking out the ref
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9573466Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.41.1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9776441Z Note: switching to 'refs/tags/v0.41.1'.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9777145Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9777799Z You are in 'detached HEAD' state. You can look around, make experimental
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9782532Z changes and commit them, and you can discard any commits you make in this
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9785134Z state without impacting any branches by switching back to a branch.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9786023Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9786626Z If you want to create a new branch to retain commits you create, you may
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9787511Z do so (now or later) by using -c with the switch command. Example:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9787988Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9788911Z   git switch -c <new-branch-name>
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9789420Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9789765Z Or undo this operation with:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9790110Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9790394Z   git switch -
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9790724Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9791438Z Turn off this advice by setting config variable advice.detachedHead to false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9792090Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9792530Z HEAD is now at ac699d1 chore: remove unused existsAired constant
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9794418Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9830351Z [command]/usr/bin/git log -1 --format=%H
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:02.9844674Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0045711Z ##[group]Run actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0046165Z with:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0046441Z   name: frontend-dist
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0046724Z   path: frontend/dist
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0047020Z   merge-multiple: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0047306Z   repository: Soviann/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0047677Z   run-id: 30737167117
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0048006Z   skip-decompress: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0048296Z   digest-mismatch: error
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.0048578Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.1385314Z Downloading single artifact
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.3015969Z Preparing to download the following artifacts:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.3030224Z - frontend-dist (ID: 8829992127, Size: 168286, Expected Digest: sha256:1bfbb49c2ec6d5de4d3be1e015b6285f235b661a0d046ed6d5a6a16419022336)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.5784253Z Redirecting to blob download url: https://productionresultssa15.blob.core.windows.net/actions-results/83d0fd02-62f6-43fd-9155-c01fd4bc229e/workflow-job-run-96ae5cfb-fa24-5315-8f27-abf874fef3b9/artifacts/f3a918e98d3e1bd24ff7789f715913d1e23ac11f0efa875caa55a923ea0c0765.zip
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.5786232Z Starting download of artifact to: /home/runner/work/plextracker/plextracker/frontend/dist
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.7100550Z (node:1924) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.7102188Z (Use `node --trace-deprecation ...` to show where the warning was created)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.7983142Z SHA256 digest of downloaded artifact is 1bfbb49c2ec6d5de4d3be1e015b6285f235b661a0d046ed6d5a6a16419022336
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8002366Z Artifact download completed successfully.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8021983Z Total of 1 artifact(s) downloaded
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8026480Z Download artifact has finished successfully
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8125867Z ##[group]Run actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8126190Z with:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8126368Z   go-version: 1.24
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8126558Z   check-latest: false
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8128543Z   token: ***
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8128724Z   cache: true
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.8128903Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.9423203Z Setup go version spec 1.24
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.9483187Z Found in cache @ /opt/hostedtoolcache/go/1.24.13/x64
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.9484198Z Added go to the path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:03.9487503Z Successfully set up Go version 1.24
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:04.1584080Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOCACHE
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:04.1622715Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOMODCACHE
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:04.1667229Z /home/runner/.cache/go-build
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:04.1678066Z /home/runner/go/pkg/mod
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:04.3268113Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.2651542Z Received 58607167 of 58607167 (100.0%), 71.0 MBs/sec
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.2655199Z Cache Size: ~56 MB (58607167 B)
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.2733128Z [command]/usr/bin/tar -xf /home/runner/work/_temp/f09638c4-630f-4582-96e8-d8beba76c5af/cache.tzst -P -C /home/runner/work/plextracker/plextracker --use-compress-program unzstd
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.6064951Z Cache restored successfully
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.9892941Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.9932656Z go version go1.24.13 linux/amd64
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.9932949Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:05.9933345Z ##[group]go env
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4355526Z AR='ar'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4356037Z CC='gcc'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4356736Z CGO_CFLAGS='-O2 -g'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4357318Z CGO_CPPFLAGS=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4357694Z CGO_CXXFLAGS='-O2 -g'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4358105Z CGO_ENABLED='1'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4358474Z CGO_FFLAGS='-O2 -g'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4358843Z CGO_LDFLAGS='-O2 -g'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4359212Z CXX='g++'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4359551Z GCCGO='gccgo'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4359918Z GO111MODULE=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4360277Z GOAMD64='v1'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4360625Z GOARCH='amd64'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4360988Z GOAUTH='netrc'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4361575Z GOBIN=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4362000Z GOCACHE='/home/runner/.cache/go-build'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4362467Z GOCACHEPROG=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4362831Z GODEBUG=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4363200Z GOENV='/home/runner/.config/go/env'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4363634Z GOEXE=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4363989Z GOEXPERIMENT=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4364367Z GOFIPS140='off'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4364743Z GOFLAGS=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4365719Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build3165340833=/tmp/go-build -gno-record-gcc-switches'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4366683Z GOHOSTARCH='amd64'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4367066Z GOHOSTOS='linux'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4367455Z GOINSECURE=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4367971Z GOMOD='/home/runner/work/plextracker/plextracker/go.mod'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4368495Z GOMODCACHE='/home/runner/go/pkg/mod'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4368921Z GONOPROXY=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4370063Z GONOSUMDB=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4370420Z GOOS='linux'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4370791Z GOPATH='/home/runner/go'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4371223Z GOPRIVATE=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4372250Z GOPROXY='https://proxy.golang.org,direct'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4372756Z GOROOT='/opt/hostedtoolcache/go/1.24.13/x64'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4373211Z GOSUMDB='sum.golang.org'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4373653Z GOTELEMETRY='local'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4374101Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4374570Z GOTMPDIR=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4374902Z GOTOOLCHAIN='local'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4375399Z GOTOOLDIR='/opt/hostedtoolcache/go/1.24.13/x64/pkg/tool/linux_amd64'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4376199Z GOVCS=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4376726Z GOVERSION='go1.24.13'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4377141Z GOWORK=''
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4377540Z PKG_CONFIG='pkg-config'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4377877Z 
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4378492Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4520124Z ##[group]Run go test -tags sqlite_fts5 ./... -count=1
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4520608Z [36;1mgo test -tags sqlite_fts5 ./... -count=1[0m
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4551963Z shell: /usr/bin/bash -e {0}
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4552296Z env:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4552641Z   GOTOOLCHAIN: local
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:06.4552960Z ##[endgroup]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:14.4083393Z ?   	github.com/nicolasvasse/plextracker	[no test files]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:14.4084034Z ?   	github.com/nicolasvasse/plextracker/cmd	[no test files]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:14.7080863Z ok  	github.com/nicolasvasse/plextracker/internal/config	0.004s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:15.5012604Z ok  	github.com/nicolasvasse/plextracker/internal/database	0.454s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:17.8925204Z ok  	github.com/nicolasvasse/plextracker/internal/handler	2.190s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:17.8940583Z ?   	github.com/nicolasvasse/plextracker/internal/handler/httputil	[no test files]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:17.8952428Z ok  	github.com/nicolasvasse/plextracker/internal/middleware	0.003s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:17.8982388Z ok  	github.com/nicolasvasse/plextracker/internal/model	0.002s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:20.0973039Z ok  	github.com/nicolasvasse/plextracker/internal/repository	2.485s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:20.1052739Z ?   	github.com/nicolasvasse/plextracker/internal/router	[no test files]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:24.9276666Z ok  	github.com/nicolasvasse/plextracker/internal/service	4.982s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:24.9277792Z ok  	github.com/nicolasvasse/plextracker/internal/service/colorextract	0.004s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:24.9279722Z ok  	github.com/nicolasvasse/plextracker/internal/service/matching	0.038s
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:24.9287862Z ?   	github.com/nicolasvasse/plextracker/internal/testutil	[no test files]
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:24.9434977Z Post job cleanup.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.0765212Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOMODCACHE
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.0808792Z [command]/opt/hostedtoolcache/go/1.24.13/x64/bin/go env GOCACHE
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.0922257Z /home/runner/go/pkg/mod
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.0923433Z /home/runner/.cache/go-build
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.0924621Z Cache hit occurred on the primary key setup-go-Linux-x64-ubuntu24-go-1.24.13-f386cec307d259ca1147ee97a10e177a850ed7ca6e687432d36d9d23c7628d24, not saving cache.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.1027150Z Post job cleanup.
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.1931646Z [command]/usr/bin/git version
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2002844Z git version 2.54.0
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2046335Z Temporarily overriding HOME='/home/runner/work/_temp/b16d0aa8-94c8-430a-af36-c0051d193c27' before making global git config changes
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2047977Z Adding repository directory to the temporary git global config as a safe directory
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2048992Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2089770Z Removing SSH command configuration
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2090736Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2163431Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2522183Z Removing HTTP extra header
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2542465Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.2592837Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3142059Z Removing includeIf entries pointing to credentials config files
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3192125Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3212030Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3252049Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3276563Z includeif.gitdir:/github/workspace/.git.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3305078Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3422231Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3438553Z /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3562591Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3632723Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3633816Z /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3635981Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3637952Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3638850Z /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3640637Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3642702Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3645151Z /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3647206Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3681118Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3881987Z Removing credentials config '/home/runner/work/_temp/git-credentials-c49827a4-6566-4eb4-8400-5abf6235f74a.config'
+ci / test-backend	UNKNOWN STEP	2026-08-02T07:07:25.3994244Z Cleaning up orphan processes
+release	Set up job	﻿2026-08-02T07:07:30.4074157Z Current runner version: '2.336.0'
+release	Set up job	2026-08-02T07:07:30.4155647Z ##[group]Runner Image Provisioner
+release	Set up job	2026-08-02T07:07:30.4157269Z Hosted Compute Agent
+release	Set up job	2026-08-02T07:07:30.4158289Z Version: 20260707.563
+release	Set up job	2026-08-02T07:07:30.4159284Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+release	Set up job	2026-08-02T07:07:30.4160985Z Build Date: 2026-07-07T19:33:50Z
+release	Set up job	2026-08-02T07:07:30.4162195Z Worker ID: {136b9cae-b0e3-410e-a701-0a102fb005aa}
+release	Set up job	2026-08-02T07:07:30.4163472Z Azure Region: westus3
+release	Set up job	2026-08-02T07:07:30.4164445Z ##[endgroup]
+release	Set up job	2026-08-02T07:07:30.4166897Z ##[group]Operating System
+release	Set up job	2026-08-02T07:07:30.4168100Z Ubuntu
+release	Set up job	2026-08-02T07:07:30.4169031Z 24.04.4
+release	Set up job	2026-08-02T07:07:30.4169848Z LTS
+release	Set up job	2026-08-02T07:07:30.4191297Z ##[endgroup]
+release	Set up job	2026-08-02T07:07:30.4192391Z ##[group]Runner Image
+release	Set up job	2026-08-02T07:07:30.4193609Z Image: ubuntu-24.04
+release	Set up job	2026-08-02T07:07:30.4194712Z Version: 20260720.247.2
+release	Set up job	2026-08-02T07:07:30.4196678Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260720.247/images/ubuntu/Ubuntu2404-Readme.md
+release	Set up job	2026-08-02T07:07:30.4199934Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260720.247
+release	Set up job	2026-08-02T07:07:30.4201967Z ##[endgroup]
+release	Set up job	2026-08-02T07:07:30.4204007Z ##[group]GITHUB_TOKEN Permissions
+release	Set up job	2026-08-02T07:07:30.4207782Z Contents: write
+release	Set up job	2026-08-02T07:07:30.4208982Z Metadata: read
+release	Set up job	2026-08-02T07:07:30.4209876Z ##[endgroup]
+release	Set up job	2026-08-02T07:07:30.4233969Z Secret source: Actions
+release	Set up job	2026-08-02T07:07:30.4237000Z Prepare workflow directory
+release	Set up job	2026-08-02T07:07:30.4959101Z Prepare all required actions
+release	Set up job	2026-08-02T07:07:30.5113323Z Getting action download info
+release	Set up job	2026-08-02T07:07:30.8388073Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+release	Set up job	2026-08-02T07:07:31.1085203Z Complete job name: release
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	﻿2026-08-02T07:07:31.1982470Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1983577Z with:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1984009Z   fetch-depth: 0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1984469Z   repository: Soviann/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1988697Z   token: ***
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1989142Z   ssh-strict: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1989569Z   ssh-user: git
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1990010Z   persist-credentials: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1990969Z   clean: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1991435Z   sparse-checkout-cone-mode: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1991956Z   fetch-tags: false
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1992398Z   show-progress: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1992840Z   lfs: false
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1993239Z   submodules: false
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1993673Z   set-safe-directory: true
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.1994473Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3277996Z Syncing repository: Soviann/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3283872Z ##[group]Getting Git version info
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3285128Z Working directory is '/home/runner/work/plextracker/plextracker'
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3286911Z [command]/usr/bin/git version
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3442424Z git version 2.54.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3459282Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3474453Z Temporarily overriding HOME='/home/runner/work/_temp/016d340c-6ddf-478d-b2a4-b47cf0d86fbb' before making global git config changes
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3476718Z Adding repository directory to the temporary git global config as a safe directory
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3478579Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3688666Z Deleting the contents of '/home/runner/work/plextracker/plextracker'
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3701324Z ##[group]Initializing the repository
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3702649Z [command]/usr/bin/git init /home/runner/work/plextracker/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3917597Z hint: Using 'master' as the name for the initial branch. This default branch name
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3920596Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3923386Z hint: to use in all of your new repositories, which will suppress this warning,
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3925170Z hint: call:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3926495Z hint:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3941546Z hint: 	git config --global init.defaultBranch <name>
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3952341Z hint:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3957014Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3958611Z hint: 'development'. The just-created branch can be renamed via this command:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3960744Z hint:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3961510Z hint: 	git branch -m <name>
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3962324Z hint:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3967385Z hint: Disable this message with "git config set advice.defaultBranchName false"
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3969267Z Initialized empty Git repository in /home/runner/work/plextracker/plextracker/.git/
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.3974494Z [command]/usr/bin/git remote add origin https://github.com/Soviann/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4141228Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4145115Z ##[group]Disabling automatic garbage collection
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4146564Z [command]/usr/bin/git config --local gc.auto 0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4149868Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4151885Z ##[group]Setting up auth
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4152860Z Removing SSH command configuration
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4159297Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.4173793Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5796807Z Removing HTTP extra header
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5798651Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5804523Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5815399Z Removing includeIf entries pointing to credentials config files
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5817484Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.5825453Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6094337Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6144965Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6184056Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6232119Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6273783Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6315043Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6316788Z ##[group]Fetching the repository
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:31.6322195Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9265186Z From https://github.com/Soviann/plextracker
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9292478Z  * [new branch]      main            -> origin/main
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9311587Z  * [new tag]         phase6-complete -> phase6-complete
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9313361Z  * [new tag]         v0.1.0          -> v0.1.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9331382Z  * [new tag]         v0.1.1          -> v0.1.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9351323Z  * [new tag]         v0.1.2          -> v0.1.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9371272Z  * [new tag]         v0.1.3          -> v0.1.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9391219Z  * [new tag]         v0.10.0         -> v0.10.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9392860Z  * [new tag]         v0.11.0         -> v0.11.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9411173Z  * [new tag]         v0.11.1         -> v0.11.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9428818Z  * [new tag]         v0.12.0         -> v0.12.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9451233Z  * [new tag]         v0.12.1         -> v0.12.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9461193Z  * [new tag]         v0.12.2         -> v0.12.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9471375Z  * [new tag]         v0.12.3         -> v0.12.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9491396Z  * [new tag]         v0.12.4         -> v0.12.4
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9511332Z  * [new tag]         v0.13.0         -> v0.13.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9531333Z  * [new tag]         v0.13.1         -> v0.13.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9551101Z  * [new tag]         v0.14.0         -> v0.14.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9552757Z  * [new tag]         v0.15.0         -> v0.15.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9571239Z  * [new tag]         v0.16.0         -> v0.16.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9574358Z  * [new tag]         v0.16.1         -> v0.16.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9576065Z  * [new tag]         v0.16.2         -> v0.16.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9577564Z  * [new tag]         v0.16.3         -> v0.16.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9578972Z  * [new tag]         v0.16.4         -> v0.16.4
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9580745Z  * [new tag]         v0.16.5         -> v0.16.5
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9582305Z  * [new tag]         v0.17.0         -> v0.17.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9583726Z  * [new tag]         v0.17.1         -> v0.17.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9585123Z  * [new tag]         v0.18.0         -> v0.18.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9586508Z  * [new tag]         v0.19.0         -> v0.19.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9588406Z  * [new tag]         v0.19.1         -> v0.19.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9591114Z  * [new tag]         v0.2.0          -> v0.2.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9592720Z  * [new tag]         v0.20.0         -> v0.20.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9594254Z  * [new tag]         v0.21.0         -> v0.21.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9595818Z  * [new tag]         v0.21.1         -> v0.21.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9597339Z  * [new tag]         v0.22.0         -> v0.22.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9598876Z  * [new tag]         v0.23.0         -> v0.23.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9600882Z  * [new tag]         v0.24.0         -> v0.24.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9602615Z  * [new tag]         v0.24.1         -> v0.24.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9604253Z  * [new tag]         v0.24.2         -> v0.24.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9605855Z  * [new tag]         v0.24.3         -> v0.24.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9607618Z  * [new tag]         v0.24.4         -> v0.24.4
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9609473Z  * [new tag]         v0.24.5         -> v0.24.5
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9611480Z  * [new tag]         v0.24.6         -> v0.24.6
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9613196Z  * [new tag]         v0.24.7         -> v0.24.7
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9615043Z  * [new tag]         v0.25.0         -> v0.25.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9616871Z  * [new tag]         v0.26.0         -> v0.26.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9618518Z  * [new tag]         v0.27.0         -> v0.27.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9620452Z  * [new tag]         v0.28.0         -> v0.28.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9622316Z  * [new tag]         v0.29.0         -> v0.29.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9623914Z  * [new tag]         v0.29.1         -> v0.29.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9625451Z  * [new tag]         v0.3.0          -> v0.3.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9626968Z  * [new tag]         v0.3.1          -> v0.3.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9628581Z  * [new tag]         v0.3.2          -> v0.3.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9630435Z  * [new tag]         v0.30.0         -> v0.30.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9632355Z  * [new tag]         v0.31.0         -> v0.31.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9634195Z  * [new tag]         v0.32.0         -> v0.32.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9635874Z  * [new tag]         v0.33.0         -> v0.33.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9637515Z  * [new tag]         v0.34.0         -> v0.34.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9639071Z  * [new tag]         v0.34.1         -> v0.34.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9641074Z  * [new tag]         v0.35.0         -> v0.35.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9643083Z  * [new tag]         v0.36.0         -> v0.36.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9644721Z  * [new tag]         v0.37.0         -> v0.37.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9646337Z  * [new tag]         v0.37.1         -> v0.37.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9647921Z  * [new tag]         v0.38.0         -> v0.38.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9649551Z  * [new tag]         v0.38.1         -> v0.38.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9651713Z  * [new tag]         v0.38.2         -> v0.38.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9653441Z  * [new tag]         v0.38.3         -> v0.38.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9655126Z  * [new tag]         v0.38.4         -> v0.38.4
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9656841Z  * [new tag]         v0.38.5         -> v0.38.5
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9658548Z  * [new tag]         v0.38.6         -> v0.38.6
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9660650Z  * [new tag]         v0.38.7         -> v0.38.7
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9662863Z  * [new tag]         v0.39.0         -> v0.39.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9664894Z  * [new tag]         v0.4.0          -> v0.4.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9666595Z  * [new tag]         v0.40.0         -> v0.40.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9668234Z  * [new tag]         v0.40.1         -> v0.40.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9669822Z  * [new tag]         v0.40.2         -> v0.40.2
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9671863Z  * [new tag]         v0.40.3         -> v0.40.3
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9673619Z  * [new tag]         v0.40.4         -> v0.40.4
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9675317Z  * [new tag]         v0.40.5         -> v0.40.5
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9677058Z  * [new tag]         v0.40.6         -> v0.40.6
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9678749Z  * [new tag]         v0.41.0         -> v0.41.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9680779Z  * [new tag]         v0.41.1         -> v0.41.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9682558Z  * [new tag]         v0.5.0          -> v0.5.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9684222Z  * [new tag]         v0.6.0          -> v0.6.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9686289Z  * [new tag]         v0.6.1          -> v0.6.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9687966Z  * [new tag]         v0.7.0          -> v0.7.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9689637Z  * [new tag]         v0.7.1          -> v0.7.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9691582Z  * [new tag]         v0.8.0          -> v0.8.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9693223Z  * [new tag]         v0.9.0          -> v0.9.0
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9695110Z  * [new tag]         v0.9.1          -> v0.9.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9699232Z [command]/usr/bin/git tag --list v0.41.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9701460Z v0.41.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9705099Z [command]/usr/bin/git rev-parse refs/tags/v0.41.1^{commit}
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9714953Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9734503Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9736606Z ##[group]Determining the checkout info
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9738920Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9741309Z [command]/usr/bin/git sparse-checkout disable
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9803539Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9839445Z ##[group]Checking out the ref
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:32.9842752Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.41.1
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0187195Z Note: switching to 'refs/tags/v0.41.1'.
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0190603Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0192069Z You are in 'detached HEAD' state. You can look around, make experimental
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0196967Z changes and commit them, and you can discard any commits you make in this
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0200703Z state without impacting any branches by switching back to a branch.
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0202620Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0212421Z If you want to create a new branch to retain commits you create, you may
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0214853Z do so (now or later) by using -c with the switch command. Example:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0216634Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0217431Z   git switch -c <new-branch-name>
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0218626Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0219249Z Or undo this operation with:
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0220873Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0221726Z   git switch -
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0222568Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0223823Z Turn off this advice by setting config variable advice.detachedHead to false
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0225992Z 
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0226977Z HEAD is now at ac699d1 chore: remove unused existsAired constant
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0232390Z ##[endgroup]
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0289329Z [command]/usr/bin/git log -1 --format=%H
+release	Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:33.0313677Z ac699d10a7bcb7f311d73972bf0d290fffcb0b18
+release	Create GitHub Release	﻿2026-08-02T07:07:33.0588884Z ##[group]Run gh release create "$TAG" --title "$TAG" --generate-notes
+release	Create GitHub Release	2026-08-02T07:07:33.0590752Z [36;1mgh release create "$TAG" --title "$TAG" --generate-notes[0m
+release	Create GitHub Release	2026-08-02T07:07:33.0641539Z shell: /usr/bin/bash -e {0}
+release	Create GitHub Release	2026-08-02T07:07:33.0642297Z env:
+release	Create GitHub Release	2026-08-02T07:07:33.0652885Z   GH_TOKEN: ***
+release	Create GitHub Release	2026-08-02T07:07:33.0653413Z   TAG: v0.41.1
+release	Create GitHub Release	2026-08-02T07:07:33.0653898Z ##[endgroup]
+release	Create GitHub Release	2026-08-02T07:07:34.3248211Z https://github.com/Soviann/plextracker/releases/tag/v0.41.1
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	﻿2026-08-02T07:07:34.3425036Z Post job cleanup.
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4411331Z [command]/usr/bin/git version
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4490507Z git version 2.54.0
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4693159Z Temporarily overriding HOME='/home/runner/work/_temp/edcdc711-c2d1-4132-a8c2-5c7597dd67f9' before making global git config changes
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4694952Z Adding repository directory to the temporary git global config as a safe directory
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4696427Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/plextracker/plextracker
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4698707Z Removing SSH command configuration
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4703394Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.4793600Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5151940Z Removing HTTP extra header
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5153543Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5245887Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5605637Z Removing includeIf entries pointing to credentials config files
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5607151Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5692404Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5711438Z includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5730924Z includeif.gitdir:/github/workspace/.git.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5750989Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5753233Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5754606Z /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5777516Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git.path /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5831852Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5891379Z /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5932248Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/plextracker/plextracker/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5971906Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.5991464Z /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6004896Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6082353Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6135928Z /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6168086Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6194343Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+release	Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd	2026-08-02T07:07:34.6558569Z Removing credentials config '/home/runner/work/_temp/git-credentials-c22c7d4f-7c68-40e2-ac41-400a9920eb0c.config'
+release	Complete job	﻿2026-08-02T07:07:34.6756868Z Cleaning up orphan processes
+deploy	Set up job	﻿2026-08-02T07:07:39.7454513Z Current runner version: '2.336.0'
+deploy	Set up job	2026-08-02T07:07:39.7482209Z ##[group]Runner Image Provisioner
+deploy	Set up job	2026-08-02T07:07:39.7483358Z Hosted Compute Agent
+deploy	Set up job	2026-08-02T07:07:39.7484416Z Version: 20260707.563
+deploy	Set up job	2026-08-02T07:07:39.7485216Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+deploy	Set up job	2026-08-02T07:07:39.7486024Z Build Date: 2026-07-07T19:33:50Z
+deploy	Set up job	2026-08-02T07:07:39.7486901Z Worker ID: {55d55757-5109-4f2b-86a8-e20fcfe235af}
+deploy	Set up job	2026-08-02T07:07:39.7487818Z Azure Region: westus3
+deploy	Set up job	2026-08-02T07:07:39.7488395Z ##[endgroup]
+deploy	Set up job	2026-08-02T07:07:39.7489944Z ##[group]Operating System
+deploy	Set up job	2026-08-02T07:07:39.7490595Z Ubuntu
+deploy	Set up job	2026-08-02T07:07:39.7491631Z 24.04.4
+deploy	Set up job	2026-08-02T07:07:39.7492191Z LTS
+deploy	Set up job	2026-08-02T07:07:39.7492728Z ##[endgroup]
+deploy	Set up job	2026-08-02T07:07:39.7493304Z ##[group]Runner Image
+deploy	Set up job	2026-08-02T07:07:39.7494025Z Image: ubuntu-24.04
+deploy	Set up job	2026-08-02T07:07:39.7494650Z Version: 20260720.247.2
+deploy	Set up job	2026-08-02T07:07:39.7495794Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260720.247/images/ubuntu/Ubuntu2404-Readme.md
+deploy	Set up job	2026-08-02T07:07:39.7497752Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260720.247
+deploy	Set up job	2026-08-02T07:07:39.7498837Z ##[endgroup]
+deploy	Set up job	2026-08-02T07:07:39.7500022Z ##[group]GITHUB_TOKEN Permissions
+deploy	Set up job	2026-08-02T07:07:39.7502192Z Contents: write
+deploy	Set up job	2026-08-02T07:07:39.7502919Z Metadata: read
+deploy	Set up job	2026-08-02T07:07:39.7503461Z ##[endgroup]
+deploy	Set up job	2026-08-02T07:07:39.7505615Z Secret source: Actions
+deploy	Set up job	2026-08-02T07:07:39.7506971Z Prepare workflow directory
+deploy	Set up job	2026-08-02T07:07:39.7906184Z Prepare all required actions
+deploy	Set up job	2026-08-02T07:07:39.7982084Z Getting action download info
+deploy	Set up job	2026-08-02T07:07:40.0884398Z Download action repository 'appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2' (SHA:0ff4204d59e8e51228ff73bce53f80d53301dee2)
+deploy	Set up job	2026-08-02T07:07:40.9122502Z Complete job name: deploy
+deploy	Deploy to NAS	﻿2026-08-02T07:07:40.9676086Z ##[group]Run appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Deploy to NAS	2026-08-02T07:07:40.9677198Z with:
+deploy	Deploy to NAS	2026-08-02T07:07:40.9677646Z   host: ***
+deploy	Deploy to NAS	2026-08-02T07:07:40.9677953Z   username: ***
+deploy	Deploy to NAS	2026-08-02T07:07:40.9679912Z   key: ***
+deploy	Deploy to NAS	2026-08-02T07:07:40.9680215Z   port: ***
+deploy	Deploy to NAS	2026-08-02T07:07:40.9680513Z   command_timeout: 15m
+deploy	Deploy to NAS	2026-08-02T07:07:40.9681024Z   script: export PATH="/usr/local/bin:$PATH"
+deploy	Deploy to NAS	/volume1/docker/plextracker/scripts/nas-update.sh
+deploy	Deploy to NAS	
+deploy	Deploy to NAS	2026-08-02T07:07:40.9681600Z   protocol: tcp
+deploy	Deploy to NAS	2026-08-02T07:07:40.9681905Z   timeout: 30s
+deploy	Deploy to NAS	2026-08-02T07:07:40.9682205Z   proxy_port: 22
+deploy	Deploy to NAS	2026-08-02T07:07:40.9682514Z   proxy_protocol: tcp
+deploy	Deploy to NAS	2026-08-02T07:07:40.9682844Z   proxy_timeout: 30s
+deploy	Deploy to NAS	2026-08-02T07:07:40.9683164Z   curl_insecure: false
+deploy	Deploy to NAS	2026-08-02T07:07:40.9683503Z   capture_stdout: false
+deploy	Deploy to NAS	2026-08-02T07:07:40.9683923Z ##[endgroup]
+deploy	Deploy to NAS	2026-08-02T07:07:40.9728036Z ##[start-action display=Set GitHub Path;id=__appleboy_ssh-action.__run]
+deploy	Deploy to NAS	2026-08-02T07:07:40.9758806Z ##[group]Run echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+deploy	Deploy to NAS	2026-08-02T07:07:40.9759434Z [36;1mecho "$GITHUB_ACTION_PATH" >> $GITHUB_PATH[0m
+deploy	Deploy to NAS	2026-08-02T07:07:40.9800155Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+deploy	Deploy to NAS	2026-08-02T07:07:40.9800606Z env:
+deploy	Deploy to NAS	2026-08-02T07:07:40.9801163Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Deploy to NAS	2026-08-02T07:07:40.9801763Z ##[endgroup]
+deploy	Deploy to NAS	2026-08-02T07:07:40.9946622Z ##[end-action id=__appleboy_ssh-action.__run;outcome=success;conclusion=success;duration_ms=21]
+deploy	Deploy to NAS	2026-08-02T07:07:40.9953957Z ##[start-action display=Run entrypoint.sh;id=__appleboy_ssh-action.entrypoint]
+deploy	Deploy to NAS	2026-08-02T07:07:40.9970653Z ##[group]Run entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:07:40.9971030Z [36;1mentrypoint.sh[0m
+deploy	Deploy to NAS	2026-08-02T07:07:41.0006148Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+deploy	Deploy to NAS	2026-08-02T07:07:41.0006718Z env:
+deploy	Deploy to NAS	2026-08-02T07:07:41.0007291Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Deploy to NAS	2026-08-02T07:07:41.0008042Z   INPUT_HOST: ***
+deploy	Deploy to NAS	2026-08-02T07:07:41.0008380Z   INPUT_PORT: ***
+deploy	Deploy to NAS	2026-08-02T07:07:41.0008793Z   INPUT_PROTOCOL: tcp
+deploy	Deploy to NAS	2026-08-02T07:07:41.0009147Z   INPUT_USERNAME: ***
+deploy	Deploy to NAS	2026-08-02T07:07:41.0009475Z   INPUT_PASSWORD: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0009968Z   INPUT_PASSPHRASE: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0011946Z   INPUT_KEY: ***
+deploy	Deploy to NAS	2026-08-02T07:07:41.0012258Z   INPUT_KEY_PATH: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0012575Z   INPUT_FINGERPRINT: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0012898Z   INPUT_PROXY_HOST: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0013221Z   INPUT_PROXY_PORT: 22
+deploy	Deploy to NAS	2026-08-02T07:07:41.0013551Z   INPUT_PROXY_USERNAME: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0013892Z   INPUT_PROXY_PASSWORD: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0014235Z   INPUT_PROXY_PASSPHRASE: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0014574Z   INPUT_PROXY_KEY: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0014899Z   INPUT_PROXY_KEY_PATH: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0015242Z   INPUT_PROXY_FINGERPRINT: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0015590Z   INPUT_TIMEOUT: 30s
+deploy	Deploy to NAS	2026-08-02T07:07:41.0015918Z   INPUT_PROXY_TIMEOUT: 30s
+deploy	Deploy to NAS	2026-08-02T07:07:41.0016267Z   INPUT_COMMAND_TIMEOUT: 15m
+deploy	Deploy to NAS	2026-08-02T07:07:41.0016907Z   INPUT_SCRIPT: export PATH="/usr/local/bin:$PATH"
+deploy	Deploy to NAS	/volume1/docker/plextracker/scripts/nas-update.sh
+deploy	Deploy to NAS	
+deploy	Deploy to NAS	2026-08-02T07:07:41.0017509Z   INPUT_SCRIPT_FILE: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0017834Z   INPUT_ENVS: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0018148Z   INPUT_ENVS_FORMAT: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0018468Z   INPUT_DEBUG: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0018780Z   INPUT_ALL_ENVS: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0019096Z   INPUT_REQUEST_PTY: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0019431Z   INPUT_USE_INSECURE_CIPHER: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0019781Z   INPUT_CIPHER: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0020105Z   INPUT_PROXY_USE_INSECURE_CIPHER: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0020476Z   INPUT_PROXY_CIPHER: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0020801Z   INPUT_SYNC: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0021117Z   INPUT_CAPTURE_STDOUT: false
+deploy	Deploy to NAS	2026-08-02T07:07:41.0021476Z   INPUT_CURL_INSECURE: false
+deploy	Deploy to NAS	2026-08-02T07:07:41.0021823Z   DRONE_SSH_VERSION: 
+deploy	Deploy to NAS	2026-08-02T07:07:41.0022143Z ##[endgroup]
+deploy	Deploy to NAS	2026-08-02T07:07:41.0215049Z Downloading drone-ssh-1.8.2-linux-amd64 from https://github.com/appleboy/drone-ssh/releases/download/v1.8.2
+deploy	Deploy to NAS	2026-08-02T07:07:41.3944853Z ======= CLI Version Information =======
+deploy	Deploy to NAS	2026-08-02T07:07:41.3946073Z Drone SSH version 1.8.2
+deploy	Deploy to NAS	2026-08-02T07:07:41.3947121Z =======================================
+deploy	Deploy to NAS	2026-08-02T07:07:43.8586647Z [2026-08-02 09:07:43] === Début de la mise à jour ===
+deploy	Deploy to NAS	2026-08-02T07:07:47.0763685Z From github.com:Soviann/plextracker
+deploy	Deploy to NAS	2026-08-02T07:07:47.0764306Z    c21d267..ac699d1  main       -> origin/main
+deploy	Deploy to NAS	2026-08-02T07:07:47.0764694Z  * [new tag]         v0.41.0    -> v0.41.0
+deploy	Deploy to NAS	2026-08-02T07:07:47.0765085Z  * [new tag]         v0.41.1    -> v0.41.1
+deploy	Deploy to NAS	2026-08-02T07:07:47.1040412Z [2026-08-02 09:07:47] Mise à jour : v0.40.6 → v0.41.1
+deploy	Deploy to NAS	2026-08-02T07:07:47.1372016Z Previous HEAD position was dfbd021 fix(merge): preserve source title AniList ID on moved anime season (fixes #10)
+deploy	Deploy to NAS	2026-08-02T07:07:47.1372741Z HEAD is now at ac699d1 chore: remove unused existsAired constant
+deploy	Deploy to NAS	2026-08-02T07:07:47.1464799Z [2026-08-02 09:07:47] Tentative de déploiement pour le tag v0.41.1...
+deploy	Deploy to NAS	2026-08-02T07:07:47.5353968Z  Container plextracker  Stopping
+deploy	Deploy to NAS	2026-08-02T07:07:48.2702674Z  Container plextracker  Stopped
+deploy	Deploy to NAS	2026-08-02T07:07:48.2703160Z  Container plextracker  Removing
+deploy	Deploy to NAS	2026-08-02T07:07:48.3604156Z  Container plextracker  Removed
+deploy	Deploy to NAS	2026-08-02T07:07:48.3604726Z  Network plextracker_default  Removing
+deploy	Deploy to NAS	2026-08-02T07:07:48.5340574Z  Network plextracker_default  Removed
+deploy	Deploy to NAS	2026-08-02T07:07:49.1504103Z #0 building with "default" instance using docker driver
+deploy	Deploy to NAS	2026-08-02T07:07:49.1504906Z #1 [plextracker internal] load build definition from Dockerfile
+deploy	Deploy to NAS	2026-08-02T07:07:49.1505435Z #1 transferring dockerfile: 931B 0.0s done
+deploy	Deploy to NAS	2026-08-02T07:07:49.1506245Z #1 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:07:49.1506885Z #2 [plextracker internal] load .dockerignore
+deploy	Deploy to NAS	2026-08-02T07:07:49.1507306Z #2 transferring context: 930B 0.0s done
+deploy	Deploy to NAS	2026-08-02T07:07:49.1507675Z #2 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:07:49.1508103Z #3 [plextracker internal] load metadata for docker.io/library/golang:1.24-bookworm
+deploy	Deploy to NAS	2026-08-02T07:07:50.3437717Z #3 ...
+deploy	Deploy to NAS	2026-08-02T07:07:50.3438681Z #4 [plextracker internal] load metadata for docker.io/library/debian:bookworm-slim
+deploy	Deploy to NAS	2026-08-02T07:07:50.3439506Z #4 DONE 1.2s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4669248Z #5 [plextracker internal] load metadata for docker.io/library/node:22-bookworm
+deploy	Deploy to NAS	2026-08-02T07:07:50.4670897Z #5 DONE 1.2s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4671850Z #3 [plextracker internal] load metadata for docker.io/library/golang:1.24-bookworm
+deploy	Deploy to NAS	2026-08-02T07:07:50.4672407Z #3 DONE 1.2s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4672971Z #6 [plextracker frontend 1/6] FROM docker.io/library/node:22-bookworm@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed
+deploy	Deploy to NAS	2026-08-02T07:07:50.4673506Z #6 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4674010Z #7 [plextracker stage-2 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+deploy	Deploy to NAS	2026-08-02T07:07:50.4674543Z #7 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4675026Z #8 [plextracker backend 1/7] FROM docker.io/library/golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac
+deploy	Deploy to NAS	2026-08-02T07:07:50.4675442Z #8 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:07:50.4675595Z #9 [plextracker internal] load build context
+deploy	Deploy to NAS	2026-08-02T07:07:50.4675787Z #9 transferring context: 150.26kB 0.1s done
+deploy	Deploy to NAS	2026-08-02T07:07:50.6942560Z #9 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:07:50.6943285Z #10 [plextracker frontend 2/6] WORKDIR /app/frontend
+deploy	Deploy to NAS	2026-08-02T07:07:50.6943564Z #10 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6943772Z #11 [plextracker frontend 3/6] COPY frontend/package*.json ./
+deploy	Deploy to NAS	2026-08-02T07:07:50.6944117Z #11 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6944399Z #12 [plextracker frontend 4/6] RUN npm ci
+deploy	Deploy to NAS	2026-08-02T07:07:50.6944718Z #12 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6944964Z #13 [plextracker backend 2/7] WORKDIR /app
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945133Z #13 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945286Z #14 [plextracker backend 3/7] COPY go.mod go.sum ./
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945469Z #14 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945612Z #15 [plextracker backend 4/7] RUN go mod download
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945784Z #15 CACHED
+deploy	Deploy to NAS	2026-08-02T07:07:50.6945922Z #16 [plextracker backend 5/7] COPY . .
+deploy	Deploy to NAS	2026-08-02T07:07:50.7650078Z #16 ...
+deploy	Deploy to NAS	2026-08-02T07:07:50.7650818Z #17 [plextracker frontend 5/6] COPY frontend/ .
+deploy	Deploy to NAS	2026-08-02T07:07:50.7651029Z #17 DONE 0.2s
+deploy	Deploy to NAS	2026-08-02T07:07:50.8881766Z #16 [plextracker backend 5/7] COPY . .
+deploy	Deploy to NAS	2026-08-02T07:07:50.8882363Z #16 DONE 0.3s
+deploy	Deploy to NAS	2026-08-02T07:07:50.8882945Z #18 [plextracker frontend 6/6] RUN npx vite build
+deploy	Deploy to NAS	2026-08-02T07:07:55.4603019Z #18 4.691 vite v8.0.3 building client environment for production...
+deploy	Deploy to NAS	2026-08-02T07:07:56.2033591Z #18 4.723 [2K
+deploy	Deploy to NAS	2026-08-02T07:07:56.2034389Z transforming...✓ 121 modules transformed.
+deploy	Deploy to NAS	2026-08-02T07:07:56.7664495Z #18 6.000 rendering chunks...
+deploy	Deploy to NAS	2026-08-02T07:07:56.9230355Z #18 6.041 computing gzip size...
+deploy	Deploy to NAS	2026-08-02T07:07:56.9231132Z #18 6.045 dist/index.html                           1.51 kB │ gzip:  0.61 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9231460Z #18 6.045 dist/assets/stats-CJkClb0Z.css            4.62 kB │ gzip:  1.28 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9231932Z #18 6.045 dist/assets/match-review-kOuq_pYu.css     5.54 kB │ gzip:  1.54 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9232397Z #18 6.045 dist/assets/filter-drawer-BFlQVO74.css    5.82 kB │ gzip:  1.42 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9232994Z #18 6.045 dist/assets/admin-CNhmLZdN.css           15.33 kB │ gzip:  3.01 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9233461Z #18 6.045 dist/assets/index-CkV0sAH1.css           49.41 kB │ gzip:  9.72 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9233936Z #18 6.045 dist/assets/stats-Ce6GPcC9.js             9.68 kB │ gzip:  3.35 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9234409Z #18 6.045 dist/assets/filter-drawer-CNV1wlDl.js    12.04 kB │ gzip:  4.15 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9234875Z #18 6.045 dist/assets/match-review-Bsnglbg8.js     14.10 kB │ gzip:  4.92 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9235367Z #18 6.045 dist/assets/admin-12JmcaGw.js            48.34 kB │ gzip: 16.53 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9235877Z #18 6.045 dist/assets/index-B6Hbmbeg.js           106.16 kB │ gzip: 32.62 kB
+deploy	Deploy to NAS	2026-08-02T07:07:56.9236211Z #18 6.045 
+deploy	Deploy to NAS	2026-08-02T07:07:56.9236717Z #18 6.046 ✓ built in 1.35s
+deploy	Deploy to NAS	2026-08-02T07:07:56.9236867Z #18 DONE 6.2s
+deploy	Deploy to NAS	2026-08-02T07:07:57.6341405Z #19 [plextracker backend 6/7] COPY --from=frontend /app/frontend/dist ./frontend/dist
+deploy	Deploy to NAS	2026-08-02T07:07:57.8187739Z #19 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:07:57.8188875Z #20 [plextracker backend 7/7] RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
+deploy	Deploy to NAS	2026-08-02T07:09:59.1440670Z #20 DONE 121.5s
+deploy	Deploy to NAS	2026-08-02T07:09:59.3525830Z #21 [plextracker stage-2 2/5] RUN apt-get update && apt-get install -y ca-certificates gosu curl && rm -rf /var/lib/apt/lists/*     && useradd -r -s /bin/false appuser     && mkdir -p /data && chown appuser:appuser /data
+deploy	Deploy to NAS	2026-08-02T07:09:59.3526868Z #21 CACHED
+deploy	Deploy to NAS	2026-08-02T07:09:59.5041173Z #22 [plextracker stage-2 3/5] COPY --from=backend /app/plextracker /usr/local/bin/plextracker
+deploy	Deploy to NAS	2026-08-02T07:09:59.5792120Z #22 DONE 0.2s
+deploy	Deploy to NAS	2026-08-02T07:09:59.7311119Z #23 [plextracker stage-2 4/5] COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:09:59.8218575Z #23 DONE 0.2s
+deploy	Deploy to NAS	2026-08-02T07:09:59.9775601Z #24 [plextracker stage-2 5/5] RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:10:00.1535139Z #24 DONE 0.3s
+deploy	Deploy to NAS	2026-08-02T07:10:00.3052598Z #25 [plextracker] exporting to image
+deploy	Deploy to NAS	2026-08-02T07:10:00.3052926Z #25 exporting layers
+deploy	Deploy to NAS	2026-08-02T07:10:00.8358357Z #25 exporting layers 0.7s done
+deploy	Deploy to NAS	2026-08-02T07:10:00.8885833Z #25 writing image sha256:2cfcbca3f70cc60baced06908df0f1a1bf651d826484cbc338c0dfdb3bf4adc0 done
+deploy	Deploy to NAS	2026-08-02T07:10:00.8886932Z #25 naming to docker.io/library/plextracker-plextracker done
+deploy	Deploy to NAS	2026-08-02T07:10:00.8887238Z #25 DONE 0.7s
+deploy	Deploy to NAS	2026-08-02T07:10:00.8887478Z #26 [plextracker] resolving provenance for metadata file
+deploy	Deploy to NAS	2026-08-02T07:10:00.8887763Z #26 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:00.8887949Z  plextracker  Built
+deploy	Deploy to NAS	2026-08-02T07:10:00.8888171Z  Network plextracker_default  Creating
+deploy	Deploy to NAS	2026-08-02T07:10:01.0804105Z  Network plextracker_default  Created
+deploy	Deploy to NAS	2026-08-02T07:10:01.0804502Z  Container plextracker  Creating
+deploy	Deploy to NAS	2026-08-02T07:10:01.0804788Z  Container plextracker-antigravity  Creating
+deploy	Deploy to NAS	2026-08-02T07:10:01.1233547Z  Container plextracker  Created
+deploy	Deploy to NAS	2026-08-02T07:10:01.1347287Z  Container plextracker-antigravity  Created
+deploy	Deploy to NAS	2026-08-02T07:10:01.1370481Z  Container plextracker  Starting
+deploy	Deploy to NAS	2026-08-02T07:10:01.1371752Z  Container plextracker-antigravity  Starting
+deploy	Deploy to NAS	2026-08-02T07:10:01.8833953Z  Container plextracker  Started
+deploy	Deploy to NAS	2026-08-02T07:10:01.8834525Z Error response from daemon: Bind mount failed: '/volume1/docker/plextracker/antigravity' does not exist
+deploy	Deploy to NAS	2026-08-02T07:10:01.8927272Z [2026-08-02 09:10:01] ERREUR: docker compose up --build a échoué (conteneur non healthy).
+deploy	Deploy to NAS	2026-08-02T07:10:01.8980634Z [2026-08-02 09:10:01] Le déploiement a échoué pour v0.41.1, début du rollback...
+deploy	Deploy to NAS	2026-08-02T07:10:01.9195132Z [2026-08-02 09:10:01] Rollback vers v0.41.0...
+deploy	Deploy to NAS	2026-08-02T07:10:01.9311081Z Previous HEAD position was ac699d1 chore: remove unused existsAired constant
+deploy	Deploy to NAS	2026-08-02T07:10:01.9311838Z HEAD is now at 203d2c1 fix: stop showing upcoming seasons in continue watching
+deploy	Deploy to NAS	2026-08-02T07:10:02.0072041Z [2026-08-02 09:10:01] Tentative de déploiement pour le tag v0.41.0...
+deploy	Deploy to NAS	2026-08-02T07:10:02.0453204Z  Container plextracker-antigravity  Stopping
+deploy	Deploy to NAS	2026-08-02T07:10:02.0495861Z  Container plextracker  Stopping
+deploy	Deploy to NAS	2026-08-02T07:10:02.0496162Z  Container plextracker-antigravity  Stopped
+deploy	Deploy to NAS	2026-08-02T07:10:02.0496527Z  Container plextracker-antigravity  Removing
+deploy	Deploy to NAS	2026-08-02T07:10:02.1582512Z  Container plextracker-antigravity  Removed
+deploy	Deploy to NAS	2026-08-02T07:10:02.5145569Z  Container plextracker  Stopped
+deploy	Deploy to NAS	2026-08-02T07:10:02.5145984Z  Container plextracker  Removing
+deploy	Deploy to NAS	2026-08-02T07:10:02.5232091Z  Container plextracker  Removed
+deploy	Deploy to NAS	2026-08-02T07:10:02.5232351Z  Network plextracker_default  Removing
+deploy	Deploy to NAS	2026-08-02T07:10:02.6347146Z  Network plextracker_default  Removed
+deploy	Deploy to NAS	2026-08-02T07:10:03.6046517Z #0 building with "default" instance using docker driver
+deploy	Deploy to NAS	2026-08-02T07:10:03.6047000Z #1 [plextracker internal] load build definition from Dockerfile
+deploy	Deploy to NAS	2026-08-02T07:10:03.6047337Z #1 transferring dockerfile: 931B done
+deploy	Deploy to NAS	2026-08-02T07:10:03.6047579Z #1 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:03.6047794Z #2 [plextracker internal] load .dockerignore
+deploy	Deploy to NAS	2026-08-02T07:10:03.6048074Z #2 transferring context: 930B done
+deploy	Deploy to NAS	2026-08-02T07:10:03.6048310Z #2 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:03.6048655Z #3 [plextracker internal] load metadata for docker.io/library/debian:bookworm-slim
+deploy	Deploy to NAS	2026-08-02T07:10:03.8080673Z #3 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:10:03.8081128Z #4 [plextracker internal] load metadata for docker.io/library/golang:1.24-bookworm
+deploy	Deploy to NAS	2026-08-02T07:10:04.0026321Z #4 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0027124Z #5 [plextracker internal] load metadata for docker.io/library/node:22-bookworm
+deploy	Deploy to NAS	2026-08-02T07:10:04.0027626Z #5 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0028301Z #6 [plextracker frontend 1/6] FROM docker.io/library/node:22-bookworm@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed
+deploy	Deploy to NAS	2026-08-02T07:10:04.0028740Z #6 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0029055Z #7 [plextracker stage-2 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+deploy	Deploy to NAS	2026-08-02T07:10:04.0029432Z #7 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0029738Z #8 [plextracker backend 1/7] FROM docker.io/library/golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac
+deploy	Deploy to NAS	2026-08-02T07:10:04.0030332Z #8 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0030528Z #9 [plextracker internal] load build context
+deploy	Deploy to NAS	2026-08-02T07:10:04.0030790Z #9 transferring context: 37.15kB 0.0s done
+deploy	Deploy to NAS	2026-08-02T07:10:04.0031036Z #9 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:10:04.0031232Z #10 [plextracker backend 2/7] WORKDIR /app
+deploy	Deploy to NAS	2026-08-02T07:10:04.0031462Z #10 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0031678Z #11 [plextracker backend 3/7] COPY go.mod go.sum ./
+deploy	Deploy to NAS	2026-08-02T07:10:04.0031938Z #11 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0032136Z #12 [plextracker backend 4/7] RUN go mod download
+deploy	Deploy to NAS	2026-08-02T07:10:04.0032381Z #12 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0032565Z #13 [plextracker frontend 4/6] RUN npm ci
+deploy	Deploy to NAS	2026-08-02T07:10:04.0032797Z #13 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0033008Z #14 [plextracker frontend 2/6] WORKDIR /app/frontend
+deploy	Deploy to NAS	2026-08-02T07:10:04.0033258Z #14 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0033458Z #15 [plextracker frontend 5/6] COPY frontend/ .
+deploy	Deploy to NAS	2026-08-02T07:10:04.0033714Z #15 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0033958Z #16 [plextracker frontend 3/6] COPY frontend/package*.json ./
+deploy	Deploy to NAS	2026-08-02T07:10:04.0034741Z #16 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0034935Z #17 [plextracker frontend 6/6] RUN npx vite build
+deploy	Deploy to NAS	2026-08-02T07:10:04.0035108Z #17 CACHED
+deploy	Deploy to NAS	2026-08-02T07:10:04.0035243Z #18 [plextracker backend 5/7] COPY . .
+deploy	Deploy to NAS	2026-08-02T07:10:04.0035403Z #18 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:10:04.1541720Z #19 [plextracker backend 6/7] COPY --from=frontend /app/frontend/dist ./frontend/dist
+deploy	Deploy to NAS	2026-08-02T07:10:04.5526245Z #19 DONE 0.5s
+deploy	Deploy to NAS	2026-08-02T07:10:04.7041742Z #20 [plextracker backend 7/7] RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
+deploy	Deploy to NAS	2026-08-02T07:12:05.5946988Z #20 DONE 121.0s
+deploy	Deploy to NAS	2026-08-02T07:12:05.8983304Z #21 [plextracker stage-2 2/5] RUN apt-get update && apt-get install -y ca-certificates gosu curl && rm -rf /var/lib/apt/lists/*     && useradd -r -s /bin/false appuser     && mkdir -p /data && chown appuser:appuser /data
+deploy	Deploy to NAS	2026-08-02T07:12:05.8983861Z #21 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:06.0212919Z #22 [plextracker stage-2 3/5] COPY --from=backend /app/plextracker /usr/local/bin/plextracker
+deploy	Deploy to NAS	2026-08-02T07:12:06.0213632Z #22 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:12:06.2106203Z #23 [plextracker stage-2 4/5] COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:12:06.2107101Z #23 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:06.2107402Z #24 [plextracker stage-2 5/5] RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:12:06.3355035Z #24 DONE 0.3s
+deploy	Deploy to NAS	2026-08-02T07:12:06.4841521Z #25 [plextracker] exporting to image
+deploy	Deploy to NAS	2026-08-02T07:12:06.4841779Z #25 exporting layers
+deploy	Deploy to NAS	2026-08-02T07:12:06.5362337Z #25 exporting layers 0.2s done
+deploy	Deploy to NAS	2026-08-02T07:12:06.6500532Z #25 writing image sha256:1c2d221b77f6867a12dc5b9bb4bacc60b33ce394fbd5c3558d457c33f0a6afc0 0.1s done
+deploy	Deploy to NAS	2026-08-02T07:12:06.6501156Z #25 naming to docker.io/library/plextracker-plextracker
+deploy	Deploy to NAS	2026-08-02T07:12:06.8728445Z #25 naming to docker.io/library/plextracker-plextracker 0.2s done
+deploy	Deploy to NAS	2026-08-02T07:12:06.8728746Z #25 DONE 0.5s
+deploy	Deploy to NAS	2026-08-02T07:12:06.9533262Z #26 [plextracker] resolving provenance for metadata file
+deploy	Deploy to NAS	2026-08-02T07:12:06.9533637Z #26 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:06.9533878Z  plextracker  Built
+deploy	Deploy to NAS	2026-08-02T07:12:06.9579598Z  Network plextracker_default  Creating
+deploy	Deploy to NAS	2026-08-02T07:12:07.1203403Z  Network plextracker_default  Created
+deploy	Deploy to NAS	2026-08-02T07:12:07.1204355Z  Container plextracker-antigravity  Creating
+deploy	Deploy to NAS	2026-08-02T07:12:07.1204649Z  Container plextracker  Creating
+deploy	Deploy to NAS	2026-08-02T07:12:07.1725961Z  Container plextracker  Created
+deploy	Deploy to NAS	2026-08-02T07:12:07.1726337Z  Container plextracker-antigravity  Created
+deploy	Deploy to NAS	2026-08-02T07:12:07.1726834Z  Container plextracker-antigravity  Starting
+deploy	Deploy to NAS	2026-08-02T07:12:07.1727113Z  Container plextracker  Starting
+deploy	Deploy to NAS	2026-08-02T07:12:07.6039426Z  Container plextracker  Started
+deploy	Deploy to NAS	2026-08-02T07:12:07.6039843Z Error response from daemon: Bind mount failed: '/volume1/docker/plextracker/antigravity' does not exist
+deploy	Deploy to NAS	2026-08-02T07:12:07.6083418Z [2026-08-02 09:12:07] ERREUR: docker compose up --build a échoué (conteneur non healthy).
+deploy	Deploy to NAS	2026-08-02T07:12:07.6180305Z [2026-08-02 09:12:07] Rollback vers v0.40.6...
+deploy	Deploy to NAS	2026-08-02T07:12:07.6322218Z Previous HEAD position was 203d2c1 fix: stop showing upcoming seasons in continue watching
+deploy	Deploy to NAS	2026-08-02T07:12:07.6369126Z HEAD is now at dfbd021 fix(merge): preserve source title AniList ID on moved anime season (fixes #10)
+deploy	Deploy to NAS	2026-08-02T07:12:07.6465163Z [2026-08-02 09:12:07] Tentative de déploiement pour le tag v0.40.6...
+deploy	Deploy to NAS	2026-08-02T07:12:07.7462917Z  Container plextracker  Stopping
+deploy	Deploy to NAS	2026-08-02T07:12:17.9692231Z  Container plextracker  Stopped
+deploy	Deploy to NAS	2026-08-02T07:12:17.9692532Z  Container plextracker  Removing
+deploy	Deploy to NAS	2026-08-02T07:12:17.9782892Z  Container plextracker  Removed
+deploy	Deploy to NAS	2026-08-02T07:12:17.9849392Z  Network plextracker_default  Removing
+deploy	Deploy to NAS	2026-08-02T07:12:18.1511107Z  Network plextracker_default  Removed
+deploy	Deploy to NAS	2026-08-02T07:12:18.5663224Z #0 building with "default" instance using docker driver
+deploy	Deploy to NAS	2026-08-02T07:12:18.5663654Z #1 [plextracker internal] load .dockerignore
+deploy	Deploy to NAS	2026-08-02T07:12:18.5663940Z #1 transferring context: 930B done
+deploy	Deploy to NAS	2026-08-02T07:12:18.5664210Z #1 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.5664470Z #2 [plextracker internal] load build definition from Dockerfile
+deploy	Deploy to NAS	2026-08-02T07:12:18.5665347Z #2 transferring dockerfile: 931B 0.0s done
+deploy	Deploy to NAS	2026-08-02T07:12:18.5665591Z #2 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.5665857Z #3 [plextracker internal] load metadata for docker.io/library/golang:1.24-bookworm
+deploy	Deploy to NAS	2026-08-02T07:12:18.7880328Z #3 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:12:18.7880930Z #4 [plextracker internal] load metadata for docker.io/library/node:22-bookworm
+deploy	Deploy to NAS	2026-08-02T07:12:18.9111240Z #4 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9111694Z #5 [plextracker internal] load metadata for docker.io/library/debian:bookworm-slim
+deploy	Deploy to NAS	2026-08-02T07:12:18.9112075Z #5 DONE 0.4s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9112572Z #6 [plextracker frontend 1/6] FROM docker.io/library/node:22-bookworm@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed
+deploy	Deploy to NAS	2026-08-02T07:12:18.9113110Z #6 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9113598Z #7 [plextracker stage-2 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+deploy	Deploy to NAS	2026-08-02T07:12:18.9113987Z #7 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9114333Z #8 [plextracker backend 1/7] FROM docker.io/library/golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac
+deploy	Deploy to NAS	2026-08-02T07:12:18.9114682Z #8 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9114820Z #9 [plextracker internal] load build context
+deploy	Deploy to NAS	2026-08-02T07:12:18.9776189Z #9 transferring context: 134.59kB 0.1s done
+deploy	Deploy to NAS	2026-08-02T07:12:18.9776933Z #9 DONE 0.1s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9777220Z #10 [plextracker frontend 5/6] COPY frontend/ .
+deploy	Deploy to NAS	2026-08-02T07:12:18.9777532Z #10 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9777871Z #11 [plextracker frontend 3/6] COPY frontend/package*.json ./
+deploy	Deploy to NAS	2026-08-02T07:12:18.9778177Z #11 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9778511Z #12 [plextracker stage-2 3/5] COPY --from=backend /app/plextracker /usr/local/bin/plextracker
+deploy	Deploy to NAS	2026-08-02T07:12:18.9778896Z #12 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9779100Z #13 [plextracker frontend 4/6] RUN npm ci
+deploy	Deploy to NAS	2026-08-02T07:12:18.9779351Z #13 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9779561Z #14 [plextracker frontend 6/6] RUN npx vite build
+deploy	Deploy to NAS	2026-08-02T07:12:18.9779853Z #14 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9780049Z #15 [plextracker backend 5/7] COPY . .
+deploy	Deploy to NAS	2026-08-02T07:12:18.9780290Z #15 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9780485Z #16 [plextracker backend 2/7] WORKDIR /app
+deploy	Deploy to NAS	2026-08-02T07:12:18.9781101Z #16 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9781312Z #17 [plextracker backend 7/7] RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
+deploy	Deploy to NAS	2026-08-02T07:12:18.9781557Z #17 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9781775Z #18 [plextracker backend 6/7] COPY --from=frontend /app/frontend/dist ./frontend/dist
+deploy	Deploy to NAS	2026-08-02T07:12:18.9782007Z #18 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9782144Z #19 [plextracker backend 4/7] RUN go mod download
+deploy	Deploy to NAS	2026-08-02T07:12:18.9782320Z #19 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9782743Z #20 [plextracker stage-2 2/5] RUN apt-get update && apt-get install -y ca-certificates gosu curl && rm -rf /var/lib/apt/lists/*     && useradd -r -s /bin/false appuser     && mkdir -p /data && chown appuser:appuser /data
+deploy	Deploy to NAS	2026-08-02T07:12:18.9783188Z #20 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9783420Z #21 [plextracker stage-2 4/5] COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:12:18.9783685Z #21 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9783828Z #22 [plextracker backend 3/7] COPY go.mod go.sum ./
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784016Z #22 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784164Z #23 [plextracker frontend 2/6] WORKDIR /app/frontend
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784342Z #23 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784526Z #24 [plextracker stage-2 5/5] RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784749Z #24 CACHED
+deploy	Deploy to NAS	2026-08-02T07:12:18.9784880Z #25 [plextracker] exporting to image
+deploy	Deploy to NAS	2026-08-02T07:12:18.9785049Z #25 exporting layers done
+deploy	Deploy to NAS	2026-08-02T07:12:18.9785301Z #25 writing image sha256:020ef09676d454934d203e7ede99b1bf0ceacd361c412c25a214eaf390aa1968 done
+deploy	Deploy to NAS	2026-08-02T07:12:18.9785633Z #25 naming to docker.io/library/plextracker-plextracker done
+deploy	Deploy to NAS	2026-08-02T07:12:18.9785832Z #25 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9785993Z #26 [plextracker] resolving provenance for metadata file
+deploy	Deploy to NAS	2026-08-02T07:12:18.9786182Z #26 DONE 0.0s
+deploy	Deploy to NAS	2026-08-02T07:12:18.9786579Z  plextracker  Built
+deploy	Deploy to NAS	2026-08-02T07:12:18.9819724Z  Network plextracker_default  Creating
+deploy	Deploy to NAS	2026-08-02T07:12:19.1285323Z  Network plextracker_default  Created
+deploy	Deploy to NAS	2026-08-02T07:12:19.1332508Z time="2026-08-02T09:12:19+02:00" level=warning msg="Found orphan containers ([plextracker-antigravity]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+deploy	Deploy to NAS	2026-08-02T07:12:19.1333257Z  Container plextracker  Creating
+deploy	Deploy to NAS	2026-08-02T07:12:19.1996722Z  Container plextracker  Created
+deploy	Deploy to NAS	2026-08-02T07:12:19.2049306Z  Container plextracker  Starting
+deploy	Deploy to NAS	2026-08-02T07:12:19.5647134Z  Container plextracker  Started
+deploy	Deploy to NAS	2026-08-02T07:12:19.5647433Z  Container plextracker  Waiting
+deploy	Deploy to NAS	2026-08-02T07:12:30.0647719Z  Container plextracker  Healthy
+deploy	Deploy to NAS	2026-08-02T07:12:30.0716923Z [2026-08-02 09:12:30] Déploiement réussi.
+deploy	Deploy to NAS	2026-08-02T07:12:30.0767509Z [2026-08-02 09:12:30] ATTENTION: rollback effectué — vérifier manuellement la cohérence des migrations si le tag annulé contenait des changements de schéma.
+deploy	Deploy to NAS	2026-08-02T07:12:30.0814684Z 2026/08/02 07:12:30 Process exited with status 1
+deploy	Deploy to NAS	2026-08-02T07:12:30.0815097Z [2026-08-02 09:12:30] === Mise à jour terminée (rollback vers v0.40.6) ===
+deploy	Deploy to NAS	2026-08-02T07:12:30.0833328Z ##[error]Process completed with exit code 1.
+deploy	Deploy to NAS	2026-08-02T07:12:30.0842118Z ##[end-action id=__appleboy_ssh-action.entrypoint;outcome=failure;conclusion=failure;duration_ms=289088]
+deploy	Collect diagnostics on failure	﻿2026-08-02T07:12:30.1001478Z ##[group]Run appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1001737Z with:
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1002115Z   host: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1002252Z   username: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1003274Z   key: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1003405Z   port: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1003658Z   script: export PATH="/usr/local/bin:$PATH"
+deploy	Collect diagnostics on failure	/volume1/docker/plextracker/scripts/nas-diagnostics.sh 2>&1
+deploy	Collect diagnostics on failure	
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1003953Z   protocol: tcp
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004086Z   timeout: 30s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004217Z   command_timeout: 10m
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004357Z   proxy_port: 22
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004493Z   proxy_protocol: tcp
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004632Z   proxy_timeout: 30s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1004773Z   curl_insecure: false
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1005062Z   capture_stdout: false
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1005206Z ##[endgroup]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1009569Z ##[start-action display=Set GitHub Path;id=__appleboy_ssh-action_2.__run]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1020704Z ##[group]Run echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1020999Z [36;1mecho "$GITHUB_ACTION_PATH" >> $GITHUB_PATH[0m
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1059625Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1059833Z env:
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1060094Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1060386Z ##[endgroup]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1120124Z ##[end-action id=__appleboy_ssh-action_2.__run;outcome=success;conclusion=success;duration_ms=11]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1125937Z ##[start-action display=Run entrypoint.sh;id=__appleboy_ssh-action_2.entrypoint]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1137545Z ##[group]Run entrypoint.sh
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1137730Z [36;1mentrypoint.sh[0m
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1172131Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1172338Z env:
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1172609Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/0ff4204d59e8e51228ff73bce53f80d53301dee2
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173037Z   INPUT_HOST: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173186Z   INPUT_PORT: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173324Z   INPUT_PROTOCOL: tcp
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173478Z   INPUT_USERNAME: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173618Z   INPUT_PASSWORD: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1173759Z   INPUT_PASSPHRASE: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1174824Z   INPUT_KEY: ***
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1174958Z   INPUT_KEY_PATH: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175095Z   INPUT_FINGERPRINT: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175239Z   INPUT_PROXY_HOST: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175379Z   INPUT_PROXY_PORT: 22
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175523Z   INPUT_PROXY_USERNAME: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175675Z   INPUT_PROXY_PASSWORD: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175825Z   INPUT_PROXY_PASSPHRASE: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1175975Z   INPUT_PROXY_KEY: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1176120Z   INPUT_PROXY_KEY_PATH: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1176269Z   INPUT_PROXY_FINGERPRINT: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1176628Z   INPUT_TIMEOUT: 30s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1176773Z   INPUT_PROXY_TIMEOUT: 30s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1176927Z   INPUT_COMMAND_TIMEOUT: 10m
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1177217Z   INPUT_SCRIPT: export PATH="/usr/local/bin:$PATH"
+deploy	Collect diagnostics on failure	/volume1/docker/plextracker/scripts/nas-diagnostics.sh 2>&1
+deploy	Collect diagnostics on failure	
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1177517Z   INPUT_SCRIPT_FILE: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1177657Z   INPUT_ENVS: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1177790Z   INPUT_ENVS_FORMAT: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1177929Z   INPUT_DEBUG: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178059Z   INPUT_ALL_ENVS: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178193Z   INPUT_REQUEST_PTY: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178340Z   INPUT_USE_INSECURE_CIPHER: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178519Z   INPUT_CIPHER: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178707Z   INPUT_PROXY_USE_INSECURE_CIPHER: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1178876Z   INPUT_PROXY_CIPHER: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1179013Z   INPUT_SYNC: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1179153Z   INPUT_CAPTURE_STDOUT: false
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1179317Z   INPUT_CURL_INSECURE: false
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1179470Z   DRONE_SSH_VERSION: 
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1179611Z ##[endgroup]
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1275391Z Binary drone-ssh-1.8.2-linux-amd64 already exists, skipping download
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1279682Z ======= CLI Version Information =======
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1290299Z Drone SSH version 1.8.2
+deploy	Collect diagnostics on failure	2026-08-02T07:12:30.1294974Z =======================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:31.9605297Z === Diagnostic PlexTracker — 2026-08-02 09:12:31 ===
+deploy	Collect diagnostics on failure	2026-08-02T07:12:31.9605606Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:31.9605824Z === ÉTAT DES CONTENEURS
+deploy	Collect diagnostics on failure	2026-08-02T07:12:31.9605989Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0555393Z NAME                      IMAGE                     COMMAND                  SERVICE              CREATED          STATUS                    PORTS
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0567875Z plextracker               plextracker-plextracker   "docker-entrypoint.s…"   plextracker          12 seconds ago   Up 12 seconds (healthy)   0.0.0.0:8083->8080/tcp, [::]:8083->8080/tcp
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0569457Z plextracker-antigravity   python:3.11-slim          "python3 /scripts/se…"   antigravity-daemon   24 seconds ago   Created                   0.0.0.0:8191->8191/tcp, :::8191->8191/tcp
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0632916Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0633381Z === LOGS DOCKER: plextracker (100 dernières lignes)
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.0633693Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1598784Z plextracker  | time=2026-08-02T07:12:19.755Z level=INFO msg="matching: crossref DB not loaded (optional): open crossref db: open /data/anime-offline-database.json: no such file or directory"
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1599815Z plextracker  | time=2026-08-02T07:12:20.059Z level=INFO msg="TVDB client ready"
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1600435Z plextracker  | time=2026-08-02T07:12:20.060Z level=INFO msg="PlexTracker listening on :8080"
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1602150Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-192.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 9437B in 1.405056ms
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1603384Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-512.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 21551B in 243.922µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1604049Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-maskable.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 7842B in 178.503µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1604730Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/apple-touch-icon.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 3865B in 153.118µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1605440Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-add.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 207B in 543.045µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1606085Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-library.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 186B in 201.702µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1606985Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-search.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 210B in 187.423µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1607647Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-192.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 9437B in 308.531µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1608260Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-512.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 21551B in 304.086µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1608880Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-maskable.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 7842B in 299.234µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1609523Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/apple-touch-icon.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 3865B in 224.382µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1610165Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-add.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 207B in 461.485µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1610798Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-library.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 186B in 322.951µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1611832Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/shortcut-search.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 210B in 192.422µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1612457Z plextracker  | 2026/08/02 07:12:28 "GET http://plextracker.***/icon-192.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 9437B in 266.073µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1613080Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-512.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 21551B in 527.486µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1613814Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-maskable.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 7842B in 323.228µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1614453Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/apple-touch-icon.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 3865B in 237.504µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1615025Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-add.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 207B in 1.027398ms
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1615662Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-library.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 186B in 499.761µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1616302Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-search.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 210B in 494.568µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1617017Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-192.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 9437B in 365.556µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1617635Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-512.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 21551B in 433.897µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1618266Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-maskable.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 7842B in 262.017µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1618904Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/apple-touch-icon.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 3865B in 328.024µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1619543Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-add.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 207B in 224.643µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1620176Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-library.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 186B in 213.181µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1620818Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-search.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 210B in 226.389µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1621439Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-192.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 9437B in 256.768µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1622101Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-512.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 21551B in 296.962µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1622723Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/icon-maskable.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 7842B in 249.305µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1623363Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/apple-touch-icon.png HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 3865B in 235.781µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1623996Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-add.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 207B in 206.259µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1624633Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-library.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 186B in 208.977µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1625366Z plextracker  | 2026/08/02 07:12:29 "GET http://plextracker.***/shortcut-search.svg HTTP/1.1" from 2a02:8424:5e23:f501:4c9f:c350:80f0:9b27 - 200 210B in 200.058µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1625912Z plextracker  | 2026/08/02 07:12:29 "GET http://localhost:8080/api/health HTTP/1.1" from 127.0.0.1:53540 - 200 15B in 51.82µs
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1643514Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1643813Z === OOM / KILL (dmesg)
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.1644049Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2034255Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2034646Z === ESPACE DISQUE
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2035252Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2079920Z Filesystem              Size  Used Avail Use% Mounted on
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2080458Z /dev/mapper/cachedev_0   11T   11T  717G  94% /volume1
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2080793Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2081303Z === DERNIER LOG DE MISE À JOUR
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2081566Z ============================================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2178930Z Fichier: /volume1/docker/plextracker/logs/update-2026-08-02.log
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2227489Z  Network plextracker_default  Removing
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2227800Z  Network plextracker_default  Removed
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2228128Z #0 building with "default" instance using docker driver
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2228456Z #1 [plextracker internal] load .dockerignore
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2228742Z #1 transferring context: 930B done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2228982Z #1 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2229261Z #2 [plextracker internal] load build definition from Dockerfile
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2229602Z #2 transferring dockerfile: 931B 0.0s done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2229860Z #2 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2230175Z #3 [plextracker internal] load metadata for docker.io/library/golang:1.24-bookworm
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2230549Z #3 DONE 0.4s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2230849Z #4 [plextracker internal] load metadata for docker.io/library/node:22-bookworm
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2231134Z #4 DONE 0.4s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2231336Z #5 [plextracker internal] load metadata for docker.io/library/debian:bookworm-slim
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2231567Z #5 DONE 0.4s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2231887Z #6 [plextracker frontend 1/6] FROM docker.io/library/node:22-bookworm@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2232233Z #6 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2232546Z #7 [plextracker stage-2 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2232895Z #7 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2233200Z #8 [plextracker backend 1/7] FROM docker.io/library/golang:1.24-bookworm@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2233538Z #8 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2233677Z #9 [plextracker internal] load build context
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2233865Z #9 transferring context: 134.59kB 0.1s done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234032Z #9 DONE 0.1s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234182Z #10 [plextracker frontend 5/6] COPY frontend/ .
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234358Z #10 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234527Z #11 [plextracker frontend 3/6] COPY frontend/package*.json ./
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234726Z #11 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2234944Z #12 [plextracker stage-2 3/5] COPY --from=backend /app/plextracker /usr/local/bin/plextracker
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235196Z #12 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235330Z #13 [plextracker frontend 4/6] RUN npm ci
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235495Z #13 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235640Z #14 [plextracker frontend 6/6] RUN npx vite build
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235817Z #14 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2235951Z #15 [plextracker backend 5/7] COPY . .
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2236110Z #15 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2236243Z #16 [plextracker backend 2/7] WORKDIR /app
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2236557Z #16 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2236961Z #17 [plextracker backend 7/7] RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o plextracker .
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2237209Z #17 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2237408Z #18 [plextracker backend 6/7] COPY --from=frontend /app/frontend/dist ./frontend/dist
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2237641Z #18 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2237781Z #19 [plextracker backend 4/7] RUN go mod download
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2237954Z #19 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2238376Z #20 [plextracker stage-2 2/5] RUN apt-get update && apt-get install -y ca-certificates gosu curl && rm -rf /var/lib/apt/lists/*     && useradd -r -s /bin/false appuser     && mkdir -p /data && chown appuser:appuser /data
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2238825Z #20 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2239152Z #21 [plextracker stage-2 4/5] COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2239421Z #21 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2239567Z #22 [plextracker backend 3/7] COPY go.mod go.sum ./
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2239749Z #22 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2239907Z #23 [plextracker frontend 2/6] WORKDIR /app/frontend
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2240088Z #23 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2240278Z #24 [plextracker stage-2 5/5] RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2240500Z #24 CACHED
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2240634Z #25 [plextracker] exporting to image
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2240805Z #25 exporting layers done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2241062Z #25 writing image sha256:020ef09676d454934d203e7ede99b1bf0ceacd361c412c25a214eaf390aa1968 done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2241374Z #25 naming to docker.io/library/plextracker-plextracker done
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2241575Z #25 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2241739Z #26 [plextracker] resolving provenance for metadata file
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2241938Z #26 DONE 0.0s
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2242070Z  plextracker  Built
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2242223Z  Network plextracker_default  Creating
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2242402Z  Network plextracker_default  Created
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2242947Z time="2026-08-02T09:12:19+02:00" level=warning msg="Found orphan containers ([plextracker-antigravity]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2243519Z  Container plextracker  Creating
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2243686Z  Container plextracker  Created
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2243857Z  Container plextracker  Starting
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2244039Z  Container plextracker  Started
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2244232Z  Container plextracker  Waiting
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2244391Z  Container plextracker  Healthy
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2244733Z [2026-08-02 09:12:30] Déploiement réussi.
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2245208Z [2026-08-02 09:12:30] ATTENTION: rollback effectué — vérifier manuellement la cohérence des migrations si le tag annulé contenait des changements de schéma.
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2245681Z [2026-08-02 09:12:30] === Mise à jour terminée (rollback vers v0.40.6) ===
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2936071Z === Fin du diagnostic — 2026-08-02 09:12:32 ===
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2984086Z ===============================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2988822Z ✅ Successfully executed commands to all hosts.
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.2989458Z ===============================================
+deploy	Collect diagnostics on failure	2026-08-02T07:12:32.3011904Z ##[end-action id=__appleboy_ssh-action_2.entrypoint;outcome=success;conclusion=success;duration_ms=2188]
+deploy	Complete job	﻿2026-08-02T07:12:32.3073651Z Cleaning up orphan processes

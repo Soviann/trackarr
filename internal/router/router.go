@@ -78,6 +78,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc, titleReadRepo)
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
 	admin.SetShutdownWG(shutdownWG)
+	arrSvc := service.NewArrService(cfg, settingRepo, writeDB)
+	arr := handler.NewArrHandler(arrSvc, titleRepo, writeDB)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(jellyfinSvc, cfg.JellyfinWebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
@@ -174,10 +176,20 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/admin/tasks/batch-delete", httputil.WrapHandler(admin.DeleteTasksBatch))
 			r.Get("/admin/notifications", httputil.WrapHandler(admin.GetNotificationPrefs))
 			r.Put("/admin/notifications", httputil.WrapHandler(admin.UpdateNotificationPrefs))
+			r.Get("/admin/arr", httputil.WrapHandler(admin.GetArrSettings))
+			r.Put("/admin/arr", httputil.WrapHandler(admin.UpdateArrSettings))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
 			r.Get("/admin/season-audit", httputil.WrapHandler(seasonAudit.List))
 			r.Post("/admin/season-audit/accept", httputil.WrapHandler(seasonAudit.Accept))
 			r.Post("/admin/season-audit/dismiss", httputil.WrapHandler(seasonAudit.Dismiss))
+
+			// Arr API
+			r.Route("/arr", func(r chi.Router) {
+				r.Get("/{app}/rootfolder", httputil.WrapHandler(arr.ProxyRootFolder))
+				r.Get("/{app}/qualityprofile", httputil.WrapHandler(arr.ProxyQualityProfile))
+				r.Get("/queue", httputil.WrapHandler(arr.ListArrQueue))
+				r.Post("/queue/{id}/push", httputil.WrapHandler(arr.PushToArr))
+			})
 
 			clientErrorsRateLimit := mw.RateLimit(ctx, 30, time.Minute)
 			r.With(clientErrorsRateLimit).Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))

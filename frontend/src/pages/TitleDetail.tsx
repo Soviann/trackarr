@@ -233,6 +233,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 <div className={s.extSource}>AniList</div>
               </div>
             )}
+
           </div>
         </div>
       </div>
@@ -303,6 +304,32 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <div className={s.detailRow}>
             <span className={s.detailKey}>Match</span>
             <span className={s.detailVal}>{title.match_source}</span>
+          </div>
+        )}
+        {title.radarr_id != null && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Radarr</span>
+            <span className={s.detailVal}>
+              <a href={`https://radarr.nasgits.synology.me/movie/${title.radarr_id}`} target="_blank" rel="noopener noreferrer" className={`${s.arrLink} ${s.radarrColor}`}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                  Open in Radarr
+                </span>
+              </a>
+            </span>
+          </div>
+        )}
+        {title.sonarr_id != null && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Sonarr</span>
+            <span className={s.detailVal}>
+              <a href={`https://sonarr.nasgits.synology.me/series/${title.sonarr_id}`} target="_blank" rel="noopener noreferrer" className={`${s.arrLink} ${s.sonarrColor}`}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
+                  Open in Sonarr
+                </span>
+              </a>
+            </span>
           </div>
         )}
         {title.original_title && title.original_title !== name && (

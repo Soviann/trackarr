@@ -10,6 +10,8 @@ const (
 	TaskTypeCoverFetch        TaskType = "cover_fetch"
 	TaskTypeAniListPushSeason TaskType = "anilist_push_season"
 	TaskTypeAniListPushMovie  TaskType = "anilist_push_movie"
+	TaskTypeRadarrPush        TaskType = "radarr_push"
+	TaskTypeSonarrPush        TaskType = "sonarr_push"
 )
 
 type TaskStatus string

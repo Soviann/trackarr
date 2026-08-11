@@ -25,7 +25,6 @@ type ContinueWatchingItem struct {
 	WatchProviders  []model.WatchProvider `json:"watch_providers,omitempty"`
 }
 
-// UpcomingItem represents a title with an upcoming air date.
 type UpcomingItem struct {
 	ID             int64                 `json:"id"`
 	Type           string                `json:"type"`
@@ -35,6 +34,18 @@ type UpcomingItem struct {
 	NextAirEpisode *string               `json:"next_air_episode"`
 	Status         string                `json:"status"`
 	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
+}
+
+// ArrQueueItem represents a title pending Radarr/Sonarr push.
+type ArrQueueItem struct {
+	ID       int64   `json:"id"`
+	Type     string  `json:"type"`
+	CoverURL *string `json:"cover_url"`
+	Name     string  `json:"name"`
+	IsAnime  bool    `json:"is_anime"`
+	Year     int     `json:"year"`
+	TMDBID   *int64  `json:"tmdb_id"`
+	TVDBID   *int64  `json:"tvdb_id"`
 }
 
 type TitleRepository struct {
@@ -84,6 +95,9 @@ type TitleUpdate struct {
 	AccentHex         *string
 	SimklID           *int64
 	SimklSlug         *string
+	RadarrID          *int64
+	SonarrID          *int64
+	ArrIgnored        *bool
 	WatchProviders    *string // JSON array of model.WatchProvider; "[]" clears
 	OriginCountry     *string // ISO-3166-1 alpha-2; sets titles.origin_country
 }
@@ -92,11 +106,11 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
 	var watchProvidersRaw *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles WHERE id = ?`, id).
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.PlexRatingKey, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.CreatedAt, &title.UpdatedAt)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &title.CreatedAt, &title.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
@@ -323,7 +337,7 @@ func (r *TitleRepository) GetLiteByID(ctx context.Context, id int64) (*TitleLite
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, plex_rating_key, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -335,7 +349,7 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
@@ -571,4 +585,86 @@ func (r *TitleRepository) ReviewCount(_ context.Context) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE match_status IN ('pending_review', 'unconfirmed')`).Scan(&count)
 	return count, err
+}
+
+// ListArrQueue returns ALL PlanToWatch titles that are not ignored and don't have an Arr ID.
+// Used for badges / counts.
+func (r *TitleRepository) ListArrQueue() ([]ArrQueueItem, error) {
+	query := `
+		SELECT t.id, t.type, t.cover_url, t.is_anime, t.year, t.tmdb_id, t.tvdb_id,
+		       COALESCE(` + displayNameExpr + `, '') AS name
+		FROM titles t
+		WHERE t.status = 'plan_to_watch'
+		  AND t.arr_ignored = 0
+		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL) OR 
+		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL))
+		  AND NOT EXISTS (
+		      SELECT 1 FROM task_queue tq 
+		      WHERE tq.status IN ('pending', 'running', 'sleeping') 
+		      AND tq.dedup_key = 'arr_push_' || t.id
+		  )
+		ORDER BY t.created_at DESC`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("list arr queue: %w", err)
+	}
+	defer rows.Close()
+
+	var items []ArrQueueItem
+	for rows.Next() {
+		var item ArrQueueItem
+		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.IsAnime, &item.Year, &item.TMDBID, &item.TVDBID, &item.Name); err != nil {
+			return nil, fmt.Errorf("scan arr queue: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate arr queue: %w", err)
+	}
+	return items, nil
+}
+
+// ListPaginatedArrQueue returns paginated Arr Queue items.
+func (r *TitleRepository) ListPaginatedArrQueue(limit, offset int) ([]ArrQueueItem, bool, error) {
+	query := `
+		SELECT t.id, t.type, t.cover_url, t.is_anime, t.year, t.tmdb_id, t.tvdb_id,
+		       COALESCE(` + displayNameExpr + `, '') AS name
+		FROM titles t
+		WHERE t.status = 'plan_to_watch'
+		  AND t.arr_ignored = 0
+		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL) OR 
+		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL))
+		  AND NOT EXISTS (
+		      SELECT 1 FROM task_queue tq 
+		      WHERE tq.status IN ('pending', 'running', 'sleeping') 
+		      AND tq.dedup_key = 'arr_push_' || t.id
+		  )
+		ORDER BY t.created_at DESC
+		LIMIT ? OFFSET ?`
+
+	rows, err := r.db.Query(query, limit+1, offset)
+	if err != nil {
+		return nil, false, fmt.Errorf("list paginated arr queue: %w", err)
+	}
+	defer rows.Close()
+
+	var items []ArrQueueItem
+	for rows.Next() {
+		var item ArrQueueItem
+		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.IsAnime, &item.Year, &item.TMDBID, &item.TVDBID, &item.Name); err != nil {
+			return nil, false, fmt.Errorf("scan arr queue: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("iterate arr queue: %w", err)
+	}
+	
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+	
+	return items, hasMore, nil
 }

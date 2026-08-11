@@ -143,6 +143,10 @@ func Serve(distFS embed.FS) error {
 	// aniListPushClient interface — no adapter needed.
 	anilistPushSvc := service.NewAniListPushService(writeDB, anilistClient, slog.Default())
 	worker.SetAniListPush(anilistPushSvc)
+
+	arrSvc := service.NewArrService(cfg, settingRepo, writeDB)
+	worker.SetArrService(arrSvc)
+
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(ctx)
 	}

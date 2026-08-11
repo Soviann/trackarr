@@ -97,6 +97,7 @@ type TaskQueueWorker struct {
 	anilistPush AniListPusher   // optional — configured via SetAniListPush when an AniList client is wired
 	covers      *CoverService   // optional — configured via SetCovers; drives accent extraction after every cover save
 	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so the worker loop can finish its poll
+	arrSvc      *ArrService     // optional — configured via SetArrService
 }
 
 func NewTaskQueueWorker(
@@ -164,6 +165,14 @@ func (w *TaskQueueWorker) SetCovers(covers *CoverService) {
 		return
 	}
 	w.covers = covers
+}
+
+// SetArrService wires the ArrService so the worker can process radarr/sonarr push tasks.
+func (w *TaskQueueWorker) SetArrService(arrSvc *ArrService) {
+	if w == nil {
+		return
+	}
+	w.arrSvc = arrSvc
 }
 
 // Start launches the worker loop. It polls for due tasks every 30 seconds.
@@ -286,6 +295,10 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		err = w.handleAniListPushSeason(ctx, task, logger)
 	case model.TaskTypeAniListPushMovie:
 		err = w.handleAniListPushMovie(ctx, task, logger)
+	case model.TaskTypeRadarrPush:
+		err = w.handleArrPush(ctx, task, logger, "radarr")
+	case model.TaskTypeSonarrPush:
+		err = w.handleArrPush(ctx, task, logger, "sonarr")
 	default:
 		logger.Warn("unknown task type", "taskType", task.TaskType)
 		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -19,6 +19,8 @@ import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
 import { AdminAniList } from './pages/AdminAniList'
+import { AdminArr } from './pages/AdminArr'
+import { ArrQueue } from './pages/ArrQueue'
 import { AdminSeasonAudit } from './pages/AdminSeasonAudit'
 import { AnilistCallback } from './pages/AnilistCallback'
 import { Help } from './pages/Help'
@@ -211,6 +213,8 @@ export function App() {
           <AdminTasks path={ROUTE_PATHS.adminTasks} />
           <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
           <AdminAniList path={ROUTE_PATHS.adminAniList} />
+          <AdminArr path={ROUTE_PATHS.adminArr} />
+          <ArrQueue path={ROUTE_PATHS.adminArrQueue} />
           <AdminSeasonAudit path={ROUTE_PATHS.adminSeasonAudit} />
           <Help path={ROUTE_PATHS.adminHelp} />
           <AnilistCallback path={ROUTE_PATHS.anilistCallback} />

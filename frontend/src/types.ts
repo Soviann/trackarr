@@ -28,6 +28,8 @@ export interface Title {
   anilist_id: number | null
   tmdb_id: number | null
   tvdb_id: number | null
+  radarr_id?: number | null
+  sonarr_id?: number | null
   my_rating: number | null
   status: TitleStatus
   series_status: SeriesStatus | null

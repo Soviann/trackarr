@@ -164,6 +164,18 @@
 
 .tmdbColor { color: var(--cover-accent, var(--accent)); }
 .anilistColor { color: var(--brand-anilist); }
+.radarrColor { color: #ffc230; }
+.sonarrColor { color: #00c0ff; }
+
+.arrLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.arrLink:hover {
+  opacity: 0.8;
+}
 
 /* Synopsis card */
 .synopsisText {
