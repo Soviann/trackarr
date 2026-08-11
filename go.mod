@@ -1,8 +1,6 @@
 module github.com/nicolasvasse/plextracker
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.26.0
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
@@ -12,13 +10,13 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/image v0.28.0
-	golang.org/x/time v0.14.0
+	golang.org/x/image v0.44.0
+	golang.org/x/time v0.15.0
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
