@@ -170,8 +170,8 @@ export function ArrQueue({ path }: { path?: string }) {
 
   const handleIgnore = async (item: QueueItem) => {
     try {
-      await apiFetch(`/title/${item.id}`, {
-        method: 'PUT',
+      await apiFetch(`/titles/${item.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ arr_ignored: true })
       })
