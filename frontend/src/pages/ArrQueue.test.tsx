@@ -18,8 +18,8 @@ describe('ArrQueue', () => {
       if (path.startsWith('/arr/queue')) {
         return Promise.resolve({
           items: [
-            { id: 1, type: 'movie', name: 'Test Movie', is_anime: false },
-            { id: 2, type: 'series', name: 'Test Show', is_anime: false }
+            { id: 1, type: 'movie', name: 'Test Movie', is_anime: false, cover_url: 'movie_cover.webp' },
+            { id: 2, type: 'series', name: 'Test Show', is_anime: false, cover_url: null }
           ],
           has_more: false
         })
@@ -57,6 +57,10 @@ describe('ArrQueue', () => {
     await waitFor(() => {
       expect(screen.getByText('Test Movie')).not.toBeNull()
     })
+
+    // Check cover image src
+    const img = screen.getByAltText('Test Movie') as HTMLImageElement
+    expect(img.src).toContain('/api/covers/movie_cover.webp')
 
     // Check that both items are rendered
     expect(screen.getByText('Test Movie')).not.toBeNull()

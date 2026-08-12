@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import type { Title } from '../types'
-import { aniListMediaUrl, getName } from '../utils'
+import { aniListMediaUrl, getName, getCoverUrl } from '../utils'
 import { BottomSheet } from './BottomSheet'
 import s from './AniListSheet.module.css'
 
@@ -16,6 +16,7 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
   const name = getName(title)
   const hasAnilistMatch = !!title.anilist_id
   const isConfirmed = title.match_status === 'confirmed'
+  const coverUrl = getCoverUrl(title.cover_url)
 
   return (
     <BottomSheet open={open} onClose={onClose} ariaLabel="AniList match">
@@ -29,9 +30,9 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
             {/* Match card */}
             <div className={s.matchCard}>
               <div
-                className={clsx(s.cover, !title.cover_url && s.coverFallback)}
-                style={title.cover_url
-                  ? { background: `url(/api/covers/${title.cover_url}) center/cover` }
+                className={clsx(s.cover, !coverUrl && s.coverFallback)}
+                style={coverUrl
+                  ? { background: `url(${coverUrl}) center/cover` }
                   : undefined}
               />
               <div>

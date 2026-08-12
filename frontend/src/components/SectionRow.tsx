@@ -1,5 +1,6 @@
 import s from './SectionRow.module.css'
 import type { Title } from '../types'
+import { getCoverUrl } from '../utils'
 
 interface SectionRowProps {
   label: string
@@ -32,17 +33,20 @@ export function SectionRow({ label, subText, posters, onClick, loading }: Sectio
                 aria-hidden="true"
               />
             ))
-          : peek.map((p, i) => (
-              <div
-                key={p.id}
-                className={s.miniPoster}
-                style={{
-                  backgroundImage: p.cover_url ? `url(/api/covers/${p.cover_url})` : undefined,
-                  transform: `translateX(${i * -8}px)`,
-                  zIndex: peek.length - i,
-                }}
-              />
-            ))}
+          : peek.map((p, i) => {
+              const coverUrl = getCoverUrl(p.cover_url)
+              return (
+                <div
+                  key={p.id}
+                  className={s.miniPoster}
+                  style={{
+                    backgroundImage: coverUrl ? `url(${coverUrl})` : undefined,
+                    transform: `translateX(${i * -8}px)`,
+                    zIndex: peek.length - i,
+                  }}
+                />
+              )
+            })}
       </div>
       <svg className={s.chev} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6" />

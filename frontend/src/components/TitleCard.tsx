@@ -7,7 +7,7 @@ import { apiFetch } from '../api'
 import { getName, getTypeLabel, formatSortCaption } from '../utils'
 import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
-import { CoverPlaceholder } from './CoverPlaceholder'
+import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 import s from './TitleCard.module.css'
@@ -44,7 +44,6 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
   const sortField = useTitleStore(s => s.sort.field)
   const sortCaption = showSortCaption ? formatSortCaption(title, sortField) : null
   const [toggling, setToggling] = useState(false)
-  const [imgError, setImgError] = useState(false)
   const name = getName(title)
   const typeLabel = getTypeLabel(title.type)
 
@@ -73,18 +72,14 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
     <a href={routeTo.title(title.id)} onClick={(e) => { e.preventDefault(); route(routeTo.title(title.id)) }} className={s.card}>
       {/* Cover */}
       <div className={s.cover}>
-        {title.cover_url && !imgError ? (
-          <img
-            src={`/api/covers/${title.cover_url}`}
-            className={s.coverImage}
-            loading="lazy"
-            decoding="async"
-            alt={name}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <CoverPlaceholder type={title.type} iconSize="20px" />
-        )}
+        <CoverImage
+          coverUrl={title.cover_url}
+          type={title.type}
+          is_anime={title.is_anime}
+          alt={name}
+          className={s.coverImage}
+          iconSize="20px"
+        />
         <div className={s.typeBadge}>
           <TypeBadge type={title.type} size="sm" />
         </div>

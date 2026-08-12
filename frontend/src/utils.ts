@@ -215,3 +215,16 @@ export function computeAniListUrl(title: Title): string | null {
   }
   return null
 }
+
+/**
+ * Resolves a cover image filename or URL to its full downloadable / displayable path.
+ * Relative filenames (e.g. "abc123.webp") are prefixed with "/api/covers/".
+ * Null, undefined, or empty values return null.
+ */
+export function getCoverUrl(coverUrl: string | null | undefined): string | null {
+  if (!coverUrl) return null
+  if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://') || coverUrl.startsWith('/')) {
+    return coverUrl
+  }
+  return `/api/covers/${coverUrl}`
+}

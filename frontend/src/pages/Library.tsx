@@ -3,7 +3,7 @@ import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import { useApi } from '../hooks/useApi'
 import { haptic, HAPTIC_SHORT } from '../utils/haptic'
-import { formatWatchtimeShort } from '../utils'
+import { formatWatchtimeShort, getCoverUrl } from '../utils'
 import type { Title, ContinueWatchingTitle, UpcomingTitle, StatsResponse } from '../types'
 import { colors } from '../theme'
 import { useTitleStore } from '../store'
@@ -227,7 +227,7 @@ export function Library(_props: { path?: string }) {
       {backdropCover && (
         <div
           className={s.backdrop}
-          style={{ backgroundImage: `url(/api/covers/${backdropCover})` }}
+          style={{ backgroundImage: `url(${getCoverUrl(backdropCover)})` }}
           aria-hidden="true"
         />
       )}

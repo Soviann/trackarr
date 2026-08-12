@@ -1,7 +1,7 @@
 import { route } from 'preact-router'
 import type { TitleType } from '../types'
 import s from './PosterTile.module.css'
-import { CoverPlaceholder } from './CoverPlaceholder'
+import { CoverImage } from './CoverImage'
 import { PrimeBadge } from './PrimeBadge'
 
 export interface PosterTileItem {
@@ -30,9 +30,7 @@ export function PosterTile({ item }: Props) {
       onKeyDown={e => e.key === 'Enter' && go()}
     >
       <div className={s.poster}>
-        {item.cover_url
-          ? <img src={`/api/covers/${item.cover_url}`} alt="" role="presentation" loading="lazy" />
-          : <CoverPlaceholder type={item.type} />}
+        <CoverImage coverUrl={item.cover_url} type={item.type} alt="" />
         {item.onPrime && (
           <span className={s.primeBadge}>
             <PrimeBadge />

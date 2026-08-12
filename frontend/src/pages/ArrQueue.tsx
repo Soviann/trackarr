@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import type { TitleType } from '../types'
+import { CoverImage } from '../components/CoverImage'
 import s from './ArrQueue.module.css'
 
 interface QueueItem {
   id: number
-  type: string
+  type: TitleType
   cover_url: string | null
   name: string
   is_anime: boolean
@@ -205,7 +207,15 @@ export function ArrQueue({ path }: { path?: string }) {
 
           return (
             <div key={item.id} className={s.card}>
-              <img src={item.cover_url || ''} alt="" className={`${s.poster} ${s.clickable}`} onClick={() => route(`/title/${item.id}`)} />
+              <CoverImage
+                coverUrl={item.cover_url}
+                type={item.type}
+                is_anime={item.is_anime}
+                alt={item.name}
+                className={`${s.poster} ${s.clickable}`}
+                iconSize="28px"
+                onClick={() => route(`/title/${item.id}`)}
+              />
               
               <div className={s.info}>
                 <h3 className={`${s.itemTitle} ${s.clickable}`} onClick={() => route(`/title/${item.id}`)}>{item.name}</h3>

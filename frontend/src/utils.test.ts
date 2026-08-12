@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, hexToRgba, watchedCount, totalEpisodes } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -207,5 +207,23 @@ describe('computeAniListUrl', () => {
   it('returns null for anime series with no seasons array and no title id (unconfirmed title)', () => {
     const t = makeTitle({ is_anime: true, type: 'series', anilist_id: null, seasons: undefined as unknown as Season[] })
     expect(computeAniListUrl(t)).toBeNull()
+  })
+})
+
+describe('getCoverUrl', () => {
+  it('returns null for null, undefined, or empty coverUrl', () => {
+    expect(getCoverUrl(null)).toBeNull()
+    expect(getCoverUrl(undefined)).toBeNull()
+    expect(getCoverUrl('')).toBeNull()
+  })
+
+  it('prefixes relative filenames with /api/covers/', () => {
+    expect(getCoverUrl('abc123.webp')).toBe('/api/covers/abc123.webp')
+  })
+
+  it('leaves absolute URLs untouched', () => {
+    expect(getCoverUrl('http://example.com/cover.jpg')).toBe('http://example.com/cover.jpg')
+    expect(getCoverUrl('https://example.com/cover.jpg')).toBe('https://example.com/cover.jpg')
+    expect(getCoverUrl('/custom/path/cover.jpg')).toBe('/custom/path/cover.jpg')
   })
 })

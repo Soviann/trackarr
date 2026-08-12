@@ -164,9 +164,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   if (title.runtime) metaParts.push(formatRuntime(title.runtime))
   if (title.series_status) metaParts.push(formatSeriesStatus(title.series_status))
 
-  const coverBg = title.cover_url
-    ? `url(/api/covers/${title.cover_url})`
-    : coverBackground(null, title.type)
+  const coverBg = coverBackground(title.cover_url, title.type)
 
   const pageStyle = {
     '--cover-bg': coverBg,

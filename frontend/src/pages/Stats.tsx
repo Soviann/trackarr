@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { formatWatchtime } from '../utils'
+import { formatWatchtime, getCoverUrl } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
 import type { StatsResponse, FunStat, ActivityEvent } from '../types'
 import { routeTo } from '../routes'
@@ -201,8 +201,8 @@ function ActivitySection() {
             <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
             {rows.map((row) => (
               <a key={row.key} href={routeTo.title(row.titleId)} className={s.activityRow}>
-                {row.coverUrl
-                  ? <img className={s.activityThumb} src={`/api/covers/${row.coverUrl}`} alt="" role="presentation" loading="lazy" />
+                {getCoverUrl(row.coverUrl)
+                  ? <img className={s.activityThumb} src={getCoverUrl(row.coverUrl)!} alt="" role="presentation" loading="lazy" />
                   : <div className={s.activityThumbPlaceholder} />}
                 <div className={s.activityInfo}>
                   <span className={s.activityTitle}>{row.titleName}</span>
