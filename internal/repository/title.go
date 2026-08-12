@@ -596,8 +596,8 @@ func (r *TitleRepository) ListArrQueue() ([]ArrQueueItem, error) {
 		FROM titles t
 		WHERE t.status = 'plan_to_watch'
 		  AND t.arr_ignored = 0
-		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL) OR 
-		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL))
+		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL AND t.tmdb_id > 0) OR 
+		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (
 		      SELECT 1 FROM task_queue tq 
 		      WHERE tq.status IN ('pending', 'running', 'sleeping') 
@@ -633,8 +633,8 @@ func (r *TitleRepository) ListPaginatedArrQueue(limit, offset int) ([]ArrQueueIt
 		FROM titles t
 		WHERE t.status = 'plan_to_watch'
 		  AND t.arr_ignored = 0
-		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL) OR 
-		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL))
+		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL AND t.tmdb_id > 0) OR 
+		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (
 		      SELECT 1 FROM task_queue tq 
 		      WHERE tq.status IN ('pending', 'running', 'sleeping') 

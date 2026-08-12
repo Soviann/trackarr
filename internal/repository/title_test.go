@@ -1437,3 +1437,59 @@ func TestTitleRepository_List_FilterByRatingMinimums(t *testing.T) {
 	require.Len(t, result.Titles, 1) // only "Great"; NULL my_rating excluded
 	assert.Equal(t, "Great", result.Titles[0].PrimaryName())
 }
+
+func TestTitleRepository_ArrQueue_RequiresValidIDs(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	tvdbValid := int64(12345)
+	tmdbValid := int64(67890)
+	zeroID := int64(0)
+
+	// Series with valid TVDB ID -> included
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbValid,
+	}, []model.TitleName{{Name: "Valid Series", Language: "en", IsPrimary: true}})
+
+	// Series with no TVDB ID (nil) -> excluded
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "No TVDB Series", Language: "en", IsPrimary: true}})
+
+	// Series with 0 TVDB ID -> excluded
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &zeroID,
+	}, []model.TitleName{{Name: "Zero TVDB Series", Language: "en", IsPrimary: true}})
+
+	// Movie with valid TMDB ID -> included
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbValid,
+	}, []model.TitleName{{Name: "Valid Movie", Language: "en", IsPrimary: true}})
+
+	// Movie with no TMDB ID -> excluded
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "No TMDB Movie", Language: "en", IsPrimary: true}})
+
+	items, err := repo.ListArrQueue()
+	require.NoError(t, err)
+	require.Len(t, items, 2)
+
+	names := []string{items[0].Name, items[1].Name}
+	assert.Contains(t, names, "Valid Series")
+	assert.Contains(t, names, "Valid Movie")
+}
+
