@@ -90,6 +90,23 @@
   border-color: var(--accent);
 }
 
+.input {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .toggle {
   display: flex;
   align-items: center;

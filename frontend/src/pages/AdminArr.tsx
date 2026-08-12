@@ -47,17 +47,17 @@ export function AdminArr({ path }: { path?: string }) {
   const [sonarrRootFolders, setSonarrRootFolders] = useState<RootFolder[]>([])
   const [sonarrQualityProfiles, setSonarrQualityProfiles] = useState<QualityProfile[]>([])
 
+  const fetchOptions = () => {
+    apiFetch<RootFolder[]>('/arr/radarr/rootfolder').then(data => setRadarrRootFolders(data)).catch(err => console.error('Failed to load Radarr root folders:', err))
+    apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').then(data => setRadarrQualityProfiles(data)).catch(err => console.error('Failed to load Radarr quality profiles:', err))
+    apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').then(data => setSonarrRootFolders(data)).catch(err => console.error('Failed to load Sonarr root folders:', err))
+    apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').then(data => setSonarrQualityProfiles(data)).catch(err => console.error('Failed to load Sonarr quality profiles:', err))
+  }
+
   useEffect(() => {
     // Fetch settings
     apiFetch<ArrSettings>('/admin/arr').then(data => setSettings(data)).catch(err => setError(err.message))
-    
-    // Fetch Radarr options
-    apiFetch<RootFolder[]>('/arr/radarr/rootfolder').then(data => setRadarrRootFolders(data)).catch(err => console.error('Failed to load Radarr root folders:', err))
-    apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').then(data => setRadarrQualityProfiles(data)).catch(err => console.error('Failed to load Radarr quality profiles:', err))
-    
-    // Fetch Sonarr options
-    apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').then(data => setSonarrRootFolders(data)).catch(err => console.error('Failed to load Sonarr root folders:', err))
-    apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').then(data => setSonarrQualityProfiles(data)).catch(err => console.error('Failed to load Sonarr quality profiles:', err))
+    fetchOptions()
   }, [])
 
   const handleSave = async () => {
@@ -72,6 +72,7 @@ export function AdminArr({ path }: { path?: string }) {
         body: JSON.stringify(settings)
       })
       setSaved(true)
+      fetchOptions()
       setTimeout(() => setSaved(false), 3000)
     } catch (err: any) {
       setError(err.message)
@@ -171,6 +172,59 @@ export function AdminArr({ path }: { path?: string }) {
       </h1>
       
       {error && <div style={{ color: 'var(--status-crit)', marginBottom: '1rem' }}>{error}</div>}
+
+      {settings && (
+        <div className={s.section}>
+          <div className={s.sectionHeader}>
+            <h2 className={s.sectionTitle}>Server Connections</h2>
+            <p className={s.sectionDesc}>Configure Radarr & Sonarr server URLs and API keys (overrides environment variables if set)</p>
+          </div>
+          
+          <label className={s.settingRow}>
+            <span className={s.settingLabel}>Radarr URL</span>
+            <input 
+              type="text" 
+              className={s.input} 
+              placeholder="http://radarr:7878"
+              value={settings.radarr_url || ''} 
+              onChange={e => updateSetting('radarr_url', (e.target as HTMLInputElement).value)} 
+            />
+          </label>
+          
+          <label className={s.settingRow}>
+            <span className={s.settingLabel}>Radarr API Key</span>
+            <input 
+              type="password" 
+              className={s.input} 
+              placeholder="Radarr API Key"
+              value={settings.radarr_api_key || ''} 
+              onChange={e => updateSetting('radarr_api_key', (e.target as HTMLInputElement).value)} 
+            />
+          </label>
+
+          <label className={s.settingRow}>
+            <span className={s.settingLabel}>Sonarr URL</span>
+            <input 
+              type="text" 
+              className={s.input} 
+              placeholder="http://sonarr:8989"
+              value={settings.sonarr_url || ''} 
+              onChange={e => updateSetting('sonarr_url', (e.target as HTMLInputElement).value)} 
+            />
+          </label>
+
+          <label className={s.settingRow}>
+            <span className={s.settingLabel}>Sonarr API Key</span>
+            <input 
+              type="password" 
+              className={s.input} 
+              placeholder="Sonarr API Key"
+              value={settings.sonarr_api_key || ''} 
+              onChange={e => updateSetting('sonarr_api_key', (e.target as HTMLInputElement).value)} 
+            />
+          </label>
+        </div>
+      )}
 
       {renderSection('Radarr (Standard)', 'Defaults for movies', 'radarr_std')}
       {renderSection('Radarr (Anime)', 'Defaults for anime movies', 'radarr_anime')}
