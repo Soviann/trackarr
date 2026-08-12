@@ -145,6 +145,8 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  background-position: center;
+  background-size: cover;
 }
 
 .eventBody {

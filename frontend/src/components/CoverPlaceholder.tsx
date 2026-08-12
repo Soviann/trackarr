@@ -30,7 +30,7 @@ export function CoverPlaceholder({ type, is_anime, iconSize }: CoverPlaceholderP
 /** CSS background string for cover or placeholder gradient */
 export function coverBackground(coverUrl: string | null | undefined, type: TitleType, is_anime?: boolean): string {
   const url = getCoverUrl(coverUrl)
-  if (url) return `url(${url}) center/cover`
+  if (url) return `url("${url}")`
   const { color } = typeIconConfig[resolveTypeIconKey(type, is_anime)]
   return `linear-gradient(135deg, ${color}25, ${color}0A)`
 }
