@@ -81,3 +81,39 @@ func TestArrService_ProxyRequest_FallbackToDBSettings(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "/api/v3/qualityprofile", requestedURI)
 }
+
+func TestArrService_ProxyRequest_PreservesApiKeyOnRedirect(t *testing.T) {
+	var finalApiKey string
+	var finalURI string
+
+	tsTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		finalApiKey = r.Header.Get("X-Api-Key")
+		finalURI = r.RequestURI
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer tsTarget.Close()
+
+	tsRedirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, tsTarget.URL+"/api/v3/rootfolder", http.StatusMovedPermanently)
+	}))
+	defer tsRedirect.Close()
+
+	cfg := &config.Config{
+		RadarrURL:    tsRedirect.URL,
+		RadarrAPIKey: "redirect-key-123",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, db)
+
+	resp, err := arrSvc.ProxyRequest(context.Background(), "radarr", "GET", "/api/v3/rootfolder", nil)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "/api/v3/rootfolder", finalURI)
+	assert.Equal(t, "redirect-key-123", finalApiKey)
+}

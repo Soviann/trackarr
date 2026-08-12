@@ -24,9 +24,22 @@ type ArrService struct {
 }
 
 func NewArrService(cfg *config.Config, settings *repository.SettingRepository, writeDB *sql.DB) *ArrService {
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			if len(via) > 0 {
+				if apiKey := via[0].Header.Get("X-Api-Key"); apiKey != "" {
+					req.Header.Set("X-Api-Key", apiKey)
+				}
+			}
+			return nil
+		},
+	}
 	return &ArrService{
 		cfg:      cfg,
-		client:   &http.Client{},
+		client:   client,
 		settings: settings,
 		writeDB:  writeDB,
 	}
@@ -101,6 +114,20 @@ func (s *ArrService) getAppConfig(app string) (baseURL string, apiKey string) {
 	return strings.TrimSpace(baseURL), strings.TrimSpace(apiKey)
 }
 
+func normalizeBaseURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		return raw
+	}
+	if strings.Contains(raw, ".") && !strings.Contains(raw, ":") && !strings.HasPrefix(raw, "127.") && !strings.HasPrefix(raw, "192.168.") && !strings.HasPrefix(raw, "10.") {
+		return "https://" + raw
+	}
+	return "http://" + raw
+}
+
 // ProxyRequest proxies a request to Radarr or Sonarr API.
 func (s *ArrService) ProxyRequest(ctx context.Context, app string, method string, path string, body io.Reader) (*http.Response, error) {
 	baseURL, apiKey := s.getAppConfig(app)
@@ -108,9 +135,7 @@ func (s *ArrService) ProxyRequest(ctx context.Context, app string, method string
 		return nil, fmt.Errorf("%s URL or API key not configured", app)
 	}
 
-	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		baseURL = "http://" + baseURL
-	}
+	baseURL = normalizeBaseURL(baseURL)
 
 	fullURL := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(path, "/")
 	reqURL, err := url.Parse(fullURL)

@@ -173,59 +173,6 @@ export function AdminArr({ path }: { path?: string }) {
       
       {error && <div style={{ color: 'var(--status-crit)', marginBottom: '1rem' }}>{error}</div>}
 
-      {settings && (
-        <div className={s.section}>
-          <div className={s.sectionHeader}>
-            <h2 className={s.sectionTitle}>Server Connections</h2>
-            <p className={s.sectionDesc}>Configure Radarr & Sonarr server URLs and API keys (overrides environment variables if set)</p>
-          </div>
-          
-          <label className={s.settingRow}>
-            <span className={s.settingLabel}>Radarr URL</span>
-            <input 
-              type="text" 
-              className={s.input} 
-              placeholder="http://radarr:7878"
-              value={settings.radarr_url || ''} 
-              onChange={e => updateSetting('radarr_url', (e.target as HTMLInputElement).value)} 
-            />
-          </label>
-          
-          <label className={s.settingRow}>
-            <span className={s.settingLabel}>Radarr API Key</span>
-            <input 
-              type="password" 
-              className={s.input} 
-              placeholder="Radarr API Key"
-              value={settings.radarr_api_key || ''} 
-              onChange={e => updateSetting('radarr_api_key', (e.target as HTMLInputElement).value)} 
-            />
-          </label>
-
-          <label className={s.settingRow}>
-            <span className={s.settingLabel}>Sonarr URL</span>
-            <input 
-              type="text" 
-              className={s.input} 
-              placeholder="http://sonarr:8989"
-              value={settings.sonarr_url || ''} 
-              onChange={e => updateSetting('sonarr_url', (e.target as HTMLInputElement).value)} 
-            />
-          </label>
-
-          <label className={s.settingRow}>
-            <span className={s.settingLabel}>Sonarr API Key</span>
-            <input 
-              type="password" 
-              className={s.input} 
-              placeholder="Sonarr API Key"
-              value={settings.sonarr_api_key || ''} 
-              onChange={e => updateSetting('sonarr_api_key', (e.target as HTMLInputElement).value)} 
-            />
-          </label>
-        </div>
-      )}
-
       {renderSection('Radarr (Standard)', 'Defaults for movies', 'radarr_std')}
       {renderSection('Radarr (Anime)', 'Defaults for anime movies', 'radarr_anime')}
       {renderSection('Sonarr (Standard)', 'Defaults for TV shows', 'sonarr_std')}
