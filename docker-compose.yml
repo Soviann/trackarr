@@ -9,8 +9,7 @@ services:
       - ./data:/data
     env_file:
       - .env
-      - path: .env.local
-        required: false
+      - .env.local
     environment:
       - DATA_DIR=/data
       - DISABLE_BACKGROUND_TASKS=false
