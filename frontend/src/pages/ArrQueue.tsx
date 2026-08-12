@@ -93,10 +93,10 @@ export function ArrQueue({ path }: { path?: string }) {
     Promise.all([
       apiFetch<{items: QueueItem[], has_more: boolean}>('/arr/queue?limit=50&offset=0'),
       apiFetch<ArrSettings>('/admin/arr'),
-      apiFetch<RootFolder[]>('/arr/radarr/rootfolder').catch(() => []),
-      apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').catch(() => []),
-      apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').catch(() => []),
-      apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').catch(() => [])
+      apiFetch<RootFolder[]>('/arr/radarr/rootfolder').catch(err => { console.error('Failed to load Radarr root folders:', err); return [] }),
+      apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').catch(err => { console.error('Failed to load Radarr quality profiles:', err); return [] }),
+      apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').catch(err => { console.error('Failed to load Sonarr root folders:', err); return [] }),
+      apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').catch(err => { console.error('Failed to load Sonarr quality profiles:', err); return [] })
     ]).then(([queueRes, settingsData, rr, rq, sr, sq]) => {
       const queueData = queueRes.items || []
       setQueue(queueData)

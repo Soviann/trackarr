@@ -77,37 +77,46 @@ func (s *ArrService) EnqueuePush(ctx context.Context, app string, payload PushPa
 	return tx.Commit()
 }
 
-// ProxyRequest proxies a request to Radarr or Sonarr API.
-func (s *ArrService) ProxyRequest(ctx context.Context, app string, method string, path string, body io.Reader) (*http.Response, error) {
-	var baseURL, apiKey string
+func (s *ArrService) getAppConfig(app string) (baseURL string, apiKey string) {
 	switch app {
 	case "radarr":
 		baseURL = s.cfg.RadarrURL
 		apiKey = s.cfg.RadarrAPIKey
+		if baseURL == "" && s.settings != nil {
+			baseURL, _ = s.settings.Get("radarr_url")
+		}
+		if apiKey == "" && s.settings != nil {
+			apiKey, _ = s.settings.Get("radarr_api_key")
+		}
 	case "sonarr":
 		baseURL = s.cfg.SonarrURL
 		apiKey = s.cfg.SonarrAPIKey
-	default:
-		return nil, fmt.Errorf("unknown arr app: %s", app)
+		if baseURL == "" && s.settings != nil {
+			baseURL, _ = s.settings.Get("sonarr_url")
+		}
+		if apiKey == "" && s.settings != nil {
+			apiKey, _ = s.settings.Get("sonarr_api_key")
+		}
 	}
+	return strings.TrimSpace(baseURL), strings.TrimSpace(apiKey)
+}
 
+// ProxyRequest proxies a request to Radarr or Sonarr API.
+func (s *ArrService) ProxyRequest(ctx context.Context, app string, method string, path string, body io.Reader) (*http.Response, error) {
+	baseURL, apiKey := s.getAppConfig(app)
 	if baseURL == "" || apiKey == "" {
 		return nil, fmt.Errorf("%s URL or API key not configured", app)
 	}
 
 	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		baseURL = "https://" + baseURL
+		baseURL = "http://" + baseURL
 	}
 
-	reqURL, err := url.Parse(baseURL)
+	fullURL := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(path, "/")
+	reqURL, err := url.Parse(fullURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid %s URL: %w", app, err)
+		return nil, fmt.Errorf("invalid %s URL (%s): %w", app, fullURL, err)
 	}
-	rel, err := url.Parse(path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
-	}
-	reqURL = reqURL.ResolveReference(rel)
 
 	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), body)
 	if err != nil {

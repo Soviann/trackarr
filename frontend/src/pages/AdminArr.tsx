@@ -4,6 +4,10 @@ import { apiFetch } from '../api'
 import s from './AdminArr.module.css'
 
 interface ArrSettings {
+  radarr_url?: string
+  radarr_api_key?: string
+  sonarr_url?: string
+  sonarr_api_key?: string
   radarr_std_monitored: string
   radarr_std_search: string
   radarr_std_root_folder: string
@@ -48,12 +52,12 @@ export function AdminArr({ path }: { path?: string }) {
     apiFetch<ArrSettings>('/admin/arr').then(data => setSettings(data)).catch(err => setError(err.message))
     
     // Fetch Radarr options
-    apiFetch<RootFolder[]>('/arr/radarr/rootfolder').then(data => setRadarrRootFolders(data)).catch(() => {})
-    apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').then(data => setRadarrQualityProfiles(data)).catch(() => {})
+    apiFetch<RootFolder[]>('/arr/radarr/rootfolder').then(data => setRadarrRootFolders(data)).catch(err => console.error('Failed to load Radarr root folders:', err))
+    apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').then(data => setRadarrQualityProfiles(data)).catch(err => console.error('Failed to load Radarr quality profiles:', err))
     
     // Fetch Sonarr options
-    apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').then(data => setSonarrRootFolders(data)).catch(() => {})
-    apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').then(data => setSonarrQualityProfiles(data)).catch(() => {})
+    apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').then(data => setSonarrRootFolders(data)).catch(err => console.error('Failed to load Sonarr root folders:', err))
+    apiFetch<QualityProfile[]>('/arr/sonarr/qualityprofile').then(data => setSonarrQualityProfiles(data)).catch(err => console.error('Failed to load Sonarr quality profiles:', err))
   }, [])
 
   const handleSave = async () => {

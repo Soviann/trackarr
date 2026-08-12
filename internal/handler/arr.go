@@ -45,7 +45,13 @@ func (h *ArrHandler) proxy(ctx context.Context, w http.ResponseWriter, app, path
 	defer resp.Body.Close()
 
 	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	w.WriteHeader(resp.StatusCode)
+
+	statusCode := resp.StatusCode
+	if statusCode == http.StatusUnauthorized {
+		statusCode = http.StatusBadGateway
+	}
+
+	w.WriteHeader(statusCode)
 	_, _ = io.Copy(w, resp.Body)
 	return nil
 }

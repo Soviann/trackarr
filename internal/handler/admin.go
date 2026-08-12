@@ -233,6 +233,7 @@ func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error 
 // GetArrSettings returns Radarr/Sonarr default settings.
 func (h *AdminHandler) GetArrSettings(w http.ResponseWriter, r *http.Request) error {
 	keys := []string{
+		"radarr_url", "radarr_api_key", "sonarr_url", "sonarr_api_key",
 		"radarr_std_monitored", "radarr_std_search", "radarr_std_root_folder", "radarr_std_quality_profile",
 		"radarr_anime_monitored", "radarr_anime_search", "radarr_anime_root_folder", "radarr_anime_quality_profile",
 		"sonarr_std_monitored", "sonarr_std_search", "sonarr_std_root_folder", "sonarr_std_quality_profile",
@@ -259,6 +260,7 @@ func (h *AdminHandler) UpdateArrSettings(w http.ResponseWriter, r *http.Request)
 	}
 
 	allowedKeys := map[string]bool{
+		"radarr_url": true, "radarr_api_key": true, "sonarr_url": true, "sonarr_api_key": true,
 		"radarr_std_monitored": true, "radarr_std_search": true, "radarr_std_root_folder": true, "radarr_std_quality_profile": true,
 		"radarr_anime_monitored": true, "radarr_anime_search": true, "radarr_anime_root_folder": true, "radarr_anime_quality_profile": true,
 		"sonarr_std_monitored": true, "sonarr_std_search": true, "sonarr_std_root_folder": true, "sonarr_std_quality_profile": true,
