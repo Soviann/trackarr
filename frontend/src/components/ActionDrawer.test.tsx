@@ -60,4 +60,17 @@ describe('ActionDrawer — Delete action', () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
+
+  it('renders Arr Queue toggle in More sheet when onToggleArrQueue is provided', () => {
+    const onToggleArrQueue = vi.fn()
+    const title = { ...makeTitle(), arr_ignored: true, radarr_id: null, sonarr_id: null }
+    const { getByText } = renderDrawer({ title, onToggleArrQueue })
+
+    fireEvent.click(getByText('Actions'))
+    fireEvent.click(getByText('More'))
+    const btn = getByText('+ File Arr')
+    fireEvent.click(btn)
+
+    expect(onToggleArrQueue).toHaveBeenCalledTimes(1)
+  })
 })

@@ -340,6 +340,7 @@ func (w *TaskQueueWorker) createParentAndAttach(ctx context.Context, result *mat
 		MatchStatus: confirmed,
 		MatchSource: &matchSource,
 		AniListID:   &rootAniList,
+		ArrIgnored:  true,
 	}
 	names := []model.TitleName{{Name: chain.RootTitle, Language: "en", IsPrimary: true}}
 

@@ -145,6 +145,21 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     }
   }
 
+  const handleToggleArrQueue = async () => {
+    const nextIgnored = !title.arr_ignored
+    setData((prev) => prev ? { ...prev, arr_ignored: nextIgnored } : prev)
+    try {
+      const updated = await apiFetch<Title>(`/titles/${title.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ arr_ignored: nextIgnored }),
+      })
+      setData(updated)
+    } catch (e) {
+      setActionError('Failed to update Arr queue state')
+      mutate()
+    }
+  }
+
   // Deleting removes the whole title (seasons, episodes, history). We can't stay
   // on a page whose subject no longer exists, so route back to the library and
   // invalidate its cache so the deleted title drops out of the list.
@@ -330,6 +345,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             </span>
           </div>
         )}
+        {title.radarr_id == null && title.sonarr_id == null && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>Arr Queue</span>
+            <span className={s.detailVal}>
+              <button
+                type="button"
+                onClick={handleToggleArrQueue}
+                className={title.arr_ignored ? s.arrAddBtn : s.arrInQueueBtn}
+              >
+                {title.arr_ignored ? '+ Ajouter à la file Arr' : '✓ Dans la file Arr'}
+              </button>
+            </span>
+          </div>
+        )}
         {title.original_title && title.original_title !== name && (
           <div className={s.detailRow}>
             <span className={s.detailKey}>Original title</span>
@@ -421,6 +450,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
         onRefresh={handleRefresh}
         onDelete={() => setShowDeleteConfirm(true)}
+        onToggleArrQueue={handleToggleArrQueue}
         onOpenChange={setDrawerOpen}
       />
 

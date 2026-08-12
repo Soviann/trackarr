@@ -289,6 +289,7 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		AniListID:   body.AniListID,
 		TMDBID:      body.TMDBID,
 		TVDBID:      body.TVDBID,
+		ArrIgnored:  true,
 	}
 
 	var id int64

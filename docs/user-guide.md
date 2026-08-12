@@ -77,7 +77,7 @@ L'écran principal affiche tous les titres organisés par statut.
 - **Carte « My rating »** : note personnelle (sur 10) à gauche ; à droite, les notes externes TMDB et AniList (en %) quand disponibles. Pas de note TVDB.
 - **Carte « Synopsis »** : résumé du titre avec bouton « Show more » / « Show less » pour développer.
 - **Carte « Cast & Crew »** : liste des acteurs principaux et de l'équipe (rôles). Taper un nom ouvre la page **Person** qui filtre la bibliothèque sur tous les titres où cette personne apparaît.
-- **Carte « Details »** : Added, Last watched, Watch time (cumulé), Last refreshed, Original title, et une section **« Autres titres »** listant les titres dans les autres langues et les alias connus (chacun avec son drapeau 🇫🇷/🇬🇧/🇯🇵), sans doublon ni répétition du titre déjà affiché. Ces titres alternatifs sont complétés au fil des rafraîchissements (traductions TMDB/TVDB).
+- **Carte « Details »** : Added, Last watched, Watch time (cumulé), Last refreshed, Original title, une ligne **« Arr Queue »** avec le bouton **+ Ajouter à la file Arr** / **✓ Dans la file Arr** pour ajouter ou retirer manuellement le titre de la file Arr (Radarr/Sonarr), et une section **« Autres titres »** listant les titres dans les autres langues et les alias connus (chacun avec son drapeau 🇫🇷/🇬🇧/🇯🇵), sans doublon ni répétition du titre déjà affiché. Ces titres alternatifs sont complétés au fil des rafraîchissements (traductions TMDB/TVDB).
 - **Bouton « Historique »** : ouvre une vue plein écran des sessions de visionnage du titre, avec regroupement automatique des épisodes consécutifs en plages (ex: `S1 E1–4 · 12 avr.`).
 - **Barre de progression** (séries/anime) : `S2 · 7 of 10 episodes watched`.
 - **Onglets de saison** : chaque saison est un pill. Vert = terminée (avec note), Ambre = en cours (avec progression), Gris = pas commencée.
@@ -86,7 +86,7 @@ L'écran principal affiche tous les titres organisés par statut.
 - **Tiroir « Actions »** (poignée glissable au-dessus de la navbar) :
   - **★ Rate** : ouvre le prompt de notation
   - **Edit** : ouvre l'édition de type / statut / nom affiché
-  - **More** : déploie Rematch, Merge, Refresh, Delete
+  - **More** : déploie **+ File Arr** / **✓ Dans la file Arr**, Rematch, Merge, Refresh, Delete
     - **Delete** (rouge) : supprime le titre et tout son historique de visionnage après confirmation, puis renvoie à la bibliothèque. Irréversible.
   - **Liens externes** (sur leur propre ligne) :
     - **IMDb** quand un `imdb_id` est connu

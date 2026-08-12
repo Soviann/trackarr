@@ -12,12 +12,13 @@ interface ActionDrawerProps {
   onMerge: () => void
   onRefresh: () => Promise<void>
   onDelete: () => void
+  onToggleArrQueue?: () => void
   onOpenChange?: (open: boolean) => void
 }
 
 export function ActionDrawer({
   title, aniListUrl,
-  onRate, onEdit, onRematch, onMerge, onRefresh, onDelete, onOpenChange,
+  onRate, onEdit, onRematch, onMerge, onRefresh, onDelete, onToggleArrQueue, onOpenChange,
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -158,6 +159,11 @@ export function ActionDrawer({
 
         {moreOpen && (
           <div className={s.moreSheet}>
+            {title.radarr_id == null && title.sonarr_id == null && onToggleArrQueue && (
+              <button onClick={onToggleArrQueue} className={s.moreBtn}>
+                {title.arr_ignored ? '+ File Arr' : '✓ Dans la file Arr'}
+              </button>
+            )}
             <button onClick={onRematch} className={s.moreBtn}>Rematch</button>
             <button onClick={onMerge} className={s.moreBtn}>Merge</button>
             <button

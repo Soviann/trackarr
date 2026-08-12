@@ -587,15 +587,14 @@ func (r *TitleRepository) ReviewCount(_ context.Context) (int, error) {
 	return count, err
 }
 
-// ListArrQueue returns ALL PlanToWatch titles that are not ignored and don't have an Arr ID.
+// ListArrQueue returns ALL titles that are not ignored and don't have an Arr ID.
 // Used for badges / counts.
 func (r *TitleRepository) ListArrQueue() ([]ArrQueueItem, error) {
 	query := `
 		SELECT t.id, t.type, t.cover_url, t.is_anime, t.year, t.tmdb_id, t.tvdb_id,
 		       COALESCE(` + displayNameExpr + `, '') AS name
 		FROM titles t
-		WHERE t.status = 'plan_to_watch'
-		  AND t.arr_ignored = 0
+		WHERE t.arr_ignored = 0
 		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL AND t.tmdb_id > 0) OR 
 		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (
@@ -631,8 +630,7 @@ func (r *TitleRepository) ListPaginatedArrQueue(limit, offset int) ([]ArrQueueIt
 		SELECT t.id, t.type, t.cover_url, t.is_anime, t.year, t.tmdb_id, t.tvdb_id,
 		       COALESCE(` + displayNameExpr + `, '') AS name
 		FROM titles t
-		WHERE t.status = 'plan_to_watch'
-		  AND t.arr_ignored = 0
+		WHERE t.arr_ignored = 0
 		  AND ((t.type = 'movie' AND t.radarr_id IS NULL AND t.tmdb_id IS NOT NULL AND t.tmdb_id > 0) OR 
 		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (

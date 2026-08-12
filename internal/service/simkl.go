@@ -198,6 +198,7 @@ func (s *SimklImporter) importItem(item SimklItem, titleType model.TitleType, is
 		Status:      status,
 		MatchStatus: model.MatchStatusConfirmed,
 		MyRating:    item.UserRating,
+		ArrIgnored:  true,
 	}
 
 	if media.IDs.IMDB != "" {
