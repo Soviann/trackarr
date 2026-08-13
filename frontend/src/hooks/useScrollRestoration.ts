@@ -2,42 +2,97 @@ import { useEffect, useRef } from 'preact/hooks'
 
 const scrollPositions = new Map<string, number>()
 
-export function useScrollRestoration(key: string) {
+export function clearSavedScroll(key: string) {
+  scrollPositions.delete(key)
+  try {
+    sessionStorage.removeItem(`scroll_${key}`)
+  } catch {
+    // Ignore sessionStorage errors
+  }
+}
+
+export function getSavedScroll(key: string): number | undefined {
+  if (scrollPositions.has(key)) return scrollPositions.get(key)
+  try {
+    const val = sessionStorage.getItem(`scroll_${key}`)
+    if (val !== null) {
+      const num = parseInt(val, 10)
+      if (!isNaN(num)) return num
+    }
+  } catch {
+    // Ignore sessionStorage errors
+  }
+  return undefined
+}
+
+export function saveScroll(key: string, y: number) {
+  scrollPositions.set(key, y)
+  try {
+    sessionStorage.setItem(`scroll_${key}`, String(y))
+  } catch {
+    // Ignore sessionStorage errors
+  }
+}
+
+export function useScrollRestoration(key: string, isReady: boolean = true) {
   const isRestoring = useRef(false)
+  const currentYRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
-    // Restore scroll position if it exists
-    const savedY = scrollPositions.get(key)
-    let currentY = window.scrollY
+    const savedY = getSavedScroll(key)
     const originalPath = window.location.pathname
 
-    if (savedY !== undefined) {
-      currentY = savedY // Initialize to saved position so we don't save 0 if user leaves without scrolling
-      isRestoring.current = true
-      window.scrollTo(0, savedY)
-      // Wait a frame to ensure Preact has flushed DOM updates
-      requestAnimationFrame(() => {
-        window.scrollTo(0, savedY)
-        setTimeout(() => {
-          isRestoring.current = false
-        }, 50)
-      })
+    if (savedY !== undefined && savedY > 0) {
+      currentYRef.current = savedY
     }
-    
+
     const onScroll = () => {
-      // Don't save the 0 position if we're in the middle of restoring a saved position
-      // Also ignore if the route has changed, to prevent saving 0 when DOM shrinks on navigation
-      if (!isRestoring.current && window.location.pathname === originalPath) {
-        currentY = window.scrollY
+      if (!isRestoring.current && isReady && window.location.pathname === originalPath) {
+        currentYRef.current = window.scrollY
+        saveScroll(key, window.scrollY)
       }
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
 
-    // On unmount, save the last known scroll position
     return () => {
       window.removeEventListener('scroll', onScroll)
-      scrollPositions.set(key, currentY)
+      if (currentYRef.current !== undefined && window.location.pathname === originalPath) {
+        saveScroll(key, currentYRef.current)
+      }
     }
-  }, [key])
+  }, [key, isReady])
+
+  useEffect(() => {
+    if (!isReady) return
+
+    const savedY = getSavedScroll(key)
+    if (savedY === undefined || savedY <= 0) return
+
+    isRestoring.current = true
+    let attempts = 0
+    let rafId: number
+
+    const tryScroll = () => {
+      window.scrollTo(0, savedY)
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+      const reached = Math.abs(window.scrollY - savedY) <= 5 || window.scrollY >= maxScroll
+
+      if (!reached && attempts < 10) {
+        attempts++
+        rafId = requestAnimationFrame(tryScroll)
+      } else {
+        setTimeout(() => {
+          isRestoring.current = false
+        }, 50)
+      }
+    }
+
+    rafId = requestAnimationFrame(tryScroll)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      isRestoring.current = false
+    }
+  }, [key, isReady])
 }

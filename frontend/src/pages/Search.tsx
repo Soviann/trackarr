@@ -36,13 +36,13 @@ function getMetadata(t: Title) {
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 export function Search({ path: _ }: { path?: string }) {
-  useScrollRestoration('search')
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
   const results = useSearchStore(s => s.results)
   const total = useSearchStore(s => s.total)
   const hasMore = useSearchStore(s => s.hasMore)
   const loading = useSearchStore(s => s.loading)
+  useScrollRestoration('search', !loading)
   const loadingMore = useSearchStore(s => s.loadingMore)
   const error = useSearchStore(s => s.error)
   const search = useSearchStore(s => s.search)

@@ -20,8 +20,8 @@ function toTile(t: ContinueWatchingTitle): PosterTileItem {
 }
 
 export function ContinueWatching(_props: { path?: string }) {
-  useScrollRestoration('continueWatching')
   const [items, setItems] = useState<ContinueWatchingTitle[] | null>(null)
+  useScrollRestoration('continueWatching', items !== null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 

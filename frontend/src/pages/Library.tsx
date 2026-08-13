@@ -78,13 +78,13 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 export function Library(_props: { path?: string }) {
-  useScrollRestoration('library')
   const titles = useTitleStore(s => s.titles)
   const total = useTitleStore(s => s.total)
   const hasMore = useTitleStore(s => s.hasMore)
   const counts = useTitleStore(s => s.counts)
   const filter = useTitleStore(s => s.filter)
   const loading = useTitleStore(s => s.loading)
+  useScrollRestoration('library', !loading)
   const loadingMore = useTitleStore(s => s.loadingMore)
   const error = useTitleStore(s => s.error)
   const fetchTitles = useTitleStore(s => s.fetchTitles)

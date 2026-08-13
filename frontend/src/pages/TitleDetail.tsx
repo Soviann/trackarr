@@ -22,6 +22,7 @@ import { TitleHistory } from '../components/TitleHistory'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './TitleDetail.module.css'
 
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
@@ -54,6 +55,7 @@ function parseJSON<T>(json: string | null): T | null {
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate, setData } = useApi<Title>(id ? `/titles/${id}` : null)
+  useScrollRestoration(`title-${id ?? ''}`, !loading && title !== null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
   const [showRating, setShowRating] = useState(false)
   const [showEdit, setShowEdit] = useState(false)

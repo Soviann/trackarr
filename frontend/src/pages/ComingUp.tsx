@@ -32,8 +32,8 @@ function toTile(t: UpcomingTitle): PosterTileItem {
 }
 
 export function ComingUp(_props: { path?: string }) {
-  useScrollRestoration('comingUp')
   const [items, setItems] = useState<UpcomingTitle[] | null>(null)
+  useScrollRestoration('comingUp', items !== null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
