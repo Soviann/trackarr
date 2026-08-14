@@ -6,11 +6,11 @@
 
 ## Qu'est-ce que PlexTracker ?
 
-PlexTracker est une application personnelle de suivi de visionnage. Elle remplace Simkl comme tracker central pour les films, séries et animes regardés sur Jellyfin et Plex.
+PlexTracker est une application personnelle de suivi de visionnage. Elle remplace Simkl comme tracker central pour les films, séries et animes regardés sur Jellyfin.
 
 ### Ce que fait PlexTracker
 
-- **Suivi automatique** : Chaque film ou épisode terminé sur Jellyfin ou Plex est automatiquement enregistré via webhook.
+- **Suivi automatique** : Chaque film ou épisode terminé sur Jellyfin est automatiquement enregistré via webhook.
 - **Bibliothèque centralisée** : Vue d'ensemble de tout ce qui est en cours, terminé, abandonné ou à regarder.
 - **Progression en un coup d'œil** : Suivi exact des épisodes vus et des prochains épisodes à regarder.
 - **Notes & Synchronisation** : Notation des titres (1-10), liens IMDb, et synchronisation automatique vers AniList.

@@ -1,12 +1,12 @@
 # PlexTracker
 
-PlexTracker est une application personnelle de suivi de visionnage de films, séries et animes. Conçue comme une Progressive Web App (PWA) optimisée pour mobile, elle remplace Simkl en s'intégrant directement avec Jellyfin, Plex, TMDB, TVDB et AniList.
+PlexTracker est une application personnelle de suivi de visionnage de films, séries et animes. Conçue comme une Progressive Web App (PWA) optimisée pour mobile, elle remplace Simkl en s'intégrant directement avec Jellyfin, TMDB, TVDB et AniList.
 
 ---
 
 ## 🚀 Fonctionnalités clés
 
-- **Suivi automatique** : Enregistrement automatique des visionnages via webhooks Jellyfin et Plex.
+- **Suivi automatique** : Enregistrement automatique des visionnages via webhook Jellyfin.
 - **Gestion de bibliothèque** : Suivi des statuts (*Watching*, *Plan to watch*, *Caught up*, *Completed*, *Dropped*).
 - **Synchronisation AniList** : Synchronisation bidirectionnelle automatique des notes, statuts et de la progression par saison/épisode.
 - **Match Review intelligent** : Pipeline d'identification des médias assisté par Gemini AI avec file de revue manuelle pour les cas ambigus.
@@ -21,7 +21,7 @@ PlexTracker est une application personnelle de suivi de visionnage de films, sé
 - **Backend** : Go 1.24, Chi router, SQLite (`sqlite_fts5`)
 - **Frontend** : Preact 10, TypeScript, Vite, Vanilla CSS (Design system HSL)
 - **Infrastructure** : Docker & Docker Compose
-- **APIs & Intégrations** : TMDB, TVDB, AniList OAuth, Gemini AI, Webhooks Jellyfin/Plex
+- **APIs & Intégrations** : TMDB, TVDB, AniList OAuth, Gemini AI, Webhook Jellyfin
 
 ---
 
@@ -61,7 +61,7 @@ Toute la documentation du projet est organisée de manière modulaire dans le do
 
 1. [**Aperçu & Accès**](docs/overview.md) — Présentation, périmètre et installation PWA.
 2. [**Guide de l'Interface**](docs/interface.md) — Bibliothèque, fiches titres, recherche, fusions, notation et statistiques.
-3. [**Intégrations & Webhooks**](docs/integrations.md) — Configuration Jellyfin, Plex et synchronisation AniList.
+3. [**Intégrations & Webhooks**](docs/integrations.md) — Configuration Jellyfin et synchronisation AniList.
 4. [**Tâches de Fond & Matching**](docs/background-jobs.md) — Rafraîchissement quotidien, pipeline de matching Gemini AI et audit des saisons.
 5. [**Déploiement & Administration**](docs/deployment.md) — Déploiement NAS, import Simkl et commandes Makefile.
 6. [**Maintenance & CI**](docs/maintenance.md) — Dependabot, auto-merge et correction automatique AI.

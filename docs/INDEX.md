@@ -21,12 +21,11 @@ Bienvenue dans la documentation officielle de PlexTracker. Chaque aspect de l'ap
 
 ### 3. [Intégrations & Webhooks](integrations.md)
 - **Jellyfin Webhook** : Configuration pas-à-pas du plugin Webhook, template JSON et déduplication.
-- **Plex Webhook** : Intégration native scrobble à 90%.
 - **AniList** : Connexion OAuth, synchronisation bidirectionnelle automatique (notes, statuts, progression), saisons découpées (*parts*), et rattachement des prequels.
 
 ### 4. [Tâches de Fond & Automation](background-jobs.md)
 - **Rafraîchissement Quotidien** : Mise à jour automatique des métadonnées, nouveaux épisodes, statut de séries et couvertures.
-- **Pipeline de Matching Média** : Résolution des IDs externes (Plex, cross-référence, TMDB, AniList, Gemini AI).
+- **Pipeline de Matching Média** : Résolution des IDs externes (cross-référence, TMDB, AniList, Gemini AI).
 - **Season Audit (Admin)** : Outil de détection et de fusion guidée des saisons éclatées.
 
 ### 5. [Déploiement & Administration](deployment.md)

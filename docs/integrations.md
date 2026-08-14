@@ -47,17 +47,7 @@ PlexTracker écoute les événements de visionnage envoyés par Jellyfin. Lorsqu
 
 ---
 
-## 2. Webhook Plex (Temps Réel)
-
-Dès qu'un média atteint environ 90% de visionnage sur Plex, un événement `media.scrobble` est envoyé à PlexTracker.
-
-### Configuration Plex
-Déclarer l'URL du webhook dans les paramètres de votre compte Plex :
-`http://<nas-ip>:8080/api/webhook/plex`
-
----
-
-## 3. Synchronisation AniList
+## 2. Synchronisation AniList
 
 PlexTracker synchronise automatiquement votre activité d'anime avec AniList (notes, statuts, progression par épisode).
 

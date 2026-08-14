@@ -67,7 +67,7 @@ Pour regrouper les doublons (ex: animes éclatés par saison) :
 
 ## 5. Match Review (Revue des Correspondances)
 
-File de validation des titres importés via Plex/Jellyfin :
+File de validation des titres importés via Jellyfin :
 
 - **Auto-confirmation** : Les matchs à haute confiance Gemini sont confirmés automatiquement.
 - **File de revue** : Seuls les cas ambigus apparaissent (*Pending review* ou *Unconfirmed*).

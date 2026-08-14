@@ -28,11 +28,11 @@ Titres non terminés (*Watching*, *Plan to watch*) ainsi que les titres présent
 
 ## 2. Pipeline de Matching Média
 
-Lorsqu'un nouveau titre est reçu (webhook Plex/Jellyfin ou ajout manuel), le pipeline tente d'associer automatiquement les identifiants externes (TMDB, IMDb, TVDB, AniList) :
+Lorsqu'un nouveau titre est reçu (webhook Jellyfin ou ajout manuel), le pipeline tente d'associer automatiquement les identifiants externes (TMDB, IMDb, TVDB, AniList) :
 
 ```mermaid
 graph TD
-    A[Nouveau Média] --> B{1. IDs Webhook / Plex?}
+    A[Nouveau Média] --> B{1. IDs Webhook?}
     B -- Oui --> C[Match Confirmed]
     B -- Non --> D{2. Base Cross-Ref?}
     D -- Oui --> C
