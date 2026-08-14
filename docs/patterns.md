@@ -354,10 +354,7 @@ function load<T>(key: string): T | null {
 ### Frontend Tests
 `make test-front` — vitest + jsdom + @testing-library/preact.
 
-### Dependabot & Automated Dependency Management
-- **Configuration**: `.github/dependabot.yml`.
-- **Version Updates**: Weekly grouped updates for `gomod` (`/`), `npm` (`/frontend`), `github-actions` (`/`), and `docker` (`/`) using `applies-to: version-updates`.
-- **Security Updates**: Bypass weekly grouping to trigger immediate standalone PRs upon vulnerability disclosure.
-- **Auto-Merge**: `.github/workflows/dependabot-auto-merge.yml` automatically enables squash merge when CI passes.
-- **Auto-Fix**: `.github/workflows/dependabot-antigravity-fix.yml` notifies Antigravity to analyze and patch failing CI on Dependabot PRs.
+### Dependabot
+`.github/dependabot.yml` (weekly grouped version updates, immediate security PRs) + `.github/workflows/dependabot-*` (auto-merge, CI fix trigger).
+
 
