@@ -124,13 +124,15 @@ func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
 	assert.False(t, cfg.CookieSecure)
 }
 
-func TestLoad_DebugLoginRejectedWhenGoogleClientIDNotDev(t *testing.T) {
+func TestLoad_DebugLoginDisabledInProductionOAuth(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "real-prod-oauth-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DEBUG_LOGIN", "true")
+	t.Setenv("COOKIE_SECURE", "")
 
-	_, err := config.Load()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "DEBUG_LOGIN=true is incompatible with production Google OAuth")
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.False(t, cfg.DebugLogin)
+	assert.True(t, cfg.CookieSecure)
 }

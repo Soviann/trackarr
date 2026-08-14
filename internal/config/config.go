@@ -82,18 +82,21 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters (HMAC-SHA256 strength)")
 	}
 
+	// Dev login is only permitted in local development (when GOOGLE_CLIENT_ID == "dev").
+	// In production (when a real GOOGLE_CLIENT_ID is configured), DEBUG_LOGIN=true is automatically
+	// disabled so dev login credentials and UI forms are never exposed in prod.
+	if cfg.DebugLogin && cfg.GoogleClientID != "dev" {
+		cfg.DebugLogin = false
+		if os.Getenv("COOKIE_SECURE") == "" {
+			cfg.CookieSecure = true
+		}
+	}
+
 	// CookieSecure=true is the prod marker (HTTPS behind reverse proxy). DebugLogin=true
 	// in that environment is a config copy-paste accident — refuse to boot rather than
 	// expose /api/auth/dev with hardcoded creds in prod.
 	if cfg.DebugLogin && cfg.CookieSecure {
 		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with COOKIE_SECURE=true (prod env)")
-	}
-
-	// Dev login is only permitted in local development (when GOOGLE_CLIENT_ID == "dev").
-	// In production (when a real GOOGLE_CLIENT_ID is configured), DEBUG_LOGIN=true is a
-	// dangerous configuration leftover — refuse to boot rather than expose /api/auth/dev.
-	if cfg.DebugLogin && cfg.GoogleClientID != "dev" {
-		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with production Google OAuth (GOOGLE_CLIENT_ID != \"dev\")")
 	}
 
 	return cfg, nil
