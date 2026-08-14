@@ -8,6 +8,7 @@ updates:
     open-pull-requests-limit: 10
     groups:
       go-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
     labels:
@@ -22,6 +23,7 @@ updates:
     open-pull-requests-limit: 10
     groups:
       frontend-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
     labels:
@@ -36,6 +38,7 @@ updates:
     open-pull-requests-limit: 10
     groups:
       actions-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
     labels:
@@ -50,8 +53,10 @@ updates:
     open-pull-requests-limit: 10
     groups:
       docker-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
     labels:
       - "dependencies"
       - "docker"
+
