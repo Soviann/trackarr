@@ -398,3 +398,15 @@ docker compose pull && docker compose up -d
 ```
 
 Variables d'environnement requises : voir `docker-compose.yml`.
+
+---
+
+## Maintenance & Dépendances (Dependabot & CI)
+
+La maintenance des dépendances du projet est entièrement automatisée via GitHub Actions et Dependabot :
+
+- **Mises à jour hebdomadaires** (`.github/dependabot.yml`) : Dependabot recherche chaque semaine les mises à jour pour Go (`/`), npm (`/frontend`), GitHub Actions et Docker. Les mises à jour de routine sont regroupées en PRs hebdomadaires.
+- **Alertes de sécurité immédiates** : Dès qu'une vulnérabilité est publiée (CVE/GHSA), Dependabot ouvre immédiatement une Pull Request autonome dédiée sans attendre le passage hebdomadaire.
+- **Fusion automatique (Auto-Merge)** (`.github/workflows/dependabot-auto-merge.yml`) : Toute PR Dependabot dont les tests CI passent est automatiquement fusionnée en `squash`.
+- **Correction automatique AI** (`.github/workflows/dependabot-antigravity-fix.yml`) : Si la CI échoue sur une PR Dependabot, le workflow notifie automatiquement l'agent AI pour analyser les logs d'erreur, corriger le code et pousser la correction.
+
