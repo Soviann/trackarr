@@ -57,7 +57,7 @@ PlexTracker — Personal media tracking app. Go 1.24 / SQLite / chi / Preact 10 
 
 ## Approach
 - Always prefer the robust/correct solution over the lazy/easy one. If trade-offs exist, present them as a PO: user-visible impact, not implementation effort.
-- Update `docs/patterns.md` when adding routes/services/components/commands. Update `docs/user-guide.md` when adding user-facing features.
+- Update `docs/patterns.md` when adding routes/services/components/commands. Update the relevant topic doc in `docs/` (see `docs/INDEX.md`) when adding user-facing features.
 
 ## Plans
 Location: `docs/superpowers/plans/` (gitignored, local-only). Plans are throwaway working notes — never commit, no `done/` archive. Git history is the durable record.

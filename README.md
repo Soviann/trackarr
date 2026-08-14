@@ -1,80 +1,69 @@
 # PlexTracker
 
-Application personnelle de suivi de visionnage. Remplace Simkl comme tracker central pour les films, séries et anime regardés sur Jellyfin.
+PlexTracker est une application personnelle de suivi de visionnage de films, séries et animes. Conçue comme une Progressive Web App (PWA) optimisée pour mobile, elle remplace Simkl en s'intégrant directement avec Jellyfin, Plex, TMDB, TVDB et AniList.
 
-## Fonctionnalités
+---
 
-- **Suivi automatique Jellyfin** via webhooks (scrobble à la fin de visionnage)
-- **Bibliothèque** avec filtres par statut (en cours, terminé, abandonné, à regarder)
-- **Progression** en un coup d'œil : barre de progression, prochain épisode
-- **Notes** (1-10) par titre et par saison, avec liens IMDb et sync AniList
-- **Ajout manuel** par lien (IMDb, TVDB, AniList) ou recherche par nom
-- **Partage Android** (PWA Share Target) depuis les apps IMDb, navigateur, etc.
-- **Notifications push** pour les fins de saison/film et les changements de statut
-- **Import Simkl** pour la migration initiale de l'historique
+## 🚀 Fonctionnalités clés
 
-## Stack technique
+- **Suivi automatique** : Enregistrement automatique des visionnages via webhooks Jellyfin et Plex.
+- **Gestion de bibliothèque** : Suivi des statuts (*Watching*, *Plan to watch*, *Caught up*, *Completed*, *Dropped*).
+- **Synchronisation AniList** : Synchronisation bidirectionnelle automatique des notes, statuts et de la progression par saison/épisode.
+- **Match Review intelligent** : Pipeline d'identification des médias assisté par Gemini AI avec file de revue manuelle pour les cas ambigus.
+- **Gestion des saisons et Animes** : Fusion automatique des saisons, support des saisons découpées en plusieurs *parts*, et outil d'audit des saisons.
+- **File Arr (Radarr / Sonarr)** : Intégration directe pour suivre et ajouter des titres à la file de téléchargement.
+- **Statistiques & Insights** : Tableau de bord de statistiques détaillées et d'insights de visionnage.
 
-| Composant | Technologie |
-|---|---|
-| Backend | Go 1.24, chi router, SQLite (WAL) |
-| Frontend | Preact 10, Vite, TypeScript |
-| Auth | Google OAuth, JWT (cookie HttpOnly) |
-| APIs externes | TMDB, AniList (GraphQL), Gemini AI |
-| Déploiement | Docker, Synology DS920+ |
+---
 
-## Développement local
+## 🛠 Stack Technique
 
-Prérequis : Docker (via limactl ou Docker Desktop).
+- **Backend** : Go 1.24, Chi router, SQLite (`sqlite_fts5`)
+- **Frontend** : Preact 10, TypeScript, Vite, Vanilla CSS (Design system HSL)
+- **Infrastructure** : Docker & Docker Compose
+- **APIs & Intégrations** : TMDB, TVDB, AniList OAuth, Gemini AI, Webhooks Jellyfin/Plex
+
+---
+
+## 💻 Démarrage Rapide
+
+### Prérequis
+- Docker et Docker Compose
+- Make
+
+### Lancement en développement
 
 ```bash
-# Démarrer l'environnement de dev
+# Démarrer le conteneur applicatif (Go backend)
 make up
 
-# Logs
-make logs
-
-# Shell dans le conteneur
-make shell
-
-# Tests Go
-make test
-
-# Tests frontend
-make test-front
-
-# Linter
-make lint
-
-# Arrêter
-make down
+# Démarrer le serveur dev frontend (Vite)
+make dev-frontend
 ```
 
-Toutes les commandes passent par le Makefile qui exécute dans le conteneur Docker. Ne jamais lancer `go`, `node` ou `npm` directement sur l'hôte.
+L'application est accessible sur `http://localhost:8080`.
 
-## Import Simkl
+### Commandes Makefile principales
 
 ```bash
-# Copier le backup dans le conteneur puis :
-make import-dry BACKUP_FILE=/chemin/vers/Simkl_backup.zip  # prévisualisation
-make import BACKUP_FILE=/chemin/vers/Simkl_backup.zip       # import réel
+make test          # Lancer les tests unitaires Go
+make test-front    # Lancer les tests Vitest + build Vite
+make lint          # Lancer golangci-lint
+make lint-front    # Lancer le type-check TypeScript
+make build         # Compiler le binaire Go
 ```
 
-## Déploiement
+---
 
-```bash
-# Build de l'image
-docker build -t ghcr.io/nicolasvasse/plextracker:latest .
+## 📚 Documentation Détaillée
 
-# Production sur le NAS
-docker compose pull && docker compose up -d
-```
+Toute la documentation du projet est organisée de manière modulaire dans le dossier [`docs/`](docs/INDEX.md) :
 
-Configuration via variables d'environnement — voir `docker-compose.yml`.
+1. [**Aperçu & Accès**](docs/overview.md) — Présentation, périmètre et installation PWA.
+2. [**Guide de l'Interface**](docs/interface.md) — Bibliothèque, fiches titres, recherche, fusions, notation et statistiques.
+3. [**Intégrations & Webhooks**](docs/integrations.md) — Configuration Jellyfin, Plex et synchronisation AniList.
+4. [**Tâches de Fond & Matching**](docs/background-jobs.md) — Rafraîchissement quotidien, pipeline de matching Gemini AI et audit des saisons.
+5. [**Déploiement & Administration**](docs/deployment.md) — Déploiement NAS, import Simkl et commandes Makefile.
+6. [**Maintenance & CI**](docs/maintenance.md) — Dependabot, auto-merge et correction automatique AI.
 
-## Documentation
-
-- [Guide utilisateur](docs/user-guide.md) — fonctionnement de l'application
-- [Design spec](docs/superpowers/specs/2026-04-01-plextracker-design.md) — spécifications techniques
-- [UI/UX spec](docs/superpowers/specs/2026-04-02-plextracker-ui-design.md) — design visuel et interactions
-- [Patterns](docs/patterns.md) — carte du codebase et conventions
+Consultez l'[Index Général de la Documentation](docs/INDEX.md) pour naviguer facilement.
