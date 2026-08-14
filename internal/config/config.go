@@ -89,6 +89,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with COOKIE_SECURE=true (prod env)")
 	}
 
+	// Dev login is only permitted in local development (when GOOGLE_CLIENT_ID == "dev").
+	// In production (when a real GOOGLE_CLIENT_ID is configured), DEBUG_LOGIN=true is a
+	// dangerous configuration leftover — refuse to boot rather than expose /api/auth/dev.
+	if cfg.DebugLogin && cfg.GoogleClientID != "dev" {
+		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with production Google OAuth (GOOGLE_CLIENT_ID != \"dev\")")
+	}
+
 	return cfg, nil
 }
 

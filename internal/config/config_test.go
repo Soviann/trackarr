@@ -17,6 +17,7 @@ func TestLoad_Defaults(t *testing.T) {
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DATA_DIR", "")
 	t.Setenv("DISABLE_BACKGROUND_TASKS", "false")
+	t.Setenv("DEBUG_LOGIN", "false")
 
 	cfg, err := config.Load()
 	require.NoError(t, err)
@@ -33,6 +34,7 @@ func TestLoad_DisableBackgroundTasks(t *testing.T) {
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DISABLE_BACKGROUND_TASKS", "true")
+	t.Setenv("DEBUG_LOGIN", "false")
 
 	cfg, err := config.Load()
 	require.NoError(t, err)
@@ -44,6 +46,7 @@ func TestLoad_MissingRequired(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "")
 	t.Setenv("JWT_SECRET", "")
+	t.Setenv("DEBUG_LOGIN", "false")
 
 	_, err := config.Load()
 	assert.Error(t, err)
@@ -55,7 +58,7 @@ func TestLoad_MissingRequired(t *testing.T) {
 func TestLoad_DefaultJWTSecretRejectedRegardlessOfDebugLogin(t *testing.T) {
 	for _, debug := range []string{"true", "false"} {
 		t.Run("DEBUG_LOGIN="+debug, func(t *testing.T) {
-			t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+			t.Setenv("GOOGLE_CLIENT_ID", "dev")
 			t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 			t.Setenv("JWT_SECRET", "dev-secret-change-me")
 			t.Setenv("DEBUG_LOGIN", debug)
@@ -71,6 +74,7 @@ func TestLoad_JWTSecretTooShortRejected(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", "short")
+	t.Setenv("DEBUG_LOGIN", "false")
 
 	_, err := config.Load()
 	require.Error(t, err)
@@ -83,6 +87,7 @@ func TestLoad_JWTSecretMinLengthAccepted(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", secret)
+	t.Setenv("DEBUG_LOGIN", "false")
 
 	cfg, err := config.Load()
 	require.NoError(t, err)
@@ -92,7 +97,7 @@ func TestLoad_JWTSecretMinLengthAccepted(t *testing.T) {
 // DEBUG_LOGIN=true with COOKIE_SECURE=true means a prod deploy accidentally
 // inherited the dev .env — refuse to boot rather than expose /api/auth/dev.
 func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
-	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_CLIENT_ID", "dev")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DEBUG_LOGIN", "true")
@@ -105,9 +110,9 @@ func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
 }
 
 // DEBUG_LOGIN=true with COOKIE_SECURE unset is the standard dev path —
-// CookieSecure defaults to !DebugLogin = false, so the guard must not trip.
+// CookieSecure defaults to !DebugLogin = false, so the guard must not trip when GOOGLE_CLIENT_ID=dev.
 func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
-	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_CLIENT_ID", "dev")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DEBUG_LOGIN", "true")
@@ -117,4 +122,15 @@ func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, cfg.DebugLogin)
 	assert.False(t, cfg.CookieSecure)
+}
+
+func TestLoad_DebugLoginRejectedWhenGoogleClientIDNotDev(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "real-prod-oauth-client-id")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("DEBUG_LOGIN", "true")
+
+	_, err := config.Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "DEBUG_LOGIN=true is incompatible with production Google OAuth")
 }
