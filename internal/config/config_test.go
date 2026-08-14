@@ -110,9 +110,9 @@ func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
 }
 
 // DEBUG_LOGIN=true with COOKIE_SECURE unset is the standard dev path —
-// CookieSecure defaults to !DebugLogin = false, so the guard must not trip when GOOGLE_CLIENT_ID=dev.
+// CookieSecure defaults to !DebugLogin = false, so dev login works locally even with a real GOOGLE_CLIENT_ID.
 func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
-	t.Setenv("GOOGLE_CLIENT_ID", "dev")
+	t.Setenv("GOOGLE_CLIENT_ID", "real-prod-oauth-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
 	t.Setenv("DEBUG_LOGIN", "true")
@@ -122,17 +122,4 @@ func TestLoad_DebugLoginAllowedInDev(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, cfg.DebugLogin)
 	assert.False(t, cfg.CookieSecure)
-}
-
-func TestLoad_DebugLoginDisabledInProductionOAuth(t *testing.T) {
-	t.Setenv("GOOGLE_CLIENT_ID", "real-prod-oauth-client-id")
-	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
-	t.Setenv("JWT_SECRET", validSecret)
-	t.Setenv("DEBUG_LOGIN", "true")
-	t.Setenv("COOKIE_SECURE", "")
-
-	cfg, err := config.Load()
-	require.NoError(t, err)
-	assert.False(t, cfg.DebugLogin)
-	assert.True(t, cfg.CookieSecure)
 }

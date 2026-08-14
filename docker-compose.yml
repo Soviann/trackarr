@@ -13,6 +13,8 @@ services:
     environment:
       - DATA_DIR=/data
       - DISABLE_BACKGROUND_TASKS=false
+      - COOKIE_SECURE=true
+      - DEBUG_LOGIN=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 10s
