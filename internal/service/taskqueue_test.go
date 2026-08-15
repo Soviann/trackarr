@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nicolasvasse/plextracker/internal/config"
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
@@ -1366,4 +1367,112 @@ func TestHandleEnrichment_RootNotMergedIntoDistinctSibling(t *testing.T) {
 	assert.NoError(t, err, "root title must survive — it must never merge into a distinct-AniList sibling")
 	_, err = titles.GetByID(siblingID)
 	assert.NoError(t, err, "sibling must be untouched by the root's enrichment")
+}
+
+func TestTaskQueueWorker_RadarrPush(t *testing.T) {
+	var putCalled, postCalled bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "GET" && r.URL.Path == "/api/v3/movie/lookup":
+			switch r.URL.Query().Get("term") {
+			case "tmdb:123":
+				// Existing movie in Radarr
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`[{"id": 42, "title": "Existing Movie", "tmdbId": 123}]`))
+			case "tmdb:456":
+				// New movie not yet in Radarr
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`[{"id": null, "title": "New Movie", "tmdbId": 456}]`))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		case r.Method == "PUT" && r.URL.Path == "/api/v3/movie/42":
+			putCalled = true
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id": 42, "title": "Existing Movie"}`))
+		case r.Method == "POST" && r.URL.Path == "/api/v3/movie":
+			postCalled = true
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id": 99, "title": "New Movie"}`))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer ts.Close()
+
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+
+	cfg := &config.Config{
+		RadarrURL:    ts.URL,
+		RadarrAPIKey: "test-key",
+	}
+	settingsRepo := repository.NewSettingRepository(db)
+	arrSvc := service.NewArrService(cfg, settingsRepo, db)
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+	worker.SetArrService(arrSvc)
+
+	// 1. Existing movie (TMDB 123)
+	tmdb123 := int64(123)
+	movie1ID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdb123,
+	}, []model.TitleName{{Name: "Existing Movie", Language: "en", IsPrimary: true}})
+
+	payload1, _ := json.Marshal(service.PushPayload{
+		TitleID:        movie1ID,
+		Monitored:      true,
+		QualityProfile: 4,
+		RootFolder:     "/movies",
+	})
+	testutil.EnqueueTask(t, db, model.TaskTypeRadarrPush, string(payload1), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.True(t, putCalled, "existing movie should trigger PUT update")
+	m1, err := titles.GetByID(movie1ID)
+	require.NoError(t, err)
+	require.NotNil(t, m1.RadarrID)
+	assert.Equal(t, int64(42), *m1.RadarrID)
+
+	// 2. New movie (TMDB 456)
+	tmdb456 := int64(456)
+	movie2ID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2025,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdb456,
+	}, []model.TitleName{{Name: "New Movie", Language: "en", IsPrimary: true}})
+
+	payload2, _ := json.Marshal(service.PushPayload{
+		TitleID:        movie2ID,
+		Monitored:      true,
+		QualityProfile: 4,
+		RootFolder:     "/movies",
+	})
+	testutil.EnqueueTask(t, db, model.TaskTypeRadarrPush, string(payload2), nil)
+
+	queued, err = tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	assert.True(t, postCalled, "new movie should trigger POST add")
+	m2, err := titles.GetByID(movie2ID)
+	require.NoError(t, err)
+	require.NotNil(t, m2.RadarrID)
+	assert.Equal(t, int64(99), *m2.RadarrID)
 }

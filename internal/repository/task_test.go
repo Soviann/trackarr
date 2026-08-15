@@ -71,3 +71,33 @@ func TestTaskRepository_FetchDue_WakeSleeping(t *testing.T) {
 	assert.Len(t, tasks, 1)
 	assert.Equal(t, model.TaskStatusRunning, tasks[0].Status)
 }
+
+func TestTaskWriter_Enqueue_WakeSleeping(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	repo := repository.NewTaskRepository(db)
+
+	dedupKey := "arr_push_123"
+	id := testutil.EnqueueTask(t, db, model.TaskTypeRadarrPush, `{"title_id": 123}`, &dedupKey)
+
+	// Force sleep on fail
+	_, err = db.Exec(`UPDATE task_queue SET max_attempts = 1 WHERE id = ?`, id)
+	require.NoError(t, err)
+	testutil.FailTask(t, db, id, "API error", time.Now().Add(24*time.Hour))
+
+	task, err := repo.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusSleeping, task.Status)
+	assert.Equal(t, "API error", *task.LastError)
+
+	// Re-enqueue with the same dedup_key
+	testutil.EnqueueTask(t, db, model.TaskTypeRadarrPush, `{"title_id": 123, "monitored": true}`, &dedupKey)
+
+	task, err = repo.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusPending, task.Status)
+	assert.Equal(t, `{"title_id": 123, "monitored": true}`, task.Payload)
+	assert.Nil(t, task.LastError)
+	assert.Equal(t, 0, task.Attempts)
+}

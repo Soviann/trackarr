@@ -23,8 +23,17 @@ func NewTaskWriter(tx *sql.Tx) *TaskWriter {
 }
 
 // Enqueue adds a new task to the queue. If a dedup_key is provided and a non-dead
-// task with the same key already exists, the insert is silently skipped.
+// task with the same key already exists, any sleeping task is reset to pending
+// so it runs immediately.
 func (w *TaskWriter) Enqueue(ctx context.Context, taskType model.TaskType, payload string, dedupKey *string) (int64, error) {
+	if dedupKey != nil {
+		if _, err := w.tx.ExecContext(ctx,
+			`UPDATE task_queue SET status = 'pending', payload = ?, attempts = 0, last_error = NULL, run_at = CURRENT_TIMESTAMP WHERE dedup_key = ? AND status = 'sleeping'`,
+			payload, *dedupKey,
+		); err != nil {
+			return 0, fmt.Errorf("wake sleeping task: %w", err)
+		}
+	}
 	res, err := w.tx.ExecContext(ctx,
 		`INSERT OR IGNORE INTO task_queue (task_type, payload, dedup_key) VALUES (?, ?, ?)`,
 		taskType, payload, dedupKey,
