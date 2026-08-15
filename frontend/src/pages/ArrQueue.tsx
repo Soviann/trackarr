@@ -91,8 +91,8 @@ export function ArrQueue({ path }: { path?: string }) {
 
   useEffect(() => {
     Promise.all([
-      apiFetch<{items: QueueItem[], has_more: boolean}>('/arr/queue?limit=50&offset=0'),
-      apiFetch<ArrSettings>('/admin/arr'),
+      apiFetch<{items: QueueItem[], has_more: boolean}>('/arr/queue?limit=50&offset=0').catch(err => { console.error('Failed to load arr queue:', err); return { items: [], has_more: false } }),
+      apiFetch<ArrSettings>('/admin/arr').catch(err => { console.error('Failed to load arr settings:', err); return {} as ArrSettings }),
       apiFetch<RootFolder[]>('/arr/radarr/rootfolder').catch(err => { console.error('Failed to load Radarr root folders:', err); return [] }),
       apiFetch<QualityProfile[]>('/arr/radarr/qualityprofile').catch(err => { console.error('Failed to load Radarr quality profiles:', err); return [] }),
       apiFetch<RootFolder[]>('/arr/sonarr/rootfolder').catch(err => { console.error('Failed to load Sonarr root folders:', err); return [] }),
