@@ -9,6 +9,7 @@ import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
 import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
+import { ArrBadge } from './ArrBadge'
 import { TypeBadge } from './TypeBadge'
 import s from './TitleCard.module.css'
 
@@ -96,6 +97,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
           )}
           <span className={s.statusBadge}>
             <StatusBadge status={title.status} />
+            <ArrBadge type={title.type} radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
           </span>
         </div>
         {season && (

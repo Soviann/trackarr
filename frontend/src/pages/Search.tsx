@@ -8,6 +8,7 @@ import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
 import { StatusBadge } from '../components/StatusBadge'
 import { TypeBadge } from '../components/TypeBadge'
+import { ArrBadge } from '../components/ArrBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -178,6 +179,7 @@ export function Search({ path: _ }: { path?: string }) {
                     <div className={s.cardHeader}>
                       <span className={s.cardTitle}>{getName(t)}</span>
                       <StatusBadge status={t.status} />
+                      <ArrBadge type={t.type} radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
                     </div>
                     {hasMatchedAlt(t) && (
                       <div className={s.matchedRow}>
