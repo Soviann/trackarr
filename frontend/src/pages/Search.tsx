@@ -7,6 +7,7 @@ import { useTitleStore, useSearchStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
 import { StatusBadge } from '../components/StatusBadge'
+import { TypeBadge } from '../components/TypeBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
@@ -162,11 +163,16 @@ export function Search({ path: _ }: { path?: string }) {
                   }}
                   className={s.card}
                 >
-                  <div
-                    className={s.cardCover}
-                    style={{ background: coverBackground(t.cover_url, t.type) }}
-                  >
-                    {!t.cover_url && <CoverPlaceholder type={t.type} iconSize="18px" />}
+                  <div className={s.coverWrap}>
+                    <div
+                      className={s.cardCover}
+                      style={{ background: coverBackground(t.cover_url, t.type) }}
+                    >
+                      {!t.cover_url && <CoverPlaceholder type={t.type} iconSize="18px" />}
+                    </div>
+                    <div className={s.typeBadge}>
+                      <TypeBadge type={t.type} size="sm" radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
+                    </div>
                   </div>
                   <div className={s.cardBody}>
                     <div className={s.cardHeader}>
