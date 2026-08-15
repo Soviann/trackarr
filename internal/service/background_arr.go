@@ -36,7 +36,7 @@ func (w *TaskQueueWorker) handleArrPush(ctx context.Context, task model.Task, lo
 			return fmt.Errorf("TMDB ID not found for title %d (required for Radarr)", payload.TitleID)
 		}
 		externalID = fmt.Sprintf("tmdbId=%d", *title.TMDBID)
-		lookupEndpoint = "/api/v3/movie/lookup?"
+		lookupEndpoint = "/api/v3/movie/lookup/tmdb?"
 	case "sonarr":
 		if title.TVDBID == nil || *title.TVDBID == 0 {
 			return fmt.Errorf("TVDB ID not found for title %d (required for Sonarr)", payload.TitleID)
@@ -59,17 +59,24 @@ func (w *TaskQueueWorker) handleArrPush(ctx context.Context, task model.Task, lo
 		return fmt.Errorf("%s lookup returned %d: %s", app, resp.StatusCode, string(body))
 	}
 
-	var lookupResults []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&lookupResults); err != nil {
-		return fmt.Errorf("decode lookup %s: %w", app, err)
+	var lookupResult map[string]interface{}
+	switch app {
+	case "radarr":
+		// /api/v3/movie/lookup/tmdb returns a single object
+		if err := json.NewDecoder(resp.Body).Decode(&lookupResult); err != nil {
+			return fmt.Errorf("decode lookup %s: %w", app, err)
+		}
+	case "sonarr":
+		// /api/v3/series/lookup returns an array
+		var lookupResults []map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&lookupResults); err != nil {
+			return fmt.Errorf("decode lookup %s: %w", app, err)
+		}
+		if len(lookupResults) == 0 {
+			return fmt.Errorf("%s lookup returned no results for %s", app, externalID)
+		}
+		lookupResult = lookupResults[0]
 	}
-
-	if len(lookupResults) == 0 {
-		return fmt.Errorf("%s lookup returned no results for %s", app, externalID)
-	}
-
-	lookupResult := lookupResults[0]
-
 	arrIDFloat, exists := lookupResult["id"].(float64)
 	if exists && arrIDFloat > 0 {
 		arrID := int64(arrIDFloat)
