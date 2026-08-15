@@ -79,7 +79,7 @@ Les opérations lourdes ou dépendantes de services tiers sont exécutées en ar
 | `cover_fetch` | Nouveau titre sans visuel | Télécharge la couverture sur le CDN et extrait sa couleur d'accentuation. |
 | `anilist_push_season` | Épisode vu / Changement de note | Envoie l'avancement et la note de la saison correspondante à AniList. |
 | `anilist_push_movie` | Film vu / Noté | Envoie la complétion et la note du film à AniList. |
-| `radarr_push` | Bouton « File Arr » sur un film | Ajoute ou met à jour le film dans Radarr et lance la recherche de release. |
-| `sonarr_push` | Bouton « File Arr » sur une série | Ajoute ou met à jour la série dans Sonarr et lance la recherche des épisodes manquants. |
+| `radarr_push` | Bouton « File Arr » sur un film | Ajoute le film dans Radarr (ou associe l'existant sans écraser ses paramètres) et lance la recherche si nouveau. |
+| `sonarr_push` | Bouton « File Arr » sur une série | Ajoute la série dans Sonarr (ou associe l'existante sans écraser ses paramètres) et lance la recherche si nouvelle. |
 
 Les tâches en échec sont consultables et réessayables manuellement depuis **Admin → Tasks** (`/admin/tasks`).

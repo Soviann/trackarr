@@ -20,7 +20,7 @@ When a title is queued for push (`TaskTypeRadarrPush` or `TaskTypeSonarrPush`):
 1. **Radarr**: Lookup term `term=tmdb:<tmdb_id>` against `/api/v3/movie/lookup`.
 2. **Sonarr**: Lookup term `term=tvdb:<tvdb_id>` against `/api/v3/series/lookup`.
 3. If entry already exists in Arr:
-   - Updates monitoring, quality profile, and root folder via `PUT /api/v3/movie/{id}` or `PUT /api/v3/series/{id}`.
+   - Does not overwrite values in Arr (Arr values prevail); saves the Arr ID directly.
 4. If entry is new:
    - Posts add payload via `POST /api/v3/movie` or `POST /api/v3/series` with `addOptions{searchForMovie: true, searchForMissingEpisodes: true}`.
 5. Persists the returned ID:

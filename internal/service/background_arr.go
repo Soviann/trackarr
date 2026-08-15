@@ -70,33 +70,7 @@ func (w *TaskQueueWorker) handleArrPush(ctx context.Context, task model.Task, lo
 	arrIDFloat, exists := lookupResult["id"].(float64)
 	if exists && arrIDFloat > 0 {
 		arrID := int64(arrIDFloat)
-
-		// Update existing title with user's requested options
-		lookupResult["monitored"] = payload.Monitored
-		lookupResult["qualityProfileId"] = payload.QualityProfile
-		lookupResult["rootFolderPath"] = payload.RootFolder
-
-		updateBody, err := json.Marshal(lookupResult)
-		if err != nil {
-			return fmt.Errorf("marshal %s update payload: %w", app, err)
-		}
-
-		endpoint := fmt.Sprintf("/api/v3/movie/%d", arrID)
-		if app == "sonarr" {
-			endpoint = fmt.Sprintf("/api/v3/series/%d", arrID)
-		}
-
-		updateResp, err := w.arrSvc.ProxyRequest(ctx, app, "PUT", endpoint, bytes.NewBuffer(updateBody))
-		if err != nil {
-			return fmt.Errorf("update %s: %w", app, err)
-		}
-		defer updateResp.Body.Close()
-
-		if updateResp.StatusCode != http.StatusAccepted && updateResp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(updateResp.Body)
-			return fmt.Errorf("%s update returned %d: %s", app, updateResp.StatusCode, string(body))
-		}
-
+		// Title already exists in Radarr/Sonarr: do not overwrite existing settings, Arr values prevail.
 		return w.saveArrID(ctx, payload.TitleID, app, arrID)
 	}
 

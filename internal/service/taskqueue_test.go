@@ -1441,7 +1441,7 @@ func TestTaskQueueWorker_RadarrPush(t *testing.T) {
 	require.Len(t, queued, 1)
 	worker.ProcessTask(context.Background(), queued[0])
 
-	assert.True(t, putCalled, "existing movie should trigger PUT update")
+	assert.False(t, putCalled, "existing movie should not trigger PUT update (Arr values prevail)")
 	m1, err := titles.GetByID(movie1ID)
 	require.NoError(t, err)
 	require.NotNil(t, m1.RadarrID)
