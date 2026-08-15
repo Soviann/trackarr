@@ -20,7 +20,10 @@ export function ArrBadge({ type, radarrId, sonarrId }: ArrBadgeProps) {
         aria-label="Présent sur Radarr"
         title="Présent sur Radarr"
       >
-        Radarr
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
       </span>
     )
   }
@@ -31,7 +34,9 @@ export function ArrBadge({ type, radarrId, sonarrId }: ArrBadgeProps) {
       aria-label="Présent sur Sonarr"
       title="Présent sur Sonarr"
     >
-      Sonarr
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12h4l3-9 5 18 3-9h5" />
+      </svg>
     </span>
   )
 }
