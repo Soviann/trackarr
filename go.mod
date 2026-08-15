@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/image v0.44.0
+	golang.org/x/image v0.45.0
 	golang.org/x/time v0.15.0
 )
 
