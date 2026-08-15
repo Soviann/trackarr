@@ -31,19 +31,33 @@ Chaque fiche titre rassemble l'ensemble des informations et actions :
 - **Badge Prime** : Badge bleu **prime** si le titre est inclus sur Amazon Prime Video (France).
 - **Notes** : Note personnelle (/10) à gauche, notes externes TMDB et AniList (%) à droite.
 - **Cast & Crew** : Liste des acteurs et de l'équipe. Taper un nom ouvre la fiche **Person** filtrant la bibliothèque.
-- **Détails & Titres alternatifs** : Dates d'ajout et dernier visionnage, temps cumulé, nom original, bouton **File Arr**, et liste des alias connus avec drapeau de langue (🇫🇷/🇬🇧/🇯🇵).
+- **Détails & Titres alternatifs** : Dates d'ajout et dernier visionnage, temps cumulé, nom original, badge d'état Arr (**In Queue**, **Monitored**, **Downloaded**), bouton **File Arr**, et liste des alias connus avec drapeau de langue (🇫🇷/🇬🇧/🇯🇵).
 - **Historique de visionnage** : Vue des sessions de visionnage avec regroupement automatique des épisodes consécutifs en plages (ex: `S1 E1–4 · 12 avr.`).
 - **Saisons & Épisodes** : Barre de progression, onglets par saison (vert = terminée, ambre = en cours, gris = pas commencée), et liste interactive d'épisodes.
 - **Bandeau AniList par saison** (anime) : Liens et scores AniList par saison. Support des saisons découpées en plusieurs *parts* (*Part 1*, *Part 2*).
 - **Tiroir « Actions »** :
   - **Rate** : Note personnelle.
   - **Edit** : Modifier type, statut, nom affiché.
-  - **More** : File Arr, Rematch, Merge, Refresh, Delete.
+  - **More** : File Arr (envoi Radarr/Sonarr avec choix du profil et dossier), Rematch, Merge, Refresh, Delete.
   - **Liens externes** : Accès direct IMDb, TVDB, AniList.
 
 ---
 
-## 3. Recherche & Ajout de Titres
+## 3. File d'Attente Arr & Indicateurs
+
+PlexTracker s'interface avec Radarr (films) et Sonarr (séries) pour suivre et déclencher les téléchargements :
+
+- **Badges sur les vignettes** :
+  - Liseré supérieur coloré sur les cartes : Jaune pour Radarr (films), Cyan pour Sonarr (séries).
+  - Pastille d'état : *In Queue* (téléchargement en cours), *Downloaded* (déjà récupéré), *Monitored* (suivi).
+- **File de téléchargement (`/admin/arr/queue`)** :
+  - Liste en temps réel des éléments en cours de téléchargement sur Radarr et Sonarr.
+  - Pourcentage de progression, taille restante, temps estimé, et protocole (Usenet vs Torrent).
+  - Filtre par application (Tous, Radarr, Sonarr).
+
+---
+
+## 4. Recherche & Ajout de Titres
 
 ### Recherche globale
 Recherche instantanée dans toute la bibliothèque. La position de défilement et les résultats sont conservés lors des retours depuis une fiche titre.
@@ -55,7 +69,7 @@ Recherche instantanée dans toute la bibliothèque. La position de défilement e
 
 ---
 
-## 4. Fusion de Titres (Merge)
+## 5. Fusion de Titres (Merge)
 
 Pour regrouper les doublons (ex: animes éclatés par saison) :
 1. Ouvrir la fiche du titre à fusionner et supprimer.
@@ -65,7 +79,7 @@ Pour regrouper les doublons (ex: animes éclatés par saison) :
 
 ---
 
-## 5. Match Review (Revue des Correspondances)
+## 6. Match Review (Revue des Correspondances)
 
 File de validation des titres importés via Jellyfin :
 
@@ -77,7 +91,7 @@ File de validation des titres importés via Jellyfin :
 
 ---
 
-## 6. Notation & Panneaux (BottomSheet)
+## 7. Notation & Panneaux (BottomSheet)
 
 - **Prompt automatique** : Proposé automatiquement à la fin d'un film, d'une saison, ou lors du passage en *Completed* / *Dropped*.
 - **Options** : *Save rating* (synchro AniList auto pour les animes), *IMDb Save & rate* (ouvre IMDb), ou *Skip*.
@@ -85,10 +99,21 @@ File de validation des titres importés via Jellyfin :
 
 ---
 
-## 7. Statistiques & Insights
+## 8. Statistiques & Insights
 
 Onglet dédié présentant les métriques globales de la bibliothèque :
 - **Chiffres clés** : Titres suivis, épisodes vus, complétion, note moyenne, répartition par type.
 - **Distribution des notes** : Graphique en barres (10 à 1) avec insight de tendance.
 - **Insight Cards ("Le savais-tu ?")** : Plus gros binge, fidélité, sprint de complétion, créneau horaire de visionnage, écart de notes, décennies préférées.
 - **Activité récente** : Flux paginé avec regroupement intelligent des épisodes consécutifs.
+
+---
+
+## 9. Administration & Paramètres
+
+Accessible depuis l'icône Paramètres :
+- **Serveurs Arr (`/admin/arr`)** : Configuration des URLs et clés d'API Radarr / Sonarr, dossiers racine et profils de qualité par défaut.
+- **Tâches de fond (`/admin/tasks`)** : Liste des tâches en cours/échouées, bouton de relance et purge.
+- **Préférences de notifications (`/admin/notifications`)** : Gestion des alertes Web Push.
+- **Season Audit (`/admin/season-audit`)** : Suggestions de fusion pour les séries multi-saisons éclatées.
+- **Validation (`/admin/validate`)** : Audit global de l'intégrité des métadonnées de la bibliothèque.

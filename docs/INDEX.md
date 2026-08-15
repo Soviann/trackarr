@@ -14,6 +14,7 @@ Bienvenue dans la documentation officielle de PlexTracker. Chaque aspect de l'ap
 ### 2. [Guide de l'Interface Utilisateur](interface.md)
 - **Bibliothèque (Accueil)** : Filtres (statut, type, pays, note), tri, mode sélection, pull-to-refresh, Continue Watching & Coming Up.
 - **Détail d'un Titre** : Notes, synopsis, cast & crew, raccourcis Arr, historique, épisodes, bandeaux AniList par saison.
+- **File Arr & Badges** : Indicateurs de disponibilité Radarr/Sonarr (In Queue, Monitored, Downloaded) et vue `/admin/arr/queue`.
 - **Recherche & Ajout** : Recherche par nom, collage d'URLs (IMDb/TMDB/AniList/TVDB), partage natif Android/iOS.
 - **Match Review** : Validation des correspondances d'IDs externes, swipe actions, batch confirm.
 - **Notation & Édition** : Prompt de notation contextuel, modification du statut/type/nom affiché.
@@ -22,6 +23,7 @@ Bienvenue dans la documentation officielle de PlexTracker. Chaque aspect de l'ap
 ### 3. [Intégrations & Webhooks](integrations.md)
 - **Jellyfin Webhook** : Configuration pas-à-pas du plugin Webhook, template JSON et déduplication.
 - **AniList** : Connexion OAuth, synchronisation bidirectionnelle automatique (notes, statuts, progression), saisons découpées (*parts*), et rattachement des prequels.
+- **Radarr & Sonarr (*arr)** : Configuration des serveurs, envoi automatique ou manuel de films/séries, suivi de la file de téléchargement et profils de qualité.
 
 ### 4. [Tâches de Fond & Automation](background-jobs.md)
 - **Rafraîchissement Quotidien** : Mise à jour automatique des métadonnées, nouveaux épisodes, statut de séries et couvertures.

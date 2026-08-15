@@ -68,3 +68,34 @@ Certaines saisons sont divisées en plusieurs entrées sur AniList (ex: *Part 1*
 
 ### Rattachement automatique des prequels
 Lors de l'import d'un anime via AniList, PlexTracker remonte automatiquement les liens de prequels pour fusionner la saison dans la série parente au bon numéro de saison, sauf si la saison possède ses propres identifiants externes distincts (TMDB/TVDB).
+
+---
+
+## 3. Intégration Radarr & Sonarr (*arr)
+
+PlexTracker s'intègre avec vos instances **Radarr** (pour les films) et **Sonarr** (pour les séries) pour surveiller l'état des téléchargements et ajouter automatiquement des médias à vos gestionnaires de téléchargement.
+
+### Configuration (`/admin/arr`)
+
+1. Ouvrir l'écran d'administration **Arr** via les paramètres (`/admin/arr`).
+2. Configurer pour chaque service :
+   - **URL de l'instance** (ex: `http://192.168.1.50:7878` pour Radarr, `http://192.168.1.50:8989` pour Sonarr).
+   - **Clé d'API** (trouvée dans *Paramètres → Général → Sécurité* dans Radarr/Sonarr).
+   - **Dossier racine par défaut** (*Root Folder*).
+   - **Profil de qualité par défaut** (*Quality Profile*).
+
+### Déclenchement de téléchargement (« File Arr »)
+
+Depuis la fiche d'un titre ([TitleDetail](interface.md#2-détail-dun-titre)) :
+1. Cliquer sur le bouton **File Arr** (ou via le menu *More → File Arr*).
+2. Vérifier ou ajuster le dossier racine, le profil de qualité, l'option de recherche immédiate et de surveillance.
+3. Valider pour envoyer le titre en tâche de fond (`TaskTypeRadarrPush` / `TaskTypeSonarrPush`).
+4. Une fois envoyé, l'identifiant Radarr/Sonarr est enregistré et les badges de statut s'affichent automatiquement.
+
+### Suivi en temps réel (`/admin/arr/queue`)
+
+La vue de file d'attente centralise tous les téléchargements actifs :
+- Barre de progression en temps réel (pourcentage et mégaoctets téléchargés).
+- Temps restant estimé.
+- Protocole utilisé (Usenet vs BitTorrent).
+- Liens directs vers les fiches PlexTracker correspondantes.

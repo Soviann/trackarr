@@ -65,3 +65,21 @@ Accessible dans la section **Admin → Season Audit**.
 - **Dismiss** : Masque définitivement la suggestion.
 
 > Aucune fusion d'audit n'est automatique : toutes nécessitent une validation explicite de l'administrateur.
+
+---
+
+## 4. File de Tâches Asynchrones (Task Queue Worker)
+
+Les opérations lourdes ou dépendantes de services tiers sont exécutées en arrière-plan par un gestionnaire de file de tâches (`TaskQueueWorker`) :
+
+| Type de Tâche | Déclencheur | Action |
+|---|---|---|
+| `enrichment` | Ajout de titre / Rematch | Exécute le pipeline de matching, récupère les détails TMDB/TVDB et associe les identifiants. |
+| `refresh` | Cron quotidien / Enrichissement | Télécharge les épisodes et métadonnées d'une série ou d'un film. |
+| `cover_fetch` | Nouveau titre sans visuel | Télécharge la couverture sur le CDN et extrait sa couleur d'accentuation. |
+| `anilist_push_season` | Épisode vu / Changement de note | Envoie l'avancement et la note de la saison correspondante à AniList. |
+| `anilist_push_movie` | Film vu / Noté | Envoie la complétion et la note du film à AniList. |
+| `radarr_push` | Bouton « File Arr » sur un film | Ajoute ou met à jour le film dans Radarr et lance la recherche de release. |
+| `sonarr_push` | Bouton « File Arr » sur une série | Ajoute ou met à jour la série dans Sonarr et lance la recherche des épisodes manquants. |
+
+Les tâches en échec sont consultables et réessayables manuellement depuis **Admin → Tasks** (`/admin/tasks`).
