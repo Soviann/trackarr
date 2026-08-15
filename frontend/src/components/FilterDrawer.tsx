@@ -6,7 +6,7 @@ import { apiFetch } from '../api'
 import { countryLabel, isRealCountry } from '../lib/country'
 import s from './FilterDrawer.module.css'
 
-const STORAGE_KEY_HOME = 'filter-drawer-open-home'
+const STORAGE_KEY_HOME = 'filter-drawer-open-home-v2'
 
 type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
@@ -111,7 +111,7 @@ export function FilterDrawer({
   status, type, isAnime, seriesStatus,
   onStatusChange, onTypeChange, onIsAnimeChange, onSeriesStatusChange,
   sort, onSortChange, isSearchActive,
-  defaultOpen = true,
+  defaultOpen = false,
   decade, releaseFrom, releaseTo, includeNoRelease,
   onDecadeChange, onReleaseFromChange, onReleaseToChange, onIncludeNoReleaseChange,
   selectedGenres, genreOp, onGenreToggle, onGenreOpChange,
@@ -119,9 +119,8 @@ export function FilterDrawer({
   onMyRatingMinChange, onTmdbRatingMinChange,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(() => {
-    if (!defaultOpen) return false
     const stored = localStorage.getItem(STORAGE_KEY_HOME)
-    return stored !== null ? stored === 'true' : true
+    return stored !== null ? stored === 'true' : defaultOpen
   })
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
@@ -198,14 +197,9 @@ export function FilterDrawer({
     }
   }, [handleTouchStart, handleTouchMove, handleTouchEnd])
 
-  // Reset to closed when switching to a page with defaultOpen=false
   useEffect(() => {
-    if (!defaultOpen) setOpen(false)
-  }, [defaultOpen])
-
-  useEffect(() => {
-    if (defaultOpen) localStorage.setItem(STORAGE_KEY_HOME, String(open))
-  }, [open, defaultOpen])
+    localStorage.setItem(STORAGE_KEY_HOME, String(open))
+  }, [open])
 
   const showSeriesStatus = type === 'series'
 

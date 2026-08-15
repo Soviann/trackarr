@@ -166,7 +166,7 @@ export function App() {
       sort={sort}
       onSortChange={setSort}
       isSearchActive={isSearch}
-      defaultOpen={true}
+      defaultOpen={false}
       decade={filter.decade ?? null}
       releaseFrom={filter.release_from ?? ''}
       releaseTo={filter.release_to ?? ''}
