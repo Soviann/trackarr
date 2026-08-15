@@ -74,7 +74,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
           className={s.coverImage}
         />
         <div className={`${s.typeBadge}${selecting ? ` ${s.typeBadgeShifted}` : ''}`}>
-          <TypeBadge type={title.type} />
+          <TypeBadge type={title.type} radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
         </div>
         <div className={s.statusBadge}>
           <StatusBadge status={title.status} caughtUp={title.caught_up} />

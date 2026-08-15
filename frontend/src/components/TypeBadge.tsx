@@ -8,15 +8,32 @@ type TypeBadgeSize = 'sm' | 'md'
 interface TypeBadgeProps {
   type: TitleType
   size?: TypeBadgeSize
+  radarrId?: number | null
+  sonarrId?: number | null
 }
 
-export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
+export function TypeBadge({ type, size = 'md', radarrId, sonarrId }: TypeBadgeProps) {
   const { color, icon } = typeIconConfig[type]
+  const hasRadarr = type === 'movie' && radarrId != null
+  const hasSonarr = type === 'series' && sonarrId != null
+
+  const arrLabel = hasRadarr
+    ? ' (Présent sur Radarr)'
+    : hasSonarr
+    ? ' (Présent sur Sonarr)'
+    : ''
+
   return (
     <div
-      className={clsx(s.badge, size === 'sm' ? s.sizeSm : s.sizeMd)}
+      className={clsx(
+        s.badge,
+        size === 'sm' ? s.sizeSm : s.sizeMd,
+        hasRadarr && s.hasRadarr,
+        hasSonarr && s.hasSonarr
+      )}
       style={{ color }}
-      aria-label={type === 'movie' ? 'Movie' : 'Series'}
+      aria-label={(type === 'movie' ? 'Movie' : 'Series') + arrLabel}
+      title={hasRadarr ? 'Présent sur Radarr' : hasSonarr ? 'Présent sur Sonarr' : undefined}
     >
       <div className={clsx(s.icon, size === 'sm' ? s.iconSm : s.iconMd)}>
         {icon}
@@ -24,3 +41,4 @@ export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
     </div>
   )
 }
+

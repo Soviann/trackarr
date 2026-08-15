@@ -152,7 +152,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp,
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp,
 			&matchedName, &matchedLang); err != nil {
 			return nil, fmt.Errorf("scan search title: %w", err)
 		}
@@ -447,7 +447,7 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 		if err := tRows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.PlexRatingKey, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
 			tRows.Close()
 			return nil, fmt.Errorf("scan fuzzy title: %w", err)
 		}

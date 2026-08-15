@@ -81,7 +81,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
           iconSize="20px"
         />
         <div className={s.typeBadge}>
-          <TypeBadge type={title.type} size="sm" />
+          <TypeBadge type={title.type} size="sm" radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
         </div>
       </div>
 
