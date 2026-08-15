@@ -7,7 +7,7 @@ EXEC = $(DC) exec app
 
 .PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate
 .PHONY: import import-dry db-reset reset-import backfill-accents
-.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-logs
+.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-db-pull ssh-logs ssh-debug-pull ssh-db-push push-secrets pull-secrets
 
 # SSH helper: sources NAS_* from .env.local and runs a command over SSH
 NAS_SSH = bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
@@ -116,6 +116,10 @@ ssh-logs: ## Pull logs du conteneur plextracker du NAS vers data/plextracker.log
 	@echo "Téléchargement des logs depuis le NAS..."
 	@$(call NAS_SSH,/usr/local/bin/docker logs $${LINES:+--tail $${LINES}} plextracker 2>&1) > data/plextracker.log
 	@echo "Logs enregistrés dans data/plextracker.log ($$(wc -l < data/plextracker.log) lignes)"
+
+ssh-debug-pull: ## Pull la BDD et les logs de prod du NAS en local pour diagnostic
+	@$(MAKE) ssh-db-pull
+	@$(MAKE) ssh-logs
 
 ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de prod)
 	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \

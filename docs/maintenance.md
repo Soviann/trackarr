@@ -53,3 +53,25 @@ Si la CI échoue sur une PR Dependabot (par exemple à cause d'un *breaking chan
 1. Le workflow détecte l'échec de la CI.
 2. Il poste automatiquement un commentaire sur la PR pour alerter l'agent AI Antigravity.
 3. L'agent AI prend en charge l'analyse des logs, applique la correction dans le code et pousse la résolution sur la branche de la PR.
+
+---
+
+## 3. Diagnostic & Débogage de Production (Local-First)
+
+Pour diagnostiquer un dysfonctionnement survenu en production (erreur de file d'attente Radarr/Sonarr, désynchronisation de scrobble, problème de matching, incohérence de BDD) :
+
+### Règle Local-First
+**Systématiquement rapatrier les fichiers (BDD, logs) en local d'abord.** L'inspection des logs, les requêtes BDD et le débogage applicatif se font en local. L'utilisation directe de SSH reste réservée aux diagnostics système qui ne peuvent pas être extraits sous forme de fichiers (espace disque hôte, connectivité réseau, statut du démon Docker).
+
+### Workflow
+1. **Extraction de l'état de production** :
+   ```bash
+   make ssh-debug-pull
+   ```
+   *Télécharge la BDD de production (`data/plextracker.db` + WAL/SHM) et les logs du conteneur (`data/plextracker.log`), puis démarre l'application locale.*
+2. **Analyse des logs en local** :
+   Inspection et recherche textuelle / regex directement dans `data/plextracker.log`.
+3. **Analyse de la BDD en local** :
+   Requêtes SQL ou inspection via l'interface locale (`http://localhost:8080`) connectée aux données de prod.
+4. **Reproduction & Fixation** :
+   Reproduction du bug en local, rédaction de tests unitaires/intégration (`make test`), et validation du fix.

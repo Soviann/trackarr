@@ -12,6 +12,9 @@ Update when adding routes, services, components, or commands.
 | `import` | `cmd/import.go` | Simkl backup import |
 | `reset-import` | `Makefile` | Calls `db-reset` (deletes .db + -wal + -shm, restarts Docker container so migrations re-run on boot), sleeps 5 s, then `import`. Refuses without `BACKUP_FILE=`. |
 | `ssh-reset-import` | `Makefile` | Calls `ssh-db-reset` (rm files inside container + `docker restart plextracker`, migrations re-run on boot), sleeps 20 s, then `ssh-import`. `BACKUP_FILE=` is a filename under `/volume1/downloads`. Refuses without it. |
+| `ssh-db-pull` | `Makefile` | Downloads prod DB (`plextracker.db` + wal + shm) from NAS to local `data/` and starts local app. |
+| `ssh-logs` | `Makefile` | Dumps prod container logs from NAS into local `data/plextracker.log` (`LINES=...` optional). |
+| `ssh-debug-pull` | `Makefile` | Runs `ssh-db-pull` then `ssh-logs` to prepare local environment for offline prod debugging. |
 
 ### Models
 

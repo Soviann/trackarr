@@ -69,7 +69,15 @@ Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/
 ## Commands
 **All via Makefile (runs inside Docker).** Never `go`/`node`/`npm` on host. Host-only: `git`, `gh`, `docker`, `make`.
 
-`up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...`
+`up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import BACKUP_FILE=...` `import-dry BACKUP_FILE=...` `ssh-db-pull` `ssh-logs` `ssh-debug-pull`
+
+## Production Debugging (MANDATORY)
+- **Local-first rule**: Always pull files (DB, logs) locally first instead of inspecting logs or querying DB directly via SSH on production.
+- When asked to debug a production issue (e.g. Radarr/Sonarr queue, sync issues, missing titles, app errors):
+  1. **Pull production state locally**: `make ssh-debug-pull` (pulls DB via `ssh-db-pull` and logs via `ssh-logs`).
+  2. **Inspect locally**: read logs in `data/plextracker.log` and query SQLite DB in `data/plextracker.db`.
+  3. **Reproduce & fix locally**: test on `http://localhost:8080` before preparing a fix.
+  4. Direct SSH on production is reserved for non-pullable host/infrastructure checks (e.g. disk space, network reachability, docker service status) if strictly needed, but never for log grepping or database investigation when data can be pulled.
 
 ## Deploy
 `.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag (no CHANGELOG to maintain; release notes, when needed, come from `git log <prev-tag>..HEAD --oneline` or GitHub Releases auto-generation). Hotfix: `gh workflow run deploy.yml`.

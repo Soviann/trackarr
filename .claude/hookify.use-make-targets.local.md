@@ -15,4 +15,6 @@ action: block
 
 Allowed on host: `git`, `gh`, `docker`, `make`
 
-Existing targets: `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import` `import-dry`
+Existing targets: `up` `down` `logs` `shell` `test` `test-front` `lint` `fmt` `build` `dev-frontend` `migrate` `import` `import-dry` `ssh-db-pull` `ssh-logs` `ssh-debug-pull`
+
+**Production Debugging:** Always pull files locally (`make ssh-debug-pull`, `make ssh-db-pull`, `make ssh-logs`) instead of doing remote log tailing or DB checks over SSH. Keep direct SSH strictly for checks that cannot be pulled as files (e.g. host disk space, system daemon health).
