@@ -599,7 +599,7 @@ func (r *TitleRepository) ListArrQueue() ([]ArrQueueItem, error) {
 		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (
 		      SELECT 1 FROM task_queue tq 
-		      WHERE tq.status IN ('pending', 'running', 'sleeping') 
+		      WHERE tq.status IN ('pending', 'running') 
 		      AND tq.dedup_key = 'arr_push_' || t.id
 		  )
 		ORDER BY t.created_at DESC`
@@ -635,7 +635,7 @@ func (r *TitleRepository) ListPaginatedArrQueue(limit, offset int) ([]ArrQueueIt
 		       (t.type = 'series' AND t.sonarr_id IS NULL AND t.tvdb_id IS NOT NULL AND t.tvdb_id > 0))
 		  AND NOT EXISTS (
 		      SELECT 1 FROM task_queue tq 
-		      WHERE tq.status IN ('pending', 'running', 'sleeping') 
+		      WHERE tq.status IN ('pending', 'running') 
 		      AND tq.dedup_key = 'arr_push_' || t.id
 		  )
 		ORDER BY t.created_at DESC
