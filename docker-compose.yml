@@ -23,9 +23,8 @@ services:
       start_period: 10s
 
   antigravity-daemon:
-    image: python:3.11-slim
+    build: ./scripts/github-pr-daemon
     container_name: plextracker-antigravity
-    command: python3 /scripts/server.py
     environment:
       - PUID=1026
       - PGID=100

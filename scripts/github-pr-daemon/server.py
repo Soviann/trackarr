@@ -107,11 +107,17 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, commen
     repo_dir = os.path.join(WORKSPACE_DIR, repo_full_name.replace("/", "_"))
 
     try:
+        auth_clone_url = clone_url.replace("https://", f"https://x-access-token:{GITHUB_TOKEN}@")
         if not os.path.exists(os.path.join(repo_dir, ".git")):
             # Clone repo if not exists
-            auth_clone_url = clone_url.replace("https://", f"https://x-access-token:{GITHUB_TOKEN}@")
             subprocess.run(["git", "clone", auth_clone_url, repo_dir], check=True, capture_output=True, text=True)
-        
+        else:
+            # Ensure authenticated origin URL is up-to-date
+            subprocess.run(["git", "remote", "set-url", "origin", auth_clone_url], cwd=repo_dir, check=True, capture_output=True, text=True)
+
+        subprocess.run(["git", "config", "user.name", "Antigravity NAS Agent"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.email", "antigravity-bot@plextracker.local"], cwd=repo_dir, check=True, capture_output=True, text=True)
+
         # Fetch and checkout target branch
         subprocess.run(["git", "fetch", "origin"], cwd=repo_dir, check=True, capture_output=True, text=True)
         subprocess.run(["git", "checkout", branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
@@ -145,6 +151,19 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, commen
         post_github_comment(repo_full_name, pr_number, err_msg)
 
 
+ALLOWED_TRIGGERS = ["/antigravity", "/plextracker", "/bot", "/agy", "@antigravity"]
+
+def is_trigger_present(*texts):
+    """Check if any trigger command is present in the provided texts."""
+    for text in texts:
+        if not text:
+            continue
+        text_lower = text.lower()
+        if any(tr in text_lower for tr in ALLOWED_TRIGGERS):
+            return True
+    return False
+
+
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
@@ -160,6 +179,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             "service": "Antigravity GitHub PR Daemon",
             "nas_host": "Synology DS920+",
             "default_model": DEFAULT_MODEL,
+            "triggers": ALLOWED_TRIGGERS,
             "webhook_secret_set": bool(WEBHOOK_SECRET),
             "github_token_set": bool(GITHUB_TOKEN),
             "gemini_api_key_set": bool(GEMINI_API_KEY)
@@ -203,8 +223,8 @@ class WebhookHandler(BaseHTTPRequestHandler):
             user = comment.get("user", {}).get("login", "")
             issue = payload.get("issue", {})
 
-            # Only process if comment mentions @antigravity or /antigravity (and not posted by a bot)
-            if ("@antigravity" in body.lower() or "/antigravity" in body.lower()) and not comment.get("user", {}).get("type") == "Bot":
+            # Only process if comment contains a recognized trigger (and not posted by a bot)
+            if is_trigger_present(body) and not comment.get("user", {}).get("type") == "Bot":
                 issue_number = issue.get("number")
                 repo_full_name = payload.get("repository", {}).get("full_name")
                 clone_url = payload.get("repository", {}).get("clone_url")
@@ -243,7 +263,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             repo_full_name = payload.get("repository", {}).get("full_name")
             clone_url = payload.get("repository", {}).get("clone_url")
 
-            if "@antigravity" in body.lower() or "/antigravity" in body.lower() or "@antigravity" in title.lower():
+            if is_trigger_present(body, title):
                 process_pr_command(repo_full_name, issue_number, "main", clone_url, f"{title}\n{body}", user)
 
         elif event_type == "pull_request" and payload.get("action") in ["opened", "reopened"]:
@@ -256,7 +276,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             clone_url = payload.get("repository", {}).get("clone_url")
             branch_name = pr.get("head", {}).get("ref")
 
-            if "@antigravity" in body.lower() or "/antigravity" in body.lower() or "@antigravity" in title.lower():
+            if is_trigger_present(body, title):
                 process_pr_command(repo_full_name, pr_number, branch_name, clone_url, f"{title}\n{body}", user)
 
 

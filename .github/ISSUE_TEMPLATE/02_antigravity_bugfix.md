@@ -14,4 +14,4 @@ labels: 'bug, antigravity'
 ```
 
 ---
-@antigravity analyse le problème et propose un plan d'implémentation pour le corriger.
+/antigravity analyse le problème et propose un plan d'implémentation pour le corriger.

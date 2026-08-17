@@ -14,4 +14,4 @@ labels: 'antigravity'
 - [ ] `gemini-3.6-pro` (Refactoring complexe)
 
 ---
-@antigravity propose un plan d'implémentation clair pour cette demande.
+/antigravity propose un plan d'implémentation clair pour cette demande.

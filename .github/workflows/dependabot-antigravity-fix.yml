@@ -28,7 +28,7 @@ jobs:
 
           if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot PR detected with failing CI. Notifying Antigravity..."
-            gh pr comment "$PR_NUM" --body "@antigravity La CI a échoué sur cette PR Dependabot. Merci d'analyser l'échec CI, de corriger le code ou la configuration des dépendances, et de pousser la correction sur cette PR."
+            gh pr comment "$PR_NUM" --body "/antigravity La CI a échoué sur cette PR Dependabot. Merci d'analyser l'échec CI, de corriger le code ou la configuration des dépendances, et de pousser la correction sur cette PR."
           else
             echo "PR author is not dependabot[bot], skipping auto-notification."
           fi
