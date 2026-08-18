@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-GitHub PR Webhook Daemon for Antigravity (Synology NAS)
+GitHub PR & Issue Webhook Daemon for Antigravity (Synology NAS)
 Listens for GitHub Webhook events on port 8191 (via Synology Reverse Proxy).
-Verifies HMAC SHA-256 signatures, checks out PR branches, parses user prompts/commands,
-posts implementation plans & diff reviews, and commits changes back to GitHub PRs.
+Verifies HMAC SHA-256 signatures, analyzes repository context & logs with Gemini AI,
+and posts complete implementation plans, bug diagnoses, and reviews to GitHub.
 """
 
 import os
@@ -20,6 +20,7 @@ from socketserver import ThreadingMixIn
 PORT = int(os.getenv("PORT", "8191"))
 ENV_FILE = os.getenv("ENV_FILE", "/volume1/docker/plextracker/antigravity/.env.local")
 WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "/volume1/docker/plextracker/antigravity/workspace")
+DATA_DIR = os.getenv("DATA_DIR", "/data")
 
 # Load .env.local secrets into environment if file exists
 def load_env_file():
@@ -37,7 +38,7 @@ load_env_file()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", os.getenv("ANTIGRAVITY_TOKEN", os.getenv("GH_TOKEN", "")))
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", os.getenv("GITHUB_WEBHOOK_SECRET", ""))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-3.6-flash")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-2.0-flash")
 
 DAEMON_SIGNATURE = "<!-- antigravity-daemon -->"
 ALLOWED_TRIGGERS = ["/antigravity", "/plextracker", "/bot", "/agy"]
@@ -117,19 +118,121 @@ def verify_signature(body_bytes, signature_header):
     return hmac.compare_digest(expected_sig, signature_header)
 
 
+def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
+    """Call Google Gemini API to generate content with API key fallback/rotation."""
+    keys = [k.strip() for k in GEMINI_API_KEY.split(",") if k.strip()]
+    if not keys:
+        raise ValueError("GEMINI_API_KEY not configured on NAS.")
+
+    # Map model aliases to valid Gemini API models
+    model = model_name
+    if "pro" in model_name.lower():
+        model = "gemini-2.5-pro"
+    elif "flash" in model_name.lower() or model == "gemini-3.6-flash":
+        model = "gemini-2.0-flash"
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 8192
+        }
+    }
+    data = json.dumps(payload).encode("utf-8")
+
+    last_err = None
+    for key in keys:
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        req = urllib.request.Request(
+            api_url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                candidates = result.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"], model
+                raise ValueError(f"Empty response from Gemini API: {result}")
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode("utf-8", errors="ignore")
+            print(f"[WARN] Gemini API error (model {model}, status {e.code}): {err_msg}", flush=True)
+            last_err = f"HTTP {e.code}: {err_msg}"
+            # Try next key if 429 or 5xx
+            if e.code in (429, 500, 503):
+                continue
+            break
+        except Exception as e:
+            print(f"[WARN] Gemini API call failed: {e}", flush=True)
+            last_err = str(e)
+            continue
+
+    raise RuntimeError(f"Gemini API generation failed. Last error: {last_err}")
+
+
+def gather_repo_context(repo_dir):
+    """Read essential context and documentation files from repository."""
+    context_chunks = []
+    
+    docs_to_read = [
+        "AGENTS.md",
+        "docs/INDEX.md",
+        "docs/maintenance.md",
+        "docs/patterns.md"
+    ]
+    for rel_path in docs_to_read:
+        abs_path = os.path.join(repo_dir, rel_path)
+        if os.path.exists(abs_path):
+            try:
+                with open(abs_path, "r", encoding="utf-8") as f:
+                    content = f.read(4000)
+                    context_chunks.append(f"### File: `{rel_path}`\n```markdown\n{content}\n```")
+            except Exception as e:
+                print(f"[DEBUG] Could not read {rel_path}: {e}", flush=True)
+
+    # Read recent logs if available (from /data/plextracker.log or repo data)
+    log_candidates = [
+        os.path.join(DATA_DIR, "plextracker.log"),
+        "/volume1/docker/plextracker/data/plextracker.log",
+        os.path.join(repo_dir, "data", "plextracker.log")
+    ]
+    for log_path in log_candidates:
+        if os.path.exists(log_path):
+            try:
+                with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                    last_lines = lines[-120:] if len(lines) > 120 else lines
+                    context_chunks.append(f"### Recent Production Logs (`{log_path}` - last {len(last_lines)} lines):\n```log\n{''.join(last_lines)}\n```")
+                    break
+            except Exception as e:
+                print(f"[DEBUG] Could not read log at {log_path}: {e}", flush=True)
+
+    return "\n\n".join(context_chunks)
+
+
 def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, comment_body, user_login):
     """Process a PR request/command from GitHub."""
     print(f"[INFO] Processing request from {user_login} on {repo_full_name}#{pr_number} (branch: {branch_name})", flush=True)
 
     # Determine model override if specified in comment
-    model = DEFAULT_MODEL
+    model_choice = DEFAULT_MODEL
     if "--model=pro" in comment_body.lower() or "model pro" in comment_body.lower():
-        model = "gemini-3.6-pro"
+        model_choice = "gemini-2.5-pro"
     elif "--model=flash" in comment_body.lower() or "model flash" in comment_body.lower():
-        model = "gemini-3.6-flash"
+        model_choice = "gemini-2.0-flash"
 
     # Ack comment on PR
-    ack_msg = f"🤖 **Antigravity NAS Agent** received your request!\n- **Branch**: `{branch_name}`\n- **Model**: `{model}`\n- **Status**: Analyzing repository and preparing response..."
+    ack_msg = f"🤖 **Antigravity NAS Agent** received your request!\n- **Branch**: `{branch_name}`\n- **Model**: `{model_choice}`\n- **Status**: Analyzing repository and logs to prepare implementation plan..."
     post_github_comment(repo_full_name, pr_number, ack_msg)
 
     # Prepare local workspace
@@ -139,10 +242,8 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, commen
     try:
         auth_clone_url = clone_url.replace("https://", f"https://x-access-token:{GITHUB_TOKEN}@")
         if not os.path.exists(os.path.join(repo_dir, ".git")):
-            # Clone repo if not exists
             subprocess.run(["git", "clone", auth_clone_url, repo_dir], check=True, capture_output=True, text=True)
         else:
-            # Ensure authenticated origin URL is up-to-date
             subprocess.run(["git", "remote", "set-url", "origin", auth_clone_url], cwd=repo_dir, check=True, capture_output=True, text=True)
 
         subprocess.run(["git", "config", "user.name", "Antigravity NAS Agent"], cwd=repo_dir, check=True, capture_output=True, text=True)
@@ -159,7 +260,7 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, commen
             import shutil
             shutil.copy(ENV_FILE, repo_env)
 
-        # Sanitize comment body for presentation (strip direct trigger to prevent downstream parsing)
+        # Clean trigger strings from user message
         clean_user_body = "\n".join(
             line for line in comment_body.strip().splitlines()
             if not any(tr in line.lower() for tr in ALLOWED_TRIGGERS)
@@ -167,16 +268,48 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, commen
         if not clean_user_body:
             clean_user_body = comment_body.strip()
 
-        # Build clean response for PR comment
+        # Gather repository docs & recent logs
+        repo_context = gather_repo_context(repo_dir)
+
+        # Build prompt for Gemini
+        system_prompt = f"""You are Antigravity, an expert senior AI engineer responsible for PlexTracker (a media tracking platform in Go 1.24, SQLite, chi router, Preact 10, Vite, Docker, running on a Synology DS920+ NAS).
+
+You are reviewing a request/issue from the developer @{user_login}.
+Repository: {repo_full_name} (target branch: {branch_name})
+
+---
+## DEVELOPER REQUEST / ISSUE:
+{clean_user_body}
+
+---
+## REPOSITORY CONTEXT & SYSTEM LOGS:
+{repo_context}
+
+---
+## INSTRUCTIONS:
+1. Provide a clear, thorough technical analysis of the problem or feature requested.
+2. If it's a bug report (e.g. Jellyfin sync, matching, queue, database), inspect the logs/context to identify the exact cause (missing webhook, auth token, matching failure, error in background task, etc.).
+3. Propose a concrete Step-by-Step Implementation Plan:
+   - Specify files to modify or create with exact function/struct names.
+   - Outline code changes concisely.
+4. Provide a Verification Plan:
+   - Automated tests (`make test`, `make test-front`).
+   - Manual verification steps.
+5. Format your response cleanly in GitHub Flavored Markdown (in French, matching the user's language). Keep it structured with clear headings.
+"""
+
+        print(f"[INFO] Generating AI response with model {model_choice}...", flush=True)
+        plan_text, used_model = call_gemini_api(system_prompt, model_choice)
+
         response_body = (
-            f"### 📋 Antigravity Plan / Task Review\n\n"
-            f"**Request from @{user_login}:**\n> {clean_user_body}\n\n"
-            f"**Workspace**: `{repo_full_name}` (Branch: `{branch_name}`)\n"
-            f"**Selected Model**: `{model}`\n\n"
-            f"**Execution Summary:**\n"
-            f"- Branch updated cleanly from `origin/{branch_name}`.\n"
-            f"- Secret `.env.local` loaded from NAS storage.\n"
-            f"- Ready for review. Reply **`Approved`** or **`LGTM`** to execute full code modifications."
+            f"### 📋 Antigravity Plan & Analysis\n\n"
+            f"**Demande de @{user_login}:**\n> {clean_user_body}\n\n"
+            f"**Workspace**: `{repo_full_name}` (Branche: `{branch_name}`)\n"
+            f"**Modèle utilisé**: `{used_model}`\n\n"
+            f"---\n\n"
+            f"{plan_text}\n\n"
+            f"---\n"
+            f"💡 *Pour exécuter ce plan et pousser les modifications sur la branche, répondez avec **`/antigravity Approved`** ou **`/antigravity LGTM`**.*"
         )
 
         post_github_comment(repo_full_name, pr_number, response_body)

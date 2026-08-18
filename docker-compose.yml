@@ -32,8 +32,10 @@ services:
       - PORT=8191
       - ENV_FILE=/volume1/docker/plextracker/antigravity/.env.local
       - WORKSPACE_DIR=/volume1/docker/plextracker/antigravity/workspace
+      - DATA_DIR=/data
     volumes:
       - /volume1/docker/plextracker/antigravity:/volume1/docker/plextracker/antigravity
+      - /volume1/docker/plextracker/data:/data:ro
       - ./scripts/github-pr-daemon:/scripts
     ports:
       - 8191:8191
