@@ -191,3 +191,4 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 2. **SQLite Single Writer**: SQLite connection pool is locked to `MaxOpenConns=1`. Never open nested transactions.
 3. **Frontend Re-Embed**: `dist/` is embedded in the Go binary. After editing frontend and running `make test-front`, run `touch main.go` so `air` re-embeds the assets.
 4. **PWA Cache Busting**: The service worker caches aggressively. When validating UI changes in the browser, append `?t=$(date +%s)` to the test URL.
+5. **Antigravity NAS Daemon Boundary**: The webhook daemon (`scripts/github-pr-daemon/server.py`) running on the NAS is a lightweight assistant that reads local logs and calls Gemini to draft plans. It does not execute `make` or Docker builds. All testing and code implementations are executed locally on the developer workstation or in GitHub Actions.

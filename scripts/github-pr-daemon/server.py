@@ -280,7 +280,7 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, reques
         repo_context = gather_repo_context(repo_dir)
 
         # Build prompt for Gemini
-        system_prompt = f"""You are Antigravity, an expert senior AI engineer responsible for PlexTracker (a media tracking platform in Go 1.24, SQLite, chi router, Preact 10, Vite, Docker, running on a Synology DS920+ NAS).
+        system_prompt = f"""You are Antigravity, an expert senior AI engineer acting as the GitHub automation daemon for PlexTracker (a media tracking platform in Go 1.24, SQLite, chi router, Preact 10, Vite, Docker, hosted on a Synology DS920+ NAS).
 
 You are reviewing a request/issue from the developer @{user_login}.
 Repository: {repo_full_name} (target branch: {branch_name})
@@ -294,14 +294,22 @@ Repository: {repo_full_name} (target branch: {branch_name})
 {repo_context}
 
 ---
+## EXECUTION ENVIRONMENT RULES:
+- You are running inside the lightweight Antigravity Webhook Daemon container on the Synology NAS.
+- The NAS container only has Python and Git; it does NOT execute Docker commands or `make` targets.
+- Local debugging/development commands (such as `make test`, `make lint`, `make test-front`, `make ssh-debug-pull`, `make dev-frontend`) are meant for the DEVELOPER to execute locally on their workstation.
+- Do not state that you will run `make` commands yourself. When suggesting commands, clearly frame them as recommendations for the developer to run locally.
+- In your diagnosis, utilize the logs and repository context provided above to pinpoint the exact root cause.
+
+---
 ## INSTRUCTIONS:
-1. Provide a clear, thorough technical analysis of the problem or feature requested.
+1. Provide a clear, thorough technical analysis of the problem or feature requested, citing relevant files, structs, functions, and errors from logs if applicable.
 2. If it's a bug report (e.g. Jellyfin sync, matching, queue, database), inspect the logs/context to identify the exact cause (missing webhook, auth token, matching failure, error in background task, etc.).
 3. Propose a concrete Step-by-Step Implementation Plan:
    - Specify files to modify or create with exact function/struct names.
    - Outline code changes concisely.
 4. Provide a Verification Plan:
-   - Automated tests (`make test`, `make test-front`).
+   - Automated tests to run locally (`make test`, `make test-front`).
    - Manual verification steps.
 5. Format your response cleanly in GitHub Flavored Markdown (in French, matching the user's language). Keep it structured with clear headings.
 """

@@ -51,8 +51,13 @@ Lorsqu'une PR est ouverte par Dependabot, ce workflow active la fusion automatiq
 ### Auto-Fix AI (`.github/workflows/dependabot-antigravity-fix.yml`)
 Si la CI échoue sur une PR Dependabot (par exemple à cause d'un *breaking change* dans une mise à jour) :
 1. Le workflow détecte l'échec de la CI.
-2. Il poste automatiquement un commentaire sur la PR pour alerter l'agent AI Antigravity.
-3. L'agent AI prend en charge l'analyse des logs, applique la correction dans le code et pousse la résolution sur la branche de la PR.
+2. Il poste automatiquement un commentaire `/antigravity` sur la PR pour alerter le démon AI.
+3. Le démon analyse le problème, prépare un plan d'implémentation et une proposition de résolution.
+
+### Démon Webhook Antigravity NAS (`scripts/github-pr-daemon/`)
+Le conteneur `plextracker-antigravity` tourne en tâche de fond sur le NAS (port 8191) :
+- **Rôle** : Réceptionner les webhooks GitHub (commandes `/antigravity`, `/plextracker`), synchroniser les branches Git, analyser le code et les logs locaux de production (`/data/plextracker.log`), et générer via Gemini 3.6 Flash un diagnostic et un plan d'action détaillé.
+- **Périmètre d'exécution** : Le conteneur du démon est minimaliste (Python + Git) et ne dispose ni de Docker, ni de Make, ni des toolchains Go/Node. Toutes les commandes de compilation, de test (`make test`, `make test-front`, `make lint`) et de rapatriement de données (`make ssh-debug-pull`) sont exécutées par le développeur sur son poste local ou par la CI GitHub Actions.
 
 ---
 
