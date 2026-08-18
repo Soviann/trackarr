@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -43,4 +45,16 @@ func (r *WatchEventRepository) ListByTitle(titleID int64) ([]model.WatchEvent, e
 		return nil, fmt.Errorf("iterate watch events: %w", err)
 	}
 	return events, nil
+}
+
+func (r *WatchEventRepository) GetLatestCreatedAtBySource(source model.WatchEventSource) (*time.Time, error) {
+	var t time.Time
+	err := r.db.QueryRow(`SELECT created_at FROM watch_events WHERE source = ? ORDER BY created_at DESC LIMIT 1`, source).Scan(&t)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("watch_event: get latest by source: %w", err)
+	}
+	return &t, nil
 }

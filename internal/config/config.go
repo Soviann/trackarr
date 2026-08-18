@@ -89,6 +89,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with COOKIE_SECURE=true (prod env)")
 	}
 
+	if cfg.CookieSecure && cfg.JellyfinWebhookSecret == "" {
+		return nil, fmt.Errorf("JELLYFIN_WEBHOOK_SECRET is required in production (COOKIE_SECURE=true)")
+	}
+
 	return cfg, nil
 }
 

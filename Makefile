@@ -130,7 +130,8 @@ ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de pro
 push-secrets: ## Sync local .env.local to NAS (app and antigravity)
 	@test -f .env.local || { echo "Error: local .env.local file not found"; exit 1; }
 	@$(call NAS_SSH,mkdir -p /volume1/docker/plextracker/antigravity)
-	@B64=$$(sed 's/^DEBUG_LOGIN=.*/DEBUG_LOGIN=false/' .env.local | base64 | tr -d '\n'); $(call NAS_SSH,echo $$B64 | base64 -d > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local) && echo "Pushed .env.local to NAS (/volume1/docker/plextracker/.env.local and antigravity with DEBUG_LOGIN=false)"
+	@sed 's/^DEBUG_LOGIN=.*/DEBUG_LOGIN=false/' .env.local | bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+		sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST "cat > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local"' && echo "Pushed .env.local to NAS (/volume1/docker/plextracker/.env.local and antigravity with DEBUG_LOGIN=false)"
 
 pull-secrets: ## Pull .env.local from NAS daemon folder to local Mac
 	@$(call NAS_SSH,base64 /volume1/docker/plextracker/antigravity/.env.local) | base64 -d > .env.local && echo "Pulled .env.local from NAS to local Mac"

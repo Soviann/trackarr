@@ -8,6 +8,8 @@ export interface Settings {
   anilist_token_invalid: boolean
   push_subscribed: boolean
   tvdb_connected: boolean
+  jellyfin_configured: boolean
+  jellyfin_last_scrobble_at?: string | null
 }
 
 export type TitleType = 'movie' | 'series'

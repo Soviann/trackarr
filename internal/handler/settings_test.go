@@ -23,7 +23,8 @@ func setupSettingsHandler(t *testing.T) (*handler.SettingsHandler, *sql.DB) {
 	t.Cleanup(func() { db.Close() })
 
 	settings := repository.NewSettingRepository(db)
-	h := handler.NewSettingsHandler(settings, false)
+	events := repository.NewWatchEventRepository(db)
+	h := handler.NewSettingsHandler(settings, events, false, true)
 	return h, db
 }
 
@@ -96,4 +97,24 @@ func TestSettingsHandler_Get_TokenValidFlagAbsent(t *testing.T) {
 	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
 	assert.Equal(t, false, result["anilist_token_invalid"])
+	assert.Equal(t, true, result["jellyfin_configured"])
+}
+
+func TestSettingsHandler_Get_JellyfinLastScrobble(t *testing.T) {
+	h, db := setupSettingsHandler(t)
+
+	// Create a title and a jellyfin watch event
+	_, err := db.Exec(`INSERT INTO titles (id, type, year, status, match_status) VALUES (1, 'movie', 2024, 'completed', 'confirmed')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (1, 'jellyfin', '2026-08-18 14:00:00')`)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	var result map[string]any
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.Equal(t, true, result["jellyfin_configured"])
+	assert.NotNil(t, result["jellyfin_last_scrobble_at"])
 }

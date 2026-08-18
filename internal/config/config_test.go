@@ -15,6 +15,7 @@ func TestLoad_Defaults(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 	t.Setenv("DATA_DIR", "")
 	t.Setenv("DISABLE_BACKGROUND_TASKS", "false")
 	t.Setenv("DEBUG_LOGIN", "false")
@@ -24,6 +25,7 @@ func TestLoad_Defaults(t *testing.T) {
 
 	assert.Equal(t, "test-client-id", cfg.GoogleClientID)
 	assert.Equal(t, "test@example.com", cfg.GoogleAllowedEmail)
+	assert.Equal(t, "test-jellyfin-secret", cfg.JellyfinWebhookSecret)
 	assert.Equal(t, ":8080", cfg.ListenAddr)
 	assert.Equal(t, "/data", cfg.DataDir)
 	assert.False(t, cfg.DisableBackgroundTasks)
@@ -33,6 +35,7 @@ func TestLoad_DisableBackgroundTasks(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 	t.Setenv("DISABLE_BACKGROUND_TASKS", "true")
 	t.Setenv("DEBUG_LOGIN", "false")
 
@@ -61,6 +64,7 @@ func TestLoad_DefaultJWTSecretRejectedRegardlessOfDebugLogin(t *testing.T) {
 			t.Setenv("GOOGLE_CLIENT_ID", "dev")
 			t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 			t.Setenv("JWT_SECRET", "dev-secret-change-me")
+			t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 			t.Setenv("DEBUG_LOGIN", debug)
 
 			_, err := config.Load()
@@ -74,6 +78,7 @@ func TestLoad_JWTSecretTooShortRejected(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", "short")
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 	t.Setenv("DEBUG_LOGIN", "false")
 
 	_, err := config.Load()
@@ -87,6 +92,7 @@ func TestLoad_JWTSecretMinLengthAccepted(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", secret)
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 	t.Setenv("DEBUG_LOGIN", "false")
 
 	cfg, err := config.Load()
@@ -100,6 +106,7 @@ func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "dev")
 	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
 	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "test-jellyfin-secret")
 	t.Setenv("DEBUG_LOGIN", "true")
 	t.Setenv("COOKIE_SECURE", "true")
 
@@ -107,6 +114,34 @@ func TestLoad_DebugLoginRejectedWhenCookieSecure(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "DEBUG_LOGIN")
 	assert.Contains(t, err.Error(), "COOKIE_SECURE")
+}
+
+// JELLYFIN_WEBHOOK_SECRET is mandatory in production (COOKIE_SECURE=true).
+func TestLoad_JellyfinWebhookSecretRequiredInProd(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("DEBUG_LOGIN", "false")
+	t.Setenv("COOKIE_SECURE", "true")
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "")
+
+	_, err := config.Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "JELLYFIN_WEBHOOK_SECRET")
+}
+
+// In local dev (COOKIE_SECURE=false), JELLYFIN_WEBHOOK_SECRET is optional.
+func TestLoad_JellyfinWebhookSecretOptionalInDev(t *testing.T) {
+	t.Setenv("GOOGLE_CLIENT_ID", "dev")
+	t.Setenv("GOOGLE_ALLOWED_EMAIL", "test@example.com")
+	t.Setenv("JWT_SECRET", validSecret)
+	t.Setenv("DEBUG_LOGIN", "true")
+	t.Setenv("COOKIE_SECURE", "false")
+	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.Empty(t, cfg.JellyfinWebhookSecret)
 }
 
 // DEBUG_LOGIN=true with COOKIE_SECURE unset is the standard dev path —

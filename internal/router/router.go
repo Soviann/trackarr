@@ -85,7 +85,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
-	settings := handler.NewSettingsHandler(settingRepo, tvdbReady)
+	settings := handler.NewSettingsHandler(settingRepo, eventRepo, tvdbReady, cfg.JellyfinWebhookSecret != "")
 	stats := handler.NewStatsHandler(statsRepo)
 	genres := handler.NewGenreHandler(genreReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)

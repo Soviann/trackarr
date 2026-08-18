@@ -39,6 +39,11 @@ func NewWebhookHandler(jellyfin jellyfinProcessor, secret string) *WebhookHandle
 func (h *WebhookHandler) HandleJellyfin(w http.ResponseWriter, r *http.Request) error {
 	token := chi.URLParam(r, "secret")
 	if h.jellyfin == nil || h.jellyfinSecret == "" || subtle.ConstantTimeCompare([]byte(token), []byte(h.jellyfinSecret)) != 1 {
+		if h.jellyfinSecret == "" {
+			log.Printf("jellyfin webhook: rejected request from %s — JELLYFIN_WEBHOOK_SECRET is not configured", r.RemoteAddr)
+		} else {
+			log.Printf("jellyfin webhook: rejected unauthorized request from %s — secret token mismatch", r.RemoteAddr)
+		}
 		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
 	}
 

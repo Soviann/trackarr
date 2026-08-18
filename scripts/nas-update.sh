@@ -37,7 +37,10 @@ try_deploy() {
     docker compose down 2>&1 | tee -a "$LOG_FILE"
 
     mkdir -p "$APP_DIR/antigravity"
-    touch "$APP_DIR/.env.local"
+    if [ ! -s "$APP_DIR/.env.local" ]; then
+        log "ATTENTION: $APP_DIR/.env.local est absent ou vide. Si le conteneur refuse de démarrer, exécutez 'make push-secrets'."
+        touch "$APP_DIR/.env.local"
+    fi
     if [ -f "$APP_DIR/.env.local" ]; then
         cp -f "$APP_DIR/.env.local" "$APP_DIR/antigravity/.env.local"
     fi

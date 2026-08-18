@@ -178,6 +178,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | `/admin/arr/queue` | `ArrQueue` | `pages/ArrQueue.tsx` |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` |
 | `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` |
+| `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` |
 | `/admin/anilist` | `AdminAniList` | `pages/AdminAniList.tsx` |
 | `/admin/season-audit` | `AdminSeasonAudit` | `pages/AdminSeasonAudit.tsx` |
 | `/admin/validate` | `Validate` | `pages/Validate.tsx` |

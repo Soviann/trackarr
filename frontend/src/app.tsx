@@ -18,6 +18,7 @@ import { Stats } from './pages/Stats'
 import { Admin } from './pages/Admin'
 import { AdminTasks } from './pages/AdminTasks'
 import { AdminNotifications } from './pages/AdminNotifications'
+import { AdminJellyfin } from './pages/AdminJellyfin'
 import { AdminAniList } from './pages/AdminAniList'
 import { AdminArr } from './pages/AdminArr'
 import { ArrQueue } from './pages/ArrQueue'
@@ -212,6 +213,7 @@ export function App() {
           <Validate path={ROUTE_PATHS.adminValidate} />
           <AdminTasks path={ROUTE_PATHS.adminTasks} />
           <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
+          <AdminJellyfin path={ROUTE_PATHS.adminJellyfin} />
           <AdminAniList path={ROUTE_PATHS.adminAniList} />
           <AdminArr path={ROUTE_PATHS.adminArr} />
           <ArrQueue path={ROUTE_PATHS.adminArrQueue} />
