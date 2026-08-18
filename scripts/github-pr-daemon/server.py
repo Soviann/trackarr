@@ -22,18 +22,29 @@ ENV_FILE = os.getenv("ENV_FILE", "/volume1/docker/plextracker/antigravity/.env.l
 WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "/volume1/docker/plextracker/antigravity/workspace")
 DATA_DIR = os.getenv("DATA_DIR", "/data")
 
-# Load .env.local secrets into environment if file exists
-def load_env_file():
-    if os.path.exists(ENV_FILE):
-        with open(ENV_FILE, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    val = val.strip("'\"")
-                    os.environ[key.strip()] = val
+# Load all available .env and .env.local secrets into environment
+def load_env_files():
+    env_paths = [
+        ".env",
+        ".env.local",
+        "/volume1/docker/plextracker/.env",
+        "/volume1/docker/plextracker/.env.local",
+        ENV_FILE
+    ]
+    for path in env_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            key, val = line.split("=", 1)
+                            val = val.strip("'\"")
+                            os.environ[key.strip()] = val
+            except Exception as e:
+                print(f"[WARN] Failed to read env file {path}: {e}", flush=True)
 
-load_env_file()
+load_env_files()
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", os.getenv("ANTIGRAVITY_TOKEN", os.getenv("GH_TOKEN", "")))
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", os.getenv("GITHUB_WEBHOOK_SECRET", ""))
@@ -287,11 +298,16 @@ def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, reques
         subprocess.run(["git", "checkout", branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
         subprocess.run(["git", "pull", "origin", branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-        # Ensure .env.local is available inside the repository directory
-        repo_env = os.path.join(repo_dir, ".env.local")
-        if os.path.exists(ENV_FILE):
-            import shutil
-            shutil.copy(ENV_FILE, repo_env)
+        # Ensure all environment secrets (.env and .env.local) are available inside repo_dir
+        import shutil
+        for src in [ENV_FILE, "/volume1/docker/plextracker/antigravity/.env.local", "/volume1/docker/plextracker/.env.local", ".env.local"]:
+            if os.path.exists(src):
+                shutil.copy(src, os.path.join(repo_dir, ".env.local"))
+                break
+        for src in ["/volume1/docker/plextracker/.env", ".env"]:
+            if os.path.exists(src):
+                shutil.copy(src, os.path.join(repo_dir, ".env"))
+                break
 
         # Clean trigger strings from user message
         clean_user_body = "\n".join(
@@ -319,10 +335,16 @@ Repository: {repo_full_name} (target branch: {branch_name})
 {repo_context}
 
 ---
+## EXECUTION ENVIRONMENT & TOOLING:
+- You are running inside the Antigravity Daemon container on the Synology NAS.
+- The daemon container is fully equipped with Git, Make, Docker CLI, Docker Compose, and access to `/var/run/docker.sock` and `/data`.
+- It can run `make test`, `make test-front`, `make lint` inside the repository workspace.
+- The complete production environment variables (`.env`, `.env.local`) are loaded into the workspace.
+
+---
 ## CRITICAL RESPONSE FORMAT RULES:
 - DO NOT simulate bash commands or output mock terminal interactions (e.g. "Let's run bash", "Let's inspect...", fake command outputs).
 - You are generating a direct, final, comprehensive markdown document in French.
-- Frame commands as recommendations for the developer to run locally on their development machine (using `make ...`).
 - Analyze recent commits, releases, and log messages to identify if a recent release introduced a regression.
 
 ---
@@ -334,7 +356,8 @@ Repository: {repo_full_name} (target branch: {branch_name})
 2. 🛠️ **Plan d'Implémentation Détaillé** :
    - Fichiers, structures, fonctions à modifier avec extraits de code concrets.
 3. 🧪 **Plan de Test & Validation** :
-   - Commandes à exécuter localement (`make test`, simulation `curl`).
+   - Tests automatisés (`make test`, `make test-front`).
+   - Commandes de simulation (`curl`) et vérifications dans l'interface.
 """
 
         print(f"[INFO] Generating AI response with model {model_choice}...", flush=True)

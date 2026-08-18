@@ -57,7 +57,7 @@ Si la CI échoue sur une PR Dependabot (par exemple à cause d'un *breaking chan
 ### Démon Webhook Antigravity NAS (`scripts/github-pr-daemon/`)
 Le conteneur `plextracker-antigravity` tourne en tâche de fond sur le NAS (port 8191) :
 - **Rôle** : Réceptionner les webhooks GitHub (commandes `/antigravity`, `/plextracker`), synchroniser les branches Git, analyser le code et les logs locaux de production (`/data/plextracker.log`), et générer via Gemini 3.6 Flash un diagnostic et un plan d'action détaillé.
-- **Périmètre d'exécution** : Le conteneur du démon est minimaliste (Python + Git) et ne dispose ni de Docker, ni de Make, ni des toolchains Go/Node. Toutes les commandes de compilation, de test (`make test`, `make test-front`, `make lint`) et de rapatriement de données (`make ssh-debug-pull`) sont exécutées par le développeur sur son poste local ou par la CI GitHub Actions.
+- **Environnement & Outillage** : Le conteneur du démon est équipé de Git, Make, Docker CLI, Docker Compose et du socket Docker `/var/run/docker.sock`. Il dispose de l'ensemble des variables d'environnement (`.env`, `.env.local`) et peut exécuter `make test`, `make test-front` et `make lint` dans le workspace des dépôts clonés.
 
 ---
 

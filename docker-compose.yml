@@ -25,6 +25,12 @@ services:
   antigravity-daemon:
     build: ./scripts/github-pr-daemon
     container_name: plextracker-antigravity
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
+      - path: /volume1/docker/plextracker/antigravity/.env.local
+        required: false
     environment:
       - PUID=1026
       - PGID=100
@@ -36,7 +42,9 @@ services:
     volumes:
       - /volume1/docker/plextracker/antigravity:/volume1/docker/plextracker/antigravity
       - /volume1/docker/plextracker/data:/data:ro
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./scripts/github-pr-daemon:/scripts
     ports:
       - 8191:8191
     restart: unless-stopped
+
