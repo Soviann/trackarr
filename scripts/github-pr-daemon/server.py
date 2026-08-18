@@ -189,22 +189,47 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
 
 
 def gather_repo_context(repo_dir):
-    """Read essential context and documentation files from repository."""
+    """Read essential context, git history, and documentation files from repository."""
     context_chunks = []
     
+    # Recent git commit log
+    try:
+        git_log = subprocess.run(
+            ["git", "log", "-n", "25", "--oneline"],
+            cwd=repo_dir, capture_output=True, text=True, check=False
+        ).stdout.strip()
+        if git_log:
+            context_chunks.append(f"### Recent Git Commits (`git log -n 25`):\n```\n{git_log}\n```")
+    except Exception as e:
+        print(f"[DEBUG] Could not get git log: {e}", flush=True)
+
+    # Recent releases / tags
+    try:
+        git_tags = subprocess.run(
+            ["git", "tag", "--sort=-v:refname"],
+            cwd=repo_dir, capture_output=True, text=True, check=False
+        ).stdout.strip()
+        tags_list = git_tags.splitlines()[:10]
+        if tags_list:
+            context_chunks.append(f"### Recent Release Tags:\n```\n{chr(10).join(tags_list)}\n```")
+    except Exception as e:
+        print(f"[DEBUG] Could not get git tags: {e}", flush=True)
+
     docs_to_read = [
         "AGENTS.md",
         "docs/INDEX.md",
         "docs/maintenance.md",
-        "docs/patterns.md"
+        "docs/patterns.md",
+        "internal/handler/webhook.go",
+        "internal/service/jellyfin.go"
     ]
     for rel_path in docs_to_read:
         abs_path = os.path.join(repo_dir, rel_path)
         if os.path.exists(abs_path):
             try:
                 with open(abs_path, "r", encoding="utf-8") as f:
-                    content = f.read(4000)
-                    context_chunks.append(f"### File: `{rel_path}`\n```markdown\n{content}\n```")
+                    content = f.read(5000)
+                    context_chunks.append(f"### File: `{rel_path}`\n```\n{content}\n```")
             except Exception as e:
                 print(f"[DEBUG] Could not read {rel_path}: {e}", flush=True)
 
@@ -290,28 +315,26 @@ Repository: {repo_full_name} (target branch: {branch_name})
 {clean_user_body}
 
 ---
-## REPOSITORY CONTEXT & SYSTEM LOGS:
+## REPOSITORY CONTEXT, COMMITS & SYSTEM LOGS:
 {repo_context}
 
 ---
-## EXECUTION ENVIRONMENT RULES:
-- You are running inside the lightweight Antigravity Webhook Daemon container on the Synology NAS.
-- The NAS container only has Python and Git; it does NOT execute Docker commands or `make` targets.
-- Local debugging/development commands (such as `make test`, `make lint`, `make test-front`, `make ssh-debug-pull`, `make dev-frontend`) are meant for the DEVELOPER to execute locally on their workstation.
-- Do not state that you will run `make` commands yourself. When suggesting commands, clearly frame them as recommendations for the developer to run locally.
-- In your diagnosis, utilize the logs and repository context provided above to pinpoint the exact root cause.
+## CRITICAL RESPONSE FORMAT RULES:
+- DO NOT simulate bash commands or output mock terminal interactions (e.g. "Let's run bash", "Let's inspect...", fake command outputs).
+- You are generating a direct, final, comprehensive markdown document in French.
+- Frame commands as recommendations for the developer to run locally on their development machine (using `make ...`).
+- Analyze recent commits, releases, and log messages to identify if a recent release introduced a regression.
 
 ---
-## INSTRUCTIONS:
-1. Provide a clear, thorough technical analysis of the problem or feature requested, citing relevant files, structs, functions, and errors from logs if applicable.
-2. If it's a bug report (e.g. Jellyfin sync, matching, queue, database), inspect the logs/context to identify the exact cause (missing webhook, auth token, matching failure, error in background task, etc.).
-3. Propose a concrete Step-by-Step Implementation Plan:
-   - Specify files to modify or create with exact function/struct names.
-   - Outline code changes concisely.
-4. Provide a Verification Plan:
-   - Automated tests to run locally (`make test`, `make test-front`).
-   - Manual verification steps.
-5. Format your response cleanly in GitHub Flavored Markdown (in French, matching the user's language). Keep it structured with clear headings.
+## STRUCTURE OF YOUR RESPONSE:
+1. 🔍 **Diagnostic & Analyse Technique** :
+   - Corrélation avec les commits et releases récents si applicable.
+   - Analyse du cheminement du webhook Jellyfin et des identifiants (Anime, films, séries).
+   - Causes racines identifiées.
+2. 🛠️ **Plan d'Implémentation Détaillé** :
+   - Fichiers, structures, fonctions à modifier avec extraits de code concrets.
+3. 🧪 **Plan de Test & Validation** :
+   - Commandes à exécuter localement (`make test`, simulation `curl`).
 """
 
         print(f"[INFO] Generating AI response with model {model_choice}...", flush=True)
