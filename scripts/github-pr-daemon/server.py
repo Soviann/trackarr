@@ -38,7 +38,7 @@ load_env_file()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", os.getenv("ANTIGRAVITY_TOKEN", os.getenv("GH_TOKEN", "")))
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", os.getenv("GITHUB_WEBHOOK_SECRET", ""))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-2.0-flash")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-3.6-flash")
 
 DAEMON_SIGNATURE = "<!-- antigravity-daemon -->"
 ALLOWED_TRIGGERS = ["/antigravity", "/plextracker", "/bot", "/agy"]
@@ -119,17 +119,16 @@ def verify_signature(body_bytes, signature_header):
 
 
 def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
-    """Call Google Gemini API to generate content with API key fallback/rotation."""
+    """Call Google Gemini API to generate content with API key and model fallback."""
     keys = [k.strip() for k in GEMINI_API_KEY.split(",") if k.strip()]
     if not keys:
         raise ValueError("GEMINI_API_KEY not configured on NAS.")
 
-    # Map model aliases to valid Gemini API models
-    model = model_name
+    # Candidate models in priority order
     if "pro" in model_name.lower():
-        model = "gemini-2.5-pro"
-    elif "flash" in model_name.lower() or model == "gemini-3.6-flash":
-        model = "gemini-2.0-flash"
+        candidate_models = ["gemini-3.6-pro", "gemini-2.5-pro", "gemini-1.5-pro"]
+    else:
+        candidate_models = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
     payload = {
         "contents": [
@@ -147,35 +146,39 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
     data = json.dumps(payload).encode("utf-8")
 
     last_err = None
-    for key in keys:
-        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-        req = urllib.request.Request(
-            api_url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=90) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                candidates = result.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and "text" in parts[0]:
-                        return parts[0]["text"], model
-                raise ValueError(f"Empty response from Gemini API: {result}")
-        except urllib.error.HTTPError as e:
-            err_msg = e.read().decode("utf-8", errors="ignore")
-            print(f"[WARN] Gemini API error (model {model}, status {e.code}): {err_msg}", flush=True)
-            last_err = f"HTTP {e.code}: {err_msg}"
-            # Try next key if 429 or 5xx
-            if e.code in (429, 500, 503):
+    for model in candidate_models:
+        for key in keys:
+            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+            req = urllib.request.Request(
+                api_url,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=90) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                    candidates = result.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"], model
+                    raise ValueError(f"Empty response from Gemini API: {result}")
+            except urllib.error.HTTPError as e:
+                err_msg = e.read().decode("utf-8", errors="ignore")
+                print(f"[WARN] Gemini API error (model {model}, status {e.code}): {err_msg}", flush=True)
+                last_err = f"HTTP {e.code} (model {model}): {err_msg}"
+                if e.code == 404:
+                    # Model not found, try next candidate model
+                    break
+                elif e.code in (429, 500, 503):
+                    # Rate limit or temporary error, try next key
+                    continue
+                break
+            except Exception as e:
+                print(f"[WARN] Gemini API call failed: {e}", flush=True)
+                last_err = str(e)
                 continue
-            break
-        except Exception as e:
-            print(f"[WARN] Gemini API call failed: {e}", flush=True)
-            last_err = str(e)
-            continue
 
     raise RuntimeError(f"Gemini API generation failed. Last error: {last_err}")
 
