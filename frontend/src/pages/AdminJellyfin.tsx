@@ -1,6 +1,7 @@
 import { useApi } from '../hooks/useApi'
 import { colors } from '../theme'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { formatDateTime24h } from '../utils'
 import type { Settings } from '../types'
 import s from './AdminJellyfin.module.css'
 
@@ -9,7 +10,7 @@ export function AdminJellyfin({ path }: { path?: string }) {
 
   const configured = settings?.jellyfin_configured === true
   const lastScrobble = settings?.jellyfin_last_scrobble_at
-    ? new Date(settings.jellyfin_last_scrobble_at).toLocaleString()
+    ? formatDateTime24h(settings.jellyfin_last_scrobble_at)
     : 'None recorded'
 
   return (

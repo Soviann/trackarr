@@ -124,6 +124,15 @@ export function formatDateTime(dateStr: string | null | undefined): string {
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+/** Formats a date string to "DD/MM/YYYY, HH:mm" (24h format). */
+export function formatDateTime24h(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /**
  * Returns the value to surface on a card when the given sort is active,
  * so the order is self-explanatory at a glance. Returns null when the value

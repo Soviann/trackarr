@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -103,6 +103,19 @@ describe('formatDate', () => {
 
   it('returns empty for invalid date', () => {
     expect(formatDate('not-a-date')).toBe('')
+  })
+})
+
+describe('formatDateTime24h', () => {
+  it('formats valid ISO date into DD/MM/YYYY, HH:mm format', () => {
+    const d = new Date(2026, 7, 19, 14, 5) // August 19, 2026 at 14:05
+    expect(formatDateTime24h(d.toISOString())).toBe('19/08/2026, 14:05')
+  })
+
+  it('returns empty for null/undefined/invalid', () => {
+    expect(formatDateTime24h(null)).toBe('')
+    expect(formatDateTime24h(undefined)).toBe('')
+    expect(formatDateTime24h('invalid-date')).toBe('')
   })
 })
 
