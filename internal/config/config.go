@@ -22,6 +22,7 @@ type Config struct {
 	VAPIDPrivateKey        string
 	VAPIDSubject           string
 	JellyfinWebhookSecret  string
+	WebhookSecret          string
 	RadarrURL              string
 	RadarrAPIKey           string
 	SonarrURL              string
@@ -47,6 +48,7 @@ func Load() (*Config, error) {
 		VAPIDPrivateKey:        os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:           os.Getenv("VAPID_SUBJECT"),
 		JellyfinWebhookSecret:  os.Getenv("JELLYFIN_WEBHOOK_SECRET"),
+		WebhookSecret:          os.Getenv("WEBHOOK_SECRET"),
 		RadarrURL:              os.Getenv("RADARR_URL"),
 		RadarrAPIKey:           os.Getenv("RADARR_API_KEY"),
 		SonarrURL:              os.Getenv("SONARR_URL"),
@@ -89,7 +91,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DEBUG_LOGIN=true is incompatible with COOKIE_SECURE=true (prod env)")
 	}
 
-	if cfg.CookieSecure && cfg.JellyfinWebhookSecret == "" {
+	if cfg.CookieSecure && cfg.JellyfinWebhookSecret == "" && cfg.WebhookSecret == "" {
 		return nil, fmt.Errorf("JELLYFIN_WEBHOOK_SECRET is required in production (COOKIE_SECURE=true)")
 	}
 

@@ -124,6 +124,7 @@ func TestLoad_JellyfinWebhookSecretRequiredInProd(t *testing.T) {
 	t.Setenv("DEBUG_LOGIN", "false")
 	t.Setenv("COOKIE_SECURE", "true")
 	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "")
+	t.Setenv("WEBHOOK_SECRET", "")
 
 	_, err := config.Load()
 	require.Error(t, err)
@@ -138,6 +139,7 @@ func TestLoad_JellyfinWebhookSecretOptionalInDev(t *testing.T) {
 	t.Setenv("DEBUG_LOGIN", "true")
 	t.Setenv("COOKIE_SECURE", "false")
 	t.Setenv("JELLYFIN_WEBHOOK_SECRET", "")
+	t.Setenv("WEBHOOK_SECRET", "")
 
 	cfg, err := config.Load()
 	require.NoError(t, err)

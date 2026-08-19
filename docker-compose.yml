@@ -27,10 +27,7 @@ services:
     container_name: plextracker-antigravity
     env_file:
       - .env
-      - path: .env.local
-        required: false
-      - path: /volume1/docker/plextracker/antigravity/.env.local
-        required: false
+      - .env.local
     environment:
       - PUID=1026
       - PGID=100

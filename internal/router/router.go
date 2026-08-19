@@ -81,11 +81,11 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	arrSvc := service.NewArrService(cfg, settingRepo, writeDB)
 	arr := handler.NewArrHandler(arrSvc, titleRepo, writeDB)
 	covers := handler.NewCoverHandler(cfg.DataDir)
-	webhooks := handler.NewWebhookHandler(jellyfinSvc, cfg.JellyfinWebhookSecret)
+	webhooks := handler.NewWebhookHandler(jellyfinSvc, cfg.JellyfinWebhookSecret, cfg.WebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
-	settings := handler.NewSettingsHandler(settingRepo, eventRepo, tvdbReady, cfg.JellyfinWebhookSecret != "")
+	settings := handler.NewSettingsHandler(settingRepo, eventRepo, tvdbReady, cfg.JellyfinWebhookSecret != "" || cfg.WebhookSecret != "")
 	stats := handler.NewStatsHandler(statsRepo)
 	genres := handler.NewGenreHandler(genreReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)

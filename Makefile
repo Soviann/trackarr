@@ -9,9 +9,9 @@ EXEC = $(DC) exec app
 .PHONY: import import-dry db-reset reset-import backfill-accents
 .PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-db-pull ssh-logs ssh-debug-pull ssh-db-push push-secrets pull-secrets
 
-# SSH helper: sources NAS_* from .env.local and runs a command over SSH
-NAS_SSH = bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
-	sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST "$(1)"'
+# SSH helper: sources NAS_* from .env and .env.local and runs a command over SSH
+NAS_SSH = bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
+	sshpass -p "$$NAS_PASSWORD" ssh -p "$${NAS_PORT:-22}" "$$NAS_USERNAME@$$NAS_HOST" "$(1)"'
 
 .DEFAULT_GOAL := help
 help: ## Show this help
@@ -102,11 +102,12 @@ ssh-db-pull: ## Pull la BDD du NAS vers le local (nettoie le local avant)
 	@echo "Nettoyage de la base de données locale..."
 	rm -f data/plextracker.db data/plextracker.db-wal data/plextracker.db-shm
 	@echo "Téléchargement de la base de données depuis le NAS (db + wal + shm)..."
-	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
+	@bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
+		NAS_PORT=$${NAS_PORT:-22} && \
 		NAS_DB_PATH=/volume1/docker/plextracker/data/plextracker.db && \
-		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$$NAS_DB_PATH data/plextracker.db; \
-		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-wal data/plextracker.db-wal 2>/dev/null || true; \
-		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-shm data/plextracker.db-shm 2>/dev/null || true'
+		sshpass -p "$$NAS_PASSWORD" scp -O -P "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST:$$NAS_DB_PATH" data/plextracker.db; \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-wal" data/plextracker.db-wal 2>/dev/null || true; \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST:$${NAS_DB_PATH}-shm" data/plextracker.db-shm 2>/dev/null || true'
 	@echo "Démarrage de l'application locale..."
 	$(DC) start app
 	@echo "Database pulled from NAS and local app started"
@@ -122,16 +123,18 @@ ssh-debug-pull: ## Pull la BDD et les logs de prod du NAS en local pour diagnost
 	@$(MAKE) ssh-logs
 
 ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de prod)
-	@bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
-		sshpass -p "$$NAS_PASSWORD" scp -O -P $$NAS_PORT data/plextracker.db $$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db'
+	@bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
+		NAS_PORT=$${NAS_PORT:-22} && \
+		sshpass -p "$$NAS_PASSWORD" scp -O -P "$$NAS_PORT" data/plextracker.db "$$NAS_USERNAME@$$NAS_HOST:/volume1/docker/plextracker/data/plextracker.db"'
 	@$(call NAS_SSH,/usr/local/bin/docker restart plextracker)
 	@echo "Database pushed to NAS and container restarted"
 
 push-secrets: ## Sync local .env.local to NAS (app and antigravity)
 	@test -f .env.local || { echo "Error: local .env.local file not found"; exit 1; }
 	@$(call NAS_SSH,mkdir -p /volume1/docker/plextracker/antigravity)
-	@sed 's/^DEBUG_LOGIN=.*/DEBUG_LOGIN=false/' .env.local | bash -c 'set -a && source <(grep "^NAS_" .env.local) && set +a && \
-		sshpass -p "$$NAS_PASSWORD" ssh -p $$NAS_PORT $$NAS_USERNAME@$$NAS_HOST "cat > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local"' && echo "Pushed .env.local to NAS (/volume1/docker/plextracker/.env.local and antigravity with DEBUG_LOGIN=false)"
+	@sed 's/^DEBUG_LOGIN=.*/DEBUG_LOGIN=false/' .env.local | bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
+		NAS_PORT=$${NAS_PORT:-22} && \
+		sshpass -p "$$NAS_PASSWORD" ssh -p "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST" "cat > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local"' && echo "Pushed .env.local to NAS (/volume1/docker/plextracker/.env.local and antigravity with DEBUG_LOGIN=false)"
 
 pull-secrets: ## Pull .env.local from NAS daemon folder to local Mac
 	@$(call NAS_SSH,base64 /volume1/docker/plextracker/antigravity/.env.local) | base64 -d > .env.local && echo "Pulled .env.local from NAS to local Mac"

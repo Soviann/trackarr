@@ -25,24 +25,44 @@ const webhookMaxBodyBytes int64 = 1 << 20
 type WebhookHandler struct {
 	jellyfin       jellyfinProcessor
 	jellyfinSecret string
+	fallbackSecret string
 }
 
-func NewWebhookHandler(jellyfin jellyfinProcessor, secret string) *WebhookHandler {
+func NewWebhookHandler(jellyfin jellyfinProcessor, secret string, fallbackSecret ...string) *WebhookHandler {
+	var fallback string
+	if len(fallbackSecret) > 0 {
+		fallback = fallbackSecret[0]
+	}
 	return &WebhookHandler{
 		jellyfin:       jellyfin,
 		jellyfinSecret: secret,
+		fallbackSecret: fallback,
 	}
+}
+
+func (h *WebhookHandler) isAuthorized(token string) bool {
+	if h.jellyfinSecret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(h.jellyfinSecret)) == 1 {
+		return true
+	}
+	if h.fallbackSecret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(h.fallbackSecret)) == 1 {
+		return true
+	}
+	return false
 }
 
 // HandleJellyfin ingests a notification from the Jellyfin Webhook plugin's
 // Generic Destination. The body is always plain JSON.
 func (h *WebhookHandler) HandleJellyfin(w http.ResponseWriter, r *http.Request) error {
 	token := chi.URLParam(r, "secret")
-	if h.jellyfin == nil || h.jellyfinSecret == "" || subtle.ConstantTimeCompare([]byte(token), []byte(h.jellyfinSecret)) != 1 {
-		if h.jellyfinSecret == "" {
+	if h.jellyfin == nil || !h.isAuthorized(token) {
+		if h.jellyfinSecret == "" && h.fallbackSecret == "" {
 			log.Printf("jellyfin webhook: rejected request from %s — JELLYFIN_WEBHOOK_SECRET is not configured", r.RemoteAddr)
 		} else {
-			log.Printf("jellyfin webhook: rejected unauthorized request from %s — secret token mismatch", r.RemoteAddr)
+			prefix := token
+			if len(prefix) > 4 {
+				prefix = prefix[:4] + "..."
+			}
+			log.Printf("jellyfin webhook: rejected unauthorized request from %s — secret token mismatch (received len=%d '%s', expected len=%d)", r.RemoteAddr, len(token), prefix, len(h.jellyfinSecret))
 		}
 		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
 	}

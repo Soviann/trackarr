@@ -53,6 +53,17 @@ func TestJellyfinHandler_EmptyConfigSecret(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
+func TestJellyfinHandler_FallbackSecret(t *testing.T) {
+	fake := &fakeJellyfinProcessor{}
+	h := handler.NewWebhookHandler(fake, "primary_secret", "fallback_secret")
+	req := httptest.NewRequest("POST", "/webhook/jellyfin/fallback_secret", strings.NewReader(`{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newJellyfinRouter(h).ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, 1, fake.calls)
+}
+
 func TestJellyfinHandler_Valid(t *testing.T) {
 	const raw = `{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True","provider_tmdb":"438631"}`
 	fake := &fakeJellyfinProcessor{}
