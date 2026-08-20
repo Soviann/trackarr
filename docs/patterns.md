@@ -30,6 +30,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | `make ssh-db-pull` | `Makefile` | Pull prod DB (`plextracker.db` + WAL/SHM) from NAS to local `data/`. |
 | `make ssh-logs` | `Makefile` | Dump prod container logs to `data/plextracker.log` (`LINES=...` optional). |
 | `make ssh-debug-pull`| `Makefile` | Combined target: downloads prod DB and logs for local-first debugging. |
+| `make ssh-backup` | `Makefile` | Trigger automated compressed SQLite backup on NAS to Google Drive. |
 | `make reset-import` | `Makefile` | Resets local DB and imports a Simkl backup (`BACKUP_FILE=`). |
 
 ### Schema & Models (`internal/model/`)

@@ -58,7 +58,54 @@ make ssh-reset-import BACKUP_FILE=Simkl_backup.zip
 
 ---
 
-## 3. Guide des Commandes Makefile
+---
+
+## 3. Sauvegardes & Restauration
+
+### Backup automatique de la BDD (quotidien, ex: 02:00)
+
+Le script [`scripts/nas-backup.sh`](file:///Users/nicolasvasse/Soviann/plextracker/scripts/nas-backup.sh) effectue une sauvegarde SQLite à chaud cohérente (prenant en compte le mode WAL), la compresse avec gzip et la stocke dans `/volume1/google drive/Backup/Plextracker/` avec une rotation automatique sur 7 jours.
+
+#### Configuration dans le Planificateur de tâches DSM (Synology) :
+1. **Panneau de configuration** > **Planificateur de tâches** > **Créer** > **Tâche planifiée** > **Script défini par l'utilisateur**.
+2. Général : Utilisateur = `root`.
+3. Planification : Quotidien à `02:00`.
+4. Paramètres de tâche :
+   ```bash
+   bash /volume1/docker/plextracker/scripts/nas-backup.sh
+   ```
+
+### Déclenchement manuel du backup
+
+```bash
+# Depuis la machine locale via SSH
+make ssh-backup
+
+# Ou directement sur le NAS
+bash /volume1/docker/plextracker/scripts/nas-backup.sh
+```
+
+### Restauration d'une sauvegarde
+
+Pour restaurer une sauvegarde sur le NAS :
+
+```bash
+# 1. Arrêter le conteneur
+docker stop plextracker
+
+# 2. Nettoyer les fichiers WAL/SHM résiduels
+rm -f /volume1/docker/plextracker/data/plextracker.db-wal /volume1/docker/plextracker/data/plextracker.db-shm
+
+# 3. Décompresser le dump vers plextracker.db
+gunzip -c "/volume1/google drive/Backup/Plextracker/plextracker-YYYY-MM-DD_HHMMSS.db.gz" > /volume1/docker/plextracker/data/plextracker.db
+
+# 4. Redémarrer le conteneur
+docker start plextracker
+```
+
+---
+
+## 4. Guide des Commandes Makefile
 
 Toutes les opérations se font via le Makefile (qui orchestre les exécutions dans le conteneur Docker).
 
@@ -81,5 +128,7 @@ Toutes les opérations se font via le Makefile (qui orchestre les exécutions da
 | `make ssh-db-pull` | Télécharger la base de production (`plextracker.db` + WAL/SHM) du NAS vers le local |
 | `make ssh-logs` | Télécharger les logs du conteneur de production dans `data/plextracker.log` |
 | `make ssh-debug-pull` | Télécharger à la fois la BDD et les logs de prod en local pour débogage |
+| `make ssh-backup` | Exécuter le script de backup sur le NAS (crée dump compressé dans Google Drive) |
 | `make push-secrets` | Synchroniser `.env.local` vers le NAS |
 | `make pull-secrets` | Récupérer `.env.local` depuis le NAS |
+

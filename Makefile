@@ -7,7 +7,7 @@ EXEC = $(DC) exec app
 
 .PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate
 .PHONY: import import-dry db-reset reset-import backfill-accents
-.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-db-pull ssh-logs ssh-debug-pull ssh-db-push push-secrets pull-secrets
+.PHONY: ssh-import ssh-import-dry ssh-db-reset ssh-reset-import ssh-db-pull ssh-logs ssh-debug-pull ssh-db-push push-secrets pull-secrets ssh-backup
 
 # SSH helper: sources NAS_* from .env and .env.local and runs a command over SSH
 NAS_SSH = bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
@@ -121,6 +121,9 @@ ssh-logs: ## Pull logs du conteneur plextracker du NAS vers data/plextracker.log
 ssh-debug-pull: ## Pull la BDD et les logs de prod du NAS en local pour diagnostic
 	@$(MAKE) ssh-db-pull
 	@$(MAKE) ssh-logs
+
+ssh-backup: ## Exécute le script de backup de la BDD sur le NAS (crée dump compressé dans Google Drive)
+	@$(call NAS_SSH,/volume1/docker/plextracker/scripts/nas-backup.sh)
 
 ssh-db-push: ## Push la BDD locale vers le NAS (ATTENTION: écrase la BDD de prod)
 	@bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
