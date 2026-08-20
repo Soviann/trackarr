@@ -2,7 +2,7 @@ services:
   plextracker:
     build: .
     container_name: plextracker
-    restart: unless-stopped
+    restart: on-failure:5
     ports:
       - "8083:8080"
     volumes:
