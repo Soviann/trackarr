@@ -24,12 +24,13 @@ Create a new PlexTracker release.
 7. **Tag**: `git tag vX.Y.Z`
 8. **Push**: `git push origin main --tags`
 
-9. **Monitor Deployment**:
+9. **Monitor Deployment (MANDATORY)**:
    - The push triggers `.github/workflows/deploy.yml`.
    - Find the triggered run using `gh run list --workflow=deploy.yml --limit 1`.
-   - **MUST DO**: You must actively watch the release/deploy until it succeeds or fails (`gh run watch <run-id>`).
-   - If the run fails, fetch the failed logs (`gh run view <run-id> --log-failed`), diagnose the issue, and present it to the user.
-   - If it succeeds, notify the user that the deployment is successfully complete.
+   - **MUST DO**: You must actively watch the release/deploy until it succeeds or fails (`gh run watch <run-id>`). Never leave a release unattended or return to the user before completion.
+   - **Post-Deploy Health Check (MANDATORY)**: Once GitHub Actions completes successfully, run `make ssh-logs LINES=30` to inspect container logs on production and confirm the server is running (`PlexTracker listening on :8080` / `200 OK` on `/api/health`).
+   - If the run fails or container is unhealthy, fetch failed logs (`gh run view <run-id> --log-failed`), diagnose the issue, and resolve it immediately without leaving production in a broken state.
+   - Only after successful health check confirmation, report to the user that the release is fully deployed and healthy.
 ## Rules
 
 - **Never ask** the user which version bump — decide from the changes

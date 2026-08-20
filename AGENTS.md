@@ -81,6 +81,8 @@ Overrides `superpowers:writing-plans`: save via Write tool to `docs/superpowers/
 
 ## Deploy
 `.github/workflows/deploy.yml` → SSHes NAS → `nas-update.sh`. Release: push `v*` tag (no CHANGELOG to maintain; release notes, when needed, come from `git log <prev-tag>..HEAD --oneline` or GitHub Releases auto-generation). Hotfix: `gh workflow run deploy.yml`.
+- **Mandatory End-to-End Monitoring**: Whenever a release tag is pushed or `deploy.yml` is triggered, the agent **MUST** watch the workflow until completion (`gh run watch <run-id>`). Never leave a release unattended.
+- **Mandatory Post-Deploy Verification**: Immediately after workflow completion, run `make ssh-logs` to verify that the container started cleanly on production (`PlexTracker listening on :8080` / `200 OK` on `/api/health`). Never declare a release complete without actively watching the deploy and confirming production health logs.
 
 ## Environment
 `.env` (committed, defaults) + `.env.local` (gitignored, secrets). Keys: `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_EMAIL`, `JWT_SECRET`, `TMDB_API_KEY`, `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET`, `GEMINI_API_KEY`, `VAPID_*`.
