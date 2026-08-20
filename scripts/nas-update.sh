@@ -95,8 +95,14 @@ if ! git -C "$APP_DIR" checkout -f "$TARGET_TAG" 2>&1 | tee -a "$LOG_FILE"; then
 fi
 mkdir -p "$LOG_DIR"
 
+# Sauvegarde de sécurité de la base de données avant la tentative
+if [ -f "$APP_DIR/data/plextracker.db" ]; then
+    cp -f "$APP_DIR/data/plextracker.db" "$APP_DIR/data/plextracker.db.pre-deploy.bak" 2>/dev/null || true
+fi
+
 # Tentative de déploiement
 if try_deploy; then
+    rm -f "$APP_DIR/data/plextracker.db.pre-deploy.bak" 2>/dev/null || true
     # Supprimer les anciennes images plextracker (garde uniquement la version courante)
     docker images --format '{{.Repository}}:{{.Tag}}' \
         | grep 'plextracker' \
@@ -112,6 +118,12 @@ fi
 # Échec du déploiement : rollback vers les tags précédents
 log "Le déploiement a échoué pour ${TARGET_TAG}, début du rollback..."
 
+# Restauration de la sauvegarde pre-deploy si présente pour éviter les blocages de schéma
+if [ -f "$APP_DIR/data/plextracker.db.pre-deploy.bak" ]; then
+    log "Restauration de la base de données pre-deploy pour le rollback..."
+    cp -f "$APP_DIR/data/plextracker.db.pre-deploy.bak" "$APP_DIR/data/plextracker.db" 2>/dev/null || true
+fi
+
 PREVIOUS_TAGS=$(git -C "$APP_DIR" tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TARGET_TAG}$" | head -5)
 
 for tag in $PREVIOUS_TAGS; do
@@ -120,7 +132,7 @@ for tag in $PREVIOUS_TAGS; do
     mkdir -p "$LOG_DIR"
 
     if try_deploy; then
-        log "ATTENTION: rollback effectué — vérifier manuellement la cohérence des migrations si le tag annulé contenait des changements de schéma."
+        log "Rollback effectué avec succès vers ${tag}."
         log "=== Mise à jour terminée (rollback vers ${tag}) ==="
         exit 1
     fi
