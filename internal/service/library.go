@@ -112,6 +112,22 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 		if !ep.Watched && title.Status == model.TitleStatusCompleted {
 			watching := model.TitleStatusWatching
 			update.Status = &watching
+		} else if ep.Watched && title.Type != model.TitleTypeMovie {
+			isEndedOrCancelled := title.SeriesStatus != nil &&
+				(*title.SeriesStatus == model.SeriesStatusEnded || *title.SeriesStatus == model.SeriesStatusCancelled)
+			if isEndedOrCancelled {
+				hasUnwatched, err := titles.HasUnwatchedEpisodes(titleID)
+				if err == nil && !hasUnwatched {
+					completed := model.TitleStatusCompleted
+					update.Status = &completed
+				} else if title.Status == model.TitleStatusPlanToWatch {
+					watching := model.TitleStatusWatching
+					update.Status = &watching
+				}
+			} else if title.Status == model.TitleStatusPlanToWatch {
+				watching := model.TitleStatusWatching
+				update.Status = &watching
+			}
 		}
 		_ = titlesW.Update(ctx, titleID, update)
 		title.TotalWatchMinutes = newTotal
@@ -187,10 +203,31 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 	if title != nil {
 		// Increment total_watch_minutes by runtime × number of newly watched episodes.
 		newTotal := title.TotalWatchMinutes + safeRuntime(title.Runtime)*len(episodeIDs)
-		if err := titlesW.Update(ctx, titleID, repository.TitleUpdate{TotalWatchMinutes: &newTotal}); err != nil {
-			log.Printf("library: update total_watch_minutes for title %d: %v", titleID, err)
+		update := repository.TitleUpdate{TotalWatchMinutes: &newTotal}
+		if title.Type != model.TitleTypeMovie {
+			isEndedOrCancelled := title.SeriesStatus != nil &&
+				(*title.SeriesStatus == model.SeriesStatusEnded || *title.SeriesStatus == model.SeriesStatusCancelled)
+			if isEndedOrCancelled {
+				hasUnwatched, err := titles.HasUnwatchedEpisodes(titleID)
+				if err == nil && !hasUnwatched {
+					completed := model.TitleStatusCompleted
+					update.Status = &completed
+				} else if title.Status == model.TitleStatusPlanToWatch {
+					watching := model.TitleStatusWatching
+					update.Status = &watching
+				}
+			} else if title.Status == model.TitleStatusPlanToWatch {
+				watching := model.TitleStatusWatching
+				update.Status = &watching
+			}
+		}
+		if err := titlesW.Update(ctx, titleID, update); err != nil {
+			log.Printf("library: update title for %d: %v", titleID, err)
 		}
 		title.TotalWatchMinutes = newTotal
+		if update.Status != nil {
+			title.Status = *update.Status
+		}
 		prompt = s.buildRatingPrompt(tx, title)
 	}
 

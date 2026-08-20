@@ -212,6 +212,54 @@ func TestBackgroundService_NoAutoCompleteIfUnwatchedEpisodes(t *testing.T) {
 	assert.False(t, results[0].AutoCompleted)
 }
 
+func TestBackgroundService_PlanToWatchWithWatchedEpisodesReconcilesToWatching(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+
+	returning := model.SeriesStatusReturning
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2023,
+		Status:       model.TitleStatusPlanToWatch,
+		MatchStatus:  model.MatchStatusConfirmed,
+		SeriesStatus: &returning,
+	}, []model.TitleName{{Name: "Returning Anime", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", true)
+	s2 := testutil.GetOrCreateSeason(t, db, titleID, 2)
+	_ = testutil.SeedEpisode(t, db, s2.ID, 1, "2099-01-01", false)
+
+	svc.RefreshTitles(context.Background())
+
+	title, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, title.Status)
+}
+
+func TestBackgroundService_PlanToWatchCompletedEndedSeriesReconcilesToCompleted(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+
+	ended := model.SeriesStatusEnded
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2023,
+		Status:       model.TitleStatusPlanToWatch,
+		MatchStatus:  model.MatchStatusConfirmed,
+		SeriesStatus: &ended,
+	}, []model.TitleName{{Name: "Ended Show", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", true)
+
+	results := svc.RefreshTitles(context.Background())
+
+	title, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, title.Status)
+	assert.Len(t, results, 1)
+	assert.True(t, results[0].AutoCompleted)
+}
+
 func TestBackgroundService_NilSafe(t *testing.T) {
 	var svc *service.BackgroundService
 	results := svc.RefreshTitles(context.Background())

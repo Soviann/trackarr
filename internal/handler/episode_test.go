@@ -3,6 +3,7 @@ package handler_test
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -131,3 +132,107 @@ func TestEpisodeHandler_ToggleWatched_ResponseReflectsBackfillCascade(t *testing
 	assert.True(t, watched[ep2.ID], "E02 should be cascaded watched in the response")
 	assert.True(t, watched[ep3.ID], "E03 should be watched in the response")
 }
+
+func TestEpisodeHandler_ToggleWatched_PlanToWatchToWatching_WithReturningAndCaughtUp(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+	titleRepo := repository.NewTitleRepository(db)
+
+	returning := model.SeriesStatusReturning
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		IsAnime:      true,
+		Year:         2024,
+		Status:       model.TitleStatusPlanToWatch,
+		SeriesStatus: &returning,
+		MatchStatus:  model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Sword Anime", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	s2 := testutil.GetOrCreateSeason(t, db, titleID, 2)
+	_ = testutil.SeedEpisode(t, db, s2.ID, 1, "2099-01-01", false) // future TBA episode
+
+	r := chi.NewRouter()
+	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
+
+	req := httptest.NewRequest(http.MethodPatch,
+		"/titles/"+strconv.FormatInt(titleID, 10)+"/episodes/"+strconv.FormatInt(ep1.ID, 10), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var got model.Title
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+	assert.Equal(t, model.TitleStatusWatching, got.Status, "response title should transition to watching")
+
+	// Verify in TitleRepository.List (which computes CaughtUp dynamically)
+	res, err := titleRepo.List(repository.TitleFilter{Search: ptr("Sword Anime")})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+	assert.Equal(t, model.TitleStatusWatching, res.Titles[0].Status)
+	assert.True(t, res.Titles[0].CaughtUp, "should be caught up because future TBA episode is not counted as behind")
+}
+
+func TestEpisodeHandler_ToggleWatched_PlanToWatchToCompleted_WhenSeriesEnded(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+
+	ended := model.SeriesStatusEnded
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2024,
+		Status:       model.TitleStatusPlanToWatch,
+		SeriesStatus: &ended,
+		MatchStatus:  model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Ended Show", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+
+	r := chi.NewRouter()
+	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
+
+	req := httptest.NewRequest(http.MethodPatch,
+		"/titles/"+strconv.FormatInt(titleID, 10)+"/episodes/"+strconv.FormatInt(ep1.ID, 10), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var got model.Title
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+	assert.Equal(t, model.TitleStatusCompleted, got.Status, "response title should transition to completed when all episodes of ended series are watched")
+}
+
+func TestEpisodeHandler_BatchMarkWatched_PlanToWatchToCompleted(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+
+	ended := model.SeriesStatusEnded
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2024,
+		Status:       model.TitleStatusPlanToWatch,
+		SeriesStatus: &ended,
+		MatchStatus:  model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Ended Batch", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	ep2 := testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", false)
+
+	r := chi.NewRouter()
+	r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(h.BatchMarkWatched))
+
+	body := strings.NewReader(fmt.Sprintf(`{"episode_ids": [%d, %d]}`, ep1.ID, ep2.ID))
+	req := httptest.NewRequest(http.MethodPost, "/titles/"+strconv.FormatInt(titleID, 10)+"/episodes/batch-watch", body)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var got model.Title
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+	assert.Equal(t, model.TitleStatusCompleted, got.Status)
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+

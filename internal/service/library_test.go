@@ -240,3 +240,96 @@ func TestToggleEpisodeWatched_UnwatchCompletedSeriesRevertsToWatching(t *testing
 	require.NoError(t, row.Scan(&finalStatus))
 	assert.Equal(t, model.TitleStatusWatching, finalStatus, "DB should reflect 'watching' status")
 }
+
+func TestToggleEpisodeWatched_PlanToWatchTransitionsToWatching(t *testing.T) {
+	libSvc, db := setupLibraryService(t)
+	returning := model.SeriesStatusReturning
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{
+			Type:         model.TitleTypeSeries,
+			IsAnime:      true,
+			Year:         2024,
+			Status:       model.TitleStatusPlanToWatch,
+			SeriesStatus: &returning,
+			MatchStatus:  model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: "Sword Anime", Language: "en", IsPrimary: true}},
+	)
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	s2 := testutil.GetOrCreateSeason(t, db, titleID, 2)
+	_ = testutil.SeedEpisode(t, db, s2.ID, 1, "2099-01-01", false)
+
+	ctx := context.Background()
+	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		returnedTitle, toggledEp, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep1.ID)
+		require.NoError(t, err)
+		assert.True(t, toggledEp.Watched)
+		assert.Equal(t, model.TitleStatusWatching, returnedTitle.Status)
+		return nil
+	}))
+
+	var finalStatus model.TitleStatus
+	require.NoError(t, db.QueryRow(`SELECT status FROM titles WHERE id = ?`, titleID).Scan(&finalStatus))
+	assert.Equal(t, model.TitleStatusWatching, finalStatus)
+}
+
+func TestToggleEpisodeWatched_PlanToWatchCompletedSeriesTransitionsToCompleted(t *testing.T) {
+	libSvc, db := setupLibraryService(t)
+	ended := model.SeriesStatusEnded
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{
+			Type:         model.TitleTypeSeries,
+			Year:         2024,
+			Status:       model.TitleStatusPlanToWatch,
+			SeriesStatus: &ended,
+			MatchStatus:  model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: "Ended Series", Language: "en", IsPrimary: true}},
+	)
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+
+	ctx := context.Background()
+	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		returnedTitle, toggledEp, _, err := libSvc.ToggleEpisodeWatched(ctx, tx, titleID, ep1.ID)
+		require.NoError(t, err)
+		assert.True(t, toggledEp.Watched)
+		assert.Equal(t, model.TitleStatusCompleted, returnedTitle.Status)
+		return nil
+	}))
+
+	var finalStatus model.TitleStatus
+	require.NoError(t, db.QueryRow(`SELECT status FROM titles WHERE id = ?`, titleID).Scan(&finalStatus))
+	assert.Equal(t, model.TitleStatusCompleted, finalStatus)
+}
+
+func TestMarkEpisodesWatched_PlanToWatchTransitionsToWatching(t *testing.T) {
+	libSvc, db := setupLibraryService(t)
+	returning := model.SeriesStatusReturning
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{
+			Type:         model.TitleTypeSeries,
+			Year:         2024,
+			Status:       model.TitleStatusPlanToWatch,
+			SeriesStatus: &returning,
+			MatchStatus:  model.MatchStatusConfirmed,
+		},
+		[]model.TitleName{{Name: "Series Batch", Language: "en", IsPrimary: true}},
+	)
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	ep2 := testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", false)
+
+	ctx := context.Background()
+	require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		returnedTitle, _, err := libSvc.MarkEpisodesWatched(ctx, tx, titleID, []int64{ep1.ID, ep2.ID}, nil, model.WatchEventSourceManual, nil)
+		require.NoError(t, err)
+		assert.Equal(t, model.TitleStatusWatching, returnedTitle.Status)
+		return nil
+	}))
+
+	var finalStatus model.TitleStatus
+	require.NoError(t, db.QueryRow(`SELECT status FROM titles WHERE id = ?`, titleID).Scan(&finalStatus))
+	assert.Equal(t, model.TitleStatusWatching, finalStatus)
+}

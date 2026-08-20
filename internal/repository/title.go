@@ -454,17 +454,32 @@ func parseSQLiteTime(s *string) *time.Time {
 	return &t
 }
 
-// HasUnwatchedEpisodes returns true if the title has at least one aired unwatched episode.
+// HasUnwatchedEpisodes returns true if the title has at least one unwatched episode.
 func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
 	query := `
 		SELECT EXISTS(
 			SELECT 1 FROM episodes e
 			JOIN seasons s ON e.season_id = s.id
-			WHERE s.title_id = ? AND e.watched = 0 AND ` + airedEpisode + `
+			WHERE s.title_id = ? AND e.watched = 0
 		)`
 	var exists bool
 	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
 		return false, fmt.Errorf("has unwatched episodes: %w", err)
+	}
+	return exists, nil
+}
+
+// HasWatchedEpisodes returns true if the title has at least one watched episode.
+func (r *TitleRepository) HasWatchedEpisodes(titleID int64) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM episodes e
+			JOIN seasons s ON e.season_id = s.id
+			WHERE s.title_id = ? AND e.watched = 1
+		)`
+	var exists bool
+	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("has watched episodes: %w", err)
 	}
 	return exists, nil
 }

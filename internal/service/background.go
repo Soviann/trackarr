@@ -217,15 +217,42 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		s.backfillAniListID(ctx, title, &result)
 	}
 
-	// Step 2: Auto-complete if series ended and all episodes watched
-	if title.Type != model.TitleTypeMovie && title.SeriesStatus != nil {
-		if *title.SeriesStatus == model.SeriesStatusEnded || *title.SeriesStatus == model.SeriesStatusCancelled {
+	// Step 2: Auto-reconcile status for series
+	if title.Type != model.TitleTypeMovie {
+		isEndedOrCancelled := title.SeriesStatus != nil &&
+			(*title.SeriesStatus == model.SeriesStatusEnded || *title.SeriesStatus == model.SeriesStatusCancelled)
+
+		if isEndedOrCancelled {
 			hasUnwatched, err := s.titles.HasUnwatchedEpisodes(title.ID)
 			if err == nil && !hasUnwatched {
-				completed := model.TitleStatusCompleted
-				if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &completed}); err == nil {
-					result.AutoCompleted = true
-					log.Printf("background: auto-completed %q", result.TitleName)
+				shouldComplete := title.Status == model.TitleStatusWatching
+				if title.Status == model.TitleStatusPlanToWatch {
+					hasWatched, _ := s.titles.HasWatchedEpisodes(title.ID)
+					shouldComplete = hasWatched
+				}
+				if shouldComplete {
+					completed := model.TitleStatusCompleted
+					if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &completed}); err == nil {
+						result.AutoCompleted = true
+						title.Status = model.TitleStatusCompleted
+						log.Printf("background: auto-completed %q", result.TitleName)
+					}
+				}
+			} else if title.Status == model.TitleStatusPlanToWatch {
+				if hasWatched, err := s.titles.HasWatchedEpisodes(title.ID); err == nil && hasWatched {
+					watching := model.TitleStatusWatching
+					if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &watching}); err == nil {
+						title.Status = model.TitleStatusWatching
+						log.Printf("background: updated %q status plan_to_watch -> watching", result.TitleName)
+					}
+				}
+			}
+		} else if title.Status == model.TitleStatusPlanToWatch {
+			if hasWatched, err := s.titles.HasWatchedEpisodes(title.ID); err == nil && hasWatched {
+				watching := model.TitleStatusWatching
+				if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &watching}); err == nil {
+					title.Status = model.TitleStatusWatching
+					log.Printf("background: updated %q status plan_to_watch -> watching", result.TitleName)
 				}
 			}
 		}

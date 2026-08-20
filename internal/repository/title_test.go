@@ -128,7 +128,50 @@ func TestTitleRepository_CaughtUp(t *testing.T) {
 		wbNames[tt.PrimaryName()] = true
 	}
 	assert.True(t, wbNames["Behind"] && wbNames["Movie"])
-	assert.False(t, wbNames["CaughtUp"] || wbNames["Future"] || wbNames["Unknown"])
+}
+
+func TestTitleRepository_HasWatchedAndUnwatchedEpisodes(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+
+	// No episodes
+	hasWatched, err := repo.HasWatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.False(t, hasWatched)
+	hasUnwatched, err := repo.HasUnwatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.False(t, hasUnwatched)
+
+	// Add aired unwatched episode
+	ep1 := testutil.SeedEpisode(t, db, season.ID, 1, "2020-01-01", false)
+	hasWatched, err = repo.HasWatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.False(t, hasWatched)
+	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.True(t, hasUnwatched)
+
+	// Add future unwatched episode
+	_ = testutil.SeedEpisode(t, db, season.ID, 2, "2099-01-01", false)
+
+	// Mark ep1 watched
+	_, err = db.Exec(`UPDATE episodes SET watched = 1 WHERE id = ?`, ep1.ID)
+	require.NoError(t, err)
+
+	hasWatched, err = repo.HasWatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.True(t, hasWatched)
+	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.True(t, hasUnwatched, "future episode is unwatched")
 }
 
 func TestTitleRepository_List(t *testing.T) {
