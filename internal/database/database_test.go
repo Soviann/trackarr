@@ -183,10 +183,33 @@ func TestWithTxContext_DeadlineAbortsWithoutStarvingOthers(t *testing.T) {
 
 	require.True(t, errors.Is(ctx.Err(), context.DeadlineExceeded))
 
-	// Confirm the connection is free for the next write.
 	err = database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
 		_, err := tx.Exec("INSERT INTO settings (key, value) VALUES (?, ?)", "post_deadline", "y")
 		return err
 	})
 	require.NoError(t, err)
+}
+
+func TestMigrate_AutoRecoversFromDirtyState(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := dir + "/dirty.db"
+	db, _, err := database.Open(dbPath)
+	require.NoError(t, err)
+	defer db.Close()
+
+	// Initial migration to latest
+	require.NoError(t, database.Migrate(db))
+
+	// Manually set database to dirty state at version 38
+	_, err = db.Exec("UPDATE schema_migrations SET dirty = 1")
+	require.NoError(t, err)
+
+	// Running Migrate again should auto-recover and succeed
+	err = database.Migrate(db)
+	require.NoError(t, err)
+
+	var dirty bool
+	err = db.QueryRow("SELECT dirty FROM schema_migrations").Scan(&dirty)
+	require.NoError(t, err)
+	assert.False(t, dirty)
 }
