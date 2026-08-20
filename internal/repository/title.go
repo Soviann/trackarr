@@ -658,11 +658,11 @@ func (r *TitleRepository) ListPaginatedArrQueue(limit, offset int) ([]ArrQueueIt
 	if err := rows.Err(); err != nil {
 		return nil, false, fmt.Errorf("iterate arr queue: %w", err)
 	}
-	
+
 	hasMore := len(items) > limit
 	if hasMore {
 		items = items[:limit]
 	}
-	
+
 	return items, hasMore, nil
 }

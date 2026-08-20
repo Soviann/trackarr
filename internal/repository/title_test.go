@@ -1492,4 +1492,3 @@ func TestTitleRepository_ArrQueue_RequiresValidIDs(t *testing.T) {
 	assert.Contains(t, names, "Valid Series")
 	assert.Contains(t, names, "Valid Movie")
 }
-

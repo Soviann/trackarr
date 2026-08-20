@@ -1,9 +1,12 @@
 package repository_test
 
 import (
+	"context"
+	"database/sql"
 	"testing"
 	"time"
 
+	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
 	"github.com/nicolasvasse/plextracker/internal/testutil"
@@ -117,4 +120,59 @@ func TestSettingRepository_SetAndGet(t *testing.T) {
 	testutil.DeleteSetting(t, db, "test_key")
 	_, err = repo.Get("test_key")
 	assert.Error(t, err)
+}
+
+func TestEpisodeWriter_DeleteBeyond(t *testing.T) {
+	db := setupTestDB(t)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	runtime := 24
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:              model.TitleTypeSeries,
+		Year:              2024,
+		Status:            model.TitleStatusWatching,
+		MatchStatus:       model.MatchStatusConfirmed,
+		Runtime:           &runtime,
+		TotalWatchMinutes: 48, // 2 episodes watched initially
+	}, []model.TitleName{{Name: "Test", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 2)
+	ep3 := testutil.GetOrCreateEpisode(t, db, season.ID, 3)
+
+	// Mark ep1 and ep3 watched
+	testutil.ToggleEpisodeWatched(t, db, ep1.ID)
+	testutil.ToggleEpisodeWatched(t, db, ep3.ID)
+
+	// Create watch event for ep3
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   titleID,
+		EpisodeID: &ep3.ID,
+		Source:    model.WatchEventSourceManual,
+	})
+
+	// Delete beyond episode 2 (should delete ep3, its watch event, and decrement watch minutes)
+	err := database.WithTx(db, func(tx *sql.Tx) error {
+		return repository.NewEpisodeWriter(tx).DeleteBeyond(context.Background(), season.ID, 2)
+	})
+	require.NoError(t, err)
+
+	eps, err := episodeRepo.GetBySeasonID(season.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+	assert.Equal(t, 1, eps[0].Episode)
+	assert.Equal(t, 2, eps[1].Episode)
+
+	// Check watch event for ep3 was deleted
+	var weCount int
+	err = db.QueryRow(`SELECT COUNT(*) FROM watch_events WHERE title_id = ?`, titleID).Scan(&weCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, weCount)
+
+	// Check total_watch_minutes decremented by 1 episode runtime (48 - 24 = 24)
+	var totalMinutes int
+	err = db.QueryRow(`SELECT total_watch_minutes FROM titles WHERE id = ?`, titleID).Scan(&totalMinutes)
+	require.NoError(t, err)
+	assert.Equal(t, 24, totalMinutes)
 }

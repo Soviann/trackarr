@@ -124,7 +124,11 @@ func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *re
 		}
 
 		entries := make([]repository.EpisodeUpsert, len(episodes))
+		maxEp := 0
 		for i, ep := range episodes {
+			if ep.Number > maxEp {
+				maxEp = ep.Number
+			}
 			entries[i] = repository.EpisodeUpsert{
 				EpisodeNumber: ep.Number,
 				Name:          ep.Name,
@@ -137,7 +141,13 @@ func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *re
 			if err != nil {
 				return err
 			}
-			return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+			if err := repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries); err != nil {
+				return err
+			}
+			if maxEp > 0 {
+				return repository.NewEpisodeWriter(tx).DeleteBeyond(ctx, season.ID, maxEp)
+			}
+			return nil
 		})
 	}
 

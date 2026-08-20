@@ -631,3 +631,81 @@ func TestBackgroundService_DroppedSeriesNotForceWatched(t *testing.T) {
 	require.Len(t, eps, 1)
 	assert.False(t, eps[0].Watched, "dropped ⟹ watched flags untouched")
 }
+
+func TestBackgroundService_SeriesRefresh_PrunesSurplusEpisodes(t *testing.T) {
+	tmdbID := int64(12345)
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":     tmdbID,
+			"name":   "Anime Series",
+			"status": "Ended",
+			"seasons": []map[string]any{
+				{"season_number": 1, "episode_count": 2},
+			},
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/tv/%d/season/1", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"season_number": 1,
+			"episodes": []matching.TMDBEpisode{
+				{EpisodeNumber: 1, Name: "Ep 1"},
+				{EpisodeNumber: 2, Name: "Ep 2"},
+			},
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, _, _ := newBackgroundServiceWithTMDB(t, client)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	runtime := 20
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:              model.TitleTypeSeries,
+		Year:              2024,
+		Status:            model.TitleStatusWatching,
+		MatchStatus:       model.MatchStatusConfirmed,
+		TMDBID:            &tmdbID,
+		Runtime:           &runtime,
+		TotalWatchMinutes: 60,
+	}, []model.TitleName{{Name: "Anime Series", Language: "en", IsPrimary: true}})
+
+	season := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.GetOrCreateEpisode(t, db, season.ID, 1)
+	_ = testutil.GetOrCreateEpisode(t, db, season.ID, 2)
+	ep3 := testutil.GetOrCreateEpisode(t, db, season.ID, 3)
+
+	testutil.ToggleEpisodeWatched(t, db, ep1.ID)
+	testutil.ToggleEpisodeWatched(t, db, ep3.ID)
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   titleID,
+		EpisodeID: &ep3.ID,
+		Source:    model.WatchEventSourceManual,
+	})
+
+	err := svc.RefreshByID(context.Background(), titleID)
+	require.NoError(t, err)
+
+	eps, err := episodeRepo.GetBySeasonID(season.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2, "ep3 should be pruned")
+	assert.Equal(t, 1, eps[0].Episode)
+	assert.Equal(t, 2, eps[1].Episode)
+
+	// Watch event for ep3 should be pruned
+	var weCount int
+	err = db.QueryRow(`SELECT COUNT(*) FROM watch_events WHERE title_id = ?`, titleID).Scan(&weCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, weCount)
+
+	// Total watch minutes should be decremented from 60 to 40 (pruned 1 watched episode with runtime 20)
+	var totalMinutes int
+	err = db.QueryRow(`SELECT total_watch_minutes FROM titles WHERE id = ?`, titleID).Scan(&totalMinutes)
+	require.NoError(t, err)
+	assert.Equal(t, 40, totalMinutes)
+}

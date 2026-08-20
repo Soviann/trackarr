@@ -276,7 +276,10 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 							if err != nil {
 								return err
 							}
-							return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+							if err := repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries); err != nil {
+								return err
+							}
+							return repository.NewEpisodeWriter(tx).DeleteBeyond(ctx, season.ID, len(slice))
 						})
 						cum = end
 					}
@@ -286,7 +289,11 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 			}
 
 			entries := make([]repository.EpisodeUpsert, len(tmdbEpisodes))
+			maxEp := 0
 			for i, ep := range tmdbEpisodes {
+				if ep.EpisodeNumber > maxEp {
+					maxEp = ep.EpisodeNumber
+				}
 				entries[i] = repository.EpisodeUpsert{
 					EpisodeNumber: ep.EpisodeNumber,
 					Name:          ep.Name,
@@ -299,7 +306,13 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 				if err != nil {
 					return err
 				}
-				return repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries)
+				if err := repository.NewEpisodeWriter(tx).UpsertBatch(ctx, season.ID, entries); err != nil {
+					return err
+				}
+				if maxEp > 0 {
+					return repository.NewEpisodeWriter(tx).DeleteBeyond(ctx, season.ID, maxEp)
+				}
+				return nil
 			})
 
 			_ = s.limiter.Wait(ctx)

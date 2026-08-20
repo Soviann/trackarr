@@ -108,7 +108,7 @@ func (h *ArrHandler) PushToArr(w http.ResponseWriter, r *http.Request) error {
 		if title.TMDBID == nil || *title.TMDBID == 0 {
 			return httputil.BadRequest("Title has no TMDB ID")
 		}
-		
+
 		taskData := map[string]interface{}{
 			"title_id":        titleID,
 			"tmdb_id":         *title.TMDBID,
@@ -129,7 +129,7 @@ func (h *ArrHandler) PushToArr(w http.ResponseWriter, r *http.Request) error {
 		if title.TVDBID == nil || *title.TVDBID == 0 {
 			return httputil.BadRequest("Title has no TVDB ID")
 		}
-		
+
 		taskData := map[string]interface{}{
 			"title_id":        titleID,
 			"tvdb_id":         *title.TVDBID,
