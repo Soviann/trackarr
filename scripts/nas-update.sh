@@ -45,8 +45,13 @@ try_deploy() {
         cp -f "$APP_DIR/.env.local" "$APP_DIR/antigravity/.env.local"
     fi
 
-    if ! docker compose up -d --build --wait 2>&1 | tee -a "$LOG_FILE"; then
-        log "ERREUR: docker compose up --build a échoué (conteneur non healthy)."
+    if ! docker compose build --no-cache plextracker 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERREUR: docker compose build a échoué."
+        return 1
+    fi
+
+    if ! docker compose up -d --wait 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERREUR: docker compose up a échoué (conteneur non healthy)."
         return 1
     fi
 
