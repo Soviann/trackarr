@@ -134,7 +134,7 @@ push-secrets: ## Sync local .env.local to NAS (app and antigravity)
 	@$(call NAS_SSH,mkdir -p /volume1/docker/plextracker/antigravity)
 	@sed 's/^DEBUG_LOGIN=.*/DEBUG_LOGIN=false/' .env.local | bash -c 'set -a && source .env && [ -f .env.local ] && source .env.local && set +a && \
 		NAS_PORT=$${NAS_PORT:-22} && \
-		sshpass -p "$$NAS_PASSWORD" ssh -p "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST" "cat > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local"' && echo "Pushed .env.local to NAS (/volume1/docker/plextracker/.env.local and antigravity with DEBUG_LOGIN=false)"
+		sshpass -p "$$NAS_PASSWORD" ssh -p "$$NAS_PORT" "$$NAS_USERNAME@$$NAS_HOST" "cat > /volume1/docker/plextracker/.env.local && cp -f /volume1/docker/plextracker/.env.local /volume1/docker/plextracker/antigravity/.env.local && cd /volume1/docker/plextracker && /usr/local/bin/docker compose up -d"' && echo "Pushed .env.local to NAS and recreated containers"
 
 pull-secrets: ## Pull .env.local from NAS daemon folder to local Mac
 	@$(call NAS_SSH,base64 /volume1/docker/plextracker/antigravity/.env.local) | base64 -d > .env.local && echo "Pulled .env.local from NAS to local Mac"
