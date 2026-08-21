@@ -154,7 +154,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids |
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
-| `FilterDrawer`| `components/FilterDrawer.tsx` | Collapsible filter panel (status, type, series status, genres, country, rating) |
+| `FilterDrawer`| `components/FilterDrawer.tsx` | Collapsible segmented filter panel with 3 tabs: Status & Type, Genres & Origin, Dates & Ratings |
 | `SearchBar` | `components/SearchBar.tsx` | Sticky search input bound to `useSearchStore` |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |

@@ -11,6 +11,7 @@ const STORAGE_KEY_HOME = 'filter-drawer-open-home-v2'
 type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
 type SeriesStatusFilter = SeriesStatus | null
+type DrawerTab = 'basics' | 'genres' | 'dates'
 
 interface FilterDrawerProps {
   status: StatusFilter
@@ -122,6 +123,7 @@ export function FilterDrawer({
     const stored = localStorage.getItem(STORAGE_KEY_HOME)
     return stored !== null ? stored === 'true' : defaultOpen
   })
+  const [activeTab, setActiveTab] = useState<DrawerTab>('basics')
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
   const dragYRef = useRef(0)
@@ -244,6 +246,23 @@ export function FilterDrawer({
   if (myRatingMin) activeTags.push(`My ★≥${myRatingMin}`)
   if (tmdbRatingMin) activeTags.push(`TMDB≥${tmdbRatingMin}`)
 
+  const hasBasicsActive = Boolean(
+    status !== null ||
+    type !== null ||
+    isAnime ||
+    (showSeriesStatus && seriesStatus !== null) ||
+    (!isSearchActive && (sort.field !== 'updated_at' || sort.order !== 'desc'))
+  )
+  const hasGenresActive = selectedGenres.length > 0 || selectedCountries.length > 0
+  const hasDatesActive = Boolean(
+    decade ||
+    releaseFrom ||
+    releaseTo ||
+    !includeNoRelease ||
+    myRatingMin ||
+    tmdbRatingMin
+  )
+
   return (
     <div
       ref={containerRef}
@@ -268,299 +287,357 @@ export function FilterDrawer({
 
       {/* Drawer content */}
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
-        {!isSearchActive && (
-          <>
-            <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Sort</div>
-            <div className={s.filterRow}>
-              {sortOptions.map((opt) => {
-                const active = sort.field === opt.field
-                return (
-                  <button
-                    key={opt.field}
-                    className={clsx(s.chip, active && s.chipActive)}
-                    onClick={() => handleSortClick(opt)}
-                  >
-                    {opt.label}
-                    {active && (
-                      <span className={s.sortArrow}>
-                        {sort.order === 'asc' ? ' ↑' : ' ↓'}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
-        <div className={clsx(s.filterLabel, isSearchActive && s.filterLabelFirst)}>Status</div>
-        <div className={s.filterRow}>
-          {statusFilters.map((f) => (
-            <Chip key={f.label} filter={f} active={status === f.id} onClick={() => onStatusChange(f.id)} />
-          ))}
+        {/* Sub-tab Navigation */}
+        <div className={s.tabBar} role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'basics'}
+            className={clsx(s.tabBtn, activeTab === 'basics' && s.tabBtnActive)}
+            onClick={() => setActiveTab('basics')}
+          >
+            <span>Status & Type</span>
+            {hasBasicsActive && <span className={s.tabDot} />}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'genres'}
+            className={clsx(s.tabBtn, activeTab === 'genres' && s.tabBtnActive)}
+            onClick={() => setActiveTab('genres')}
+          >
+            <span>Genres & Origin</span>
+            {hasGenresActive && <span className={s.tabDot} />}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'dates'}
+            className={clsx(s.tabBtn, activeTab === 'dates' && s.tabBtnActive)}
+            onClick={() => setActiveTab('dates')}
+          >
+            <span>Dates & Ratings</span>
+            {hasDatesActive && <span className={s.tabDot} />}
+          </button>
         </div>
 
-        <div className={s.filterLabel}>Type</div>
-        <div className={s.filterRow}>
-          {typeFilters.map((f) => (
-            <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
-          ))}
-          <Chip
-            filter={{ id: true, label: 'Anime' }}
-            active={isAnime}
-            onClick={() => onIsAnimeChange(!isAnime)}
-          />
-        </div>
-
-        {showSeriesStatus && (
-          <>
-            <div className={s.filterLabel}>Series status</div>
-            <div className={s.filterRow}>
-              {seriesStatusFilters.map((f) => (
-                <Chip
-                  key={f.label}
-                  filter={f}
-                  active={seriesStatus === f.id}
-                  onClick={() => onSeriesStatusChange(f.id)}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        {genres.length > 0 && (() => {
-          const sortedGenres = [...genres].sort((a, b) => a.genre.localeCompare(b.genre))
-          const filteredGenres = sortedGenres
-            .filter(g => !selectedGenres.includes(g.genre))
-            .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
-          return (
-            <>
-              <div className={s.filterLabel}>Genres</div>
-              <div className={s.genreOpRow}>
-                <button
-                  className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
-                  onClick={() => onGenreOpChange('OR')}
-                >Any</button>
-                <button
-                  className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
-                  onClick={() => onGenreOpChange('AND')}
-                >All</button>
-                {selectedGenres.length > 0 && (
-                  <button
-                    className={s.clearGenresBtn}
-                    onClick={() => selectedGenres.forEach(g => onGenreToggle(g))}
-                  >Clear</button>
-                )}
+        <div className={s.tabContent}>
+          {/* TAB 1: Basics (Sort, Status, Type, Series Status) */}
+          {activeTab === 'basics' && (
+            <div className={s.tabPane}>
+              {!isSearchActive && (
+                <>
+                  <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Sort</div>
+                  <div className={s.filterRow}>
+                    {sortOptions.map((opt) => {
+                      const active = sort.field === opt.field
+                      return (
+                        <button
+                          key={opt.field}
+                          type="button"
+                          className={clsx(s.chip, active && s.chipActive)}
+                          onClick={() => handleSortClick(opt)}
+                        >
+                          {opt.label}
+                          {active && (
+                            <span className={s.sortArrow}>
+                              {sort.order === 'asc' ? ' ↑' : ' ↓'}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+              <div className={clsx(s.filterLabel, isSearchActive && s.filterLabelFirst)}>Status</div>
+              <div className={s.filterRow}>
+                {statusFilters.map((f) => (
+                  <Chip key={f.label} filter={f} active={status === f.id} onClick={() => onStatusChange(f.id)} />
+                ))}
               </div>
-              <div className={s.genreDropdownWrapper}>
-                <div
-                  className={s.genreAutocomplete}
-                  onClick={() => genreInputRef.current?.focus()}
-                >
-                  {selectedGenres.map(g => (
-                    <span key={g} className={s.genreTag}>
-                      {g}
-                      <button
-                        className={s.genreTagRemove}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => { e.stopPropagation(); onGenreToggle(g) }}
-                      >&times;</button>
-                    </span>
-                  ))}
-                  <input
-                    ref={genreInputRef}
-                    type="text"
-                    className={s.genreInput}
-                    placeholder={selectedGenres.length === 0 ? 'Search genres…' : ''}
-                    value={genreSearch}
-                    onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
-                    onFocus={() => {
-                      if (genreBlurTimeout.current) clearTimeout(genreBlurTimeout.current)
-                      setGenreDropdownOpen(true)
-                    }}
-                    onBlur={() => {
-                      genreBlurTimeout.current = setTimeout(() => setGenreDropdownOpen(false), 150)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        setGenreDropdownOpen(false)
-                        ;(e.target as HTMLInputElement).blur()
-                      }
-                    }}
-                  />
-                </div>
-                {genreDropdownOpen && filteredGenres.length > 0 && (
-                  <div ref={genreDropdownRef} className={s.genreDropdown}>
-                    {filteredGenres.map(g => (
-                      <div
-                        key={g.genre}
-                        className={s.genreDropdownItem}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          onGenreToggle(g.genre)
-                          setGenreSearch('')
-                          genreInputRef.current?.focus()
-                        }}
-                      >
-                        <span>{g.genre}</span>
-                        <span className={s.genreDropdownCount}>{g.count}</span>
-                      </div>
+
+              <div className={s.filterLabel}>Type</div>
+              <div className={s.filterRow}>
+                {typeFilters.map((f) => (
+                  <Chip key={f.label} filter={f} active={type === f.id} onClick={() => onTypeChange(f.id)} />
+                ))}
+                <Chip
+                  filter={{ id: true, label: 'Anime' }}
+                  active={isAnime}
+                  onClick={() => onIsAnimeChange(!isAnime)}
+                />
+              </div>
+
+              {showSeriesStatus && (
+                <>
+                  <div className={s.filterLabel}>Series status</div>
+                  <div className={s.filterRow}>
+                    {seriesStatusFilters.map((f) => (
+                      <Chip
+                        key={f.label}
+                        filter={f}
+                        active={seriesStatus === f.id}
+                        onClick={() => onSeriesStatusChange(f.id)}
+                      />
                     ))}
                   </div>
-                )}
-              </div>
-            </>
-          )
-        })()}
+                </>
+              )}
+            </div>
+          )}
 
-        {countries.some(c => isRealCountry(c.country)) && (() => {
-          const q = countrySearch.toLowerCase()
-          const filteredCountries = countries
-            .filter(c => isRealCountry(c.country))
-            .filter(c => !selectedCountries.includes(c.country))
-            .filter(c => !q || countryLabel(c.country).toLowerCase().includes(q) || c.country.toLowerCase().includes(q))
-          return (
-            <>
-              <div className={s.filterLabel}>Country</div>
-              {selectedCountries.length > 0 && (
-                <div className={s.genreOpRow}>
-                  <button
-                    className={s.clearGenresBtn}
-                    onClick={() => selectedCountries.forEach(c => onCountryToggle(c))}
-                  >Clear</button>
+          {/* TAB 2: Genres & Origin */}
+          {activeTab === 'genres' && (
+            <div className={s.tabPane}>
+              {genres.length > 0 && (() => {
+                const sortedGenres = [...genres].sort((a, b) => a.genre.localeCompare(b.genre))
+                const filteredGenres = sortedGenres
+                  .filter(g => !selectedGenres.includes(g.genre))
+                  .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
+                return (
+                  <>
+                    <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Genres</div>
+                    <div className={s.genreOpRow}>
+                      <button
+                        type="button"
+                        className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
+                        onClick={() => onGenreOpChange('OR')}
+                      >Any</button>
+                      <button
+                        type="button"
+                        className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
+                        onClick={() => onGenreOpChange('AND')}
+                      >All</button>
+                      {selectedGenres.length > 0 && (
+                        <button
+                          type="button"
+                          className={s.clearGenresBtn}
+                          onClick={() => selectedGenres.forEach(g => onGenreToggle(g))}
+                        >Clear</button>
+                      )}
+                    </div>
+                    <div className={s.genreDropdownWrapper}>
+                      <div
+                        className={s.genreAutocomplete}
+                        onClick={() => genreInputRef.current?.focus()}
+                      >
+                        {selectedGenres.map(g => (
+                          <span key={g} className={s.genreTag}>
+                            {g}
+                            <button
+                              type="button"
+                              className={s.genreTagRemove}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={(e) => { e.stopPropagation(); onGenreToggle(g) }}
+                            >&times;</button>
+                          </span>
+                        ))}
+                        <input
+                          ref={genreInputRef}
+                          type="text"
+                          className={s.genreInput}
+                          placeholder={selectedGenres.length === 0 ? 'Search genres…' : ''}
+                          value={genreSearch}
+                          onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
+                          onFocus={() => {
+                            if (genreBlurTimeout.current) clearTimeout(genreBlurTimeout.current)
+                            setGenreDropdownOpen(true)
+                          }}
+                          onBlur={() => {
+                            genreBlurTimeout.current = setTimeout(() => setGenreDropdownOpen(false), 150)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setGenreDropdownOpen(false)
+                              ;(e.target as HTMLInputElement).blur()
+                            }
+                          }}
+                        />
+                      </div>
+                      {genreDropdownOpen && filteredGenres.length > 0 && (
+                        <div ref={genreDropdownRef} className={s.genreDropdown}>
+                          {filteredGenres.map(g => (
+                            <div
+                              key={g.genre}
+                              className={s.genreDropdownItem}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                onGenreToggle(g.genre)
+                                setGenreSearch('')
+                                genreInputRef.current?.focus()
+                              }}
+                            >
+                              <span>{g.genre}</span>
+                              <span className={s.genreDropdownCount}>{g.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
+
+              {countries.some(c => isRealCountry(c.country)) && (() => {
+                const q = countrySearch.toLowerCase()
+                const filteredCountries = countries
+                  .filter(c => isRealCountry(c.country))
+                  .filter(c => !selectedCountries.includes(c.country))
+                  .filter(c => !q || countryLabel(c.country).toLowerCase().includes(q) || c.country.toLowerCase().includes(q))
+                return (
+                  <>
+                    <div className={s.filterLabel}>Country</div>
+                    {selectedCountries.length > 0 && (
+                      <div className={s.genreOpRow}>
+                        <button
+                          type="button"
+                          className={s.clearGenresBtn}
+                          onClick={() => selectedCountries.forEach(c => onCountryToggle(c))}
+                        >Clear</button>
+                      </div>
+                    )}
+                    <div className={s.genreDropdownWrapper}>
+                      <div
+                        className={s.genreAutocomplete}
+                        onClick={() => countryInputRef.current?.focus()}
+                      >
+                        {selectedCountries.map(c => (
+                          <span key={c} className={s.genreTag}>
+                            {countryLabel(c)}
+                            <button
+                              type="button"
+                              className={s.genreTagRemove}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={(e) => { e.stopPropagation(); onCountryToggle(c) }}
+                            >&times;</button>
+                          </span>
+                        ))}
+                        <input
+                          ref={countryInputRef}
+                          type="text"
+                          className={s.genreInput}
+                          placeholder={selectedCountries.length === 0 ? 'Search countries…' : ''}
+                          value={countrySearch}
+                          onInput={(e) => setCountrySearch((e.target as HTMLInputElement).value)}
+                          onFocus={() => {
+                            if (countryBlurTimeout.current) clearTimeout(countryBlurTimeout.current)
+                            setCountryDropdownOpen(true)
+                          }}
+                          onBlur={() => {
+                            countryBlurTimeout.current = setTimeout(() => setCountryDropdownOpen(false), 150)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setCountryDropdownOpen(false)
+                              ;(e.target as HTMLInputElement).blur()
+                            }
+                          }}
+                        />
+                      </div>
+                      {countryDropdownOpen && filteredCountries.length > 0 && (
+                        <div ref={countryDropdownRef} className={clsx(s.genreDropdown, s.dropUp)}>
+                          {filteredCountries.map(c => (
+                            <div
+                              key={c.country}
+                              className={s.genreDropdownItem}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                onCountryToggle(c.country)
+                                setCountrySearch('')
+                                countryInputRef.current?.focus()
+                              }}
+                            >
+                              <span>{countryLabel(c.country)}</span>
+                              <span className={s.genreDropdownCount}>{c.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* TAB 3: Dates & Ratings */}
+          {activeTab === 'dates' && (
+            <div className={s.tabPane}>
+              <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Rating</div>
+              <div className={s.filterRow}>
+                <select
+                  className={s.select}
+                  value={myRatingMin}
+                  onChange={(e) => onMyRatingMinChange((e.target as HTMLSelectElement).value)}
+                >
+                  <option value="">My rating: any</option>
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                    <option key={n} value={String(n)}>My rating ≥ {n}</option>
+                  ))}
+                </select>
+                <select
+                  className={s.select}
+                  value={tmdbRatingMin}
+                  onChange={(e) => onTmdbRatingMinChange((e.target as HTMLSelectElement).value)}
+                >
+                  <option value="">TMDB: any</option>
+                  {[5,6,7,8,9].map(n => (
+                    <option key={n} value={String(n)}>TMDB ≥ {n}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={s.filterLabel}>Release date</div>
+              <div className={s.filterRow}>
+                <select
+                  className={s.select}
+                  value={decade ?? ''}
+                  onChange={(e) => {
+                    const val = (e.target as HTMLSelectElement).value
+                    onDecadeChange(val || null)
+                  }}
+                >
+                  {decadeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="date"
+                  className={s.dateInput}
+                  value={releaseFrom}
+                  placeholder="From"
+                  onChange={(e) => {
+                    onReleaseFromChange((e.target as HTMLInputElement).value)
+                    if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+                  }}
+                />
+                <input
+                  type="date"
+                  className={s.dateInput}
+                  value={releaseTo}
+                  placeholder="To"
+                  onChange={(e) => {
+                    onReleaseToChange((e.target as HTMLInputElement).value)
+                    if ((e.target as HTMLInputElement).value) onDecadeChange(null)
+                  }}
+                />
+              </div>
+              {(decade || releaseFrom || releaseTo) && (
+                <div className={s.filterRow}>
+                  <label className={s.toggleLabel}>
+                    <input
+                      type="checkbox"
+                      checked={includeNoRelease}
+                      onChange={(e) => onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
+                    />
+                    <span>Include without release date</span>
+                  </label>
                 </div>
               )}
-              <div className={s.genreDropdownWrapper}>
-                <div
-                  className={s.genreAutocomplete}
-                  onClick={() => countryInputRef.current?.focus()}
-                >
-                  {selectedCountries.map(c => (
-                    <span key={c} className={s.genreTag}>
-                      {countryLabel(c)}
-                      <button
-                        className={s.genreTagRemove}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => { e.stopPropagation(); onCountryToggle(c) }}
-                      >&times;</button>
-                    </span>
-                  ))}
-                  <input
-                    ref={countryInputRef}
-                    type="text"
-                    className={s.genreInput}
-                    placeholder={selectedCountries.length === 0 ? 'Search countries…' : ''}
-                    value={countrySearch}
-                    onInput={(e) => setCountrySearch((e.target as HTMLInputElement).value)}
-                    onFocus={() => {
-                      if (countryBlurTimeout.current) clearTimeout(countryBlurTimeout.current)
-                      setCountryDropdownOpen(true)
-                    }}
-                    onBlur={() => {
-                      countryBlurTimeout.current = setTimeout(() => setCountryDropdownOpen(false), 150)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        setCountryDropdownOpen(false)
-                        ;(e.target as HTMLInputElement).blur()
-                      }
-                    }}
-                  />
-                </div>
-                {countryDropdownOpen && filteredCountries.length > 0 && (
-                  <div ref={countryDropdownRef} className={clsx(s.genreDropdown, s.dropUp)}>
-                    {filteredCountries.map(c => (
-                      <div
-                        key={c.country}
-                        className={s.genreDropdownItem}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          onCountryToggle(c.country)
-                          setCountrySearch('')
-                          countryInputRef.current?.focus()
-                        }}
-                      >
-                        <span>{countryLabel(c.country)}</span>
-                        <span className={s.genreDropdownCount}>{c.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )
-        })()}
-
-        <div className={s.filterLabel}>Rating</div>
-        <div className={s.filterRow}>
-          <select
-            className={s.select}
-            value={myRatingMin}
-            onChange={(e) => onMyRatingMinChange((e.target as HTMLSelectElement).value)}
-          >
-            <option value="">My rating: any</option>
-            {[1,2,3,4,5,6,7,8,9,10].map(n => (
-              <option key={n} value={String(n)}>My rating ≥ {n}</option>
-            ))}
-          </select>
-          <select
-            className={s.select}
-            value={tmdbRatingMin}
-            onChange={(e) => onTmdbRatingMinChange((e.target as HTMLSelectElement).value)}
-          >
-            <option value="">TMDB: any</option>
-            {[5,6,7,8,9].map(n => (
-              <option key={n} value={String(n)}>TMDB ≥ {n}</option>
-            ))}
-          </select>
+            </div>
+          )}
         </div>
-
-        <div className={s.filterLabel}>Release date</div>
-        <div className={s.filterRow}>
-          <select
-            className={s.select}
-            value={decade ?? ''}
-            onChange={(e) => {
-              const val = (e.target as HTMLSelectElement).value
-              onDecadeChange(val || null)
-            }}
-          >
-            {decadeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            className={s.dateInput}
-            value={releaseFrom}
-            placeholder="From"
-            onChange={(e) => {
-              onReleaseFromChange((e.target as HTMLInputElement).value)
-              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
-            }}
-          />
-          <input
-            type="date"
-            className={s.dateInput}
-            value={releaseTo}
-            placeholder="To"
-            onChange={(e) => {
-              onReleaseToChange((e.target as HTMLInputElement).value)
-              if ((e.target as HTMLInputElement).value) onDecadeChange(null)
-            }}
-          />
-        </div>
-        {(decade || releaseFrom || releaseTo) && (
-          <div className={s.filterRow}>
-            <label className={s.toggleLabel}>
-              <input
-                type="checkbox"
-                checked={includeNoRelease}
-                onChange={(e) => onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
-              />
-              <span>Include without release date</span>
-            </label>
-          </div>
-        )}
 
         <div className={s.bottomPad} />
       </div>

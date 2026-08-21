@@ -76,4 +76,37 @@ describe('FilterDrawer', () => {
     const drawerEl = container.querySelector('.drawer')
     expect(drawerEl?.className).toContain('drawerExpanded')
   })
+
+  it('renders 3 tabs and switches between them when clicked', () => {
+    const { getByText, queryByText } = renderFilterDrawer({ defaultOpen: true })
+    
+    // Default tab is Status & Type
+    expect(getByText('Status & Type')).toBeDefined()
+    expect(getByText('Genres & Origin')).toBeDefined()
+    expect(getByText('Dates & Ratings')).toBeDefined()
+    expect(getByText('Watching')).toBeDefined()
+    expect(queryByText('TMDB: any')).toBeNull()
+
+    // Switch to Dates & Ratings tab
+    fireEvent.click(getByText('Dates & Ratings'))
+    expect(getByText('TMDB: any')).toBeDefined()
+    expect(queryByText('Watching')).toBeNull()
+
+    // Switch to Genres & Origin tab
+    fireEvent.click(getByText('Genres & Origin'))
+    expect(queryByText('TMDB: any')).toBeNull()
+    expect(queryByText('Watching')).toBeNull()
+  })
+
+  it('displays tab dot indicator when a tab has active filters', () => {
+    const { container } = renderFilterDrawer({
+      defaultOpen: true,
+      status: 'watching',
+      myRatingMin: '8',
+    })
+
+    // Check that tabDot elements are rendered
+    const dots = container.querySelectorAll('.tabDot')
+    expect(dots.length).toBe(2) // basics and dates
+  })
 })
