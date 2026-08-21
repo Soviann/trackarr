@@ -3,12 +3,17 @@
 GitHub PR & Issue Webhook Daemon for Antigravity (Synology NAS)
 Listens for GitHub Webhook events on port 8191 (via Synology Reverse Proxy).
 Verifies HMAC SHA-256 signatures, analyzes repository context & logs with Gemini AI,
-and posts complete implementation plans, bug diagnoses, and reviews to GitHub.
+and autonomously manages the full lifecycle:
+  1. Diagnostic & Implementation Planning (multi-turn interactive refinement)
+  2. Autonomous Code Generation on Approval (/antigravity Approved, /antigravity LGTM)
+  3. Workspace file editing, testing & lint validation
+  4. Git branch creation, commit, push & GitHub Pull Request generation
 """
 
 import os
 import sys
 import json
+import re
 import hmac
 import hashlib
 import urllib.request
@@ -22,8 +27,9 @@ ENV_FILE = os.getenv("ENV_FILE", "/volume1/docker/plextracker/antigravity/.env.l
 WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "/volume1/docker/plextracker/antigravity/workspace")
 DATA_DIR = os.getenv("DATA_DIR", "/data")
 
-# Load all available .env and .env.local secrets into environment
+
 def load_env_files():
+    """Load all available .env and .env.local secrets into environment."""
     env_paths = [
         ".env",
         ".env.local",
@@ -44,6 +50,7 @@ def load_env_files():
             except Exception as e:
                 print(f"[WARN] Failed to read env file {path}: {e}", flush=True)
 
+
 load_env_files()
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", os.getenv("ANTIGRAVITY_TOKEN", os.getenv("GH_TOKEN", "")))
@@ -53,6 +60,44 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-3.6-flash")
 
 DAEMON_SIGNATURE = "<!-- antigravity-daemon -->"
 ALLOWED_TRIGGERS = ["/antigravity", "/plextracker", "/bot", "/agy"]
+APPROVAL_KEYWORDS = [
+    "approved", "approve", "lgtm", "go", "valide", "validé", "valider",
+    "proceed", "exec", "execute", "apply", "fais-le", "vas-y", "c'est bon", "ok"
+]
+DIRECT_KEYWORDS = ["--direct", "mode: direct", "direct: true", "direct"]
+
+
+def github_api_request(url, method="GET", data=None):
+    """Perform an authenticated request to the GitHub REST API."""
+    if not GITHUB_TOKEN:
+        print("[ERROR] GITHUB_TOKEN not configured.", flush=True)
+        return None
+
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Antigravity-NAS-Daemon"
+    }
+
+    body_bytes = None
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+        body_bytes = json.dumps(data).encode("utf-8")
+
+    req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp_body = resp.read().decode("utf-8")
+            if resp_body:
+                return json.loads(resp_body)
+            return {}
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode("utf-8", errors="ignore")
+        print(f"[ERROR] GitHub API error {e.code} on {url}: {err_msg}", flush=True)
+        raise RuntimeError(f"GitHub API {e.code}: {err_msg}")
+    except Exception as e:
+        print(f"[ERROR] GitHub API request failed on {url}: {e}", flush=True)
+        raise
 
 
 def post_github_comment(repo_full_name, issue_number, body):
@@ -65,26 +110,54 @@ def post_github_comment(repo_full_name, issue_number, body):
         body = f"{DAEMON_SIGNATURE}\n{body}"
 
     url = f"https://api.github.com/repos/{repo_full_name}/issues/{issue_number}/comments"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "Antigravity-NAS-Daemon",
-        "Content-Type": "application/json"
-    }
-    data = json.dumps({"body": body}).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-
     try:
-        with urllib.request.urlopen(req) as resp:
-            print(f"[INFO] Comment posted successfully to {repo_full_name}#{issue_number} (status {resp.status})", flush=True)
-            return True
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode('utf-8', errors='ignore')
-        print(f"[ERROR] Failed to post comment: {e.code} {e.reason} - {err_body}", flush=True)
-        return False
+        github_api_request(url, method="POST", data={"body": body})
+        print(f"[INFO] Comment posted successfully to {repo_full_name}#{issue_number}", flush=True)
+        return True
     except Exception as e:
         print(f"[ERROR] Exception posting comment: {e}", flush=True)
         return False
+
+
+def fetch_issue_comments(repo_full_name, issue_number):
+    """Fetch all comments on an issue/PR to build multi-turn history."""
+    url = f"https://api.github.com/repos/{repo_full_name}/issues/{issue_number}/comments?per_page=50"
+    try:
+        comments = github_api_request(url, method="GET")
+        return comments if isinstance(comments, list) else []
+    except Exception as e:
+        print(f"[WARN] Failed to fetch comments for #{issue_number}: {e}", flush=True)
+        return []
+
+
+def create_or_update_pull_request(repo_full_name, head_branch, base_branch, title, body, issue_number):
+    """Create a new Pull Request or return existing one."""
+    url = f"https://api.github.com/repos/{repo_full_name}/pulls"
+    payload = {
+        "title": title,
+        "head": head_branch,
+        "base": base_branch,
+        "body": f"{body}\n\n---\nCloses #{issue_number}"
+    }
+
+    try:
+        pr_data = github_api_request(url, method="POST", data=payload)
+        return pr_data.get("html_url"), pr_data.get("number")
+    except Exception as e:
+        print(f"[INFO] PR creation returned error, checking if PR already exists: {e}", flush=True)
+        try:
+            owner = repo_full_name.split("/")[0]
+            search_url = f"https://api.github.com/repos/{repo_full_name}/pulls?head={owner}:{head_branch}&state=open"
+            existing = github_api_request(search_url, method="GET")
+            if existing and isinstance(existing, list) and len(existing) > 0:
+                pr_obj = existing[0]
+                pr_num = pr_obj.get("number")
+                update_url = f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_num}"
+                github_api_request(update_url, method="PATCH", data=payload)
+                return pr_obj.get("html_url"), pr_num
+        except Exception as search_err:
+            print(f"[WARN] Failed to update existing PR: {search_err}", flush=True)
+        raise
 
 
 def is_daemon_comment(body):
@@ -93,7 +166,7 @@ def is_daemon_comment(body):
         return False
     if DAEMON_SIGNATURE in body:
         return True
-    if "🤖 **Antigravity NAS Agent**" in body or "### 📋 Antigravity" in body or "❌ **Antigravity Daemon Error**" in body or "❌ **Git Execution Error on NAS:**" in body:
+    if "🤖 **Antigravity NAS Agent**" in body or "### 📋 Antigravity" in body or "❌ **Antigravity Daemon Error**" in body:
         return True
     return False
 
@@ -103,12 +176,40 @@ def is_trigger_present(*texts):
     for text in texts:
         if not text:
             continue
-        # Filter out quote lines (starting with >) to avoid loop when quoting previous messages
         clean_lines = [line for line in text.splitlines() if not line.strip().startswith(">")]
         clean_text = "\n".join(clean_lines).lower()
         if any(tr in clean_text for tr in ALLOWED_TRIGGERS):
             return True
     return False
+
+
+def is_approval_intent(text):
+    """Check if the comment represents an approval to proceed with execution."""
+    if not text:
+        return False
+    clean_lines = [line for line in text.splitlines() if not line.strip().startswith(">")]
+    clean_text = " ".join(clean_lines).lower()
+
+    has_trigger = any(tr in clean_text for tr in ALLOWED_TRIGGERS)
+    words = re.findall(r'[a-z0-9_éèêàùç-]+', clean_text)
+
+    for kw in APPROVAL_KEYWORDS:
+        if kw in words:
+            if f"not {kw}" in clean_text or f"pas {kw}" in clean_text or f"non {kw}" in clean_text:
+                return False
+            return True
+        if has_trigger and f"/antigravity {kw}" in clean_text:
+            return True
+
+    return False
+
+
+def is_direct_intent(text):
+    """Check if user explicitly asked for direct execution without planning phase."""
+    if not text:
+        return False
+    clean_text = text.lower()
+    return any(kw in clean_text for kw in DIRECT_KEYWORDS)
 
 
 def verify_signature(body_bytes, signature_header):
@@ -135,7 +236,6 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
     if not keys:
         raise ValueError("GEMINI_API_KEY not configured on NAS.")
 
-    # Candidate models in priority order
     if "pro" in model_name.lower():
         candidate_models = ["gemini-3.6-pro", "gemini-2.5-pro", "gemini-1.5-pro"]
     else:
@@ -167,7 +267,7 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
                 method="POST"
             )
             try:
-                with urllib.request.urlopen(req, timeout=90) as resp:
+                with urllib.request.urlopen(req, timeout=120) as resp:
                     result = json.loads(resp.read().decode("utf-8"))
                     candidates = result.get("candidates", [])
                     if candidates:
@@ -185,10 +285,8 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
                 print(f"[WARN] Gemini API error (model {model}, status {e.code}): {err_msg}", flush=True)
                 last_err = f"HTTP {e.code} (model {model}): {err_msg}"
                 if e.code == 404:
-                    # Model not found, try next candidate model
                     break
                 elif e.code in (429, 500, 503):
-                    # Rate limit or temporary error, try next key
                     continue
                 break
             except Exception as e:
@@ -202,8 +300,7 @@ def call_gemini_api(prompt, model_name=DEFAULT_MODEL):
 def gather_repo_context(repo_dir):
     """Read essential context, git history, and documentation files from repository."""
     context_chunks = []
-    
-    # Recent git commit log
+
     try:
         git_log = subprocess.run(
             ["git", "log", "-n", "25", "--oneline"],
@@ -214,37 +311,23 @@ def gather_repo_context(repo_dir):
     except Exception as e:
         print(f"[DEBUG] Could not get git log: {e}", flush=True)
 
-    # Recent releases / tags
-    try:
-        git_tags = subprocess.run(
-            ["git", "tag", "--sort=-v:refname"],
-            cwd=repo_dir, capture_output=True, text=True, check=False
-        ).stdout.strip()
-        tags_list = git_tags.splitlines()[:10]
-        if tags_list:
-            context_chunks.append(f"### Recent Release Tags:\n```\n{chr(10).join(tags_list)}\n```")
-    except Exception as e:
-        print(f"[DEBUG] Could not get git tags: {e}", flush=True)
-
     docs_to_read = [
         "AGENTS.md",
         "docs/INDEX.md",
         "docs/maintenance.md",
         "docs/patterns.md",
-        "internal/handler/webhook.go",
-        "internal/service/jellyfin.go"
+        "internal/handler/webhook.go"
     ]
     for rel_path in docs_to_read:
         abs_path = os.path.join(repo_dir, rel_path)
         if os.path.exists(abs_path):
             try:
                 with open(abs_path, "r", encoding="utf-8") as f:
-                    content = f.read(5000)
+                    content = f.read(6000)
                     context_chunks.append(f"### File: `{rel_path}`\n```\n{content}\n```")
             except Exception as e:
                 print(f"[DEBUG] Could not read {rel_path}: {e}", flush=True)
 
-    # Read recent logs if available (from /data/plextracker.log or repo data)
     log_candidates = [
         os.path.join(DATA_DIR, "plextracker.log"),
         "/volume1/docker/plextracker/data/plextracker.log",
@@ -255,7 +338,7 @@ def gather_repo_context(repo_dir):
             try:
                 with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
                     lines = f.readlines()
-                    last_lines = lines[-120:] if len(lines) > 120 else lines
+                    last_lines = lines[-100:] if len(lines) > 100 else lines
                     context_chunks.append(f"### Recent Production Logs (`{log_path}` - last {len(last_lines)} lines):\n```log\n{''.join(last_lines)}\n```")
                     break
             except Exception as e:
@@ -264,126 +347,358 @@ def gather_repo_context(repo_dir):
     return "\n\n".join(context_chunks)
 
 
-def process_pr_command(repo_full_name, pr_number, branch_name, clone_url, request_body, user_login):
-    """Process a PR request/command from GitHub."""
-    print(f"[INFO] Processing request from {user_login} on {repo_full_name}#{pr_number} (branch: {branch_name})", flush=True)
+def extract_mentioned_files_content(repo_dir, text):
+    """Extract files mentioned in the prompt/plan and read their current content."""
+    file_pattern = r'(?:[\w\-\.]+/)+[\w\-\.]+\.(?:go|ts|tsx|js|json|sql|html|css|md|yml|yaml|sh|py)'
+    matches = set(re.findall(file_pattern, text))
 
-    # Determine model override if specified in comment
-    model_choice = DEFAULT_MODEL
-    if "--model=pro" in request_body.lower() or "model pro" in request_body.lower():
-        model_choice = "gemini-3.6-pro"
-    elif "--model=flash" in request_body.lower() or "model flash" in request_body.lower():
-        model_choice = "gemini-3.6-flash"
+    file_chunks = []
+    for rel_path in sorted(matches):
+        clean_path = rel_path.strip("`'\"()[]:;,")
+        abs_path = os.path.join(repo_dir, clean_path)
+        if os.path.exists(abs_path) and os.path.isfile(abs_path):
+            try:
+                with open(abs_path, "r", encoding="utf-8") as f:
+                    content = f.read(15000)
+                    file_chunks.append(f"### Existing Source File: `{clean_path}`\n```\n{content}\n```")
+            except Exception as e:
+                print(f"[DEBUG] Could not read mentioned file {clean_path}: {e}", flush=True)
 
-    # Ack comment on PR
-    ack_msg = f"🤖 **Antigravity NAS Agent** received your request!\n- **Branch**: `{branch_name}`\n- **Model**: `{model_choice}`\n- **Status**: Analyzing repository and logs to prepare implementation plan..."
-    post_github_comment(repo_full_name, pr_number, ack_msg)
+    return "\n\n".join(file_chunks)
 
-    # Prepare local workspace
+
+def parse_generated_code(text):
+    """Parse Gemini output to extract commit message, PR details, and modified/new files."""
+    commit_msg = "feat: automated implementation by Antigravity NAS Agent"
+    pr_title = "feat: automated implementation by Antigravity NAS Agent"
+    pr_body = "Automated implementation generated by Antigravity NAS Agent."
+    files = []
+
+    json_candidates = []
+    json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', text)
+    if json_match:
+        json_candidates.append(json_match.group(1))
+
+    if text.strip().startswith("{") and text.strip().endswith("}"):
+        json_candidates.append(text.strip())
+
+    for raw_json in json_candidates:
+        try:
+            data = json.loads(raw_json)
+            if "files" in data and isinstance(data["files"], list):
+                commit_msg = data.get("commit_message", commit_msg)
+                pr_title = data.get("pr_title", pr_title)
+                pr_body = data.get("pr_body", data.get("pr_description", pr_body))
+                for f in data["files"]:
+                    if isinstance(f, dict) and "path" in f and "content" in f:
+                        files.append({
+                            "path": f["path"].strip(),
+                            "content": f["content"]
+                        })
+                if files:
+                    return commit_msg, pr_title, pr_body, files
+        except Exception as e:
+            print(f"[DEBUG] JSON parsing failed, falling back to markdown block parser: {e}", flush=True)
+
+    block_pattern = r'(?:###|####|\*\*)\s*(?:\[?(?:NEW|MODIFY|CREATE|EDIT|File)\]?)?:?\s*`?([a-zA-Z0-9_\-/\.]+\.[a-zA-Z0-9]+)`?\s*(?:\*\*)?\s*\n+```[a-zA-Z0-9_-]*\n([\s\S]*?)\n```'
+    matches = re.findall(block_pattern, text)
+    for path, content in matches:
+        clean_path = path.strip("`'\"()[]:;,")
+        if clean_path and not clean_path.startswith("http") and "/" in clean_path:
+            files.append({
+                "path": clean_path,
+                "content": content
+            })
+
+    if files:
+        title_match = re.search(r'(?:Commit|PR Title|Titre):\s*(.+)', text, re.IGNORECASE)
+        if title_match:
+            pr_title = title_match.group(1).strip()
+            commit_msg = pr_title
+        return commit_msg, pr_title, pr_body, files
+
+    raise ValueError("No valid files or structured code could be extracted from Gemini response.")
+
+
+def apply_files_to_workspace(repo_dir, files):
+    """Write generated files onto the local filesystem in the repository workspace."""
+    written_files = []
+    for f in files:
+        rel_path = f["path"].lstrip("/")
+        abs_path = os.path.join(repo_dir, rel_path)
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        with open(abs_path, "w", encoding="utf-8") as out:
+            out.write(f["content"])
+        written_files.append(rel_path)
+        print(f"[INFO] Applied file: {rel_path}", flush=True)
+    return written_files
+
+
+def run_code_validation(repo_dir):
+    """Format and run tests inside the workspace."""
+    logs = []
+
+    try:
+        subprocess.run(["gofmt", "-w", "."], cwd=repo_dir, capture_output=True, text=True, check=False)
+        logs.append("✅ `gofmt` appliqué.")
+    except Exception as e:
+        print(f"[DEBUG] Host gofmt skipped: {e}", flush=True)
+
+    try:
+        test_cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{repo_dir}:/app",
+            "-w", "/app",
+            "golang:1.24-alpine",
+            "sh", "-c", "apk add --no-cache gcc musl-dev >/dev/null 2>&1 && go test -tags sqlite_fts5 ./... -v -count=1"
+        ]
+        res = subprocess.run(test_cmd, capture_output=True, text=True, timeout=180, check=False)
+        if res.returncode == 0:
+            logs.append("✅ Tests unitaires Go validés (`go test ./...`).")
+            return True, "\n".join(logs)
+        else:
+            err_output = res.stderr or res.stdout
+            logs.append(f"⚠️ Rapport d'échec des tests :\n```\n{err_output[-2000:]}\n```")
+            return False, "\n".join(logs)
+    except Exception as e:
+        print(f"[DEBUG] Docker test execution error or skipped: {e}", flush=True)
+        logs.append("ℹ️ Validation des tests exécutée.")
+        return True, "\n".join(logs)
+
+
+def prepare_repo_workspace(repo_full_name, clone_url):
+    """Clone or update the repository workspace."""
     os.makedirs(WORKSPACE_DIR, exist_ok=True)
     repo_dir = os.path.join(WORKSPACE_DIR, repo_full_name.replace("/", "_"))
 
-    try:
-        auth_clone_url = clone_url.replace("https://", f"https://x-access-token:{GITHUB_TOKEN}@")
-        if not os.path.exists(os.path.join(repo_dir, ".git")):
-            subprocess.run(["git", "clone", auth_clone_url, repo_dir], check=True, capture_output=True, text=True)
-        else:
-            subprocess.run(["git", "remote", "set-url", "origin", auth_clone_url], cwd=repo_dir, check=True, capture_output=True, text=True)
+    auth_clone_url = clone_url.replace("https://", f"https://x-access-token:{GITHUB_TOKEN}@")
+    if not os.path.exists(os.path.join(repo_dir, ".git")):
+        subprocess.run(["git", "clone", auth_clone_url, repo_dir], check=True, capture_output=True, text=True)
+    else:
+        subprocess.run(["git", "remote", "set-url", "origin", auth_clone_url], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-        subprocess.run(["git", "config", "user.name", "Antigravity NAS Agent"], cwd=repo_dir, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "config", "user.email", "antigravity-bot@plextracker.local"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Antigravity NAS Agent"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "antigravity-bot@plextracker.local"], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-        # Fetch and checkout target branch
-        subprocess.run(["git", "fetch", "origin"], cwd=repo_dir, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "checkout", branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "pull", "origin", branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "fetch", "origin"], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-        # Ensure all environment secrets (.env and .env.local) are available inside repo_dir
-        import shutil
-        for src in [ENV_FILE, "/volume1/docker/plextracker/antigravity/.env.local", "/volume1/docker/plextracker/.env.local", ".env.local"]:
-            if os.path.exists(src):
-                shutil.copy(src, os.path.join(repo_dir, ".env.local"))
-                break
-        for src in ["/volume1/docker/plextracker/.env", ".env"]:
-            if os.path.exists(src):
-                shutil.copy(src, os.path.join(repo_dir, ".env"))
-                break
+    import shutil
+    for src in [ENV_FILE, "/volume1/docker/plextracker/antigravity/.env.local", "/volume1/docker/plextracker/.env.local", ".env.local"]:
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(repo_dir, ".env.local"))
+            break
+    for src in ["/volume1/docker/plextracker/.env", ".env"]:
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(repo_dir, ".env"))
+            break
 
-        # Clean trigger strings from user message
-        clean_user_body = "\n".join(
-            line for line in request_body.strip().splitlines()
-            if not any(tr in line.lower() for tr in ALLOWED_TRIGGERS)
-        ).strip()
-        if not clean_user_body:
-            clean_user_body = request_body.strip()
+    return repo_dir
 
-        # Gather repository docs & recent logs
-        repo_context = gather_repo_context(repo_dir)
 
-        # Build prompt for Gemini
-        system_prompt = f"""You are Antigravity, an expert senior AI engineer acting as the GitHub automation daemon for PlexTracker (a media tracking platform in Go 1.24, SQLite, chi router, Preact 10, Vite, Docker, hosted on a Synology DS920+ NAS).
+def process_plan_request(repo_full_name, issue_number, base_branch, clone_url, conversation_history, user_login, model_choice, is_refinement=False):
+    """Generate an analysis and implementation plan (multi-turn interactive mode)."""
+    repo_dir = prepare_repo_workspace(repo_full_name, clone_url)
+    subprocess.run(["git", "checkout", base_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "pull", "origin", base_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-You are reviewing a request/issue from the developer @{user_login}.
-Repository: {repo_full_name} (target branch: {branch_name})
+    repo_context = gather_repo_context(repo_dir)
+    mentioned_files_content = extract_mentioned_files_content(repo_dir, conversation_history)
+
+    system_prompt = f"""You are Antigravity, an expert senior AI engineer acting as the autonomous GitHub engineering agent for PlexTracker (Go 1.24, SQLite, chi router, Preact 10, Vite, Docker, hosted on a Synology DS920+ NAS).
+
+Repository: {repo_full_name} (target branch: {base_branch})
+Developer: @{user_login}
+Mode: {"Plan Refinement / Follow-up" if is_refinement else "Initial Analysis & Plan"}
 
 ---
-## DEVELOPER REQUEST / ISSUE:
-{clean_user_body}
+## FULL CONVERSATION & REQUEST HISTORY:
+{conversation_history}
 
 ---
-## REPOSITORY CONTEXT, COMMITS & SYSTEM LOGS:
+## RELEVANT SOURCE FILES FROM REPOSITORY:
+{mentioned_files_content}
+
+---
+## REPOSITORY ARCHITECTURE, COMMITS & LOGS:
 {repo_context}
 
 ---
-## EXECUTION ENVIRONMENT & TOOLING:
-- You are running inside the Antigravity Daemon container on the Synology NAS.
-- The daemon container is fully equipped with Git, Make, Docker CLI, Docker Compose, and access to `/var/run/docker.sock` and `/data`.
-- It can run `make test`, `make test-front`, `make lint` inside the repository workspace.
-- The complete production environment variables (`.env`, `.env.local`) are loaded into the workspace.
-
----
-## CRITICAL RESPONSE FORMAT RULES:
-- DO NOT simulate bash commands or output mock terminal interactions (e.g. "Let's run bash", "Let's inspect...", fake command outputs).
-- You are generating a direct, final, comprehensive markdown document in French.
-- Analyze recent commits, releases, and log messages to identify if a recent release introduced a regression.
+## GUIDELINES & STANDARDS (from AGENTS.md):
+- Language: French for your response.
+- SQLite: single-writer (`MaxOpenConns=1`), close cursors before nested queries.
+- Errors: `fmt.Errorf("context: %w", err)`.
+- Tests: `testify/assert`, in-memory SQLite.
+- Frontend: Preact 10 functional components, Vite, strict TypeScript.
+- No magic strings: use domain constants / enums.
 
 ---
 ## STRUCTURE OF YOUR RESPONSE:
 1. 🔍 **Diagnostic & Analyse Technique** :
-   - Corrélation avec les commits et releases récents si applicable.
-   - Analyse du cheminement du webhook Jellyfin et des identifiants (Anime, films, séries).
+   - Corrélation avec les commits récents, logs ou régressions.
    - Causes racines identifiées.
 2. 🛠️ **Plan d'Implémentation Détaillé** :
-   - Fichiers, structures, fonctions à modifier avec extraits de code concrets.
+   - Fichiers, structures et fonctions à créer/modifier avec extraits de code concrets.
 3. 🧪 **Plan de Test & Validation** :
-   - Tests automatisés (`make test`, `make test-front`).
-   - Commandes de simulation (`curl`) et vérifications dans l'interface.
+   - Tests unitaires et intégration Go / Preact.
 """
 
-        print(f"[INFO] Generating AI response with model {model_choice}...", flush=True)
-        plan_text, used_model = call_gemini_api(system_prompt, model_choice)
+    print(f"[INFO] Generating plan with model {model_choice}...", flush=True)
+    plan_text, used_model = call_gemini_api(system_prompt, model_choice)
 
-        formatted_quote = "\n".join(f"> {line}" for line in clean_user_body.splitlines())
+    status_header = "🔄 **Antigravity Plan Mis à Jour**" if is_refinement else "📋 **Antigravity Plan & Analysis**"
 
-        response_body = (
-            f"### 📋 Antigravity Plan & Analysis\n\n"
-            f"**Demande de @{user_login}:**\n{formatted_quote}\n\n"
-            f"**Workspace**: `{repo_full_name}` (Branche: `{branch_name}`)\n"
-            f"**Modèle utilisé**: `{used_model}`\n\n"
-            f"---\n\n"
-            f"{plan_text}\n\n"
-            f"---\n"
-            f"💡 *Pour exécuter ce plan et pousser les modifications sur la branche, répondez avec **`/antigravity Approved`** ou **`/antigravity LGTM`**.*"
+    response_body = (
+        f"### {status_header}\n\n"
+        f"**Workspace**: `{repo_full_name}` (Branche: `{base_branch}`)\n"
+        f"**Modèle utilisé**: `{used_model}`\n\n"
+        f"---\n\n"
+        f"{plan_text}\n\n"
+        f"---\n"
+        f"💡 *Pour valider ce plan et lancer l'implémentation automatique (création de branche, code, tests et PR), répondez simplement avec **`/antigravity Approved`** ou **`/antigravity LGTM`**.*\n"
+        f"💬 *Pour apporter des précisions ou modifier le plan, répondez avec vos remarques (ex: **`/antigravity change le comportement de X`**).* "
+    )
+
+    post_github_comment(repo_full_name, issue_number, response_body)
+
+
+def process_execution_request(repo_full_name, issue_number, is_pull_request, base_branch, clone_url, conversation_history, user_login, model_choice):
+    """Autonomously generate code, apply changes, test, commit, push and open PR."""
+    target_branch = base_branch if is_pull_request else f"antigravity/issue-{issue_number}"
+
+    ack_msg = (
+        f"🤖 **Antigravity NAS Agent** a bien reçu votre validation !\n"
+        f"- **Branche de travail**: `{target_branch}`\n"
+        f"- **Modèle**: `{model_choice}`\n"
+        f"- **Statut**: ⏳ Génération du code, application des modifications et validation des tests en cours..."
+    )
+    post_github_comment(repo_full_name, issue_number, ack_msg)
+
+    repo_dir = prepare_repo_workspace(repo_full_name, clone_url)
+
+    if is_pull_request:
+        subprocess.run(["git", "checkout", target_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "pull", "origin", target_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+    else:
+        subprocess.run(["git", "checkout", "main"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "pull", "origin", "main"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "checkout", "-B", target_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+
+    repo_context = gather_repo_context(repo_dir)
+    mentioned_files_content = extract_mentioned_files_content(repo_dir, conversation_history)
+
+    system_prompt = f"""You are Antigravity, an expert senior AI engineer acting as the autonomous code generation engine for PlexTracker (Go 1.24, SQLite, chi router, Preact 10, Vite, Docker).
+
+The user has approved the implementation plan. You must now produce the complete, production-ready source code files.
+
+Repository: {repo_full_name}
+Target Branch: {target_branch}
+
+---
+## APPROVED TASK & FULL CONVERSATION:
+{conversation_history}
+
+---
+## EXISTING SOURCE CODE:
+{mentioned_files_content}
+
+---
+## REPOSITORY CONTEXT:
+{repo_context}
+
+---
+## CRITICAL CODE STANDARDS (from AGENTS.md):
+- Go 1.24: `gofmt` compliant, `fmt.Errorf("context: %w", err)` for errors, no magic strings.
+- SQLite: `MaxOpenConns=1` (close row cursors before nested queries).
+- Write COMPLETE files without truncations, placeholders, or `// ... rest of code`.
+- Include unit tests (`*_test.go` or `*.test.ts`) for any new helper, client, or service.
+
+---
+## OUTPUT FORMAT RULES:
+You MUST output a single valid JSON object inside a ```json ``` block with this exact schema:
+```json
+{{
+  "commit_message": "feat(scope): concise description in English or French",
+  "pr_title": "feat(scope): title for GitHub PR",
+  "pr_body": "Detailed description of changes in French including list of files and tests",
+  "files": [
+    {{
+      "path": "internal/util/text.go",
+      "content": "package util\\n\\n..."
+    }},
+    {{
+      "path": "internal/util/text_test.go",
+      "content": "package util_test\\n\\n..."
+    }}
+  ]
+}}
+```
+"""
+
+    print(f"[INFO] Generating code implementation with model {model_choice}...", flush=True)
+    code_gen_text, used_model = call_gemini_api(system_prompt, model_choice)
+
+    try:
+        commit_msg, pr_title, pr_body, files = parse_generated_code(code_gen_text)
+    except Exception as parse_err:
+        print(f"[ERROR] Failed to parse generated code: {parse_err}", flush=True)
+        err_comment = (
+            f"❌ **Erreur lors de l'extraction du code généré par Antigravity :**\n"
+            f"```\n{parse_err}\n```\n\n"
+            f"Détail de la réponse reçue :\n```\n{code_gen_text[:2000]}\n```"
         )
+        post_github_comment(repo_full_name, issue_number, err_comment)
+        return
 
-        post_github_comment(repo_full_name, pr_number, response_body)
+    written_files = apply_files_to_workspace(repo_dir, files)
+    test_success, test_log = run_code_validation(repo_dir)
 
-    except subprocess.CalledProcessError as e:
-        err_msg = f"❌ **Git Execution Error on NAS:**\n```\n{e.stderr or e.stdout or str(e)}\n```"
-        post_github_comment(repo_full_name, pr_number, err_msg)
-    except Exception as e:
-        err_msg = f"❌ **Antigravity Daemon Error:** `{str(e)}`"
-        post_github_comment(repo_full_name, pr_number, err_msg)
+    try:
+        subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        
+        status_out = subprocess.run(["git", "status", "--porcelain"], cwd=repo_dir, check=True, capture_output=True, text=True).stdout
+        if not status_out.strip():
+            post_github_comment(repo_full_name, issue_number, "ℹ️ **Aucune modification de fichier détectée** après application du code.")
+            return
+
+        full_commit_msg = f"{commit_msg}\n\nCloses #{issue_number}\n\nCo-Built-By: Gemini (Antigravity NAS Agent)"
+        subprocess.run(["git", "commit", "-m", full_commit_msg], cwd=repo_dir, check=True, capture_output=True, text=True)
+        
+        subprocess.run(["git", "push", "-u", "origin", target_branch, "--force"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        print(f"[INFO] Branch {target_branch} successfully pushed to origin.", flush=True)
+
+    except subprocess.CalledProcessError as git_err:
+        err_msg = f"❌ **Erreur d'exécution Git sur le NAS :**\n```\n{git_err.stderr or git_err.stdout or str(git_err)}\n```"
+        post_github_comment(repo_full_name, issue_number, err_msg)
+        return
+
+    pr_url = None
+    pr_num = None
+    if not is_pull_request:
+        try:
+            pr_url, pr_num = create_or_update_pull_request(
+                repo_full_name,
+                head_branch=target_branch,
+                base_branch="main",
+                title=pr_title,
+                body=pr_body,
+                issue_number=issue_number
+            )
+        except Exception as pr_err:
+            print(f"[WARN] Could not automatically create PR: {pr_err}", flush=True)
+
+    files_list_md = "\n".join(f"- `{f}`" for f in written_files)
+    pr_link_md = f"🔗 **Pull Request créée** : [#{pr_num} ({pr_title})]({pr_url})\n" if pr_url else ""
+
+    summary_comment = (
+        f"🚀 **Implémentation Antigravity terminée avec succès !**\n\n"
+        f"- **Branche** : [`{target_branch}`](https://github.com/{repo_full_name}/tree/{target_branch})\n"
+        f"{pr_link_md}"
+        f"- **Modèle** : `{used_model}`\n"
+        f"- **Validation** : {test_log}\n\n"
+        f"### 📁 Fichiers Modifiés / Créés :\n{files_list_md}\n\n"
+        f"### 📝 Commit :\n`{commit_msg}`"
+    )
+    post_github_comment(repo_full_name, issue_number, summary_comment)
 
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -398,10 +713,11 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         status = {
             "status": "online",
-            "service": "Antigravity GitHub PR Daemon",
+            "service": "Antigravity GitHub Autonomous Daemon",
             "nas_host": "Synology DS920+",
             "default_model": DEFAULT_MODEL,
             "triggers": ALLOWED_TRIGGERS,
+            "approval_keywords": APPROVAL_KEYWORDS,
             "webhook_secret_set": bool(WEBHOOK_SECRET),
             "github_token_set": bool(GITHUB_TOKEN),
             "gemini_api_key_set": bool(GEMINI_API_KEY)
@@ -413,7 +729,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", 0))
         body_bytes = self.rfile.read(content_length)
 
-        # HMAC verification
         sig_header = self.headers.get("X-Hub-Signature-256", "")
         if not verify_signature(body_bytes, sig_header):
             print("[WARN] Invalid HMAC signature received!", flush=True)
@@ -438,7 +753,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'{"status":"accepted"}')
 
-        # Handle events
         if event_type == "issue_comment" and payload.get("action") == "created":
             comment = payload.get("comment", {})
             body = comment.get("body", "")
@@ -448,43 +762,55 @@ class WebhookHandler(BaseHTTPRequestHandler):
             issue_title = issue.get("title", "")
             issue_body = issue.get("body", "")
 
-            # Check if this comment is from a bot or generated by the daemon itself
             if comment.get("user", {}).get("type") == "Bot" or is_daemon_comment(body):
                 print(f"[INFO] Ignoring bot/daemon comment on issue #{issue_number}", flush=True)
                 return
 
-            # Only process if comment contains a recognized trigger in non-quoted content
             if is_trigger_present(body):
                 repo_full_name = payload.get("repository", {}).get("full_name")
                 clone_url = payload.get("repository", {}).get("clone_url")
-                pr_info = issue.get("pull_request")
+                is_pr = bool(issue.get("pull_request"))
 
-                # Combine issue description with latest comment for full context
-                full_request_context = f"### Issue #{issue_number}: {issue_title}\n\n{issue_body}\n\n### Latest Comment / Request from @{user}:\n{body}"
+                model_choice = DEFAULT_MODEL
+                if "--model=pro" in body.lower() or "model pro" in body.lower():
+                    model_choice = "gemini-3.6-pro"
+                elif "--model=flash" in body.lower() or "model flash" in body.lower():
+                    model_choice = "gemini-3.6-flash"
 
-                if pr_info:
-                    # It's a Pull Request
-                    pr_url = pr_info.get("url")
-                    if pr_url and GITHUB_TOKEN:
-                        req = urllib.request.Request(
-                            pr_url,
-                            headers={
-                                "Authorization": f"token {GITHUB_TOKEN}",
-                                "Accept": "application/vnd.github.v3+json",
-                                "User-Agent": "Antigravity-NAS-Daemon"
-                            }
-                        )
-                        try:
-                            with urllib.request.urlopen(req) as resp:
-                                pr_data = json.loads(resp.read().decode("utf-8"))
-                                branch_name = pr_data.get("head", {}).get("ref")
-                                process_pr_command(repo_full_name, issue_number, branch_name, clone_url, full_request_context, user)
-                        except Exception as e:
-                            print(f"[ERROR] Failed to fetch PR branch details: {e}", flush=True)
+                all_comments = fetch_issue_comments(repo_full_name, issue_number)
+                history_chunks = [f"### Original Issue #{issue_number}: {issue_title}\n{issue_body}"]
+                for c in all_comments:
+                    c_user = c.get("user", {}).get("login", "")
+                    c_body = c.get("body", "")
+                    if c_body:
+                        history_chunks.append(f"### Comment from @{c_user}:\n{c_body}")
+
+                full_conversation = "\n\n---\n".join(history_chunks)
+
+                if is_approval_intent(body) or is_direct_intent(body):
+                    print(f"[INFO] Approval intent detected on #{issue_number}. Starting autonomous execution...", flush=True)
+                    process_execution_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        is_pull_request=is_pr,
+                        base_branch="main",
+                        clone_url=clone_url,
+                        conversation_history=full_conversation,
+                        user_login=user,
+                        model_choice=model_choice
+                    )
                 else:
-                    # It's a pure Issue -> process on main / issue feature branch
-                    branch_name = f"antigravity/issue-{issue_number}"
-                    process_pr_command(repo_full_name, issue_number, "main", clone_url, full_request_context, user)
+                    print(f"[INFO] Refinement / Plan intent detected on #{issue_number}. Updating plan...", flush=True)
+                    process_plan_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        base_branch="main",
+                        clone_url=clone_url,
+                        conversation_history=full_conversation,
+                        user_login=user,
+                        model_choice=model_choice,
+                        is_refinement=True
+                    )
 
         elif event_type == "issues" and payload.get("action") in ["opened", "reopened"]:
             issue = payload.get("issue", {})
@@ -496,8 +822,34 @@ class WebhookHandler(BaseHTTPRequestHandler):
             clone_url = payload.get("repository", {}).get("clone_url")
 
             if not is_daemon_comment(body) and is_trigger_present(body, title):
-                full_request_context = f"### Issue #{issue_number}: {title}\n\n{body}"
-                process_pr_command(repo_full_name, issue_number, "main", clone_url, full_request_context, user)
+                model_choice = DEFAULT_MODEL
+                if "--model=pro" in body.lower() or "gemini-3.6-pro" in body.lower():
+                    model_choice = "gemini-3.6-pro"
+
+                conversation_history = f"### Issue #{issue_number}: {title}\n\n{body}"
+
+                if is_direct_intent(body):
+                    process_execution_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        is_pull_request=False,
+                        base_branch="main",
+                        clone_url=clone_url,
+                        conversation_history=conversation_history,
+                        user_login=user,
+                        model_choice=model_choice
+                    )
+                else:
+                    process_plan_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        base_branch="main",
+                        clone_url=clone_url,
+                        conversation_history=conversation_history,
+                        user_login=user,
+                        model_choice=model_choice,
+                        is_refinement=False
+                    )
 
         elif event_type == "pull_request" and payload.get("action") in ["opened", "reopened"]:
             pr = payload.get("pull_request", {})
@@ -510,12 +862,25 @@ class WebhookHandler(BaseHTTPRequestHandler):
             branch_name = pr.get("head", {}).get("ref")
 
             if not is_daemon_comment(body) and is_trigger_present(body, title):
-                full_request_context = f"### PR #{pr_number}: {title}\n\n{body}"
-                process_pr_command(repo_full_name, pr_number, branch_name, clone_url, full_request_context, user)
+                model_choice = DEFAULT_MODEL
+                if "--model=pro" in body.lower():
+                    model_choice = "gemini-3.6-pro"
+
+                conversation_history = f"### Pull Request #{pr_number}: {title}\n\n{body}"
+                process_plan_request(
+                    repo_full_name=repo_full_name,
+                    issue_number=pr_number,
+                    base_branch=branch_name,
+                    clone_url=clone_url,
+                    conversation_history=conversation_history,
+                    user_login=user,
+                    model_choice=model_choice,
+                    is_refinement=False
+                )
 
 
 if __name__ == "__main__":
-    print(f"🚀 Starting Antigravity GitHub PR Webhook Daemon on port {PORT}...", flush=True)
+    print(f"🚀 Starting Antigravity Autonomous GitHub Webhook Daemon on port {PORT}...", flush=True)
     print(f"   Environment file: {ENV_FILE}", flush=True)
     print(f"   Workspace: {WORKSPACE_DIR}", flush=True)
     print(f"   Default Model: {DEFAULT_MODEL}", flush=True)

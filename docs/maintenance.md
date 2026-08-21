@@ -55,9 +55,10 @@ Si la CI échoue sur une PR Dependabot (par exemple à cause d'un *breaking chan
 3. Le démon analyse le problème, prépare un plan d'implémentation et une proposition de résolution.
 
 ### Démon Webhook Antigravity NAS (`scripts/github-pr-daemon/`)
-Le conteneur `plextracker-antigravity` tourne en tâche de fond sur le NAS (port 8191) :
-- **Rôle** : Réceptionner les webhooks GitHub (commandes `/antigravity`, `/plextracker`), synchroniser les branches Git, analyser le code et les logs locaux de production (`/data/plextracker.log`), et générer via Gemini 3.6 Flash un diagnostic et un plan d'action détaillé.
-- **Environnement & Outillage** : Le conteneur du démon est équipé de Git, Make, Docker CLI, Docker Compose et du socket Docker `/var/run/docker.sock`. Il dispose de l'ensemble des variables d'environnement (`.env`, `.env.local`) et peut exécuter `make test`, `make test-front` et `make lint` dans le workspace des dépôts clonés.
+Le conteneur `plextracker-antigravity` tourne en tâche de fond sur le NAS (port 8191) et prend en charge le cycle complet autonome d'une issue ou d'une PR :
+- **Phase 1 (Analyse & Planification interactive)** : Dès l'ouverture d'une issue ou sur commentaire `/antigravity`, le démon analyse le code source et les logs, et génère un plan technique. Si des remarques sont formulées en commentaire, le démon ajuste le plan en multi-tours.
+- **Phase 2 (Exécution & Génération de code)** : Dès qu'une approbation est envoyée (`/antigravity Approved` ou `/antigravity LGTM`), le démon génère le code complet, l'applique dans le workspace, valide les tests Go, commit (`Co-Built-By: Gemini (Antigravity NAS Agent)`), pousse la branche `antigravity/issue-{N}` et ouvre automatiquement une Pull Request GitHub liée à l'issue.
+- **Environnement & Outillage** : Le conteneur du démon est équipé de Git, Make, Docker CLI, Docker Compose et du socket Docker `/var/run/docker.sock`. Il dispose des variables d'environnement (`.env`, `.env.local`), de l'accès en lecture à `/data/plextracker.db` et `/data/plextracker.log`, et des droits de push et de création de PR via token GitHub.
 
 ---
 
