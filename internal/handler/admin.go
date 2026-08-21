@@ -230,10 +230,11 @@ func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-// GetArrSettings returns Radarr/Sonarr default settings.
+// GetArrSettings returns Radarr/Sonarr/Prowlarr default settings.
 func (h *AdminHandler) GetArrSettings(w http.ResponseWriter, r *http.Request) error {
 	keys := []string{
 		"radarr_url", "radarr_api_key", "sonarr_url", "sonarr_api_key",
+		"prowlarr_url", "prowlarr_api_key",
 		"radarr_std_monitored", "radarr_std_search", "radarr_std_root_folder", "radarr_std_quality_profile",
 		"radarr_anime_monitored", "radarr_anime_search", "radarr_anime_root_folder", "radarr_anime_quality_profile",
 		"sonarr_std_monitored", "sonarr_std_search", "sonarr_std_root_folder", "sonarr_std_quality_profile",
@@ -252,7 +253,7 @@ func (h *AdminHandler) GetArrSettings(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-// UpdateArrSettings updates Radarr/Sonarr default settings.
+// UpdateArrSettings updates Radarr/Sonarr/Prowlarr default settings.
 func (h *AdminHandler) UpdateArrSettings(w http.ResponseWriter, r *http.Request) error {
 	var prefs map[string]string
 	if err := httputil.ReadJSON(r, &prefs, 1<<20); err != nil {
@@ -261,6 +262,7 @@ func (h *AdminHandler) UpdateArrSettings(w http.ResponseWriter, r *http.Request)
 
 	allowedKeys := map[string]bool{
 		"radarr_url": true, "radarr_api_key": true, "sonarr_url": true, "sonarr_api_key": true,
+		"prowlarr_url": true, "prowlarr_api_key": true,
 		"radarr_std_monitored": true, "radarr_std_search": true, "radarr_std_root_folder": true, "radarr_std_quality_profile": true,
 		"radarr_anime_monitored": true, "radarr_anime_search": true, "radarr_anime_root_folder": true, "radarr_anime_quality_profile": true,
 		"sonarr_std_monitored": true, "sonarr_std_search": true, "sonarr_std_root_folder": true, "sonarr_std_quality_profile": true,

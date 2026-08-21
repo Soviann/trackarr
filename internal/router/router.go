@@ -80,6 +80,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	admin.SetShutdownWG(shutdownWG)
 	arrSvc := service.NewArrService(cfg, settingRepo, writeDB)
 	arr := handler.NewArrHandler(arrSvc, titleRepo, writeDB)
+	prowlarrSvc := service.NewProwlarrService(cfg, settingRepo, titleReadRepo, tmdbClient)
+	releasesHandler := handler.NewReleasesHandler(writeDB, prowlarrSvc, titleRepo, taskRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
 	webhooks := handler.NewWebhookHandler(jellyfinSvc, cfg.JellyfinWebhookSecret, cfg.WebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
@@ -143,6 +145,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
+			r.Get("/releases", httputil.WrapHandler(releasesHandler.List))
+			r.Post("/releases/add", httputil.WrapHandler(releasesHandler.Add))
 
 			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
 			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))

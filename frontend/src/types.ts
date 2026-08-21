@@ -266,3 +266,25 @@ export interface SeasonAuditProposal {
   season_number: number
   shared_id: string
 }
+
+export interface ProwlarrRelease {
+  guid: string
+  title: string
+  clean_title: string
+  year: number
+  type: TitleType
+  size: number
+  publish_date: string
+  seeders: number
+  leechers: number
+  grabs: number
+  indexer: string
+  indexer_id: number
+  download_url: string
+  info_url: string
+  tmdb_id: number
+  imdb_id: string
+  poster_url: string
+  existing_title_id?: number
+  existing_status?: TitleStatus
+}

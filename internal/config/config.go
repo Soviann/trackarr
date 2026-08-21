@@ -27,6 +27,8 @@ type Config struct {
 	RadarrAPIKey           string
 	SonarrURL              string
 	SonarrAPIKey           string
+	ProwlarrURL            string
+	ProwlarrAPIKey         string
 	DebugLogin             bool
 	DebugLoginUser         string
 	DebugLoginPassword     string
@@ -53,6 +55,8 @@ func Load() (*Config, error) {
 		RadarrAPIKey:           os.Getenv("RADARR_API_KEY"),
 		SonarrURL:              os.Getenv("SONARR_URL"),
 		SonarrAPIKey:           os.Getenv("SONARR_API_KEY"),
+		ProwlarrURL:            os.Getenv("PROWLARR_URL"),
+		ProwlarrAPIKey:         os.Getenv("PROWLARR_API_KEY"),
 		DisableBackgroundTasks: os.Getenv("DISABLE_BACKGROUND_TASKS") == "true",
 	}
 

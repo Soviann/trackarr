@@ -8,6 +8,8 @@ interface ArrSettings {
   radarr_api_key?: string
   sonarr_url?: string
   sonarr_api_key?: string
+  prowlarr_url?: string
+  prowlarr_api_key?: string
   radarr_std_monitored: string
   radarr_std_search: string
   radarr_std_root_folder: string
@@ -177,6 +179,35 @@ export function AdminArr({ path }: { path?: string }) {
       {renderSection('Radarr (Anime)', 'Defaults for anime movies', 'radarr_anime')}
       {renderSection('Sonarr (Standard)', 'Defaults for TV shows', 'sonarr_std')}
       {renderSection('Sonarr (Anime)', 'Defaults for anime shows', 'sonarr_anime')}
+
+      <div className={s.section}>
+        <div className={s.sectionHeader}>
+          <h2 className={s.sectionTitle}>Prowlarr (Indexer / C411)</h2>
+          <p className={s.sectionDesc}>Configuration pour la découverte des sorties</p>
+        </div>
+
+        <label className={s.settingRow}>
+          <span className={s.settingLabel}>Prowlarr URL</span>
+          <input
+            type="text"
+            className={s.select}
+            placeholder="http://192.168.1.49:9696"
+            value={settings?.prowlarr_url || ''}
+            onInput={e => updateSetting('prowlarr_url', (e.target as HTMLInputElement).value)}
+          />
+        </label>
+
+        <label className={s.settingRow}>
+          <span className={s.settingLabel}>API Key</span>
+          <input
+            type="password"
+            className={s.select}
+            placeholder="Prowlarr API Key"
+            value={settings?.prowlarr_api_key || ''}
+            onInput={e => updateSetting('prowlarr_api_key', (e.target as HTMLInputElement).value)}
+          />
+        </label>
+      </div>
 
       <div className={s.bottomPad} />
       

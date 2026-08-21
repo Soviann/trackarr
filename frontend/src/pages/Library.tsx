@@ -11,7 +11,7 @@ import { routeTo } from '../routes'
 import { TitleCard } from '../components/TitleCard'
 import { PosterCard } from '../components/PosterCard'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { SectionRow } from '../components/SectionRow'
+import { SectionCards, type CardItemProps } from '../components/SectionCards'
 import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -258,30 +258,32 @@ export function Library(_props: { path?: string }) {
         <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
       </div>
 
-      {/* Section rows — render skeletons during load so the grid below doesn't shift.
-          Once loaded, the row is hidden if its list is empty. */}
-      <div className={s.sectionRows}>
-        {(upcoming === null || upcoming.length > 0) && (
-          <SectionRow
-            label="// COMING UP"
-            subText={upcoming
-              ? `${upcoming.length} title${upcoming.length === 1 ? '' : 's'} airing soon`
-              : undefined}
-            posters={upcoming ?? undefined}
-            onClick={() => route(routeTo.comingUp())}
-            loading={upcoming === null}
-          />
-        )}
-        {(continueWatching === null || continueWatching.length > 0) && (
-          <SectionRow
-            label="// CONTINUE WATCHING"
-            subText={continueWatching ? `${continueWatching.length} in progress` : undefined}
-            posters={continueWatching ?? undefined}
-            onClick={() => route(routeTo.continueWatching())}
-            loading={continueWatching === null}
-          />
-        )}
-      </div>
+      {/* Section hub cards: Coming Up / In Progress / Releases */}
+      <SectionCards
+        cards={[
+          {
+            label: '// COMING UP',
+            subText: upcoming === null ? undefined : `${upcoming.length} airing soon`,
+            posters: upcoming ?? undefined,
+            loading: upcoming === null,
+            onClick: () => route(routeTo.comingUp()),
+          },
+          {
+            label: '// IN PROGRESS',
+            subText: continueWatching === null ? undefined : `${continueWatching.length} in progress`,
+            posters: continueWatching ?? undefined,
+            loading: continueWatching === null,
+            onClick: () => route(routeTo.continueWatching()),
+          },
+          {
+            label: '// RELEASES',
+            subText: 'Explore C411',
+            variant: 'accent',
+            loading: false,
+            onClick: () => route(routeTo.releases()),
+          },
+        ]}
+      />
 
       {selecting && (
         <div className={s.selectAllRow}>

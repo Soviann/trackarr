@@ -1,0 +1,137 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 68px;
+  padding: 8px 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+/* Background layers */
+.bgLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.postersGrid {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.posterSlice {
+  flex: 1;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.38;
+  filter: saturate(1.15);
+}
+
+.bgOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(26, 23, 20, 0.4) 0%, rgba(26, 23, 20, 0.88) 75%, rgba(26, 23, 20, 0.96) 100%);
+}
+
+.accentBg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(212, 173, 122, 0.12) 0%, rgba(37, 32, 26, 0.85) 100%);
+}
+
+.accentWatermark {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  opacity: 0.08;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+/* Text and content */
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chev {
+  color: var(--ink-mute);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.sub {
+  font-size: 11px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Skeletons */
+.subSkeleton {
+  width: 70%;
+  height: 11px;
+  margin-top: 2px;
+  border-radius: 3px;
+  background: var(--bg-elev2);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}

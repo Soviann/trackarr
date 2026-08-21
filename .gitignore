@@ -43,3 +43,7 @@ docs/audits/
 
 # Playwright MCP
 .playwright-mcp/
+
+# Python
+__pycache__/
+*.pyc

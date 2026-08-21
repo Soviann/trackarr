@@ -75,6 +75,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
 | `CoverService` | `internal/service/cover.go` | Cover downloading and accent color extraction (`colorextract/`) | `docs/patterns.md` |
+| `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (C411 releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
 | `BackgroundService` | `internal/service/background.go` | Daily metadata refresh crons and name sync | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
@@ -104,6 +105,8 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list |
 | GET | `/api/titles/upcoming` | `library.Upcoming` | Upcoming titles grid list |
 | GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed |
+| GET | `/api/releases` | `releasesHandler.List` | Latest C411/Prowlarr releases with posters & local match |
+| POST | `/api/releases/add` | `releasesHandler.Add` | Direct 1-click title creation from release |
 | POST | `/api/titles/batch-delete` | `titles.BatchDelete` | Delete multiple titles |
 | POST | `/api/titles/batch-status` | `titles.BatchStatus` | Bulk update title statuses |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
@@ -145,6 +148,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | Component | File | Purpose |
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 4-tab bottom navigation bar |
+| `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar and quick mark action |
 | `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge |
 | `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids |
@@ -166,6 +170,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | Route | Page Component | File |
 |---|---|---|
 | `/` | `Library` | `pages/Library.tsx` |
+| `/releases` | `Releases` | `pages/Releases.tsx` |
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` |
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` |
 | `/search` | `Search` | `pages/Search.tsx` |

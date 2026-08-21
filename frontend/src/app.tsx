@@ -8,6 +8,7 @@ import { SearchBar } from './components/SearchBar'
 import { Library } from './pages/Library'
 import { ComingUp } from './pages/ComingUp'
 import { ContinueWatching } from './pages/ContinueWatching'
+import { Releases } from './pages/Releases'
 import { TitleDetail } from './pages/TitleDetail'
 import { Search } from './pages/Search'
 import { Add } from './pages/Add'
@@ -203,6 +204,7 @@ export function App() {
           <Library path={ROUTE_PATHS.home} />
           <ComingUp path={ROUTE_PATHS.comingUp} />
           <ContinueWatching path={ROUTE_PATHS.continueWatching} />
+          <Releases path={ROUTE_PATHS.releases} />
           <Search path={ROUTE_PATHS.search} />
           <Add path={ROUTE_PATHS.add} />
           <Stats path={ROUTE_PATHS.stats} />
