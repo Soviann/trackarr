@@ -211,6 +211,25 @@ const sections: FaqSection[] = [
         ),
       },
       {
+        q: 'What do the colored borders (liserés) and icons on posters mean?',
+        a: (
+          <>
+            They show whether a title is linked to your Radarr or Sonarr media managers:
+            <ul className={s.bulletList}>
+              <li>
+                <strong>Yellow top border (liseré jaune)</strong> on the type badge — the movie is linked to <strong>Radarr</strong>.
+              </li>
+              <li>
+                <strong>Cyan top border (liseré cyan)</strong> on the type badge — the series is linked to <strong>Sonarr</strong>.
+              </li>
+              <li>
+                <strong>Arr icon badge</strong> — an 18x18px pill with a yellow target icon (Radarr) or cyan waveform icon (Sonarr) appears next to the status badge on list and search cards.
+              </li>
+            </ul>
+          </>
+        ),
+      },
+      {
         q: 'I have two duplicate titles — how do I merge them?',
         a: (
           <>
@@ -245,13 +264,29 @@ const sections: FaqSection[] = [
         ),
       },
       {
-        q: 'What does "Refresh all metadata" do?',
+        q: 'What does a title refresh do, and how does it compare to "Refresh all"?',
         a: (
           <>
-            Force-runs the daily background refresh now: re-checks every non-completed title
-            against TMDB / AniList for new episodes, status changes, missing covers, and
-            updates AniList community scores. Takes a few minutes. Normally not needed — the
-            same job runs automatically once a day.
+            <strong>Single title Refresh</strong> (from title page → Actions bar → Refresh):
+            instantly re-fetches metadata (overview, episode list, air dates, community ratings, cast & crew, covers) for that specific title from TMDB, AniList, or TVDB.
+            <br /><br />
+            <strong>Refresh all metadata</strong> (from Admin): runs a full background scan across every non-completed title in your library. It checks for newly aired episodes, detects ended or cancelled series, updates community scores, and syncs Plex watch state. This same job also runs automatically once a day.
+          </>
+        ),
+      },
+      {
+        q: 'What is the "Releases" section and how does 1-click add work?',
+        a: (
+          <>
+            The <strong>Releases</strong> page (accessible from the Library hub cards) displays incoming media releases from Prowlarr/C411. Each item shows poster art and indicates whether the title is already in your library. Tap <strong>+ Add</strong> to create the title in PlexTracker in one click.
+          </>
+        ),
+      },
+      {
+        q: 'What is the Arr Queue ("File Arr") and how does pushing work?',
+        a: (
+          <>
+            When a title shows <strong>✓ Dans la file Arr</strong> on its detail page, it is queued to be sent to Radarr or Sonarr. Open <strong>Admin → Arr Queue</strong> to configure default root folders and quality profiles, or trigger an immediate push. Once linked in Radarr/Sonarr, its status changes to <strong>Open in Radarr / Sonarr</strong> and the colored top border line (liseré) appears on its poster.
           </>
         ),
       },
