@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import re
+import time
 import hmac
 import hashlib
 import urllib.request
@@ -202,6 +203,66 @@ def is_approval_intent(text):
             return True
 
     return False
+
+
+def is_release_intent(text):
+    """Check if the comment represents a release / deploy command."""
+    if not text:
+        return False
+    clean_lines = [line for line in text.splitlines() if not line.strip().startswith(">")]
+    clean_text = " ".join(clean_lines).lower()
+    has_trigger = any(tr in clean_text for tr in ALLOWED_TRIGGERS)
+    release_words = ["release", "deploy", "déploie", "déployer", "publie", "publier", "tag"]
+    if has_trigger and any(w in clean_text for w in release_words):
+        return True
+    return False
+
+
+def parse_release_target(text):
+    """Extract release target or bump type (major, minor, patch, or explicit vX.Y.Z)."""
+    if not text:
+        return "patch"
+    match = re.search(r'\b(v\d+\.\d+\.\d+)\b', text, re.IGNORECASE)
+    if match:
+        return match.group(1).lower()
+    clean = text.lower()
+    if "major" in clean or "majeure" in clean:
+        return "major"
+    if "minor" in clean or "mineure" in clean:
+        return "minor"
+    return "patch"
+
+
+def get_next_release_tag(repo_dir, release_target):
+    """Compute the next release SemVer tag based on existing git tags."""
+    if release_target.startswith("v") and re.match(r'^v\d+\.\d+\.\d+$', release_target):
+        return release_target
+
+    try:
+        git_tags = subprocess.run(
+            ["git", "tag", "--sort=-v:refname"],
+            cwd=repo_dir, capture_output=True, text=True, check=False
+        ).stdout.strip().splitlines()
+
+        semver_tags = [t for t in git_tags if re.match(r'^v\d+\.\d+\.\d+$', t)]
+        if not semver_tags:
+            return "v0.1.0"
+
+        latest = semver_tags[0]
+        m = re.match(r'^v(\d+)\.(\d+)\.(\d+)$', latest)
+        if not m:
+            return "v0.1.0"
+
+        maj, min_v, patch = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if release_target == "major":
+            return f"v{maj + 1}.0.0"
+        elif release_target == "minor":
+            return f"v{maj}.{min_v + 1}.0"
+        else:
+            return f"v{maj}.{min_v}.{patch + 1}"
+    except Exception as e:
+        print(f"[WARN] Failed to compute next release tag: {e}", flush=True)
+        return "v0.1.0"
 
 
 def is_direct_intent(text):
@@ -698,7 +759,84 @@ You MUST output a single valid JSON object inside a ```json ``` block with this 
         f"### 📁 Fichiers Modifiés / Créés :\n{files_list_md}\n\n"
         f"### 📝 Commit :\n`{commit_msg}`"
     )
-    post_github_comment(repo_full_name, issue_number, summary_comment)
+def process_release_request(repo_full_name, issue_number, clone_url, user_login, release_target):
+    """Autonomously create a release tag, push to GitHub, monitor Deploy workflow and confirm on issue."""
+    ack_msg = f"🚀 **Antigravity NAS Agent** : Initialisation du processus de release (`{release_target}`)..."
+    post_github_comment(repo_full_name, issue_number, ack_msg)
+
+    repo_dir = prepare_repo_workspace(repo_full_name, clone_url)
+    subprocess.run(["git", "checkout", "main"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "pull", "origin", "main"], cwd=repo_dir, check=True, capture_output=True, text=True)
+
+    target_tag = get_next_release_tag(repo_dir, release_target)
+    print(f"[INFO] Computed target release tag: {target_tag}", flush=True)
+
+    try:
+        subprocess.run(["git", "tag", "-a", target_tag, "-m", f"Release {target_tag}"], cwd=repo_dir, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "push", "origin", target_tag], cwd=repo_dir, check=True, capture_output=True, text=True)
+        print(f"[INFO] Pushed release tag {target_tag} to origin", flush=True)
+    except subprocess.CalledProcessError as e:
+        err_msg = f"❌ **Erreur lors de la création ou du push du tag `{target_tag}` :**\n```\n{e.stderr or e.stdout or str(e)}\n```"
+        post_github_comment(repo_full_name, issue_number, err_msg)
+        return
+
+    progress_msg = (
+        f"🏷️ **Tag `{target_tag}` créé et poussé sur GitHub !**\n\n"
+        f"- Le workflow de déploiement [`.github/workflows/deploy.yml`](https://github.com/{repo_full_name}/actions) a été déclenché.\n"
+        f"- ⏳ Surveillance du déploiement en cours..."
+    )
+    post_github_comment(repo_full_name, issue_number, progress_msg)
+
+    # Watch workflow run via GitHub API
+    run_id = None
+    html_url = None
+    time.sleep(8)
+    for _ in range(15):
+        try:
+            runs_data = github_api_request(f"https://api.github.com/repos/{repo_full_name}/actions/runs?event=push&per_page=10")
+            if runs_data and "workflow_runs" in runs_data:
+                for r in runs_data["workflow_runs"]:
+                    if r.get("head_branch") == target_tag or r.get("name") == "Deploy":
+                        run_id = r.get("id")
+                        html_url = r.get("html_url")
+                        break
+            if run_id:
+                break
+        except Exception as e:
+            print(f"[DEBUG] Polling workflow run: {e}", flush=True)
+        time.sleep(5)
+
+    if not run_id:
+        post_github_comment(repo_full_name, issue_number, f"ℹ️ Tag `{target_tag}` poussé. Vous pouvez suivre l'avancement sur [GitHub Releases](https://github.com/{repo_full_name}/releases).")
+        return
+
+    conclusion = None
+    status = "in_progress"
+    for _ in range(60):
+        try:
+            run_info = github_api_request(f"https://api.github.com/repos/{repo_full_name}/actions/runs/{run_id}")
+            status = run_info.get("status")
+            conclusion = run_info.get("conclusion")
+            if status == "completed":
+                break
+        except Exception as e:
+            print(f"[DEBUG] Polling run status: {e}", flush=True)
+        time.sleep(15)
+
+    if conclusion == "success":
+        success_msg = (
+            f"🎉 **Release `{target_tag}` déployée avec succès sur le NAS !**\n\n"
+            f"- 🏷️ **GitHub Release** : [{target_tag}](https://github.com/{repo_full_name}/releases/tag/{target_tag})\n"
+            f"- 🚀 **CI/CD Workflow** : [Deploy Run #{run_id}]({html_url}) (Succès ✅)\n"
+            f"- 📦 **Production** : Le conteneur PlexTracker a été reconstruit et redémarré avec succès sur le NAS."
+        )
+        post_github_comment(repo_full_name, issue_number, success_msg)
+    else:
+        fail_msg = (
+            f"⚠️ **Le déploiement de la release `{target_tag}` s'est terminé avec le statut : `{conclusion or status}`**\n\n"
+            f"- 🔍 **Détails & Logs** : [Voir l'exécution du workflow]({html_url})"
+        )
+        post_github_comment(repo_full_name, issue_number, fail_msg)
 
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -771,6 +909,19 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 clone_url = payload.get("repository", {}).get("clone_url")
                 is_pr = bool(issue.get("pull_request"))
 
+                # Check release intent first
+                if is_release_intent(body):
+                    target = parse_release_target(body)
+                    print(f"[INFO] Release intent detected on #{issue_number} (target: {target}). Starting release...", flush=True)
+                    process_release_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        clone_url=clone_url,
+                        user_login=user,
+                        release_target=target
+                    )
+                    return
+
                 model_choice = DEFAULT_MODEL
                 if "--model=pro" in body.lower() or "model pro" in body.lower():
                     model_choice = "gemini-3.6-pro"
@@ -822,6 +973,18 @@ class WebhookHandler(BaseHTTPRequestHandler):
             clone_url = payload.get("repository", {}).get("clone_url")
 
             if not is_daemon_comment(body) and is_trigger_present(body, title):
+                if is_release_intent(body) or is_release_intent(title):
+                    target = parse_release_target(f"{title} {body}")
+                    print(f"[INFO] Release intent detected on new issue #{issue_number} (target: {target}). Starting release...", flush=True)
+                    process_release_request(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue_number,
+                        clone_url=clone_url,
+                        user_login=user,
+                        release_target=target
+                    )
+                    return
+
                 model_choice = DEFAULT_MODEL
                 if "--model=pro" in body.lower() or "gemini-3.6-pro" in body.lower():
                     model_choice = "gemini-3.6-pro"

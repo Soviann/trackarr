@@ -58,7 +58,8 @@ Si la CI échoue sur une PR Dependabot (par exemple à cause d'un *breaking chan
 Le conteneur `plextracker-antigravity` tourne en tâche de fond sur le NAS (port 8191) et prend en charge le cycle complet autonome d'une issue ou d'une PR :
 - **Phase 1 (Analyse & Planification interactive)** : Dès l'ouverture d'une issue ou sur commentaire `/antigravity`, le démon analyse le code source et les logs, et génère un plan technique. Si des remarques sont formulées en commentaire, le démon ajuste le plan en multi-tours.
 - **Phase 2 (Exécution & Génération de code)** : Dès qu'une approbation est envoyée (`/antigravity Approved` ou `/antigravity LGTM`), le démon génère le code complet, l'applique dans le workspace, valide les tests Go, commit (`Co-Built-By: Gemini (Antigravity NAS Agent)`), pousse la branche `antigravity/issue-{N}` et ouvre automatiquement une Pull Request GitHub liée à l'issue.
-- **Environnement & Outillage** : Le conteneur du démon est équipé de Git, Make, Docker CLI, Docker Compose et du socket Docker `/var/run/docker.sock`. Il dispose des variables d'environnement (`.env`, `.env.local`), de l'accès en lecture à `/data/plextracker.db` et `/data/plextracker.log`, et des droits de push et de création de PR via token GitHub.
+- **Phase 3 (Release & Déploiement continu)** : Sur commande `/antigravity release` (ou `release patch/minor/major/vX.Y.Z`), le démon calcule le prochain tag SemVer, pose et pousse le tag Git `v*`, déclenche le workflow GitHub Actions `deploy.yml`, surveille le déploiement de bout en bout et confirme le bon démarrage en production sur l'issue.
+- **Environnement & Outillage** : Le conteneur du démon est équipé de Git, Make, Docker CLI, Docker Compose et du socket Docker `/var/run/docker.sock`. Il dispose des variables d'environnement (`.env`, `.env.local`), de l'accès en lecture à `/data/plextracker.db` et `/data/plextracker.log`, et des droits de push, création de PR et release via token GitHub.
 
 ---
 
