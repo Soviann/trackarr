@@ -72,7 +72,7 @@ func (h *ReleasesHandler) Add(w http.ResponseWriter, r *http.Request) error {
 
 	// Check if title already exists by TMDB ID
 	if payload.TMDBID > 0 {
-		existing, _ := h.titles.FindByExternalID(nil, &payload.TMDBID, nil, nil, &payload.Type)
+		existing, _ := h.titles.FindByExternalID(nil, &payload.TMDBID, nil, nil, nil, &payload.Type)
 		if existing != nil {
 			httputil.WriteJSON(w, http.StatusOK, existing)
 			return nil

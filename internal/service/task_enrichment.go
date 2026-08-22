@@ -150,7 +150,7 @@ func (w *TaskQueueWorker) resolveAnimeConflict(ctx context.Context, result *matc
 	if result.IMDBID == "" || !result.IsAnime {
 		return false, nil
 	}
-	existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil)
+	existing, err := w.titles.FindByExternalID(&result.IMDBID, nil, nil, nil, nil, nil)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			logger.Warn("FindByExternalID", "err", err)
@@ -223,7 +223,7 @@ func (w *TaskQueueWorker) resolveAnimeSeason(ctx context.Context, result *matchi
 			tmdbPtr = &result.TMDBID
 		}
 		if imdbPtr != nil || tmdbPtr != nil {
-			t, err := w.titles.FindByExternalID(imdbPtr, tmdbPtr, nil, nil, &seriesType)
+			t, err := w.titles.FindByExternalID(imdbPtr, tmdbPtr, nil, nil, nil, &seriesType)
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
 					logger.Warn("FindByExternalID (own ids)", "err", err)
@@ -233,7 +233,7 @@ func (w *TaskQueueWorker) resolveAnimeSeason(ctx context.Context, result *matchi
 			}
 		}
 
-		rootT, rootErr := w.titles.FindByExternalID(nil, nil, nil, &chain.RootID, &seriesType)
+		rootT, rootErr := w.titles.FindByExternalID(nil, nil, nil, &chain.RootID, nil, &seriesType)
 		if rootErr != nil {
 			if !errors.Is(rootErr, sql.ErrNoRows) {
 				logger.Warn("FindByExternalID (root anilist)", "err", rootErr)

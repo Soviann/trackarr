@@ -76,7 +76,7 @@ func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title
 
 			// Title already exists under these external IDs: update the Plex key
 			// and return the existing ID so scrobbles converge on one record.
-			existing, err := titles.FindByExternalID(t.IMDBID, t.TMDBID, nil, t.AniListID, &t.Type)
+			existing, err := titles.FindByExternalID(t.IMDBID, t.TMDBID, nil, t.AniListID, t.TVDBID, &t.Type)
 			if err == nil && existing != nil {
 				update := repository.TitleUpdate{
 					PlexRatingKey: t.PlexRatingKey,

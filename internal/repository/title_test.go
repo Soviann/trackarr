@@ -396,13 +396,15 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 	imdb := "tt1234567"
 	tmdb := int64(12345)
 	anilist := int64(67890)
-	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+	tvdb := int64(54321)
+	testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdb, AniListID: &anilist, TVDBID: &tvdb}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	tests := []struct {
 		name      string
 		imdbID    *string
 		tmdbID    *int64
 		anilistID *int64
+		tvdbID    *int64
 		plexKey   *string
 		wantErr   bool
 		wantTitle string
@@ -423,6 +425,11 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 			wantTitle: "Test Movie",
 		},
 		{
+			name:      "find by TVDB",
+			tvdbID:    &tvdb,
+			wantTitle: "Test Movie",
+		},
+		{
 			name:    "not found",
 			imdbID:  ptr("tt9999999"),
 			wantErr: true,
@@ -435,7 +442,7 @@ func TestTitleRepository_FindByExternalID(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey, tc.anilistID, nil)
+			got, err := repo.FindByExternalID(tc.imdbID, tc.tmdbID, tc.plexKey, tc.anilistID, tc.tvdbID, nil)
 			if tc.wantErr {
 				assert.Error(t, err)
 				return
@@ -460,19 +467,19 @@ func TestTitleRepository_FindByExternalID_TypeFilter(t *testing.T) {
 	seriesType := model.TitleTypeSeries
 
 	t.Run("without type filter returns first match", func(t *testing.T) {
-		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, nil)
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, nil, nil)
 		require.NoError(t, err)
 		assert.Contains(t, []string{"The Empire Strikes Back", "Rome"}, got.PrimaryName())
 	})
 
 	t.Run("filter by movie type", func(t *testing.T) {
-		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, &movieType)
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, nil, &movieType)
 		require.NoError(t, err)
 		assert.Equal(t, "The Empire Strikes Back", got.PrimaryName())
 	})
 
 	t.Run("filter by series type", func(t *testing.T) {
-		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, &seriesType)
+		got, err := repo.FindByExternalID(nil, &tmdb, nil, nil, nil, &seriesType)
 		require.NoError(t, err)
 		assert.Equal(t, "Rome", got.PrimaryName())
 	})

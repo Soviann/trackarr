@@ -101,7 +101,7 @@ func (s *JellyfinService) processMovieInTx(ctx context.Context, tx *sql.Tx, jf *
 	}
 
 	movieType := model.TitleTypeMovie
-	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, &movieType)
+	title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, nil, &movieType)
 	if err != nil {
 		titleID, err := s.titleSvc.CreateFromScrobble(ctx, tx, jf.Name, year, ids, model.TitleTypeMovie, ratingKey, nil, model.TitleStatusCompleted)
 		if err != nil {
@@ -185,7 +185,7 @@ func (s *JellyfinService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, jf
 	episodeNum := atoiSafe(jf.Episode)
 
 	seriesType := model.TitleTypeSeries
-	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, &seriesType)
+	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil, &seriesType)
 	if err != nil {
 		// For an episode scrobble, ids contains episode-level provider IDs.
 		// Pass empty ExternalIDs so CreateFromScrobble uses seriesName + year in the

@@ -1,8 +1,9 @@
 package repository
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/nicolasvasse/plextracker/internal/database"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -139,8 +140,8 @@ func (r *SeasonAuditRepository) DuplicateSeriesGroups() ([]DuplicateGroup, error
 			}
 			group.Titles = append(group.Titles, *t)
 		}
-		sort.Slice(group.Titles, func(i, j int) bool {
-			return group.Titles[i].ID < group.Titles[j].ID
+		slices.SortFunc(group.Titles, func(a, b model.Title) int {
+			return cmp.Compare(a.ID, b.ID)
 		})
 		groups = append(groups, group)
 	}

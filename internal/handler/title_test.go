@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -537,3 +538,50 @@ func TestTitleHandler_BatchStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.TitleStatusCompleted, t1.Status)
 }
+
+func TestTitleHandler_FindTitleByURL(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	imdb := "tt0111161"
+	tmdbMovie := int64(278)
+	tmdbTV := int64(1399)
+	tvdb := int64(121361)
+	anilist := int64(16498)
+
+	mID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 1994, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, IMDBID: &imdb, TMDBID: &tmdbMovie},
+		[]model.TitleName{{Name: "The Shawshank Redemption", Language: "en", IsPrimary: true}},
+	)
+	sID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeSeries, Year: 2011, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdbTV, TVDBID: &tvdb},
+		[]model.TitleName{{Name: "Game of Thrones", Language: "en", IsPrimary: true}},
+	)
+	aID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2013, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, AniListID: &anilist},
+		[]model.TitleName{{Name: "Attack on Titan", Language: "en", IsPrimary: true}},
+	)
+
+	testCases := []struct {
+		url      string
+		expected int64
+	}{
+		{"https://www.imdb.com/title/tt0111161/", mID},
+		{"https://www.themoviedb.org/movie/278-the-shawshank-redemption", mID},
+		{"https://www.themoviedb.org/tv/1399-game-of-thrones", sID},
+		{"https://anilist.co/anime/16498/Shingeki-no-Kyojin/", aID},
+	}
+
+	for _, tc := range testCases {
+		req := httptest.NewRequest(http.MethodGet, "/api/titles?search="+url.QueryEscape(tc.url), nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.List(rr, req))
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var res repository.PaginatedResult
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+		require.Len(t, res.Titles, 1)
+		assert.Equal(t, tc.expected, res.Titles[0].ID)
+	}
+}
+
+

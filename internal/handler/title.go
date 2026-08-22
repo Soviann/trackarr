@@ -71,7 +71,7 @@ var allowedSorts = map[string]bool{
 }
 
 // findTitleByURL returns an existing title matching an external URL pasted in the
-// search box (IMDB / AniList only). Returns nil when the query is not a
+// search box (IMDB, TMDB, TVDB, AniList). Returns nil when the query is not a
 // recognized URL or no matching title exists.
 func (h *TitleHandler) findTitleByURL(q string) *model.Title {
 	ids := matching.ParseURL(q)
@@ -80,18 +80,33 @@ func (h *TitleHandler) findTitleByURL(q string) *model.Title {
 	}
 	var (
 		imdbPtr    *string
+		tmdbPtr    *int64
 		anilistPtr *int64
+		tvdbPtr    *int64
+		typePtr    *model.TitleType
 	)
 	if ids.IMDB != "" {
 		imdbPtr = &ids.IMDB
 	}
+	if ids.TMDBMovie != 0 {
+		tmdbPtr = &ids.TMDBMovie
+		mType := model.TitleTypeMovie
+		typePtr = &mType
+	} else if ids.TMDBTV != 0 {
+		tmdbPtr = &ids.TMDBTV
+		sType := model.TitleTypeSeries
+		typePtr = &sType
+	}
 	if ids.AniList != 0 {
 		anilistPtr = &ids.AniList
 	}
-	if imdbPtr == nil && anilistPtr == nil {
+	if ids.TVDB != 0 {
+		tvdbPtr = &ids.TVDB
+	}
+	if imdbPtr == nil && tmdbPtr == nil && anilistPtr == nil && tvdbPtr == nil {
 		return nil
 	}
-	t, err := h.titlesRead.FindByExternalID(imdbPtr, nil, nil, anilistPtr, nil)
+	t, err := h.titlesRead.FindByExternalID(imdbPtr, tmdbPtr, nil, anilistPtr, tvdbPtr, typePtr)
 	if err != nil {
 		return nil
 	}

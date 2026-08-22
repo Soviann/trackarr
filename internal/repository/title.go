@@ -372,10 +372,10 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	return r.loadTitleRelations(titles)
 }
 
-// FindByExternalID looks up a title by external IDs (IMDB, TMDB, AniList, Plex rating key).
+// FindByExternalID looks up a title by external IDs (IMDB, TMDB, AniList, TVDB, Plex rating key).
 // If titleType is non-nil, results are filtered by type (useful because TMDB IDs
 // are only unique within a media type).
-func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRatingKey *string, anilistID *int64, titleType *model.TitleType) (*model.Title, error) {
+func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRatingKey *string, anilistID *int64, tvdbID *int64, titleType *model.TitleType) (*model.Title, error) {
 	var conditions []string
 	var args []any
 
@@ -394,6 +394,10 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, plexRa
 	if anilistID != nil && *anilistID != 0 {
 		conditions = append(conditions, `anilist_id = ?`)
 		args = append(args, *anilistID)
+	}
+	if tvdbID != nil && *tvdbID != 0 {
+		conditions = append(conditions, `tvdb_id = ?`)
+		args = append(args, *tvdbID)
 	}
 
 	if len(conditions) == 0 {

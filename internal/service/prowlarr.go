@@ -355,13 +355,13 @@ func (s *ProwlarrService) enrichWithLocalDB(ctx context.Context, releases []Prow
 		var title *model.Title
 		if result[i].TMDBID > 0 {
 			tType := model.TitleType(result[i].Type)
-			t, _ := s.titlesRepo.FindByExternalID(nil, &result[i].TMDBID, nil, nil, &tType)
+			t, _ := s.titlesRepo.FindByExternalID(nil, &result[i].TMDBID, nil, nil, nil, &tType)
 			if t != nil {
 				title = t
 			}
 		}
 		if title == nil && result[i].IMDBID != "" {
-			t, _ := s.titlesRepo.FindByExternalID(&result[i].IMDBID, nil, nil, nil, nil)
+			t, _ := s.titlesRepo.FindByExternalID(&result[i].IMDBID, nil, nil, nil, nil, nil)
 			if t != nil {
 				title = t
 			}
