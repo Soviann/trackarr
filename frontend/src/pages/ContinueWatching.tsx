@@ -11,6 +11,9 @@ function toTile(t: ContinueWatchingTitle): PosterTileItem {
   return {
     id: t.id,
     type: t.type,
+    is_anime: t.is_anime,
+    sonarr_id: t.sonarr_id,
+    radarr_id: t.radarr_id,
     cover_url: t.cover_url,
     name: t.name,
     sublabel: t.next_air_episode ?? '',

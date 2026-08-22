@@ -16,6 +16,7 @@ import (
 type ContinueWatchingItem struct {
 	ID              int64                 `json:"id"`
 	Type            string                `json:"type"`
+	IsAnime         bool                  `json:"is_anime"`
 	CoverURL        *string               `json:"cover_url"`
 	Name            string                `json:"name"`
 	NextAirEpisode  *string               `json:"next_air_episode"`
@@ -23,17 +24,22 @@ type ContinueWatchingItem struct {
 	TotalEpisodes   int                   `json:"total_episodes"`
 	LastWatchedAt   *string               `json:"last_watched_at"`
 	WatchProviders  []model.WatchProvider `json:"watch_providers,omitempty"`
+	SonarrID        *int64                `json:"sonarr_id,omitempty"`
+	RadarrID        *int64                `json:"radarr_id,omitempty"`
 }
 
 type UpcomingItem struct {
 	ID             int64                 `json:"id"`
 	Type           string                `json:"type"`
+	IsAnime        bool                  `json:"is_anime"`
 	CoverURL       *string               `json:"cover_url"`
 	Name           string                `json:"name"`
 	NextAirDate    string                `json:"next_air_date"`
 	NextAirEpisode *string               `json:"next_air_episode"`
 	Status         string                `json:"status"`
 	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
+	SonarrID       *int64                `json:"sonarr_id,omitempty"`
+	RadarrID       *int64                `json:"radarr_id,omitempty"`
 }
 
 // ArrQueueItem represents a title pending Radarr/Sonarr push.
@@ -523,13 +529,15 @@ func (r *TitleRepository) GetUsedCoversInBatch(filenames []string) (map[string]b
 // ordered by last_watched_at DESC. Display name priority: fr → en → (x-romaji → ja when anime) → any.
 func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error) {
 	query := `
-		SELECT t.id, t.type, t.cover_url,
+		SELECT t.id, t.type, t.is_anime, t.cover_url,
 		       COALESCE(` + displayNameExpr + `, '') AS name,
 		       t.next_air_episode,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 1) AS watched_episodes,
 		       (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) AS total_episodes,
 		       t.last_watched_at,
-		       t.watch_providers
+		       t.watch_providers,
+		       t.sonarr_id,
+		       t.radarr_id
 		FROM titles t
 		WHERE t.status = 'watching'
 		  AND EXISTS (SELECT 1 FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id AND e.watched = 0 AND ` + airedEpisode + `)
@@ -545,8 +553,9 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 	for rows.Next() {
 		var item ContinueWatchingItem
 		var watchProvidersRaw *string
-		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name, &item.NextAirEpisode,
-			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt, &watchProvidersRaw); err != nil {
+		if err := rows.Scan(&item.ID, &item.Type, &item.IsAnime, &item.CoverURL, &item.Name, &item.NextAirEpisode,
+			&item.WatchedEpisodes, &item.TotalEpisodes, &item.LastWatchedAt, &watchProvidersRaw,
+			&item.SonarrID, &item.RadarrID); err != nil {
 			return nil, fmt.Errorf("scan continue watching: %w", err)
 		}
 		item.WatchProviders = parseWatchProviders(watchProvidersRaw)
@@ -562,10 +571,12 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 // ordered by next_air_date ASC.
 func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	query := `
-		SELECT t.id, t.type, t.cover_url,
+		SELECT t.id, t.type, t.is_anime, t.cover_url,
 		       COALESCE(` + displayNameExpr + `, '') AS name,
 		       t.next_air_date, t.next_air_episode, t.status,
-		       t.watch_providers
+		       t.watch_providers,
+		       t.sonarr_id,
+		       t.radarr_id
 		FROM titles t
 		WHERE (t.status IN ('watching', 'plan_to_watch') OR (t.status = 'completed' AND t.series_status = 'returning'))
 		  AND t.next_air_date IS NOT NULL
@@ -582,8 +593,9 @@ func (r *TitleRepository) ListUpcoming(today string) ([]UpcomingItem, error) {
 	for rows.Next() {
 		var item UpcomingItem
 		var watchProvidersRaw *string
-		if err := rows.Scan(&item.ID, &item.Type, &item.CoverURL, &item.Name,
-			&item.NextAirDate, &item.NextAirEpisode, &item.Status, &watchProvidersRaw); err != nil {
+		if err := rows.Scan(&item.ID, &item.Type, &item.IsAnime, &item.CoverURL, &item.Name,
+			&item.NextAirDate, &item.NextAirEpisode, &item.Status, &watchProvidersRaw,
+			&item.SonarrID, &item.RadarrID); err != nil {
 			return nil, fmt.Errorf("scan upcoming: %w", err)
 		}
 		item.WatchProviders = parseWatchProviders(watchProvidersRaw)

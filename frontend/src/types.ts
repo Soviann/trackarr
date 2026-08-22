@@ -227,6 +227,7 @@ export interface StatsYear {
 export interface ContinueWatchingTitle {
   id: number
   type: TitleType
+  is_anime?: boolean
   cover_url: string | null
   name: string
   next_air_episode: string | null
@@ -234,6 +235,8 @@ export interface ContinueWatchingTitle {
   total_episodes: number
   last_watched_at: string | null
   watch_providers?: WatchProvider[]
+  sonarr_id?: number | null
+  radarr_id?: number | null
 }
 
 export type MatchEventKind = 'auto_confirmed' | 'season_attached'
@@ -250,12 +253,15 @@ export interface MatchEvent {
 export interface UpcomingTitle {
   id: number
   type: TitleType
+  is_anime?: boolean
   cover_url: string | null
   name: string
   next_air_date: string
   next_air_episode: string | null
   status: string
   watch_providers?: WatchProvider[]
+  sonarr_id?: number | null
+  radarr_id?: number | null
 }
 
 export interface SeasonAuditProposal {

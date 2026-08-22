@@ -1393,11 +1393,14 @@ func TestTitleRepo_WatchProvidersRoundTrip(t *testing.T) {
 
 func TestTitleRepo_ContinueWatching_IncludesProviders(t *testing.T) {
 	db := setupTestDB(t)
+	sonarrID := int64(42)
 	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
 		Year:        2016,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
 	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
 
 	// One season, one unwatched episode so the title qualifies for continue-watching.
@@ -1415,17 +1418,23 @@ func TestTitleRepo_ContinueWatching_IncludesProviders(t *testing.T) {
 	require.Len(t, items, 1)
 	require.Len(t, items[0].WatchProviders, 1)
 	assert.Equal(t, int64(119), items[0].WatchProviders[0].ID)
+	assert.True(t, items[0].IsAnime)
+	require.NotNil(t, items[0].SonarrID)
+	assert.Equal(t, int64(42), *items[0].SonarrID)
 }
 
 func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
 	db := setupTestDB(t)
 	nextAirDate := "2099-01-01"
+	sonarrID := int64(99)
 	id := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
 		Year:        2024,
 		Status:      model.TitleStatusWatching,
 		MatchStatus: model.MatchStatusConfirmed,
 		NextAirDate: &nextAirDate,
+		SonarrID:    &sonarrID,
 	}, []model.TitleName{{Name: "Upcoming Series", Language: "en", IsPrimary: true}})
 
 	providers := `[{"id":8,"name":"Netflix"}]`
@@ -1440,6 +1449,9 @@ func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
 	require.Len(t, items[0].WatchProviders, 1)
 	assert.Equal(t, int64(8), items[0].WatchProviders[0].ID)
 	assert.Equal(t, "Netflix", items[0].WatchProviders[0].Name)
+	assert.True(t, items[0].IsAnime)
+	require.NotNil(t, items[0].SonarrID)
+	assert.Equal(t, int64(99), *items[0].SonarrID)
 }
 
 func TestTitleRepository_List_FilterByOriginCountry(t *testing.T) {

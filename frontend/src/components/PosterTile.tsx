@@ -3,10 +3,14 @@ import type { TitleType } from '../types'
 import s from './PosterTile.module.css'
 import { CoverImage } from './CoverImage'
 import { PrimeBadge } from './PrimeBadge'
+import { TypeBadge } from './TypeBadge'
 
 export interface PosterTileItem {
   id: number
   type: TitleType
+  is_anime?: boolean
+  sonarr_id?: number | null
+  radarr_id?: number | null
   cover_url: string | null
   name: string
   sublabel: string
@@ -30,12 +34,11 @@ export function PosterTile({ item }: Props) {
       onKeyDown={e => e.key === 'Enter' && go()}
     >
       <div className={s.poster}>
-        <CoverImage coverUrl={item.cover_url} type={item.type} alt="" />
-        {item.onPrime && (
-          <span className={s.primeBadge}>
-            <PrimeBadge />
-          </span>
-        )}
+        <CoverImage coverUrl={item.cover_url} type={item.type} is_anime={item.is_anime} alt="" />
+        <div className={s.badges}>
+          <TypeBadge type={item.type} size="sm" radarrId={item.radarr_id} sonarrId={item.sonarr_id} />
+          {item.onPrime && <PrimeBadge />}
+        </div>
         {item.progressRatio !== undefined && (
           <div className={s.progressBar}>
             <div className={s.progressFill} style={{ width: `${item.progressRatio * 100}%` }} />
