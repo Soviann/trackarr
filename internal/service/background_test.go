@@ -757,3 +757,107 @@ func TestBackgroundService_SeriesRefresh_PrunesSurplusEpisodes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 40, totalMinutes)
 }
+
+func TestBackgroundService_RefreshTitle_SyncsNamesAndPurgesStaleTranslations(t *testing.T) {
+	tmdbID := int64(314554)
+	anilistID := int64(208044)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":        tmdbID,
+			"name":      "New English Title",
+			"overview":  "Overview",
+			"status":    "Returning Series",
+			"seasons":   []any{},
+			"genres":    []any{},
+			"credits":   map[string]any{"cast": []any{}},
+			"vote_avg":  6.0,
+			"run_times": []int{24},
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/tv/%d/translations", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"translations": []map[string]any{
+				{
+					"iso_639_1":  "en",
+					"iso_3166_1": "US",
+					"data":       map[string]any{"name": "New English Title"},
+				},
+				{
+					"iso_639_1":  "fr",
+					"iso_3166_1": "FR",
+					"data":       map[string]any{"name": "Nouvelle Traduction FR"},
+				},
+			},
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+	svc.SetAniList(&fakeAniListSeasonScoreClient{
+		detailsByID: map[int64]*matching.AniListDetails{
+			anilistID: {
+				ID:           anilistID,
+				EnglishTitle: "New English Title",
+				RomajiTitle:  "Rakudai Kenja Romaji",
+			},
+		},
+	})
+
+	// Initial state: old stale romaji saved as "fr", plus an old en title
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2026,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+		AniListID:   &anilistID,
+	}, []model.TitleName{
+		{Name: "Old English", Language: "en", IsPrimary: true},
+		{Name: "Old Stale Romaji In FR", Language: "fr", IsPrimary: false},
+	})
+
+	err := svc.RefreshByID(context.Background(), titleID)
+	require.NoError(t, err)
+
+	got, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, "New English Title", got.PrimaryName())
+
+	// Check title_names in DB
+	rows, err := db.Query(`SELECT name, language, is_primary FROM title_names WHERE title_id = ? ORDER BY language`, titleID)
+	require.NoError(t, err)
+	defer rows.Close()
+
+	namesByLang := make(map[string]model.TitleName)
+	for rows.Next() {
+		var n model.TitleName
+		require.NoError(t, rows.Scan(&n.Name, &n.Language, &n.IsPrimary))
+		namesByLang[n.Language] = n
+	}
+
+	assert.Len(t, namesByLang, 3, "should have en, fr, x-romaji and nothing else")
+
+	enName, ok := namesByLang["en"]
+	require.True(t, ok)
+	assert.Equal(t, "New English Title", enName.Name)
+	assert.True(t, enName.IsPrimary)
+
+	frName, ok := namesByLang["fr"]
+	require.True(t, ok)
+	assert.Equal(t, "Nouvelle Traduction FR", frName.Name)
+	assert.False(t, frName.IsPrimary)
+
+	romajiName, ok := namesByLang["x-romaji"]
+	require.True(t, ok)
+	assert.Equal(t, "Rakudai Kenja Romaji", romajiName.Name)
+	assert.False(t, romajiName.IsPrimary)
+}
+

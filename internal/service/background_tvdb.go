@@ -18,21 +18,22 @@ import (
 // TVDB ID cross-referencing from TMDB is handled in refreshMovieFromTMDB / refreshSeriesFromTMDB.
 // For titles with a TMDB ID, overview and genres are refreshed from TMDB; here only the cover is updated.
 // For titles without a TMDB ID, overview and genres are also persisted from TVDB.
-func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) map[string]string {
 	if title.TVDBID == nil {
-		return
+		return nil
 	}
 	tvdbID := *title.TVDBID
 
 	update := repository.TitleUpdate{}
+	var tvdbNames map[string]string
 	if title.Type == model.TitleTypeMovie {
 		details, err := s.tvdb.GetMovieDetails(ctx, tvdbID)
 		if err != nil {
 			log.Printf("background tvdb movie refresh %d: %v", title.ID, err)
-			return
+			return nil
 		}
 		result.Refreshed = true
-		s.syncTitleNames(ctx, title.ID, details.Names())
+		tvdbNames = details.Names()
 		if !s.hasValidCover(title) && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -61,10 +62,10 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		details, err := s.tvdb.GetSeriesDetails(ctx, tvdbID)
 		if err != nil {
 			log.Printf("background tvdb series refresh %d: %v", title.ID, err)
-			return
+			return nil
 		}
 		result.Refreshed = true
-		s.syncTitleNames(ctx, title.ID, details.Names())
+		tvdbNames = details.Names()
 		if title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
@@ -96,6 +97,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 			s.covers.ExtractAndStoreAccent(ctx, title.ID, *update.CoverURL)
 		}
 	}
+	return tvdbNames
 }
 
 // refreshSeriesFromTVDB syncs season and episode listings from TVDB.

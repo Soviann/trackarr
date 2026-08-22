@@ -13,20 +13,19 @@ import (
 	"github.com/nicolasvasse/plextracker/internal/service/matching"
 )
 
-func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+func (s *BackgroundService) refreshFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) map[string]string {
 	if title.Type == model.TitleTypeMovie {
-		s.refreshMovieFromTMDB(ctx, title, result)
-	} else {
-		s.refreshSeriesFromTMDB(ctx, title, result)
+		return s.refreshMovieFromTMDB(ctx, title, result)
 	}
+	return s.refreshSeriesFromTMDB(ctx, title, result)
 }
 
-func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) map[string]string {
 	details, err := s.tmdb.GetMovieDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
 		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
-		return
+		return nil
 	}
 	result.Refreshed = true
 
@@ -58,8 +57,9 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 	}
 	logTitleUpdate(title.ID, "movie metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
-	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "movie"); err == nil {
-		s.syncTitleNames(ctx, title.ID, tmdbNames)
+	var tmdbNames map[string]string
+	if names, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "movie"); err == nil {
+		tmdbNames = names
 	}
 
 	if genres != "" {
@@ -82,14 +82,16 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 		logTitleUpdate(title.ID, "movie tvdb backfill", s.updateTitle(ctx, title.ID, repository.TitleUpdate{TVDBID: &tvdbID}))
 		title.TVDBID = &tvdbID
 	}
+
+	return tmdbNames
 }
 
-func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) map[string]string {
 	details, err := s.tmdb.GetTVDetails(ctx, *title.TMDBID)
 	if err != nil {
 		result.Error = err
 		s.enqueueRefreshOnRetryable(ctx, title.ID, err)
-		return
+		return nil
 	}
 	result.Refreshed = true
 
@@ -156,8 +158,9 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 	}
 	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
-	if tmdbNames, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
-		s.syncTitleNames(ctx, title.ID, tmdbNames)
+	var tmdbNames map[string]string
+	if names, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
+		tmdbNames = names
 	}
 
 	if genres != "" {
@@ -204,7 +207,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 
 		for _, tmdbSeason := range details.Seasons {
 			if err := ctx.Err(); err != nil {
-				return
+				return tmdbNames
 			}
 			if tmdbSeason.SeasonNumber == 0 {
 				continue
@@ -318,4 +321,6 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 			_ = s.limiter.Wait(ctx)
 		}
 	}
+
+	return tmdbNames
 }

@@ -187,9 +187,11 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		TitleName: title.PrimaryName,
 	}
 
+	var tmdbNames, tvdbNames, aniListNames map[string]string
+
 	// Step 1: Refresh from TMDB if available
 	if s.tmdb != nil && title.TMDBID != nil {
-		s.refreshFromTMDB(ctx, title, &result)
+		tmdbNames = s.refreshFromTMDB(ctx, title, &result)
 	}
 
 	// Step 1b: AniList as the full metadata source when there's no TMDB — niche
@@ -201,7 +203,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 
 	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
 	if s.tvdb != nil {
-		s.refreshFromTVDB(ctx, title, &result)
+		tvdbNames = s.refreshFromTVDB(ctx, title, &result)
 	}
 
 	// Step 1d: AniList per-season community score (anime only). Each mapped
@@ -215,6 +217,24 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 	// Step 1e: AniList ID auto-backfill for anime titles missing an AniList link.
 	if s.anilist != nil && title.IsAnime && title.AniListID == nil {
 		s.backfillAniListID(ctx, title, &result)
+	}
+
+	// Step 1f: AniList names for anime (fetching romaji / english)
+	if s.anilist != nil && title.IsAnime && title.AniListID != nil && title.TMDBID != nil {
+		if details, err := s.anilist.GetAnimeDetails(ctx, *title.AniListID); err == nil && details != nil {
+			aniListNames = make(map[string]string)
+			if details.RomajiTitle != "" {
+				aniListNames["x-romaji"] = details.RomajiTitle
+			}
+			if details.EnglishTitle != "" {
+				aniListNames["en"] = details.EnglishTitle
+			}
+		}
+	}
+
+	// Step 1g: Reconcile and synchronize multilingual names
+	if tmdbNames != nil || tvdbNames != nil || aniListNames != nil {
+		s.syncTitleNames(ctx, title, &result, tmdbNames, tvdbNames, aniListNames)
 	}
 
 	// Step 2: Auto-reconcile status for series
@@ -298,27 +318,89 @@ func (s *BackgroundService) completeEpisodes(ctx context.Context, titleID int64)
 	}
 }
 
-// syncTitleNames backfills alternate-language names for a title from one or more
-// source maps (language -> name), inserting only entries not already stored.
-// Never deletes, so anime romaji and merged-season aliases survive a refresh.
-// Best-effort: failures are logged, not propagated.
-func (s *BackgroundService) syncTitleNames(ctx context.Context, titleID int64, sources ...map[string]string) {
-	var names []model.TitleName
-	for _, src := range sources {
-		for lang, name := range src {
-			if name == "" {
-				continue
-			}
-			names = append(names, model.TitleName{Name: name, Language: lang})
+// syncTitleNames reconciles multilingual names from TMDB, TVDB, and AniList,
+// replacing the title's stored names atomically in the database to eliminate
+// stale or duplicate translations while preserving canonical mappings.
+func (s *BackgroundService) syncTitleNames(
+	ctx context.Context,
+	title *repository.TitleLite,
+	result *RefreshResult,
+	tmdbNames, tvdbNames, aniListNames map[string]string,
+) {
+	merged := make(map[string]string)
+
+	// 1. AniList (x-romaji, fallback en)
+	for lang, name := range aniListNames {
+		if name != "" {
+			merged[lang] = name
 		}
 	}
+
+	// 2. TVDB (en, fr)
+	for lang, name := range tvdbNames {
+		if name != "" {
+			merged[lang] = name
+		}
+	}
+
+	// 3. TMDB (canonical en, fr)
+	for lang, name := range tmdbNames {
+		if name != "" {
+			merged[lang] = name
+		}
+	}
+
+	if len(merged) == 0 {
+		return
+	}
+
+	primaryName := merged["en"]
+	if primaryName == "" {
+		primaryName = title.PrimaryName
+	}
+	if primaryName == "" {
+		for _, name := range merged {
+			if name != "" {
+				primaryName = name
+				break
+			}
+		}
+	}
+
+	var names []model.TitleName
+	if primaryName != "" {
+		names = append(names, model.TitleName{
+			Name:      primaryName,
+			Language:  "en",
+			IsPrimary: true,
+		})
+	}
+
+	for lang, name := range merged {
+		if lang == "en" || name == "" {
+			continue
+		}
+		names = append(names, model.TitleName{
+			Name:      name,
+			Language:  lang,
+			IsPrimary: false,
+		})
+	}
+
 	if len(names) == 0 {
 		return
 	}
+
 	if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).AddMissingNames(ctx, titleID, names)
+		return repository.NewTitleWriter(tx).ReplaceNames(ctx, title.ID, names)
 	}); err != nil {
-		log.Printf("background: backfill names for title %d: %v", titleID, err)
+		log.Printf("background: sync names for title %d: %v", title.ID, err)
+		return
+	}
+
+	if primaryName != "" {
+		title.PrimaryName = primaryName
+		result.TitleName = primaryName
 	}
 }
 
