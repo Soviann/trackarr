@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks'
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
 import { apiFetch } from '../api'
@@ -39,6 +39,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export function Releases(_props: { path?: string }) {
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'series'>('all')
+  const [yearFilter, setYearFilter] = useState<string>('all')
   const [releases, setReleases] = useState<ProwlarrRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -68,6 +69,32 @@ export function Releases(_props: { path?: string }) {
   useEffect(() => {
     fetchReleases(false)
   }, [fetchReleases])
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    for (const r of releases) {
+      if (r.year && r.year > 0) {
+        years.add(r.year)
+      }
+    }
+    return Array.from(years).sort((a, b) => b - a)
+  }, [releases])
+
+  const filteredReleases = useMemo(() => {
+    return releases.filter(rel => {
+      if (yearFilter === 'all') return true
+      if (yearFilter.startsWith('gte_')) {
+        const minYear = parseInt(yearFilter.replace('gte_', ''), 10)
+        return rel.year >= minYear
+      }
+      if (yearFilter.startsWith('lt_')) {
+        const maxYear = parseInt(yearFilter.replace('lt_', ''), 10)
+        return rel.year > 0 && rel.year < maxYear
+      }
+      const targetYear = parseInt(yearFilter, 10)
+      return rel.year === targetYear
+    })
+  }, [releases, yearFilter])
 
   const handleAdd = async (rel: ProwlarrRelease) => {
     if (addingGuid) return
@@ -137,18 +164,57 @@ export function Releases(_props: { path?: string }) {
           </button>
         </div>
 
-        {/* Filter Tabs */}
-        <div className={s.tabs}>
-          {(['all', 'movie', 'series'] as const).map(tab => (
-            <button
-              key={tab}
-              type="button"
-              className={clsx(s.tab, filterType === tab && s.tabActive)}
-              onClick={() => setFilterType(tab)}
+        {/* Filter Row: Type Tabs + Year Selector */}
+        <div className={s.filterRow}>
+          <div className={s.tabs}>
+            {(['all', 'movie', 'series'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                className={clsx(s.tab, filterType === tab && s.tabActive)}
+                onClick={() => setFilterType(tab)}
+              >
+                {tab === 'all' ? 'Tous' : tab === 'movie' ? 'Films' : 'Séries'}
+              </button>
+            ))}
+          </div>
+
+          <div className={s.yearFilter}>
+            <select
+              className={clsx(s.yearSelect, yearFilter !== 'all' && s.yearSelectActive)}
+              value={yearFilter}
+              onChange={e => setYearFilter((e.target as HTMLSelectElement).value)}
+              aria-label="Filtrer par année"
             >
-              {tab === 'all' ? 'Tous' : tab === 'movie' ? 'Films' : 'Séries'}
-            </button>
-          ))}
+              <option value="all">Toutes années</option>
+              <optgroup label="Périodes récentes">
+                <option value="gte_2025">≥ 2025 (Récent)</option>
+                <option value="gte_2024">≥ 2024</option>
+                <option value="gte_2020">≥ 2020</option>
+                <option value="lt_2020">&lt; 2020 (Classiques)</option>
+              </optgroup>
+              {availableYears.length > 0 && (
+                <optgroup label="Année exacte">
+                  {availableYears.map(yr => (
+                    <option key={yr} value={String(yr)}>
+                      {yr}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            {yearFilter !== 'all' && (
+              <button
+                type="button"
+                className={s.resetYearBtn}
+                onClick={() => setYearFilter('all')}
+                title="Réinitialiser l'année"
+                aria-label="Réinitialiser le filtre d'année"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Error */}
@@ -164,9 +230,9 @@ export function Releases(_props: { path?: string }) {
         )}
 
         {/* List */}
-        {!loading && releases.length > 0 && (
+        {!loading && filteredReleases.length > 0 && (
           <div className={s.list}>
-            {releases.map(rel => {
+            {filteredReleases.map(rel => {
               const existingId = rel.existing_title_id ?? addedMap[rel.guid]
               const existingStatus = rel.existing_status ?? (addedMap[rel.guid] ? 'plan_to_watch' : undefined)
               const coverUrl = getCoverUrl(rel.poster_url)
@@ -250,6 +316,19 @@ export function Releases(_props: { path?: string }) {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {!loading && releases.length > 0 && filteredReleases.length === 0 && !error && (
+          <div className={s.emptyState}>
+            <p>Aucune release trouvée pour l'année sélectionnée.</p>
+            <button
+              type="button"
+              className={s.resetBtn}
+              onClick={() => setYearFilter('all')}
+            >
+              Réinitialiser le filtre d'année
+            </button>
           </div>
         )}
 
