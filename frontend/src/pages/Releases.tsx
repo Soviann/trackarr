@@ -12,6 +12,7 @@ import { TypeBadge } from '../components/TypeBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { ReleaseDetailSheet } from '../components/ReleaseDetailSheet'
 import s from './Releases.module.css'
 
 function formatBytes(bytes: number): string {
@@ -41,6 +42,7 @@ export function Releases(_props: { path?: string }) {
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'series'>('all')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [releases, setReleases] = useState<ProwlarrRelease[]>([])
+  const [selectedRelease, setSelectedRelease] = useState<ProwlarrRelease | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -238,14 +240,15 @@ export function Releases(_props: { path?: string }) {
               const coverUrl = getCoverUrl(rel.poster_url)
 
               return (
-                <div key={rel.guid} className={s.card}>
+                <div
+                  key={rel.guid}
+                  className={s.card}
+                  onClick={() => setSelectedRelease(rel)}
+                >
                   {/* Poster */}
                   <div
                     className={s.coverWrap}
                     style={{ background: coverBackground(coverUrl, rel.type) }}
-                    onClick={() => {
-                      if (existingId) route(routeTo.title(existingId))
-                    }}
                   >
                     {coverUrl ? (
                       <div
@@ -285,7 +288,10 @@ export function Releases(_props: { path?: string }) {
                       <button
                         type="button"
                         className={s.viewBtn}
-                        onClick={() => route(routeTo.title(existingId))}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          route(routeTo.title(existingId))
+                        }}
                       >
                         Voir
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -296,7 +302,10 @@ export function Releases(_props: { path?: string }) {
                       <button
                         type="button"
                         className={s.addBtn}
-                        onClick={() => handleAdd(rel)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAdd(rel)
+                        }}
                         disabled={addingGuid === rel.guid}
                       >
                         {addingGuid === rel.guid ? (
@@ -337,6 +346,16 @@ export function Releases(_props: { path?: string }) {
             <p>Aucune release disponible pour le moment.</p>
           </div>
         )}
+
+        {/* Release Detail BottomSheet */}
+        <ReleaseDetailSheet
+          release={selectedRelease}
+          onClose={() => setSelectedRelease(null)}
+          onAdd={handleAdd}
+          adding={addingGuid === selectedRelease?.guid}
+          existingTitleId={selectedRelease ? (selectedRelease.existing_title_id ?? addedMap[selectedRelease.guid]) : undefined}
+          existingStatus={selectedRelease ? (selectedRelease.existing_status ?? (addedMap[selectedRelease.guid] ? 'plan_to_watch' : undefined)) : undefined}
+        />
       </div>
     </PullToRefresh>
   )

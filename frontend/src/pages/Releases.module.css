@@ -158,11 +158,17 @@
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  transition: border-color 0.15s ease;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .card:hover {
   border-color: var(--border-strong);
+  background: var(--bg-elev2);
+}
+
+.card:active {
+  transform: scale(0.99);
 }
 
 .coverWrap {

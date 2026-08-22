@@ -161,6 +161,7 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | `MatchReviewCard` | `components/MatchReviewCard.tsx` | Review card with external ID chips, confirm, and fix actions |
 | `RatingPrompt`| `components/RatingPrompt.tsx` | 10-star rating popup with AniList / IMDb shortcuts |
 | `EditSheet` | `components/EditSheet.tsx` | Quick edit for status, type, and display title |
+| `ReleaseDetailSheet` | `components/ReleaseDetailSheet.tsx` | Slide-up modal sheet displaying torrent metadata, scene release name, external links and 1-click addition button |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |
