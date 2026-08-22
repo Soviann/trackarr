@@ -24,12 +24,15 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - **Rule**: Post-commit side effects (e.g. backfilling, push notifications, webhooks, queue dispatching) must be returned to the caller and executed **after** `WithTxContext` finishes and commits.
 
 ## Tables & Primary Schema Entities
-- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`), `status` (`watching`/`completed`/`dropped`/`plan_to_watch`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`.
-- `title_names`: Multilingual and alternative aliases. PK: `(title_id, name)`.
-- `seasons`: Seasons of a series. Columns: `id`, `title_id`, `season_number`, `episode_count`, `watched_count`, `air_date`.
-- `season_external_ids`: Per-part external IDs (split-cour anime). PK: `(season_id, provider, external_id)`.
-- `episodes`: Episodes per season. Columns: `id`, `season_id`, `episode_number`, `name`, `overview`, `air_date`, `runtime`, `watched`, `last_watched_at`.
-- `watch_events`: Granular scrobble history log. Columns: `id`, `title_id`, `episode_id`, `source` (`jellyfin`/`manual`/`simkl`), `watched_at`.
-- `task_queue`: Asynchronous background jobs. Columns: `id`, `type`, `payload`, `status` (`pending`/`running`/`completed`/`failed`/`dead`), `attempts`, `run_at`, `dedup_key`.
-- `match_events`: Audit log for automated actions. Columns: `id`, `title_id`, `kind` (`auto_confirmed`, `season_attached`), `detail`, `created_at`.
-- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `anilist_token_invalid`, etc.).
+- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `plex_rating_key`, `radarr_id`, `sonarr_id`, `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`.
+- `title_names`: Multilingual and alternative aliases. Columns: `id`, `title_id`, `name`, `language`, `is_primary`, `created_at`.
+- `title_genres`: Associated genres per title. Columns: `title_id`, `genre`.
+- `seasons`: Seasons of a series. Columns: `id`, `title_id`, `season`, `name`, `overview`, `cover_url`, `episode_count`, `watched_count`, `air_date`, `anilist_score`, `first_watched_at`, `last_watched_at`.
+- `season_external_ids`: Per-part external IDs (split-cour anime). Columns: `id`, `season_id`, `provider`, `external_id`, `position`, `created_at`.
+- `episodes`: Episodes per season. Columns: `id`, `season_id`, `episode`, `name`, `overview`, `air_date`, `runtime`, `watched`, `first_watched_at`, `last_watched_at`.
+- `watch_events`: Granular scrobble history log. Columns: `id`, `title_id`, `episode_id`, `source` (`jellyfin`/`manual`/`simkl`/`legacy_backfill`), `created_at`.
+- `task_queue`: Asynchronous background jobs. Columns: `id`, `task_type`, `payload`, `status` (`pending`/`running`/`completed`/`failed`/`dead`), `attempts`, `max_attempts`, `run_at`, `created_at`, `updated_at`, `last_error`, `dedup_key`.
+- `match_events`: Audit log for automated actions. Columns: `id`, `title_id`, `event_type` (`auto_confirmed`, `season_attached`), `detail`, `created_at`.
+- `dismissed_season_proposals`: Discarded duplicate merge proposals. Columns: `source_title_id`, `target_title_id`, `created_at`.
+- `push_subscriptions`: Web Push subscriber credentials. Columns: `id`, `endpoint`, `p256dh`, `auth`, `created_at`.
+- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `anilist_token_invalid`, notification preferences, etc.). Columns: `key`, `value`, `updated_at`.

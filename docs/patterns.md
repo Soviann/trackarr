@@ -87,14 +87,21 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | Method | Path | Handler | Description |
 |---|---|---|---|
 | GET | `/api/health` | `handler.Health` | Health check endpoint |
-| GET | `/api/config` | `handler.PublicConfig` | Pre-auth public configuration |
+| GET | `/api/config` | `handler.PublicConfig` | Pre-auth public configuration (Google Client ID, VAPID, Debug login) |
 | POST | `/api/auth/google` | `handler.GoogleCallback` | OAuth Google authentication |
 | POST | `/api/auth/dev` | `handler.DevLogin` | Local dev password login (debug only) |
 | POST | `/api/auth/logout` | `handler.Logout` | Clear JWT auth cookie |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
-| GET | `/api/covers/{filename}` | `handler.ServeCover` | Serve cached cover image |
-| GET | `/api/titles` | `titles.List` | Paginated library list with filters |
+| GET | `/api/covers/{filename}` | `covers.Serve` | Serve cached cover image |
+| GET | `/covers/{filename}` | `covers.Serve` | Legacy top-level cover route without `/api` prefix |
+| GET | `/api/titles` | `titles.List` | Paginated library list with filters and search |
 | POST | `/api/titles` | `titles.Create` | Manually create a new title |
+| GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed titles |
+| GET | `/api/titles/resolve` | `titles.Resolve` | Preview external metadata before creating a title |
+| GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list |
+| GET | `/api/titles/upcoming` | `library.Upcoming` | Upcoming titles grid list |
+| POST | `/api/titles/batch-delete` | `titles.BatchDelete` | Delete multiple titles |
+| POST | `/api/titles/batch-status` | `titles.BatchStatus` | Bulk update title statuses |
 | GET | `/api/titles/{id}` | `titles.GetByID` | Detailed title payload |
 | PATCH | `/api/titles/{id}` | `titles.Update` | Update status, rating, or metadata |
 | DELETE | `/api/titles/{id}` | `titles.Delete` | Delete title and cascade associations |
@@ -102,33 +109,44 @@ High-density, token-optimized file map for LLM agents. Look up file paths, symbo
 | PUT | `/api/titles/{id}/external-ids` | `titles.SetExternalIDs` | Explicitly overwrite external IDs |
 | POST | `/api/titles/{id}/merge` | `titles.Merge` | Merge source title into target |
 | POST | `/api/titles/{id}/refresh` | `titles.RefreshOne` | Force immediate metadata refresh |
-| GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list |
-| GET | `/api/titles/upcoming` | `library.Upcoming` | Upcoming titles grid list |
-| GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed |
+| GET | `/api/titles/{id}/history` | `history.Get` | Detailed watch event history for title |
+| GET | `/api/tmdb/search` | `tmdbSearch.Search` | Search TMDB for movie or TV titles |
 | GET | `/api/releases` | `releasesHandler.List` | Latest C411/Prowlarr releases with posters & local match |
 | POST | `/api/releases/add` | `releasesHandler.Add` | Direct 1-click title creation from release |
-| POST | `/api/titles/batch-delete` | `titles.BatchDelete` | Delete multiple titles |
-| POST | `/api/titles/batch-status` | `titles.BatchStatus` | Bulk update title statuses |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched |
 | POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season |
-| DELETE| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{extID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
+| DELETE| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
+| POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
+| DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |
 | GET | `/api/stats` | `stats.Get` | Library metrics & insight cards |
 | GET | `/api/stats/activity` | `activity.List` | Paginated watch history feed |
 | GET | `/api/match-events` | `matchEvents.List` | Audit trail of auto-matches |
 | GET | `/api/genres` | `genres.List` | List genres with counts |
 | GET | `/api/countries` | `titles.Countries` | List origin countries with counts |
-| GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
-| PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
-| GET | `/api/arr/queue` | `arr.ListArrQueue` | Active Radarr/Sonarr download queue |
-| POST | `/api/arr/queue/{id}/push` | `arr.PushToArr` | Send title to Radarr / Sonarr |
+| GET | `/api/settings` | `settings.Get` | User and app settings |
+| GET | `/api/anilist/auth` | `anilistAuth.Authorize` | Generate AniList OAuth authorize URL |
+| POST | `/api/anilist/token` | `anilistAuth.SaveToken` | Save AniList OAuth access token |
+| DELETE | `/api/anilist/token` | `anilistAuth.Disconnect` | Disconnect AniList integration |
+| GET | `/api/admin/counts` | `admin.Counts` | Library and queue totals for admin navbar badge |
 | GET | `/api/admin/tasks` | `admin.ListTasks` | Task queue inspection |
 | POST | `/api/admin/tasks/{id}/retry` | `admin.RetryTask` | Retry failed task |
+| DELETE | `/api/admin/tasks/{id}` | `admin.DeleteTask` | Delete individual task |
+| POST | `/api/admin/tasks/batch-delete` | `admin.DeleteTasksBatch` | Bulk delete tasks |
+| GET | `/api/admin/notifications` | `admin.GetNotificationPrefs` | Web Push notification preferences |
+| PUT | `/api/admin/notifications` | `admin.UpdateNotificationPrefs` | Update Web Push notification preferences |
+| GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
+| PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
+| POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh |
 | GET | `/api/admin/season-audit` | `seasonAudit.List` | Suggested multi-season merges |
 | POST | `/api/admin/season-audit/accept` | `seasonAudit.Accept` | Execute suggested merge |
 | POST | `/api/admin/season-audit/dismiss` | `seasonAudit.Dismiss` | Dismiss suggested merge |
-| POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh |
+| GET | `/api/arr/{app}/rootfolder` | `arr.ProxyRootFolder` | Proxy root folder options from Radarr/Sonarr |
+| GET | `/api/arr/{app}/qualityprofile` | `arr.ProxyQualityProfile` | Proxy quality profile options from Radarr/Sonarr |
+| GET | `/api/arr/queue` | `arr.ListArrQueue` | Unmonitored titles pending push to Radarr / Sonarr |
+| POST | `/api/arr/queue/{id}/push` | `arr.PushToArr` | Send title to Radarr / Sonarr |
+| POST | `/api/client-errors` | `clientErrors.Handle` | Client-side error reporting |
 
 ---
 

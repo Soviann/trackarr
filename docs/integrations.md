@@ -92,10 +92,10 @@ Depuis la fiche d'un titre ([TitleDetail](interface.md#2-détail-dun-titre)) :
 3. Valider pour envoyer le titre en tâche de fond (`TaskTypeRadarrPush` / `TaskTypeSonarrPush`).
 4. Une fois envoyé, l'identifiant Radarr/Sonarr est enregistré et les badges de statut s'affichent automatiquement.
 
-### Suivi en temps réel (`/admin/arr/queue`)
+### File d'attente d'envoi Arr (`/admin/arr/queue`)
 
-La vue de file d'attente centralise tous les téléchargements actifs :
-- Barre de progression en temps réel (pourcentage et mégaoctets téléchargés).
-- Temps restant estimé.
-- Protocole utilisé (Usenet vs BitTorrent).
-- Liens directs vers les fiches PlexTracker correspondantes.
+La vue de file d'attente centralise les titres de la bibliothèque non encore envoyés ou surveillés dans vos instances Arr :
+- Liste paginée des films et séries non surveillés (`arr_ignored = 0` et absence de `radarr_id` / `sonarr_id`).
+- Sélection directe du dossier racine et du profil de qualité pour chaque élément.
+- Envoi en 1 clic vers Radarr ou Sonarr (`POST /api/arr/queue/{id}/push`).
+- Option d'ignorer un titre pour le retirer de la file d'attente.

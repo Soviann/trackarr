@@ -57,5 +57,5 @@ After ID resolution:
   - **Origin Country**: TMDB `origin_country` (ISO-3166-1 alpha-2) or AniList `countryOfOrigin`.
 
 ## Key Invariants
-- **`year` and `release_date`**: Populated **strictly during enrichment** (`buildEnrichmentUpdate` in `taskqueue.go`), **NEVER** modified during routine refresh (`BackgroundService.refreshTitle`). If a title has `year=0`, trigger a rematch (`POST /api/titles/{id}/rematch`).
+- **`year` and `release_date`**: Populated **strictly during enrichment** (`buildEnrichmentUpdate` in `task_enrichment.go`), **NEVER** modified during routine refresh (`BackgroundService.refreshTitle`). If a title has `year=0`, trigger a rematch (`POST /api/titles/{id}/rematch`).
 - **Seasons creation**: Seasons are created only by refresh (`TaskTypeRefresh` via TMDB) or first watched episode scrobble (`SeasonWriter.GetOrCreate`), never during initial enrichment payload generation.
