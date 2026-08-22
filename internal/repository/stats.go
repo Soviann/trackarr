@@ -153,14 +153,19 @@ func (r *StatsRepository) MinutesSince(ctx context.Context, since time.Time) (in
 func (r *StatsRepository) overview(ctx context.Context) (*model.StatsOverview, error) {
 	o := &model.StatsOverview{}
 
+	var completed int
+	var avgRating sql.NullFloat64
+
 	err := r.db.QueryRowContext(ctx, `
 		SELECT
 			COUNT(*),
 			COALESCE(SUM(CASE WHEN type = 'movie' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'series' THEN 1 ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN is_anime = 1 THEN 1 ELSE 0 END), 0)
+			COALESCE(SUM(CASE WHEN is_anime = 1 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0),
+			AVG(my_rating)
 		FROM titles
-	`).Scan(&o.TotalTitles, &o.TotalMovies, &o.TotalSeries, &o.TotalAnime)
+	`).Scan(&o.TotalTitles, &o.TotalMovies, &o.TotalSeries, &o.TotalAnime, &completed, &avgRating)
 	if err != nil {
 		return nil, fmt.Errorf("count titles: %w", err)
 	}
@@ -171,19 +176,9 @@ func (r *StatsRepository) overview(ctx context.Context) (*model.StatsOverview, e
 	}
 
 	if o.TotalTitles > 0 {
-		var completed int
-		err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM titles WHERE status = 'completed'`).Scan(&completed)
-		if err != nil {
-			return nil, fmt.Errorf("count completed: %w", err)
-		}
 		o.CompletionRate = math.Round(float64(completed)/float64(o.TotalTitles)*100) / 100
 	}
 
-	var avgRating sql.NullFloat64
-	err = r.db.QueryRowContext(ctx, `SELECT AVG(my_rating) FROM titles WHERE my_rating IS NOT NULL`).Scan(&avgRating)
-	if err != nil {
-		return nil, fmt.Errorf("avg rating: %w", err)
-	}
 	if avgRating.Valid {
 		o.AverageRating = math.Round(avgRating.Float64*10) / 10
 	}
@@ -604,15 +599,6 @@ func (r *StatsRepository) TotalWatchMinutes(ctx context.Context) (int, error) {
 // TopGenres returns the top N genres by title count.
 // Returns an empty slice gracefully if the title_genres table does not exist (soft dependency on search-filter plan).
 func (r *StatsRepository) TopGenres(ctx context.Context, limit int) ([]GenreStat, error) {
-	// Check table exists to handle soft dependency gracefully
-	var tableExists int
-	_ = r.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='title_genres'
-	`).Scan(&tableExists)
-	if tableExists == 0 {
-		return []GenreStat{}, nil
-	}
-
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT genre, COUNT(*) AS count
 		FROM title_genres
