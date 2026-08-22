@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import { useApi } from '../hooks/useApi'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { haptic, HAPTIC_SHORT } from '../utils/haptic'
 import { formatWatchtimeShort, getCoverUrl } from '../utils'
 import type { Title, ContinueWatchingTitle, UpcomingTitle, StatsResponse } from '../types'
@@ -74,8 +75,6 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
     </div>
   )
 }
-
-import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 export function Library(_props: { path?: string }) {
   const titles = useTitleStore(s => s.titles)
