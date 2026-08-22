@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nicolasvasse/plextracker/internal/config"
 	"github.com/nicolasvasse/plextracker/internal/model"
@@ -25,6 +26,7 @@ type ArrService struct {
 
 func NewArrService(cfg *config.Config, settings *repository.SettingRepository, writeDB *sql.DB) *ArrService {
 	client := &http.Client{
+		Timeout: 15 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects")

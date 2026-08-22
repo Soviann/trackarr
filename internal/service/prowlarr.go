@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2"
 	"github.com/nicolasvasse/plextracker/internal/config"
 	"github.com/nicolasvasse/plextracker/internal/model"
 	"github.com/nicolasvasse/plextracker/internal/repository"
@@ -75,10 +76,11 @@ type ProwlarrService struct {
 	cacheTTL    time.Duration
 	mu          sync.RWMutex
 	cache       map[string]prowlarrCacheEntry
-	posterCache sync.Map // map[string]string (key: "movie:123" / "tv:456" -> posterURL)
+	posterCache *lru.Cache[string, string]
 }
 
 func NewProwlarrService(cfg *config.Config, settings *repository.SettingRepository, titlesRepo *repository.TitleRepository, tmdbClient *matching.TMDBClient) *ProwlarrService {
+	posterCache, _ := lru.New[string, string](1000)
 	return &ProwlarrService{
 		cfg:        cfg,
 		settings:   settings,
@@ -87,8 +89,9 @@ func NewProwlarrService(cfg *config.Config, settings *repository.SettingReposito
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
-		cacheTTL: 10 * time.Minute,
-		cache:    make(map[string]prowlarrCacheEntry),
+		cacheTTL:    10 * time.Minute,
+		cache:       make(map[string]prowlarrCacheEntry),
+		posterCache: posterCache,
 	}
 }
 
@@ -281,7 +284,7 @@ func (s *ProwlarrService) enrichPosters(ctx context.Context, releases []Prowlarr
 	for _, r := range releases {
 		if r.TMDBID > 0 {
 			cacheKey := fmt.Sprintf("%s:%d", r.Type, r.TMDBID)
-			if _, ok := s.posterCache.Load(cacheKey); !ok {
+			if s.posterCache == nil || !s.posterCache.Contains(cacheKey) {
 				needed[lookupKey{tmdbID: r.TMDBID, relType: r.Type}] = true
 			}
 		}
@@ -316,7 +319,9 @@ func (s *ProwlarrService) enrichPosters(ctx context.Context, releases []Prowlarr
 
 				if posterPath != nil && *posterPath != "" {
 					fullURL := "https://image.tmdb.org/t/p/w500" + *posterPath
-					s.posterCache.Store(cacheKey, fullURL)
+					if s.posterCache != nil {
+						s.posterCache.Add(cacheKey, fullURL)
+					}
 				}
 			}(k)
 		}
@@ -327,8 +332,10 @@ func (s *ProwlarrService) enrichPosters(ctx context.Context, releases []Prowlarr
 	for i := range releases {
 		if releases[i].TMDBID > 0 {
 			cacheKey := fmt.Sprintf("%s:%d", releases[i].Type, releases[i].TMDBID)
-			if val, ok := s.posterCache.Load(cacheKey); ok {
-				releases[i].PosterURL = val.(string)
+			if s.posterCache != nil {
+				if val, ok := s.posterCache.Get(cacheKey); ok {
+					releases[i].PosterURL = val
+				}
 			}
 		}
 	}

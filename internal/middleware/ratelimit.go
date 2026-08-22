@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -17,6 +18,16 @@ type rateLimiter struct {
 	attempts *lru.Cache[string, []time.Time]
 	max      int
 	window   time.Duration
+}
+
+// clientIP extracts the host portion from RemoteAddr (host:port). If parsing fails,
+// it falls back to the original string.
+func clientIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
 }
 
 // RateLimit restricts requests per IP to max within the given window.
@@ -45,7 +56,7 @@ func RateLimit(ctx context.Context, max int, window time.Duration) func(http.Han
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !rl.allow(r.RemoteAddr) {
+			if !rl.allow(clientIP(r.RemoteAddr)) {
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 				return
 			}

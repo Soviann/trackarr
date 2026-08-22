@@ -58,11 +58,7 @@ func (h *WebhookHandler) HandleJellyfin(w http.ResponseWriter, r *http.Request) 
 		if h.jellyfinSecret == "" && h.fallbackSecret == "" {
 			log.Printf("jellyfin webhook: rejected request from %s — JELLYFIN_WEBHOOK_SECRET is not configured", r.RemoteAddr)
 		} else {
-			prefix := token
-			if len(prefix) > 4 {
-				prefix = prefix[:4] + "..."
-			}
-			log.Printf("jellyfin webhook: rejected unauthorized request from %s — secret token mismatch (received len=%d '%s', expected len=%d)", r.RemoteAddr, len(token), prefix, len(h.jellyfinSecret))
+			log.Printf("jellyfin webhook: rejected unauthorized request from %s — secret token mismatch", r.RemoteAddr)
 		}
 		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
 	}
