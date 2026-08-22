@@ -1476,3 +1476,62 @@ func TestTaskQueueWorker_RadarrPush(t *testing.T) {
 	require.NotNil(t, m2.RadarrID)
 	assert.Equal(t, int64(99), *m2.RadarrID)
 }
+
+func TestTaskQueueWorker_NilCoversSafe(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	tasks := repository.NewTaskRepository(db)
+	titles := repository.NewTitleRepository(db)
+	settings := repository.NewSettingRepository(db)
+	titleSvc := service.NewTitleService(db, titles, tasks, nil)
+
+	tmdbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/movie/123") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":123,"title":"Movie","poster_path":"/poster.jpg"}`))
+			return
+		}
+		if strings.Contains(r.URL.Path, "/poster.jpg") {
+			w.Header().Set("Content-Type", "image/jpeg")
+			_, _ = w.Write([]byte("fake-image-bytes"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer tmdbServer.Close()
+
+	dataDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dataDir, "covers"), 0755))
+
+	tmdb := matching.NewTMDBClient("fake-key")
+	tmdb.SetBaseURL(tmdbServer.URL)
+	worker := service.NewTaskQueueWorker(
+		tasks, titles, nil, tmdb, nil,
+		service.NewNoopNotifier(), settings, dataDir, titleSvc, db,
+	)
+
+	tmdb123 := int64(123)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdb123,
+	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+
+	payload, _ := json.Marshal(service.RefreshPayload{TitleID: titleID})
+	testutil.EnqueueTask(t, db, model.TaskTypeRefresh, string(payload), nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+
+	// Must not panic when w.covers == nil
+	require.NotPanics(t, func() {
+		worker.ProcessTask(context.Background(), queued[0])
+	})
+
+	t1, err := titles.GetByID(titleID)
+	require.NoError(t, err)
+	assert.NotNil(t, t1.CoverURL)
+}
+

@@ -29,7 +29,7 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 	}
 	result.Refreshed = true
 
-	if !s.hasValidCover(title) && details.PosterPath != nil {
+	if s.covers != nil && !s.hasValidCover(title) && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "movie cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))
@@ -117,7 +117,7 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		}
 	}
 
-	if !s.hasValidCover(title) && details.PosterPath != nil {
+	if s.covers != nil && !s.hasValidCover(title) && details.PosterPath != nil {
 		coverPath, err := s.tmdb.DownloadCover(ctx, *details.PosterPath, s.covers.Dir())
 		if err == nil {
 			logTitleUpdate(title.ID, "series cover", s.updateTitle(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath}))

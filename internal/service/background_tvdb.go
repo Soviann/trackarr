@@ -34,7 +34,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		}
 		result.Refreshed = true
 		tvdbNames = details.Names()
-		if !s.hasValidCover(title) && details.Image != "" {
+		if s.covers != nil && !s.hasValidCover(title) && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
@@ -66,7 +66,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 		}
 		result.Refreshed = true
 		tvdbNames = details.Names()
-		if title.CoverURL == nil && details.Image != "" {
+		if s.covers != nil && title.CoverURL == nil && details.Image != "" {
 			if filename, err := s.tvdb.DownloadCover(ctx, details.Image, tvdbID, s.covers.Dir()); err == nil {
 				update.CoverURL = &filename
 			}
@@ -93,7 +93,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 	}
 	if update.CoverURL != nil || update.Overview != nil {
 		logTitleUpdate(title.ID, "tvdb refresh", s.updateTitle(ctx, title.ID, update))
-		if update.CoverURL != nil {
+		if update.CoverURL != nil && s.covers != nil {
 			s.covers.ExtractAndStoreAccent(ctx, title.ID, *update.CoverURL)
 		}
 	}

@@ -41,7 +41,9 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, lo
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 					})
-					w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+					if w.covers != nil {
+						w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+					}
 					title.CoverURL = &coverPath
 				}
 			}
@@ -56,7 +58,9 @@ func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, lo
 					_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 						return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 					})
-					w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+					if w.covers != nil {
+						w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+					}
 					title.CoverURL = &coverPath
 				}
 			}
@@ -104,7 +108,9 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task,
 			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 			})
-			w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
+			if w.covers != nil {
+				w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
+			}
 			return nil
 		}
 	}
@@ -122,7 +128,9 @@ func (w *TaskQueueWorker) handleCoverFetch(ctx context.Context, task model.Task,
 			_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 				return repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, repository.TitleUpdate{CoverURL: &coverPath})
 			})
-			w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
+			if w.covers != nil {
+				w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, coverPath)
+			}
 		}
 	}
 
@@ -147,7 +155,9 @@ func (w *TaskQueueWorker) downloadAniListCover(ctx context.Context, title *model
 	_ = database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		return repository.NewTitleWriter(tx).Update(ctx, title.ID, repository.TitleUpdate{CoverURL: &coverPath})
 	})
-	w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+	if w.covers != nil {
+		w.covers.ExtractAndStoreAccent(ctx, title.ID, coverPath)
+	}
 	title.CoverURL = &coverPath
 }
 

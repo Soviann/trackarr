@@ -81,7 +81,7 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 		return err
 	}
 
-	if result.CoverFile != "" {
+	if result.CoverFile != "" && w.covers != nil {
 		w.covers.ExtractAndStoreAccent(ctx, payload.TitleID, result.CoverFile)
 	}
 
