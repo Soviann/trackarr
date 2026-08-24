@@ -1,0 +1,28 @@
+// Vault palette — mirrors tokens.css. Prefer CSS variables; this file is
+// for components that need colors as JS values (inline SVG strokes, Navbar,
+// occasional inline styles).
+export const colors = {
+  bg: '#1a1714',
+  bgElev: '#25201a',
+  bgElev2: '#312a22',
+
+  ink: '#ebe5d9',
+  inkDim: '#a09484',
+  inkMute: '#6a5e50',
+
+  border: '#2c2620',
+  borderStrong: '#3a3127',
+
+  accent: '#d4ad7a',
+  accentDim: '#7a6044',
+
+  brandImdb: '#F5C518',
+  brandTmdb: '#01b4e4',
+  brandTvdb: '#4a90d9',
+  brandAnilist: '#02A9FF',
+
+  statusOk: '#4CAF50',
+  statusWarn: '#E8A925',
+  statusCrit: '#EB5757',
+} as const
+

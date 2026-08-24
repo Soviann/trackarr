@@ -1,0 +1,272 @@
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md) 80px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.systemStatusPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--status-ok, #4caf50);
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-ok, #4caf50);
+  box-shadow: 0 0 8px var(--status-ok, #4caf50);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.sectionIcon {
+  color: var(--accent);
+  display: flex;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.cardGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.card:hover {
+  background: var(--bg-hover, #312a22);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.card:active {
+  transform: scale(0.99);
+}
+
+.cardIconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-elev2, #312a22);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--card-color, var(--accent));
+  transition: all 0.15s;
+}
+
+.card:hover .cardIconWrap {
+  background: rgba(212, 173, 122, 0.12);
+  border-color: var(--card-color, var(--accent));
+}
+
+.cardContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cardDesc {
+  font-size: 12px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badgeCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--badge-bg, var(--accent));
+  color: var(--badge-color, #000);
+}
+
+.badgeStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-elev2, #312a22);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-dim);
+}
+
+.badgeStatus.active {
+  color: var(--status-ok, #4caf50);
+  border-color: rgba(76, 175, 80, 0.3);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.badgeStatus.warning {
+  color: var(--status-warn, #e8a925);
+  border-color: rgba(232, 169, 37, 0.3);
+  background: rgba(232, 169, 37, 0.1);
+}
+
+.cardArrow {
+  color: var(--ink-mute);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.card:hover .cardArrow {
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.refreshBox {
+  margin-top: 4px;
+  padding: 16px;
+  background: linear-gradient(180deg, var(--bg-elev) 0%, rgba(37, 32, 26, 0.6) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.refreshInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.refreshTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.refreshDesc {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.refreshBtn {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.refreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.refreshBtn:active:not(:disabled) {
+  transform: scale(0.97);
+}

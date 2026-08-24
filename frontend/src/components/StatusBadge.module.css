@@ -1,0 +1,32 @@
+.badge {
+  font-size: 9px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.watching {
+  color: var(--bg);
+  background: var(--cover-accent, var(--accent));
+}
+
+.completed {
+  color: var(--bg);
+  background: var(--status-ok);
+}
+
+.dropped {
+  color: var(--status-crit);
+  background: var(--accent-wash);
+}
+
+.planToWatch {
+  color: var(--ink);
+  background: var(--bg-elev2);
+}
+
+.caughtUp {
+  color: var(--bg);
+  background: var(--status-ok);
+}

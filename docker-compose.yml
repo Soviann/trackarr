@@ -1,0 +1,31 @@
+services:
+  trackarr:
+    image: ghcr.io/soviann/trackarr:latest
+    build: .
+    container_name: trackarr
+    restart: unless-stopped
+    ports:
+      - "${TRACKARR_PORT:-${PORT:-8080}}:8080"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+      - .env.local
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+

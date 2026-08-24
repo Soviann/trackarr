@@ -1,0 +1,77 @@
+name: 🐛 Bug Report
+description: Report a reproducible bug or issue in Trackarr
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please ensure that you are running the latest version of Trackarr before submitting.
+
+  - type: input
+    id: version
+    attributes:
+      label: Trackarr Version
+      description: What version of Trackarr are you running? (Check `/admin` or `/api/health`, e.g. `v1.0.0`)
+      placeholder: "e.g. v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      description: How is Trackarr deployed?
+      options:
+        - Docker Compose (Docker standalone)
+        - Synology NAS / Portainer
+        - Unraid
+        - TrueNAS SCALE
+        - CasaOS / Umbrel
+        - Other (Manual Build)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "Describe what went wrong..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Application Logs
+      description: Relevant logs from `docker compose logs` or browser console errors.
+      render: shell
+      placeholder: "Paste relevant logs here (make sure to sanitize private API keys or tokens)..."
+
+  - type: input
+    id: environment
+    attributes:
+      label: Client / Browser / OS
+      description: e.g. Safari on iOS 18 (PWA), Chrome 132 on macOS, Firefox on Windows 11
+      placeholder: "e.g. Chrome on iOS (PWA)"

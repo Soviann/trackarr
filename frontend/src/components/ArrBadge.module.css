@@ -1,0 +1,21 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.radarr {
+  background: rgba(255, 194, 48, 0.18);
+  color: #ffc230;
+  border: 1px solid rgba(255, 194, 48, 0.4);
+}
+
+.sonarr {
+  background: rgba(0, 192, 255, 0.18);
+  color: #00c0ff;
+  border: 1px solid rgba(0, 192, 255, 0.4);
+}

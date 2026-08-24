@@ -1,0 +1,275 @@
+.page {
+  padding: var(--space-lg) var(--space-lg) 180px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.filterBar {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.filterBtn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterBtn[data-active="true"] {
+  background: var(--accent);
+  color: #000;
+  border-color: transparent;
+}
+
+.selectToggleBtn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selectToggleBtn[data-active="true"] {
+  background: var(--accent);
+  color: #000;
+  border-color: transparent;
+}
+
+.selectionActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-xs);
+}
+
+.selectionBtn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loading, .empty {
+  padding: var(--space-xl);
+  color: var(--ink);
+  text-align: center;
+  font-size: 14px;
+}
+
+.section {
+  margin-bottom: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.taskCard {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  padding: var(--space-md);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.taskCardSelected {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.checkboxContainer {
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.customCheckbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink-mute);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: var(--bg-elev2);
+}
+
+.customCheckboxChecked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.taskContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.taskType {
+  font-size: 10px;
+  color: var(--ink-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badgePending {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badgeDead {
+  font-size: 10px;
+  background: var(--accent-wash);
+  color: var(--status-crit);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.taskTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.taskMeta {
+  font-size: 12px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
+.taskError {
+  font-size: 11px;
+  color: var(--status-crit);
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.taskActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.retryBtn, .deleteBtn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.retryBtn {
+  background: var(--accent);
+  color: #000;
+}
+
+.retryBtn:disabled, .deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteBtn {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.actionBar {
+  position: fixed;
+  bottom: 89px;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: var(--bg-elev2);
+  border-top: 1px solid var(--border-strong);
+  padding: 0 var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 999;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.actionText {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.batchDeleteBtn {
+  background: var(--status-crit);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.batchDeleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

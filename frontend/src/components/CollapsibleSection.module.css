@@ -1,0 +1,45 @@
+.section {
+  border-bottom: 1px solid var(--border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--bg-elev2);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--ink-dim);
+}
+
+.arrow {
+  font-size: 14px;
+  color: var(--ink-dim);
+  transition: transform 0.2s;
+}
+
+.arrow.open {
+  transform: rotate(90deg);
+}
+
+.body {
+  /* content area */
+}

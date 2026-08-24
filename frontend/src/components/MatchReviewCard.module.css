@@ -1,0 +1,110 @@
+.card {
+  background: var(--bg-elev);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--status-color) 20%, transparent);
+  border-left: 3px solid var(--status-color);
+  cursor: pointer;
+}
+
+.layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cover {
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  object-fit: cover;
+  display: block;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.meta {
+  font-size: 10px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.originalTitle {
+  font-size: 10px;
+  color: var(--ink);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.chips {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 9px;
+  color: var(--ink);
+  background: var(--bg-elev2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-decoration: none;
+}
+
+.statusText {
+  font-size: 10px;
+  color: var(--status-color);
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btnConfirm {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--accent-wash);
+  border: 1px solid color-mix(in srgb, var(--status-ok) 20%, transparent);
+  color: var(--status-ok);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnConfirm:disabled {
+  background: color-mix(in srgb, var(--ink-dim) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ink-dim) 20%, transparent);
+  color: var(--ink-dim);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btnFix {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}

@@ -1,0 +1,360 @@
+.page {
+  padding: var(--space-lg) var(--space-lg) 180px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.scanBtn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scanBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading,
+.empty {
+  padding: var(--space-xl);
+  color: var(--ink);
+  text-align: center;
+  font-size: 14px;
+}
+
+.topActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+.mergeAllContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.acceptAllBtn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acceptAllBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ambiguousNotice {
+  font-size: 11px;
+  color: var(--status-warn);
+  max-width: 360px;
+  text-align: right;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sharedIdChip {
+  display: inline-block;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-dim);
+  font-size: 11px;
+  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seasonBadgeSuggested {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--status-ok);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.seasonBadgeManual {
+  background: rgba(232, 169, 37, 0.15);
+  color: var(--status-warn);
+  border: 1px solid rgba(232, 169, 37, 0.3);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.cardComparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+@media (max-width: 640px) {
+  .cardComparison {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+}
+
+.entitySide {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.poster {
+  width: 48px;
+  height: 72px;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.entityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.entityLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.entityTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.entityMeta {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.arrowCol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0 var(--space-xs);
+}
+
+.arrow {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .arrowCol {
+    transform: rotate(90deg);
+    padding: var(--space-xs) 0;
+  }
+}
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-sm);
+}
+
+.acceptBtn,
+.dismissBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-button);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.acceptBtn {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.dismissBtn {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.acceptBtn:disabled,
+.dismissBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* BottomSheet merge drawer */
+.mergeDrawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-sm);
+}
+
+.mergeTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mergeDesc {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+.seasonInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seasonLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.seasonInput {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  width: 100px;
+}
+
+.seasonInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.mergeError {
+  font-size: 13px;
+  color: var(--status-crit);
+}
+
+.mergeActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.cancelBtn,
+.confirmBtn {
+  padding: 8px 16px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+}
+
+.confirmBtn {
+  background: var(--accent);
+  border: none;
+  color: var(--bg);
+}
+
+.cancelBtn:disabled,
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,250 @@
+.page {
+  padding-bottom: 36px;
+  position: relative;
+}
+
+/* Atmospheric backdrop bleed behind the header */
+.backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 280px;
+  background-size: cover;
+  background-position: center top;
+  filter: blur(50px);
+  opacity: 0.18;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  z-index: 0;
+}
+
+/* Header */
+.header {
+  padding: var(--space-lg) var(--space-lg) var(--radius-button);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.headerBrandGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.brandLogo {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.brandAccent {
+  color: var(--accent);
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brandDivider {
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0 2px;
+  opacity: 0.7;
+}
+
+.headerTitle {
+  font-family: var(--font-sans);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  letter-spacing: -0.01em;
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-xs);
+}
+
+/* Stats strip — at-a-glance figures under the header */
+.statsStrip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+}
+
+.statsStripYear {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.statsStripDot {
+  color: var(--ink-mute);
+}
+
+/* Section rows — gives them breathing room above the grid */
+.sectionRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
+/* States */
+.centered {
+  padding: 40px var(--space-lg);
+  text-align: center;
+  color: var(--ink);
+}
+
+/* Counter — mono [ NNN / total ] */
+.counter {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+  padding: var(--space-sm) var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
+/* TitleList */
+.titleList {
+  padding: 0 var(--space-lg) 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* PosterGrid */
+.posterGrid {
+  padding: 0 var(--space-lg) var(--space-sm);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+/* Skeleton tile — same footprint as PosterCard so the grid doesn't shift on load. */
+.skeletonTile {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  background: var(--bg-elev);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+
+/* MatchReviewBanner */
+.bannerWrapper {
+  padding: 0 var(--space-lg) var(--space-md);
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.banner {
+  background: var(--accent-wash);
+  border: 1px solid rgba(235, 87, 87, 0.2);
+  border-radius: var(--radius-button);
+  padding: var(--radius-button) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--radius-button);
+}
+
+.bannerBadge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--status-crit);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bannerBadgeText {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #fff;
+}
+
+.bannerBody {
+  flex: 1;
+}
+
+.bannerTitle {
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.bannerSub {
+  font-size: 10px;
+  color: var(--ink);
+  margin-left: 8px;
+}
+
+/* LoadMoreButton */
+.loadMoreWrapper {
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+  text-align: center;
+}
+
+.loadMoreBtn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  padding: var(--radius-button) var(--space-xl);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.loadMoreBtn:not(:disabled) {
+  cursor: pointer;
+}
+
+.loadMoreBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Bulk selection */
+.selectAllRow { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.selectAllBtn { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; }
+.selectCount { font-size: 12px; color: var(--ink-dim); }
+.cancelBtn { font-size: 12px; font-weight: 600; color: var(--ink-dim); background: none; border: none; cursor: pointer; }
+.actionBar { position: fixed; bottom: calc(56px + env(safe-area-inset-bottom)); left: 0; right: 0; background: var(--bg-elev2); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; z-index: 110; }
+.actionBarLabel { flex: 1; font-size: 12px; color: var(--ink-dim); }
+.actionBtnStatus { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: none; cursor: pointer; }
+.actionBtnDelete { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 7px; background: color-mix(in srgb, var(--status-crit) 20%, transparent); color: var(--status-crit); border: none; cursor: pointer; }
+.checkbox { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; z-index: 1; pointer-events: none; }
+.checked { background: var(--accent); border-color: var(--accent); }
+.statusSheet { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.statusOption { padding: 12px 16px; background: var(--bg-elev); border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--ink); cursor: pointer; text-align: left; }

@@ -1,0 +1,2 @@
+-- SQLite does not support DROP COLUMN; migration is irreversible via down.
+-- Leaving this file empty is intentional.

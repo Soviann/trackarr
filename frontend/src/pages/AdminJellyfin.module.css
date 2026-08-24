@@ -1,0 +1,123 @@
+.page {
+  padding: var(--space-lg) var(--space-lg) 36px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.loading {
+  padding: var(--space-xl);
+  color: var(--ink);
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+}
+
+.itemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.itemDesc {
+  font-size: 12px;
+  color: var(--ink-secondary, #888);
+  margin-top: 2px;
+}
+
+.statusOn,
+.statusOff {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.statusOn {
+  color: #00a4dc;
+  background: rgba(0, 164, 220, 0.12);
+}
+
+.statusOff {
+  color: var(--status-crit);
+  background: rgba(229, 62, 62, 0.12);
+}
+
+.helpCard {
+  margin-top: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+}
+
+.helpTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-sm);
+}
+
+.helpText {
+  font-size: 12px;
+  color: var(--ink);
+  opacity: 0.8;
+  line-height: 1.5;
+  margin: 0 0 var(--space-md);
+}
+
+.codeBlock {
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--bg-elev2);
+  padding: var(--space-md);
+  border-radius: var(--radius-button);
+  overflow-x: auto;
+  color: var(--ink);
+  margin: 0;
+}

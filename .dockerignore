@@ -1,0 +1,60 @@
+# Git history — never needed inside the image, can easily be 100s of MB
+.git
+.github
+.gitignore
+.gitattributes
+
+# Runtime / bind-mounted data — never goes into the image
+data
+covers
+logs
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Environment — .env.local holds secrets, .env is not needed at build time
+.env
+.env.local
+.env.*
+
+# Build artifacts
+tmp
+/plextracker
+
+# Frontend build outputs — dist comes from the `frontend` stage, node_modules rebuilt inside
+frontend/node_modules
+frontend/dist
+
+# Dev-only tooling / compose
+Dockerfile.dev
+docker-compose.dev.yml
+.air.toml
+
+# Claude / agent tooling — huge and irrelevant to the runtime image
+.claude
+.superpowers
+.worktrees
+.playwright-mcp
+
+# Docs — not needed at runtime
+docs
+CHANGELOG.md
+CLAUDE.md
+AGENTS.md
+README.md
+*.md
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+*.swp
+
+# Simkl backups
+*.zip
+
+# Test artifacts
+*.test
+*.prof
+coverage.*

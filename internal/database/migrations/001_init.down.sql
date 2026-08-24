@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS watch_events;
+DROP TABLE IF EXISTS episodes;
+DROP TABLE IF EXISTS seasons;
+DROP TABLE IF EXISTS title_names;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS titles;
