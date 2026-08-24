@@ -1,0 +1,63 @@
+.container {
+  position: relative;
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+  /* touch-action set dynamically via JS — don't set here */
+}
+
+.content.animating {
+  transition: transform 200ms ease;
+}
+
+.content.exiting {
+  transition: transform 300ms ease, max-height 300ms ease 150ms, margin-bottom 300ms ease 150ms, opacity 200ms ease;
+}
+
+.actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  z-index: 0;
+}
+
+.actionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 80px;
+  min-width: 64px;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.actionBtn:active {
+  filter: brightness(0.85);
+}
+
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.actionLabel {
+  line-height: 1.2;
+  text-align: center;
+}

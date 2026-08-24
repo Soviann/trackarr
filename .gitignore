@@ -1,0 +1,57 @@
+# Runtime data
+data/
+logs/
+*.db
+
+# Go
+/plextracker
+tmp/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Simkl backup & temporary data (sensitive)
+*.zip
+backups/
+cookies.txt
+
+# Environment (secrets & private scripts)
+.env.local
+Makefile.local
+scripts/nas-*.sh
+scripts/*.local.sh
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Agent & IDE local settings
+.claude/
+.gemini/
+.antigravity/
+AGENTS.local.md
+
+# Superpowers
+.superpowers/
+.worktrees/
+docs/plans/
+docs/superpowers/plans/
+docs/superpowers/specs/
+docs/mockups/
+
+# Audits — working notes, never committed
+docs/audits/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Python
+__pycache__/
+*.pyc

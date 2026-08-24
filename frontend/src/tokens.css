@@ -1,0 +1,134 @@
+:root {
+  /* Default Theme: Vault (Heritage warm obsidian & amber tan) */
+  --bg: #1a1714;
+  --bg-elev: #25201a;
+  --bg-elev2: #312a22;
+
+  /* Text */
+  --ink: #ebe5d9;
+  --ink-dim: #a09484;
+  --ink-mute: #6a5e50;
+
+  /* Borders */
+  --border: #2c2620;
+  --border-strong: #3a3127;
+
+  /* Accent */
+  --accent: #d4ad7a;
+  --accent-wash: rgba(212, 173, 122, 0.10);
+  --accent-dim: #7a6044;
+  --accent-gradient: linear-gradient(135deg, #d4ad7a 0%, #e5c290 50%, #8f6738 100%);
+
+  /* Brand-only — for dedicated badges/logos, never decorative */
+  --brand-imdb: #F5C518;
+  --brand-tmdb: #01b4e4;
+  --brand-tvdb: #4a90d9;
+  --brand-anilist: #02A9FF;
+
+  /* Functional status colors (badges only) */
+  --status-ok: #4CAF50;
+  --status-warn: #E8A925;
+  --status-crit: #EB5757;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  /* Radii */
+  --radius-card: 14px;
+  --radius-poster: 10px;
+  --radius-pill: 999px;
+  --radius-drawer: 22px;
+  --radius-button: 12px;
+
+  /* Font sizes */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+
+  /* Font families */
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+/* ── Theme 1: Cyber Cyan (Concept A / Trackarr Cyber) ──────────────── */
+[data-theme="cyber"] {
+  --bg: #090d16;
+  --bg-elev: #111827;
+  --bg-elev2: #1e293b;
+
+  --ink: #f3f4f6;
+  --ink-dim: #9ca3af;
+  --ink-mute: #64748b;
+
+  --border: #1f293d;
+  --border-strong: #334155;
+
+  --accent: #06b6d4;
+  --accent-wash: rgba(6, 182, 212, 0.12);
+  --accent-dim: #0891b2;
+  --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+/* ── Theme 2: Sunset Coral (Concept B / Cinematic) ─────────────────── */
+[data-theme="sunset"] {
+  --bg: #120d18;
+  --bg-elev: #1c1424;
+  --bg-elev2: #2a1b36;
+
+  --ink: #fdf2f8;
+  --ink-dim: #a8a29e;
+  --ink-mute: #78716c;
+
+  --border: #2e1d3d;
+  --border-strong: #4a2860;
+
+  --accent: #f43f5e;
+  --accent-wash: rgba(244, 63, 94, 0.12);
+  --accent-dim: #e11d48;
+  --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #f43f5e 50%, #8b5cf6 100%);
+}
+
+/* ── Theme 3: Emerald Teal (Concept C / Modern Mint) ───────────────── */
+[data-theme="emerald"] {
+  --bg: #081412;
+  --bg-elev: #0f221f;
+  --bg-elev2: #16332f;
+
+  --ink: #f0fdf4;
+  --ink-dim: #94a3b8;
+  --ink-mute: #64748b;
+
+  --border: #193933;
+  --border-strong: #245249;
+
+  --accent: #10b981;
+  --accent-wash: rgba(16, 185, 129, 0.12);
+  --accent-dim: #059669;
+  --accent-gradient: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
+}
+
+/* ── Theme 4: Vault Amber (Heritage Default) ───────────────────────── */
+[data-theme="vault"] {
+  --bg: #1a1714;
+  --bg-elev: #25201a;
+  --bg-elev2: #312a22;
+
+  --ink: #ebe5d9;
+  --ink-dim: #a09484;
+  --ink-mute: #6a5e50;
+
+  --border: #2c2620;
+  --border-strong: #3a3127;
+
+  --accent: #d4ad7a;
+  --accent-wash: rgba(212, 173, 122, 0.10);
+  --accent-dim: #7a6044;
+  --accent-gradient: linear-gradient(135deg, #d4ad7a 0%, #e5c290 50%, #8f6738 100%);
+}

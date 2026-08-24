@@ -1,0 +1,56 @@
+.container {
+  position: relative;
+}
+
+.indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-48px);
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.indicatorReady {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.indicatorSpinning {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.arrow {
+  transition: transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrowReady {
+  transform: rotate(180deg);
+}
+
+/* Spinning animation for the refresh state */
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: ptr-spin 0.75s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

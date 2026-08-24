@@ -1,0 +1,128 @@
+.context {
+  text-align: center;
+  padding: 8px 16px 2px;
+}
+
+.contextText {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.titleWrapper {
+  text-align: center;
+  padding: 2px 16px 16px;
+}
+
+.titleName {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(232, 169, 37, 0.3);
+  text-underline-offset: 2px;
+}
+
+.bigRating {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 0 0 8px;
+}
+
+.bigRatingSuffix {
+  font-size: 16px;
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 20px 20px;
+}
+
+.star {
+  font-size: 24px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.starActive {
+  color: var(--accent);
+}
+
+.buttons {
+  padding: 0 16px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saveButton {
+  background: var(--bg-elev2);
+  border-radius: 12px;
+  padding: 13px;
+  text-align: center;
+  border: none;
+  cursor: default;
+}
+
+.saveButtonActive {
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.saveButtonLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.saveButtonLabelActive {
+  color: var(--bg);
+}
+
+.externalButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.externalButton {
+  flex: 1;
+  background: var(--bg-elev2);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.imdbLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-imdb);
+  font-family: Impact, system-ui;
+}
+
+.externalSubLabel {
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.skip {
+  text-align: center;
+  padding: 10px 0 20px;
+  cursor: pointer;
+}
+
+.skipLabel {
+  font-size: 12px;
+  color: var(--ink-dim);
+}

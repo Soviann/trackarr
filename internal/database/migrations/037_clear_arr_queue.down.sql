@@ -1,0 +1,1 @@
+-- No-op: cannot restore previous arr_ignored state on rollback

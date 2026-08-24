@@ -1,0 +1,86 @@
+name: Weekly Documentation Audit
+
+on:
+  schedule:
+    # Every Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for recent commits and create audit issue
+        run: |
+          # 1. Check for commits merged to main in the last 7 days
+          RECENT_COMMITS=$(git log --since="7 days ago" --oneline)
+          if [ -z "$RECENT_COMMITS" ]; then
+            echo "No commits on main in the last 7 days. Skipping weekly documentation audit."
+            exit 0
+          fi
+
+          echo "Recent commits detected:"
+          echo "$RECENT_COMMITS"
+
+          # 2. Check if an open audit issue already exists to avoid duplicates
+          EXISTING_ISSUE=$(gh issue list --repo "${{ github.repository }}" --state open --search "Audit hebdomadaire de la documentation in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING_ISSUE" ] && [ "$EXISTING_ISSUE" != "null" ]; then
+            echo "An open audit issue (#$EXISTING_ISSUE) already exists. Skipping creation to avoid duplicates."
+            exit 0
+          fi
+
+          # 3. List modified files across the recent commits
+          MODIFIED_FILES=$(git log --since="7 days ago" --name-only --pretty="" | sort -u | grep -v '^$' || true)
+
+          # 4. Compose Issue body
+          ISSUE_TITLE="[Audit]: Audit hebdomadaire de la documentation et des règles LLM"
+
+          cat << 'BODY_EOF' > issue_body.md
+          🔔 cc @${{ github.repository_owner }}
+
+          ### 📝 Contexte de l'Audit Hebdomadaire
+          Des modifications ont été fusionnées sur `main` au cours des 7 derniers jours.
+
+          #### Commits récents :
+          ```text
+          BODY_EOF
+          echo "$RECENT_COMMITS" >> issue_body.md
+          cat << 'BODY_EOF' >> issue_body.md
+          ```
+
+          #### Fichiers modifiés au cours de la semaine :
+          ```text
+          BODY_EOF
+          echo "$MODIFIED_FILES" >> issue_body.md
+          cat << 'BODY_EOF' >> issue_body.md
+          ```
+
+          ### 🎯 Objectifs de l'Audit Antigravity
+          1. **Cohérence API & Patterns (`docs/patterns.md`)** : Vérifier si des routes, handlers, composants, modèles ou migrations ont été ajoutés ou modifiés sans être répertoriés.
+          2. **Guides Thématiques & Sommaire (`docs/` & `docs/INDEX.md`)** : Vérifier si les nouvelles fonctionnalités ou intégrations sont documentées dans le guide approprié et indexées.
+          3. **Spécifications Techniques (`docs/dev/*`)** : S'assurer que le modèle de BDD, le pipeline de matching, la synchronisation AniList et l'intégration Arr restent conformes au code source.
+          4. **Changelog (`CHANGELOG.md`)** : S'assurer que tous les ajouts, corrections et améliorations notables sont listés dans la section `[Unreleased]`.
+          5. **Règles & Agents (`AGENTS.md`, `.cursorrules`, `docs/llm.md`)** : Vérifier qu'aucune contradiction ou règle obsolète ne persiste.
+
+          ---
+          /antigravity analyse les commits récents et propose un plan d'audit et de mise à jour de la documentation.
+          BODY_EOF
+
+          # 5. Create GitHub Issue with label 'antigravity' and assign repository owner
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$ISSUE_TITLE" \
+            --body-file issue_body.md \
+            --label "antigravity" \
+            --assignee "${{ github.repository_owner }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,52 @@
+.content {
+  padding: var(--space-xl);
+  padding-bottom: calc(var(--space-xl) + 20px); /* extra for safe area */
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--space-md);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.description {
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.cancelBtn, .confirmBtn, .confirmBtnDangerous {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-button);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.cancelBtn {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+}
+
+.confirmBtn {
+  background: var(--accent);
+  color: #fff;
+}
+
+.confirmBtnDangerous {
+  background: var(--status-crit);
+  color: #fff;
+}

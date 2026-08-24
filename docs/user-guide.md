@@ -1,0 +1,154 @@
+# User Guide & Troubleshooting
+
+[← Back to Index](INDEX.md)
+
+Welcome to the **Trackarr User Guide**. This document explains how to navigate, organize, and get the most out of your personal media tracking vault.
+
+---
+
+## 📑 Table of Contents
+1. [Library & Navigation](#1-library--navigation)
+2. [Managing Titles & Episodes](#2-managing-titles--episodes)
+3. [Search, URL Paste & Android Sharing](#3-search-url-paste--android-sharing)
+4. [Match Review & Rematching](#4-match-review--rematching)
+5. [Season Audit & Title Merges](#5-season-audit--title-merges)
+6. [Arr Stack (Radarr, Sonarr, Prowlarr)](#6-arr-stack-radarr-sonarr-prowlarr)
+7. [AniList Synchronization](#7-anilist-synchronization)
+8. [Comprehensive Q&A & Troubleshooting](#8-comprehensive-qa--troubleshooting)
+
+---
+
+## 1. Library & Navigation
+
+The **Library** screen is your media command center:
+
+### Status Categories & Filters:
+- **Watching**: Series with at least one aired, unwatched episode.
+- **Caught Up**: A special green sub-status badge on watching cards when you have watched every currently aired episode, but future episodes or seasons are scheduled. It automatically flips back to Watching when a new episode airs.
+- **Plan to Watch**: Titles you intend to start later.
+- **Completed**: Finished movies, or series where every episode has been watched and the series has ended or was cancelled.
+- **Dropped**: Abandoned titles.
+
+### Dynamic Views & Stats:
+- **Year-to-Date Stats Pill**: Displays your viewing summary under the *Library* header (e.g. `2026 · 47 watched · ★ 7.8 avg · 3h this week`).
+- **Dynamic Layout**: Displays a poster grid by default. When filtering by *Watching* or *Caught up*, the view switches automatically to horizontal cards with progress bars and next episode pills.
+- **Advanced Filters Drawer**:
+  - **Series Status**: Filter series by *Returning* (ongoing), *Ended*, *Cancelled*, or *Not started*.
+  - **Origin Country**: Multi-select filter by country of origin (e.g. South Korea, Japan, France, United States).
+  - **Rating Sliders**: Dual range sliders for *My rating* (1–10) and *TMDB community rating*.
+- **Sorting Options**: 6 sort criteria (Last updated, Title, Release date, Rating, Date added, Last watched). Tap to activate; tap again to invert ascending/descending.
+
+### Gestures & Shortcuts:
+- **One-Tap Quick Progress**: In the *Watching* list view, tap the circular episode pill on a series card to immediately mark the next episode as watched without opening the title.
+- **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards to select them, then use the bottom action bar for bulk status changes or deletion.
+- **Swipe Actions (Match Review)**: Swipe a card left to quickly confirm or fix matches. A full left swipe triggers immediate confirmation.
+- **Pull to Refresh**: Pull down at the top of the Library to refresh data and re-evaluate air dates.
+- **Android App Shortcuts**: Long-press the Trackarr home screen icon for instant shortcuts to **Add Title** (`/add`), **Library** (`/`), and **Search** (`/search`).
+
+---
+
+## 2. Managing Titles & Episodes
+
+Opening a title displays its rich details:
+- **Hero & Accent Color**: High-resolution cover art with dynamic backdrop gradient extracted from poster colors.
+- **Streaming Badge**: Displays the Amazon Prime Video badge when the title is available on Prime.
+- **Scores**: Personal score (1–10) on the left, external community scores (TMDB, AniList) on the right.
+- **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
+- **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
+- **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
+- **AniList Season Strip**: Community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries).
+- **Actions Drawer**:
+  - **Rate**: Set personal 1–10 star score.
+  - **Edit**: Modify title type (Movie/Series), anime flag, or watch status.
+  - **More**: Send to Radarr/Sonarr (File Arr), Rematch, Merge into another title, Refresh Metadata, or Delete.
+  - **External Links**: Instant shortcuts to IMDb, TMDB, TVDB, and AniList.
+- **Rating Push Notification**: Sends an optional Web Push notification prompting to rate a movie or completed series after finishing it (configurable in *Admin ➔ Notifications*).
+
+---
+
+## 3. Search, URL Paste & Android Sharing
+
+Adding media to Trackarr is fast and versatile:
+1. **Search by Name**: Search instantly across your local library (with full-text search) or query TMDB for new titles to add.
+2. **Direct URL Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry.
+3. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
+
+> [!TIP]
+> **Fast-Track Mobile Addition Workflow**:
+> When finding a title on your phone (e.g. from the IMDb or TMDB app):
+> 1. Tap **Share ➔ Trackarr** (import creates the title entry).
+> 2. Open the title sheet ➔ **Actions ➔ More ➔ Rematch** ➔ search & confirm the match.
+> 3. Tap **Actions ➔ More ➔ Refresh Metadata** to pull high-res covers, full season/episode trees, and air dates immediately.
+
+---
+
+## 4. Match Review & Rematching
+
+When Trackarr ingests a scrobble from Jellyfin/Plex or an imported title:
+- **High-Confidence Matches**: Auto-confirmed by AI (Gemini) or exact cross-reference IDs, bypassing manual review.
+- **Unconfirmed / Pending Review**: Placed in the **Match Review** queue (`/match-review`) for quick human verification.
+- **Rematch**: Open any title ➔ **Actions (Bottom Bar) ➔ More ➔ Rematch** to re-link or paste a new URL.
+
+---
+
+## 5. Season Audit & Title Merges
+
+Anime and split TV seasons frequently release under separate titles (e.g. *JoJo's Bizarre Adventure: Stone Ocean* or *Frieren Season 2*).
+
+- **Season Audit Tool (`/admin/season-audit`)**: Scans for titles sharing external IDs, pairs source strays with parent series, displays side-by-side poster comparisons, and suggests the correct destination season number.
+- **Manual Title Merge**: Open the title to discard ➔ **Actions ➔ More ➔ Merge** ➔ Search the destination parent title ➔ Choose destination season number. All episodes, watch timestamps, and ratings migrate seamlessly.
+
+---
+
+## 6. Arr Stack (Radarr, Sonarr, Prowlarr)
+
+Trackarr bridges media tracking with your download managers:
+- **Visual Status Lines (Liserés)**:
+  - **Yellow top border**: Movie is tracked in **Radarr**.
+  - **Cyan top border**: Series is tracked in **Sonarr**.
+- **Arr Icon Badges**: 18px indicator pills on search and list cards showing Radarr target or Sonarr waveform.
+- **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), with defaults configurable at `/admin/arr`.
+- **Prowlarr Releases**: Access incoming releases on `/releases` with 1-click **+ Add** to Trackarr.
+
+---
+
+## 7. AniList Synchronization
+
+When AniList OAuth is connected:
+- **Automatic Push**: Episode watch events, status changes, and ratings push to AniList in the background.
+- **Multi-Part & Prequel Trees**: Trackarr automatically maps multi-part seasons (e.g. *Attack on Titan Final Season*) to individual AniList media entries using its internal season parts resolver.
+- **Season AniList Strip**: View community scores per season and re-link specific anime entries with the ✎ button.
+
+---
+
+## 8. Comprehensive Q&A & Troubleshooting
+
+### Why didn't my anime score push to AniList?
+> **Answer**: AniList's API strictly rejects rating scores on anime entries whose status is still *Current/Watching*. Trackarr automatically holds the score and sends it the moment the anime status flips to **Completed** or **Dropped**.
+
+### How does Trackarr handle split seasons like "Solo Leveling Season 2"?
+> **Answer**: Trackarr queries AniList relations to trace prequel/sequel edges back to the root series. When confirmed, it automatically attaches the new entry as Season 2 of the parent series rather than creating a duplicate standalone show.
+
+### Why do some cards show "CAUGHT UP" instead of "WATCHING"?
+> **Answer**: "Caught Up" is an intelligent sub-state of Watching. It indicates that you have watched all episodes that have aired up to today, while future episodes are still scheduled. When a new episode airs, the card seamlessly transitions back to "WATCHING".
+
+### What if TMDB and TVDB disagree on external IDs?
+> **Answer**: Trackarr's matching pipeline prioritizes TMDB as the primary source of truth, falls back to TVDB, and flags the item as **Pending Review** in Match Review so you can verify the match instead of silently accepting conflicting data.
+
+### How do I reset my password if I lose access?
+> **Answer**: Trackarr provides two recovery methods:
+> 1. **From the Browser (Emergency Recovery Key)**: On the login screen (`/login`), click **"Forgot password?"**, enter the `TRCK-XXXX-XXXX-XXXX` emergency recovery key saved during initial setup, and set a new password. Trackarr will issue a new recovery key.
+> 2. **From the Terminal (CLI)**: Run the built-in command in your container or host:
+>    ```bash
+>    docker exec -t trackarr trackarr reset-password --password="MyNewSecurePassword"
+>    ```
+>    *(Omit `--password` to enter it interactively. A new emergency recovery key is displayed upon completion).*
+
+### Why is the PWA showing older assets after an update?
+> **Answer**: Service Workers aggressively cache web app bundles for instant offline access. Hard-refresh the page (or append `?t=1234` to the URL) to let the service worker install the new version.
+
+### What causes a "database table is locked" error in logs?
+> **Answer**: SQLite in WAL mode allows unlimited concurrent readers but only one active writer (`MaxOpenConns=1`). Trackarr handles transactions with automatic retry and short timeouts. Ensure custom external tools do not lock the SQLite database file during runtime.
+
+### Can duplicate scrobbles occur if Jellyfin and Plex send simultaneous webhooks?
+> **Answer**: No. Trackarr computes an event fingerprint (media ID + title + timestamp window) and discards duplicate scrobble events received within a short threshold.

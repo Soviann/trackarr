@@ -1,0 +1,709 @@
+package handler
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/Soviann/trackarr/internal/database"
+	"github.com/Soviann/trackarr/internal/handler/httputil"
+	"github.com/Soviann/trackarr/internal/model"
+	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/Soviann/trackarr/internal/service"
+	"github.com/Soviann/trackarr/internal/service/matching"
+)
+
+type TitleHandler struct {
+	serverCtx  context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
+	db         *sql.DB
+	titles     *repository.TitleRepository // writeDB — Create, Update, Merge, Rematch
+	titlesRead *repository.TitleRepository // readDB — List, GetByID (non-blocking reads)
+	seasons    *repository.SeasonRepository
+	episodes   *repository.EpisodeRepository
+	events     *repository.WatchEventRepository
+	tasks      *repository.TaskRepository
+	pipeline   *matching.Pipeline
+	service    *service.TitleService
+	bgSvc      *service.BackgroundService
+	shutdownWG *sync.WaitGroup // optional — joined on shutdown so fire-and-forget refresh can finish
+}
+
+func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
+	return &TitleHandler{
+		serverCtx:  serverCtx,
+		db:         db,
+		titles:     titles,
+		titlesRead: titlesRead,
+		seasons:    seasons,
+		episodes:   episodes,
+		events:     events,
+		tasks:      tasks,
+		pipeline:   pipeline,
+		service:    svc,
+		bgSvc:      bgSvc,
+	}
+}
+
+// SetShutdownWG registers a WaitGroup that RefreshOne goroutines increment on
+// start and decrement on exit, so Serve() can wait for in-flight refresh before
+// closing the database.
+func (h *TitleHandler) SetShutdownWG(wg *sync.WaitGroup) {
+	if h == nil {
+		return
+	}
+	h.shutdownWG = wg
+}
+
+var allowedSorts = map[string]bool{
+	"updated_at":      true,
+	"original_title":  true,
+	"year":            true,
+	"my_rating":       true,
+	"created_at":      true,
+	"release_date":    true,
+	"last_watched_at": true,
+}
+
+// findTitleByURL returns an existing title matching an external URL pasted in the
+// search box (IMDB, TMDB, TVDB, AniList). Returns nil when the query is not a
+// recognized URL or no matching title exists.
+func (h *TitleHandler) findTitleByURL(q string) *model.Title {
+	ids := matching.ParseURL(q)
+	if ids == nil {
+		return nil
+	}
+	var (
+		imdbPtr    *string
+		tmdbPtr    *int64
+		anilistPtr *int64
+		tvdbPtr    *int64
+		typePtr    *model.TitleType
+	)
+	if ids.IMDB != "" {
+		imdbPtr = &ids.IMDB
+	}
+	if ids.TMDBMovie != 0 {
+		tmdbPtr = &ids.TMDBMovie
+		mType := model.TitleTypeMovie
+		typePtr = &mType
+	} else if ids.TMDBTV != 0 {
+		tmdbPtr = &ids.TMDBTV
+		sType := model.TitleTypeSeries
+		typePtr = &sType
+	}
+	if ids.AniList != 0 {
+		anilistPtr = &ids.AniList
+	}
+	if ids.TVDB != 0 {
+		tvdbPtr = &ids.TVDB
+	}
+	if imdbPtr == nil && tmdbPtr == nil && anilistPtr == nil && tvdbPtr == nil {
+		return nil
+	}
+	t, err := h.titlesRead.FindByExternalID(imdbPtr, tmdbPtr, nil, anilistPtr, tvdbPtr, typePtr)
+	if err != nil {
+		return nil
+	}
+	return t
+}
+
+func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
+	limit := httputil.ParseQueryInt(r, "limit", repository.DefaultPageSize)
+	if limit > repository.MaxPageSize {
+		limit = repository.MaxPageSize
+	}
+	filter := repository.TitleFilter{
+		Limit:  limit,
+		Offset: httputil.ParseQueryInt(r, "offset", 0),
+	}
+	if sortField := r.URL.Query().Get("sort"); allowedSorts[sortField] {
+		filter.Sort = sortField
+	}
+	if order := r.URL.Query().Get("order"); order == "asc" || order == "desc" {
+		filter.Order = order
+	}
+	if s := r.URL.Query().Get("status"); s != "" {
+		switch s {
+		case "up_to_date":
+			filter.UpToDate = true
+		case "watching_behind":
+			filter.WatchingBehind = true
+		default:
+			status := model.TitleStatus(s)
+			filter.Status = &status
+		}
+	}
+	if t := r.URL.Query().Get("type"); t != "" {
+		titleType := model.TitleType(t)
+		filter.Type = &titleType
+	}
+	if ia := r.URL.Query().Get("is_anime"); ia != "" {
+		isAnime := ia == "true"
+		filter.IsAnime = &isAnime
+	}
+	if q := r.URL.Query().Get("search"); q != "" {
+		if t := h.findTitleByURL(q); t != nil {
+			httputil.WriteJSON(w, http.StatusOK, repository.PaginatedResult{
+				Titles: []model.Title{*t},
+				Total:  1,
+			})
+			return nil
+		}
+		filter.Search = &q
+	}
+	if m := r.URL.Query().Get("match_status"); m != "" {
+		matchStatus := model.MatchStatus(m)
+		filter.MatchStatus = &matchStatus
+	}
+	if ss := r.URL.Query().Get("series_status"); ss != "" {
+		seriesStatus := model.SeriesStatus(ss)
+		filter.SeriesStatus = &seriesStatus
+	}
+	if d := r.URL.Query().Get("decade"); d != "" {
+		if decade := httputil.ParseQueryInt(r, "decade", 0); decade >= 1900 && decade <= 2100 {
+			filter.Decade = &decade
+		}
+	}
+	if rf := r.URL.Query().Get("release_from"); rf != "" {
+		if len(rf) == 4 {
+			rf += "-01-01"
+		}
+		filter.ReleaseFrom = &rf
+	}
+	if rt := r.URL.Query().Get("release_to"); rt != "" {
+		if len(rt) == 4 {
+			rt += "-12-31"
+		}
+		filter.ReleaseTo = &rt
+	}
+	filter.IncludeNoRelease = true // default: include titles without release date
+	if r.URL.Query().Get("include_no_release") == "false" {
+		filter.IncludeNoRelease = false
+	}
+	if genres := r.URL.Query()["genres"]; len(genres) > 0 {
+		filter.Genres = genres
+		if op := r.URL.Query().Get("genre_op"); op == "AND" {
+			filter.GenreOp = "AND"
+		} else {
+			filter.GenreOp = "OR"
+		}
+	}
+
+	if p := r.URL.Query().Get("person"); p != "" {
+		filter.Person = &p
+	}
+
+	if raw := r.URL.Query()["origin_country"]; len(raw) > 0 {
+		countries := make([]string, 0, len(raw))
+		for _, c := range raw {
+			if c = strings.ToUpper(strings.TrimSpace(c)); c != "" {
+				countries = append(countries, c)
+			}
+		}
+		if len(countries) > 0 {
+			filter.OriginCountries = countries
+		}
+	}
+	if v := r.URL.Query().Get("my_rating_min"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
+			filter.MyRatingMin = &n
+		}
+	}
+	if v := r.URL.Query().Get("tmdb_rating_min"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 10 {
+			filter.TMDBRatingMin = &f
+		}
+	}
+
+	result, err := h.titlesRead.List(filter)
+	if err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+
+	if result.Titles == nil {
+		result.Titles = []model.Title{}
+	}
+
+	// Include global counts on first page (for match review banner)
+	if filter.Offset == 0 && filter.Search == nil {
+		counts, err := h.titlesRead.GetStatusCounts()
+		if err == nil {
+			result.Counts = counts
+		}
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, result)
+	return nil
+}
+
+func (h *TitleHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	title, err := h.titlesRead.GetByID(id)
+	if err != nil {
+		return httputil.NotFound("Not found")
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
+}
+
+func (h *TitleHandler) Resolve(w http.ResponseWriter, r *http.Request) error {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		return httputil.BadRequest("Query is required")
+	}
+
+	result, err := h.service.ResolveURL(r.Context(), q)
+	if err != nil {
+		return httputil.BadRequest(fmt.Sprintf("Failed to resolve URL: %v", err))
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, result)
+	return nil
+}
+
+func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		Type        model.TitleType   `json:"type"`
+		IsAnime     bool              `json:"is_anime"`
+		Year        int               `json:"year"`
+		Status      model.TitleStatus `json:"status"`
+		MatchStatus model.MatchStatus `json:"match_status"`
+		Names       []model.TitleName `json:"names"`
+		CoverURL    *string           `json:"cover_url"`
+		IMDBID      *string           `json:"imdb_id"`
+		AniListID   *int64            `json:"anilist_id"`
+		TMDBID      *int64            `json:"tmdb_id"`
+		TVDBID      *int64            `json:"tvdb_id"`
+	}
+
+	if err := httputil.ReadJSON(r, &body, 65536); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	manualSource := "manual"
+	title := &model.Title{
+		Type:        body.Type,
+		IsAnime:     body.IsAnime,
+		Year:        body.Year,
+		Status:      body.Status,
+		MatchStatus: body.MatchStatus,
+		MatchSource: &manualSource,
+		CoverURL:    body.CoverURL,
+		IMDBID:      body.IMDBID,
+		AniListID:   body.AniListID,
+		TMDBID:      body.TMDBID,
+		TVDBID:      body.TVDBID,
+		ArrIgnored:  true,
+	}
+
+	var id int64
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		newID, createErr := repository.NewTitleWriter(tx).Create(r.Context(), title, body.Names)
+		if createErr != nil {
+			return createErr
+		}
+		id = newID
+		return nil
+	}); err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+
+	created, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusCreated, created)
+	return nil
+}
+
+func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		Status      *model.TitleStatus `json:"status"`
+		MatchStatus *model.MatchStatus `json:"match_status"`
+		MyRating    *int               `json:"my_rating"`
+		Type        *model.TitleType   `json:"type"`
+		IsAnime     *bool              `json:"is_anime"`
+		ArrIgnored  *bool              `json:"arr_ignored"`
+	}
+
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	// Snapshot the title state before the write so we can detect whether
+	// status or rating actually changed — blindly enqueueing on every PATCH
+	// would flood AniList with no-op pushes when the UI resends current values.
+	before, _ := h.titles.GetByID(id)
+
+	update := repository.TitleUpdate{
+		Status:      body.Status,
+		MatchStatus: body.MatchStatus,
+		MyRating:    body.MyRating,
+		Type:        body.Type,
+		IsAnime:     body.IsAnime,
+		ArrIgnored:  body.ArrIgnored,
+	}
+
+	typeChanged := body.Type != nil && before != nil && *body.Type != before.Type
+	if typeChanged {
+		update.ClearCoverURL = true
+	}
+
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		if err := repository.NewTitleWriter(tx).Update(r.Context(), id, update); err != nil {
+			return err
+		}
+		if before != nil {
+			enqueueAniListPushesOnTitleUpdate(r.Context(), tx, before, body.Status, body.MyRating)
+		}
+		return nil
+	}); err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+
+	if typeChanged {
+		h.asyncRefresh(id, "type change refresh")
+	}
+
+	title, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusOK, title)
+	return nil
+}
+
+// enqueueAniListPushesOnTitleUpdate fans out push tasks for a title whose
+// status and/or rating just changed. Contract:
+//   - movies: one movie push (anime + AniList-mapped only).
+//   - series, status changed: one season push per season (regardless of rating).
+//   - series, rating changed only: one push per season whose derived state is
+//     COMPLETED or DROPPED (ShouldPushRating) — AniList rejects scores on
+//     CURRENT/PLANNING entries.
+//
+// De-dupes by season ID so a combined status+rating PATCH doesn't double-push.
+func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {
+	statusChanged := newStatus != nil && *newStatus != before.Status
+	ratingChanged := newRating != nil && !intPtrEq(newRating, before.MyRating)
+	if !statusChanged && !ratingChanged {
+		return
+	}
+
+	if before.Type == model.TitleTypeMovie {
+		if before.IsAnime && before.AniListID != nil && *before.AniListID != 0 {
+			service.EnqueueAniListMoviePush(ctx, tx, before.ID)
+		}
+		return
+	}
+
+	effectiveStatus := before.Status
+	if newStatus != nil {
+		effectiveStatus = *newStatus
+	}
+	ratingOnly := !statusChanged && ratingChanged
+
+	seen := map[int64]bool{}
+	for _, season := range before.Seasons {
+		if seen[season.ID] {
+			continue
+		}
+		if ratingOnly {
+			total, watched := seasonWatchCounts(season)
+			derived, _ := service.DeriveSeasonState(string(effectiveStatus), total, watched)
+			if !service.ShouldPushRating(derived) {
+				continue
+			}
+		}
+		service.EnqueueAniListSeasonPush(ctx, tx, season.ID)
+		seen[season.ID] = true
+	}
+}
+
+// seasonWatchCounts returns (total, watched) for a season, falling back to
+// len(Episodes) when total_episodes is unset — matches GetWithProgress.
+func seasonWatchCounts(s model.Season) (total, watched int) {
+	if s.TotalEpisodes != nil {
+		total = *s.TotalEpisodes
+	}
+	if total == 0 {
+		total = len(s.Episodes)
+	}
+	for _, ep := range s.Episodes {
+		if ep.Watched {
+			watched++
+		}
+	}
+	return total, watched
+}
+
+func intPtrEq(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		TMDBID    *int64  `json:"tmdb_id"`
+		IMDBID    *string `json:"imdb_id"`
+		AniListID *int64  `json:"anilist_id"`
+		TVDBID    *int64  `json:"tvdb_id"`
+	}
+
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	if body.TMDBID == nil && body.IMDBID == nil && body.AniListID == nil && body.TVDBID == nil {
+		return httputil.BadRequest("At least one ID is required")
+	}
+
+	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
+		return httputil.InternalError("Failed to rematch", err)
+	}
+
+	updated, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+// SetExternalIDs applies a manual external-ID snapshot from the editor. Unlike
+// Rematch (TMDB re-identify), the IDs are authoritative: each field is set to
+// the value sent, or cleared when sent empty. PUT /api/titles/{id}/external-ids
+func (h *TitleHandler) SetExternalIDs(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		TMDBID          string `json:"tmdb_id"`
+		IMDBID          string `json:"imdb_id"`
+		AniListID       string `json:"anilist_id"`
+		TVDBID          string `json:"tvdb_id"`
+		AniListSeasonID *int64 `json:"anilist_season_id"`
+		AutoFill        bool   `json:"auto_fill"`
+	}
+	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+		return httputil.BadRequest("Invalid request")
+	}
+
+	// Empty string = clear (nil pointer); non-empty = set. Numeric IDs must parse.
+	parseID := func(raw, field string) (*int64, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return nil, nil
+		}
+		v, perr := strconv.ParseInt(raw, 10, 64)
+		if perr != nil {
+			return nil, httputil.BadRequest("Invalid " + field)
+		}
+		return &v, nil
+	}
+
+	edit := service.ExternalIDEdit{
+		AniListSeasonID: body.AniListSeasonID,
+		AutoFill:        body.AutoFill,
+	}
+	if edit.TMDBID, err = parseID(body.TMDBID, "TMDB ID"); err != nil {
+		return err
+	}
+	if edit.AniListID, err = parseID(body.AniListID, "AniList ID"); err != nil {
+		return err
+	}
+	if edit.TVDBID, err = parseID(body.TVDBID, "TVDB ID"); err != nil {
+		return err
+	}
+	if imdb := strings.TrimSpace(body.IMDBID); imdb != "" {
+		edit.IMDBID = &imdb
+	}
+
+	if err := h.service.SetExternalIDs(r.Context(), h.db, id, edit); err != nil {
+		return httputil.InternalError("Failed to update external IDs", err)
+	}
+
+	// AniList-only edit (no TMDB or IMDb anchor): the service skipped the
+	// enrichment pipeline, so refresh metadata straight from AniList now and
+	// return the fresh title. Synchronous because it's one GraphQL call + a cover
+	// download, and the user expects the screen to reflect the change
+	// immediately. When an IMDb id is present the service enqueued enrichment
+	// instead, so this fallback must not also fire.
+	if edit.TMDBID == nil && edit.IMDBID == nil && h.bgSvc != nil {
+		if err := h.bgSvc.RefreshByID(r.Context(), id); err != nil {
+			log.Printf("external-ids anilist refresh for title %d: %v", id, err)
+		}
+	}
+
+	updated, _ := h.titles.GetByID(id)
+	httputil.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+func (h *TitleHandler) Merge(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	var body struct {
+		TargetID     int64 `json:"target_id"`
+		SeasonOffset *int  `json:"season_offset"`
+	}
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid JSON")
+	}
+
+	if body.TargetID == 0 {
+		return httputil.BadRequest("Missing target_id")
+	}
+
+	if id == body.TargetID {
+		return httputil.BadRequest("Cannot merge a title with itself")
+	}
+
+	if err := h.service.Merge(r.Context(), h.db, body.TargetID, id, body.SeasonOffset); err != nil {
+		return httputil.InternalError("Failed to merge titles", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	return nil
+}
+
+// RefreshOne triggers a metadata refresh for a single title.
+func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("invalid title id")
+	}
+
+	if h.bgSvc == nil {
+		return httputil.InternalError("refresh title", fmt.Errorf("background service not available"))
+	}
+
+	h.asyncRefresh(id, "refresh")
+
+	w.WriteHeader(http.StatusAccepted)
+	return nil
+}
+
+// asyncRefresh launches a background refresh goroutine with a 2-minute timeout,
+// serverCtx parent context, and optional shutdownWG tracking.
+func (h *TitleHandler) asyncRefresh(id int64, logPrefix string) {
+	if h.bgSvc == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(h.serverCtx, 2*time.Minute)
+	if h.shutdownWG != nil {
+		h.shutdownWG.Add(1)
+	}
+	go func() {
+		if h.shutdownWG != nil {
+			defer h.shutdownWG.Done()
+		}
+		defer cancel()
+		if err := h.bgSvc.RefreshByID(ctx, id); err != nil {
+			log.Printf("%s title %d: %v", logPrefix, id, err)
+		}
+	}()
+}
+
+// Delete removes a title by ID.
+func (h *TitleHandler) Delete(w http.ResponseWriter, r *http.Request) error {
+	id, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Delete(r.Context(), id)
+	}); err != nil {
+		return fmt.Errorf("title: delete: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// BatchDelete removes multiple titles by ID.
+func (h *TitleHandler) BatchDelete(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid body")
+	}
+	if len(body.IDs) == 0 {
+		return httputil.BadRequest("ids is required")
+	}
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchDelete(r.Context(), body.IDs)
+	}); err != nil {
+		return fmt.Errorf("title: batch delete: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// BatchStatus updates the status of multiple titles.
+func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		IDs    []int64 `json:"ids"`
+		Status string  `json:"status"`
+	}
+	if err := httputil.ReadJSON(r, &body, 1<<20); err != nil {
+		return httputil.BadRequest("Invalid body")
+	}
+	if len(body.IDs) == 0 || body.Status == "" {
+		return httputil.BadRequest("ids and status are required")
+	}
+	validStatuses := map[string]bool{"watching": true, "completed": true, "dropped": true, "plan_to_watch": true}
+	if !validStatuses[body.Status] {
+		return httputil.BadRequest("Invalid status")
+	}
+	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchUpdateStatus(r.Context(), body.IDs, body.Status)
+	}); err != nil {
+		return fmt.Errorf("title: batch status: %w", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// ReviewCount handles GET /api/titles/review-count.
+// Returns the number of titles needing match review (pending_review + unconfirmed).
+func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error {
+	count, err := h.titlesRead.ReviewCount(r.Context())
+	if err != nil {
+		return fmt.Errorf("review count: %w", err)
+	}
+	httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
+	return nil
+}
+
+// Countries returns the distinct origin countries in the library with counts,
+// for the country filter chip.
+func (h *TitleHandler) Countries(w http.ResponseWriter, r *http.Request) error {
+	countries, err := h.titlesRead.ListOriginCountries()
+	if err != nil {
+		return httputil.InternalError("Internal error", err)
+	}
+	if countries == nil {
+		countries = []repository.CountryCount{}
+	}
+	httputil.WriteJSON(w, http.StatusOK, countries)
+	return nil
+}

@@ -1,0 +1,6 @@
+# Cursor Rules for Trackarr
+
+Follow the universal AI and contributor standards defined in AGENTS.md:
+- Architecture & Patterns: AGENTS.md and docs/patterns.md
+- Full LLM Specification & Endpoints: docs/llm.md
+- Development Commands: Docker-first via Makefile (never run go/node on host)

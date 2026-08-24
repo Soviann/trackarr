@@ -1,0 +1,398 @@
+.container {
+  background: var(--bg);
+  border-radius: var(--radius-drawer) var(--radius-drawer) 0 0;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  transition: transform 0.2s ease-out;
+}
+
+.handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-xs);
+  min-height: 48px;
+  padding: 5px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.handleTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.handleBar {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-mute);
+}
+
+.handleText {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+}
+
+.activeTags {
+  display: flex;
+  gap: 4px;
+}
+
+.activeTag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.drawer {
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.drawerCollapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.drawerExpanded {
+  max-height: 480px;
+  opacity: 1;
+}
+
+/* Sub-tab Navigation */
+.tabBar {
+  display: flex;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 4px var(--space-sm);
+  gap: 4px;
+}
+
+.tabBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.tabBtn:hover {
+  color: var(--ink);
+}
+
+.tabBtnActive {
+  background: var(--bg-elev2);
+  color: var(--accent);
+  border-color: var(--border-strong);
+  font-weight: 500;
+}
+
+.tabDot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.tabContent {
+  max-height: 380px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabPane {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 8px;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px var(--space-lg);
+}
+
+.filterLabel {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  padding: 8px var(--space-lg) 4px;
+}
+
+.filterLabelFirst {
+  padding-top: 6px;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chipActive {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sortArrow {
+  font-size: var(--font-size-xs);
+  margin-left: 2px;
+}
+
+.select,
+.dateInput {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  height: 30px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--border);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dateInput {
+  min-width: 0;
+  flex: 1;
+}
+
+.select:focus,
+.dateInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.dateInput::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.toggleLabel input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent);
+}
+
+.bottomPad {
+  height: 4px;
+}
+
+/* Genre filter */
+.genreOpRow {
+  display: flex;
+  gap: var(--space-xs);
+  padding: 2px var(--space-lg) 4px;
+  align-items: center;
+}
+
+.opBtn {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.opBtnActive {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.clearGenresBtn {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--ink-mute);
+  cursor: pointer;
+  margin-left: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreDropdownWrapper {
+  position: relative;
+  padding: 2px var(--space-lg) 4px;
+}
+
+.genreAutocomplete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 5px 8px;
+  border-radius: var(--radius-button);
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  min-height: 32px;
+  cursor: text;
+  transition: border-color 0.15s;
+}
+
+.genreAutocomplete:focus-within {
+  border-color: var(--accent);
+}
+
+.genreTag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 4px 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-wash);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.genreTagRemove {
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreInput {
+  flex: 1;
+  min-width: 60px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  border: none;
+  background: none;
+  color: var(--ink);
+  outline: none;
+  padding: 0;
+}
+
+.genreInput::placeholder {
+  color: var(--ink-mute);
+}
+
+.genreDropdown {
+  position: absolute;
+  left: var(--space-lg);
+  right: var(--space-lg);
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+/* Open the dropdown upward instead of down — used by the Country autocomplete,
+   which sits low in the drawer where a downward list runs under the navbar. */
+.dropUp {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.genreDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.genreDropdownItem:hover {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.genreDropdownCount {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  color: var(--ink-mute);
+}

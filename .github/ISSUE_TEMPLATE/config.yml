@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Community Support
+    url: https://github.com/Soviann/trackarr/discussions
+    about: Please ask questions and get help with configuring your Trackarr instance on GitHub Discussions.
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/Soviann/trackarr/security/policy
+    about: Report security vulnerabilities responsibly in private.

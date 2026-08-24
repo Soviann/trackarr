@@ -1,0 +1,62 @@
+package handler_test
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/Soviann/trackarr/internal/database"
+	"github.com/Soviann/trackarr/internal/handler"
+	"github.com/Soviann/trackarr/internal/handler/httputil"
+	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/Soviann/trackarr/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func setupPushHandler(t *testing.T) *handler.PushHandler {
+	t.Helper()
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	settings := repository.NewSettingRepository(db)
+	pushSvc := service.NewPushService(db, settings, "pub", "priv", "mailto:test@test.com")
+	return handler.NewPushHandler(pushSvc)
+}
+
+func TestPushHandler_Subscribe(t *testing.T) {
+	h := setupPushHandler(t)
+
+	body := `{"endpoint":"https://updates.push.services.mozilla.com/sub","keys":{"p256dh":"k","auth":"a"}}`
+	req := httptest.NewRequest("POST", "/api/push/subscribe", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Subscribe(rr, req))
+
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+}
+
+func TestPushHandler_Subscribe_InvalidJSON(t *testing.T) {
+	h := setupPushHandler(t)
+
+	req := httptest.NewRequest("POST", "/api/push/subscribe", strings.NewReader("not json"))
+	rr := httptest.NewRecorder()
+	err := h.Subscribe(rr, req)
+
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+}
+
+func TestPushHandler_Unsubscribe(t *testing.T) {
+	h := setupPushHandler(t)
+
+	req := httptest.NewRequest("DELETE", "/api/push/subscribe", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Unsubscribe(rr, req))
+
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+}

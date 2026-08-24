@@ -1,0 +1,173 @@
+.page {
+  padding: var(--space-lg) var(--space-lg) 36px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.loading {
+  padding: var(--space-xl);
+  color: var(--ink);
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+}
+
+.itemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.itemDesc {
+  font-size: 12px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.statusOn,
+.statusOff {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.statusOn {
+  color: var(--brand-anilist);
+  background: rgba(2, 169, 255, 0.12);
+}
+
+.statusOff {
+  color: var(--ink);
+  background: var(--bg-elev2);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.primaryBtn,
+.dangerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 var(--space-lg);
+  border: none;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.primaryBtn {
+  background: var(--brand-anilist);
+  color: #fff;
+}
+
+.dangerBtn {
+  background: var(--bg-elev2);
+  color: var(--status-crit);
+  border: 1px solid var(--border-strong);
+}
+
+.primaryBtn:disabled,
+.dangerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reconnectBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  background: var(--accent-wash);
+  border: 1px solid var(--status-crit);
+  border-radius: var(--radius-button);
+  color: var(--ink);
+}
+
+.reconnectBanner strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--status-crit);
+}
+
+.reconnectBanner p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.reconnectButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-button);
+  background: var(--status-crit);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.reconnectButton:hover {
+  opacity: 0.9;
+}

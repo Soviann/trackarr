@@ -1,0 +1,322 @@
+import { useState, useEffect, useRef } from 'preact/hooks'
+import clsx from 'clsx'
+import { useApi } from '../hooks/useApi'
+import { apiFetch } from '../api'
+import { colors } from '../theme'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
+import { formatRelativeTime } from '../utils'
+import s from './AdminTasks.module.css'
+
+interface Task {
+  id: number
+  task_type: string
+  payload: string
+  status: string
+  attempts: number
+  max_attempts: number
+  day: number
+  last_error: string | null
+  run_at: string
+  created_at: string
+}
+
+interface TasksResponse {
+  tasks: Task[]
+  total: number
+}
+
+const typeLabels: Record<string, string> = {
+  enrichment: 'Enrichment',
+  refresh: 'Refresh',
+  cover_fetch: 'Cover',
+}
+
+function parseTitleFromPayload(payload: string): string {
+  try {
+    const p = JSON.parse(payload)
+    return p.title_name || `Title #${p.title_id}`
+  } catch {
+    return 'Unknown'
+  }
+}
+
+type FilterType = 'all' | 'pending' | 'errored'
+
+export function AdminTasks({ path }: { path?: string }) {
+  const [acting, setActing] = useState<number | null>(null)
+  const [filter, setFilter] = useState<FilterType>('all')
+  const [page, setPage] = useState(1)
+  const [allTasks, setAllTasks] = useState<Task[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [isSelectMode, setIsSelectMode] = useState(false)
+
+  useEffect(() => {
+    setPage(1)
+    setAllTasks([])
+    setSelectedIds(new Set())
+    setIsSelectMode(false)
+  }, [filter])
+
+  const limit = 50
+  const offset = (page - 1) * 50
+  const { data, loading, mutate: rawMutate } = useApi<TasksResponse>(`/admin/tasks?filter=${filter}&limit=${limit}&offset=${offset}`)
+  const pageRef = useRef(page)
+  pageRef.current = page
+
+  useEffect(() => {
+    if (!data?.tasks) return
+    if (pageRef.current === 1) {
+      setAllTasks(data.tasks)
+    } else {
+      setAllTasks(prev => [...prev, ...data.tasks])
+    }
+  }, [data])
+
+  const mutate = () => {
+    setAllTasks([])
+    if (page === 1) {
+      rawMutate()
+    } else {
+      setPage(1)
+    }
+  }
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'batch' | number | null>(null)
+
+  const handleRetry = async (id: number) => {
+    setActing(id)
+    try {
+      await apiFetch(`/admin/tasks/${id}/retry`, { method: 'POST' })
+      mutate()
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    setActing(id)
+    try {
+      await apiFetch(`/admin/tasks/${id}`, { method: 'DELETE' })
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+      mutate()
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+    setActing(-1)
+    try {
+      await apiFetch(`/admin/tasks/batch-delete`, {
+        method: 'POST',
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      })
+      setSelectedIds(new Set())
+      mutate()
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const confirmDelete = () => {
+    if (modalMode === 'batch') {
+      handleBatchDelete()
+    } else if (typeof modalMode === 'number') {
+      handleDelete(modalMode)
+    }
+    setModalOpen(false)
+  }
+
+  const openDeleteModal = (mode: 'batch' | number) => {
+    setModalMode(mode)
+    setModalOpen(true)
+  }
+
+  const filteredTasks = allTasks
+  const total = data?.total ?? 0
+  const hasMore = allTasks.length < total
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredTasks.length && filteredTasks.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredTasks.map(t => t.id)))
+    }
+  }
+
+  const handleSelectToggle = () => {
+    if (isSelectMode) {
+      setSelectedIds(new Set())
+    }
+    setIsSelectMode(!isSelectMode)
+  }
+
+  const allSelected = filteredTasks.length > 0 && selectedIds.size === filteredTasks.length
+
+  return (
+    <>
+      <div className={s.page}>
+        <div className={s.header}>
+          <div className={s.headerLeft}>
+            <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+              </svg>
+            </button>
+            <h1 className={s.title}>
+              Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--ink)', marginLeft: '8px'}}>({total})</span>
+            </h1>
+          </div>
+          <button 
+            className={s.selectToggleBtn} 
+            data-active={isSelectMode}
+            onClick={handleSelectToggle}
+          >
+            {isSelectMode ? 'Cancel' : 'Select'}
+          </button>
+        </div>
+
+        <div className={s.filterBar}>
+          <button className={s.filterBtn} data-active={filter === 'all'} onClick={() => setFilter('all')}>All</button>
+          <button className={s.filterBtn} data-active={filter === 'pending'} onClick={() => setFilter('pending')}>Healthy</button>
+          <button className={s.filterBtn} data-active={filter === 'errored'} onClick={() => setFilter('errored')}>Errored</button>
+        </div>
+
+        {loading && <div className={s.loading}>Loading...</div>}
+
+        {!loading && total === 0 && (
+          <div className={s.empty}>No tasks match this filter</div>
+        )}
+
+        {filteredTasks.length > 0 && (
+          <>
+            {isSelectMode && (
+              <div className={s.selectionActions}>
+                <button className={s.selectionBtn} onClick={toggleSelectAll}>
+                  {allSelected ? 'Unselect All' : 'Select All'}
+                </button>
+              </div>
+            )}
+
+            <section className={s.section}>
+              {filteredTasks.map((task) => {
+                const isErrored = task.status === 'dead' || task.last_error !== null
+                const isDead = task.status === 'dead'
+                const isSelected = selectedIds.has(task.id)
+
+                return (
+                  <div 
+                    key={task.id} 
+                    className={clsx(s.taskCard, isSelected && s.taskCardSelected)}
+                    onClick={() => isSelectMode && toggleSelection(task.id)}
+                  >
+                    {isSelectMode && (
+                      <div className={s.checkboxContainer}>
+                        <div className={clsx(s.customCheckbox, isSelected && s.customCheckboxChecked)}>
+                          {isSelected && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={colors.bg} stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className={s.taskContent}>
+                      <div className={s.taskHeader}>
+                        <span className={s.taskType}>{typeLabels[task.task_type] ?? task.task_type}</span>
+                        <span className={isDead ? s.badgeDead : s.badgePending}>
+                          {isDead ? 'Failed' : 'Pending'}
+                        </span>
+                      </div>
+                      <div className={s.taskTitle}>{parseTitleFromPayload(task.payload)}</div>
+                      <div className={s.taskMeta}>
+                        {task.attempts}/{task.max_attempts} — day {task.day} · {formatRelativeTime(task.run_at)}
+                      </div>
+                      {task.last_error && (
+                        <div className={s.taskError}>{task.last_error}</div>
+                      )}
+                      {isErrored && (
+                        <div className={s.taskActions}>
+                          {isDead && (
+                            <button
+                              className={s.retryBtn}
+                              onClick={(e) => { e.stopPropagation(); handleRetry(task.id); }}
+                              disabled={acting === task.id || acting === -1}
+                            >
+                              Retry
+                            </button>
+                          )}
+                          <button
+                            className={s.deleteBtn}
+                            onClick={(e) => { e.stopPropagation(); openDeleteModal(task.id); }}
+                            disabled={acting === task.id || acting === -1}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </section>
+
+            {hasMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-md)' }}>
+                <button 
+                  className={s.filterBtn} 
+                  style={{ padding: '10px 24px', fontSize: '14px' }} 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Load More'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <div className={s.actionBar}>
+          <span className={s.actionText}>{selectedIds.size} selected</span>
+          <button 
+            className={s.batchDeleteBtn}
+            onClick={() => openDeleteModal('batch')}
+            disabled={acting === -1}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+
+      <ConfirmationDrawer
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={confirmDelete}
+        title={modalMode === 'batch'
+          ? `Delete ${selectedIds.size} tasks?`
+          : 'Delete this task?'}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDangerous
+      />
+      </>
+      )
+      }

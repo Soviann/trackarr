@@ -1,0 +1,64 @@
+.searchBar {
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.searchInner {
+  background: var(--bg-elev2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchInnerFocused {
+  border: none;
+}
+
+.searchInnerIdle {
+  border: 1.5px solid rgba(56, 189, 176, 0.3);
+}
+
+.searchInput {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.clearBtn {
+  cursor: pointer;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tmdbToggle {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.tmdbToggleOn {
+  background: rgba(0, 188, 212, 0.15);
+  color: var(--accent);
+  border-color: var(--accent);
+}

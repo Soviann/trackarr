@@ -1,0 +1,11 @@
+.root {
+  min-height: 100vh;
+}
+
+.withNavbar {
+  padding-bottom: 108px;
+}
+
+.withSearchBar {
+  padding-bottom: 172px;
+}

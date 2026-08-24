@@ -1,0 +1,144 @@
+import { useState, useRef, useEffect } from 'preact/hooks'
+import { route } from 'preact-router'
+import { colors } from '../theme'
+import { useSearchStore } from '../store'
+import { detectUrlType } from '../utils/url'
+import s from './Add.module.css'
+
+// extractSharedUrl scans share-target params for the first http(s) URL.
+function extractSharedUrl(params: URLSearchParams): string | null {
+  for (const key of ['url', 'text', 'title']) {
+    const v = params.get(key)
+    if (!v) continue
+    const m = v.match(/https?:\/\/\S+/i)
+    if (m) return m[0]
+  }
+  return null
+}
+
+// extractSharedName recovers a human title for TMDB search when the URL
+// resolution fails. IMDb on Android sends EXTRA_SUBJECT (`title`) as the bare
+// movie name; AniList sends similar. Strips trailing " - IMDb" / "- AniList".
+function extractSharedName(params: URLSearchParams): string | null {
+  const fromTitle = params.get('title')?.trim()
+  if (fromTitle && !/^https?:\/\//i.test(fromTitle)) {
+    return fromTitle.replace(/\s*[-–|·]\s*(IMDb|AniList)\s*$/i, '').trim() || null
+  }
+  const fromText = params.get('text')?.trim()
+  if (fromText) {
+    const stripped = fromText.replace(/https?:\/\/\S+/gi, '').trim()
+    if (stripped) return stripped.replace(/\s*[-–|·]\s*(IMDb|AniList)\s*$/i, '').trim() || null
+  }
+  return null
+}
+
+export function Add({ path }: { path?: string }) {
+  const [query, setQuery] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+
+    // PWA share target: mobile share sheets fill url/text/title inconsistently
+    // (IMDb app puts the link in `text`, some only send `title`). Capture both
+    // a URL (for resolve) and a human name (search fallback when TMDB doesn't
+    // know the title — e.g. IMDb-only, niche anime without TMDB cross-ref).
+    const params = new URLSearchParams(window.location.search)
+    const sharedUrl = extractSharedUrl(params)
+    const sharedName = extractSharedName(params)
+
+    if (sharedUrl) {
+      setQuery(sharedUrl)
+      const target = sharedName
+        ? `/admin/validate?q=${encodeURIComponent(sharedUrl)}&name=${encodeURIComponent(sharedName)}`
+        : `/admin/validate?q=${encodeURIComponent(sharedUrl)}`
+      route(target)
+      return
+    }
+    if (sharedName) {
+      useSearchStore.getState().setQuery(sharedName)
+      useSearchStore.getState().setSearchOnTMDB(true)
+      route('/search')
+    }
+  }, [])
+
+  const urlType = query.trim() ? detectUrlType(query.trim()) : null
+
+  const handleSubmit = () => {
+    if (!query.trim()) return
+    route(`/admin/validate?q=${encodeURIComponent(query.trim())}`)
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') handleSubmit()
+  }
+
+  return (
+    <div className={s.page}>
+      {/* Empty state */}
+      {!query.trim() && (
+        <div className={s.center}>
+          <div className={s.centerContent}>
+            <div className={s.emptyIcon}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+            </div>
+            <div className={s.emptyText}>
+              Add a title by name or URL
+            </div>
+            <div className={s.emptyHint}>
+              Paste an IMDb, TVDB, or AniList link
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* URL detection hint */}
+      {urlType && (
+        <div className={s.center}>
+          <div className={s.centerContent}>
+            <div className={s.urlBadge}>
+              {urlType.toUpperCase()} URL detected
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Non-URL query */}
+      {query.trim() && !urlType && (
+        <div className={s.center}>
+          <div className={s.searchHint}>
+            Press Enter to search for "{query.trim()}"
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className={s.inputBar}>
+        <div className={s.inputWrapper}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.statusOk} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <input
+            ref={inputRef}
+            type="text"
+            name="add-title"
+            id="add-title"
+            autocomplete="off"
+            value={query}
+            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Title name or URL..."
+            className={s.input}
+          />
+          {query && (
+            <button onClick={handleSubmit} className={s.goBtn}>
+              <span className={s.goBtnText}>Go</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

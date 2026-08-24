@@ -1,0 +1,284 @@
+.content {
+  padding: 8px 16px 20px;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}
+
+.searchBtn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchBtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.typeToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.typeBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: center;
+}
+
+.typeBtn.active {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.results {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status {
+  text-align: center;
+  color: var(--ink);
+  font-size: 13px;
+  padding: 16px 0;
+}
+
+.resultCard {
+  display: flex;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  cursor: pointer;
+  text-align: left;
+  align-items: center;
+}
+
+.resultCard:hover {
+  border-color: var(--accent);
+}
+
+.resultCard:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.poster {
+  width: 44px;
+  height: 66px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.noPoster {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-dim);
+  font-size: 16px;
+}
+
+.resultInfo {
+  min-width: 0;
+}
+
+.resultTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultYear {
+  font-size: 11px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.manualToggle {
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+  width: 100%;
+  text-align: left;
+}
+
+.manualSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  color: var(--ink);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldInput {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.fieldInput:focus {
+  border-color: var(--accent);
+}
+
+.saveButton {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 12px;
+  padding: 13px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.saveButtonLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg);
+}
+
+.removeMapping {
+  composes: manualToggle;
+  color: var(--ink);
+  margin-top: 8px;
+  text-align: center;
+}
+
+.autoFillRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.autoFillRow input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.autoFillHint {
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.partManageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.partManageActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reorderControls {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.reorderControls button {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 5px;
+}
+
+.reorderControls button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

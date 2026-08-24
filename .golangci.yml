@@ -1,0 +1,14 @@
+version: "2"
+
+run:
+  build-tags:
+    - sqlite_fts5
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+  exclusions:
+    rules:
+      - linters: [errcheck]
+        text: "Error return value of .*\\.Close.* is not checked"

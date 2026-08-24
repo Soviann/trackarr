@@ -1,0 +1,74 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.sub {
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+}
+
+.peek {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: var(--space-md);
+}
+
+.miniPoster {
+  width: 36px;
+  height: 54px;
+  border-radius: var(--radius-poster);
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-elev2);
+  border: 2px solid var(--bg-elev);
+}
+
+.chev {
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+/* Skeleton state — visible while data loads so the row reserves its space. */
+.subSkeleton {
+  width: 60%;
+  max-width: 180px;
+  height: 1em;
+  border-radius: 4px;
+  background: var(--bg-elev2);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.miniPosterSkeleton {
+  background-image: none;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}

@@ -1,0 +1,429 @@
+.page {
+  padding-bottom: 140px; /* space for drawer + navbar */
+  position: relative;
+  /* Cover image + fade gradients stacked as multi-layer bg.
+     Cover URL provided inline via --cover-bg.
+     Stack order (top → bottom):
+       1. Vignette (radial darkening at edges)
+       2. Linear fade (transparent → bg from 55% downward)
+       3. Cover image (top 600px, scaled width-fit)
+       4. Solid bg fill */
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 30%,
+      transparent 0%,
+      transparent 50%,
+      rgba(26, 23, 20, 0.4) 80%,
+      rgba(26, 23, 20, 0.7) 100%) center top / 100% 600px no-repeat,
+    linear-gradient(to bottom,
+      transparent 0%,
+      transparent 55%,
+      rgba(26, 23, 20, 0.7) 85%,
+      var(--bg) 100%) center top / 100% 600px no-repeat,
+    var(--cover-bg, none) center top / 100% 600px no-repeat,
+    var(--bg);
+}
+
+.loading {
+  padding: 40px var(--space-lg);
+  text-align: center;
+  color: var(--ink);
+}
+
+/* Hero — pure spacer that holds the back button; cover bg shows through .page */
+.hero {
+  position: relative;
+  height: 350px;
+}
+
+.backBtn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* Identity zone — title + meta float over the cover image */
+.identity {
+  padding: 0 var(--space-lg);
+  margin-top: -90px;
+  position: relative;
+  z-index: 2;
+}
+
+.identityTitle {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 0 6px rgba(0, 0, 0, 0.85),
+    0 0 14px rgba(0, 0, 0, 0.6);
+}
+
+.identityMeta {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: #fff;
+  margin-top: 6px;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 1),
+    0 0 4px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(0, 0, 0, 0.75);
+}
+
+.genrePills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.genrePill {
+  font-size: var(--font-size-xs);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Content cards */
+.card {
+  margin: 10px var(--space-lg);
+  background: var(--bg-elev);
+  border-radius: var(--radius-card);
+  padding: var(--space-md) 14px;
+  border: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+.cardLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-dim);
+  margin-bottom: var(--space-sm);
+}
+
+/* Ratings card */
+.ratingsRow {
+  display: flex;
+  align-items: center;
+}
+
+.myRating {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cover-accent, var(--accent));
+  line-height: 1;
+}
+
+.myRatingSuffix {
+  font-size: 16px;
+  color: var(--ink-dim);
+}
+
+.noRating {
+  font-size: 14px;
+  color: var(--ink-mute);
+}
+
+.extRatings {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.extItem {
+  text-align: center;
+}
+
+.extScore {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.extSource {
+  font-size: 9px;
+  color: var(--ink-dim);
+  margin-top: 1px;
+}
+
+.tmdbColor { color: var(--cover-accent, var(--accent)); }
+.anilistColor { color: var(--brand-anilist); }
+.radarrColor { color: #ffc230; }
+.sonarrColor { color: #00c0ff; }
+
+.arrLink:hover {
+  opacity: 0.8;
+}
+
+.externalLinksWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.extLinkBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.extLinkBadge:hover {
+  color: #fff;
+  border-color: var(--border-strong);
+}
+
+.extLinkImdb {
+  color: #f5c518;
+  border-color: rgba(245, 197, 24, 0.25);
+  background: rgba(245, 197, 24, 0.08);
+}
+
+.extLinkTmdb {
+  color: #01b4e4;
+  border-color: rgba(1, 180, 228, 0.25);
+  background: rgba(1, 180, 228, 0.08);
+}
+
+.extLinkTvdb {
+  color: #4cd964;
+  border-color: rgba(76, 217, 100, 0.25);
+  background: rgba(76, 217, 100, 0.08);
+}
+
+.extLinkAnilist {
+  color: var(--brand-anilist);
+  border-color: rgba(61, 180, 242, 0.25);
+  background: rgba(61, 180, 242, 0.08);
+}
+
+/* Synopsis card */
+.synopsisText {
+  font-size: var(--font-size-sm);
+  color: #fff;
+  line-height: 1.55;
+}
+
+.synopsisClamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.synopsisToggle {
+  color: var(--accent);
+  font-size: 12px;
+  margin-top: var(--space-xs);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Cast list */
+.castList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.castEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.castPerson {
+  color: #fff;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+  text-underline-offset: 2px;
+}
+
+.castPerson:hover {
+  text-decoration-color: #fff;
+}
+.castRole { color: var(--ink); font-size: var(--font-size-xs); }
+
+/* Details rows */
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detailRow:last-child { border-bottom: none; }
+.detailKey { color: var(--ink); }
+.detailVal { color: #fff; text-align: right; }
+
+/* Alternative titles */
+.altNames {
+  padding-top: 6px;
+}
+
+.altNamesLabel {
+  color: var(--ink);
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.altNameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.altNameFlag {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.altNameText {
+  color: #fff;
+}
+
+/* Series-specific (unchanged pattern) */
+.progressWrap {
+  padding: var(--space-md) var(--space-lg) 10px;
+}
+
+.progressTrack {
+  height: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.progressLabel {
+  font-size: 10px;
+  color: var(--ink);
+  margin-top: var(--space-xs);
+}
+
+.seasonTabs {
+  padding: 0 var(--space-lg) 10px;
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.seasonTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.episodeList {
+  padding: 0 var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Historique button */
+.historyBtnWrap {
+  padding: 0 var(--space-lg) var(--space-md);
+}
+
+.historyBtn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--bg-elev2);
+  color: var(--ink-dim);
+  border: none;
+  cursor: pointer;
+}
+
+/* History overlay — full-screen sheet on top of TitleDetail */
+.historyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow-y: auto;
+}
+
+.arrAddBtn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.arrAddBtn:hover {
+  opacity: 0.9;
+}
+
+.radarrBtn {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.35);
+}
+
+.radarrBtn:hover {
+  background: rgba(255, 193, 7, 0.25);
+}
+
+.sonarrBtn {
+  background: rgba(0, 180, 216, 0.15);
+  color: #00b4d8;
+  border: 1px solid rgba(0, 180, 216, 0.35);
+}
+
+.sonarrBtn:hover {
+  background: rgba(0, 180, 216, 0.25);
+}

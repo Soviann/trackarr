@@ -1,0 +1,119 @@
+.content {
+  padding: 8px 16px 20px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--ink);
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.typeOptions {
+  display: flex;
+  gap: 8px;
+}
+
+.statusOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.typeOption {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: center;
+}
+
+.active.typeOption {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.activeAnime.typeOption {
+  border-color: var(--brand-anilist);
+  background: var(--wash-anilist);
+  color: var(--brand-anilist);
+  font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-strong);
+  align-self: center;
+  margin: 0 4px;
+}
+
+.statusOption {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+}
+
+.active.statusOption {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.saveButton {
+  flex: 1;
+  background: var(--accent);
+  border-radius: 12px;
+  padding: 13px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.saveButtonLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cancelButton {
+  flex: 1;
+  background: var(--bg-elev);
+  border-radius: 12px;
+  padding: 13px;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  text-align: center;
+}
+
+.cancelButtonLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
