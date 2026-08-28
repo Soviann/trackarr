@@ -69,6 +69,32 @@ func TestAddAniListID_PersistsAndEnqueues(t *testing.T) {
 	assert.Equal(t, seasonID, p.SeasonID)
 }
 
+func TestAddAniListID_URLFormat_ExtractsIDAndSetsIsAnime(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	h := handler.NewSeasonExternalHandler(db)
+
+	titleID := testutil.InsertTitle(t, db, "Texhnolyze", false)
+	seasonID := testutil.InsertSeason(t, db, titleID, 1)
+
+	body, _ := json.Marshal(map[string]string{"anilist_id": "https://anilist.co/anime/26/Texhnolyze/"})
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req = withSeasonParam(req, seasonID)
+	rr := httptest.NewRecorder()
+
+	err := h.AddAniListID(rr, req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), seasonID, repository.ProviderAniList)
+	require.NoError(t, err)
+	require.Len(t, parts, 1)
+	assert.Equal(t, "26", parts[0].ExternalID)
+
+	title, err := repository.NewTitleRepository(db).GetByID(titleID)
+	require.NoError(t, err)
+	assert.True(t, title.IsAnime)
+}
+
 func TestAddAniListID_Idempotent(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	h := handler.NewSeasonExternalHandler(db)
