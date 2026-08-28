@@ -36,6 +36,7 @@ docker-compose.*.override.yml
 .claude/
 .gemini/
 .antigravity/
+.agents/
 AGENTS.local.md
 
 # Superpowers
