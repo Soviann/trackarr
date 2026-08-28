@@ -20,6 +20,13 @@ interface TMDBResult {
   poster_url: string | null
 }
 
+function extractAniListID(input: string): string {
+  const trimmed = input.trim()
+  const match = trimmed.match(/anilist\.co\/anime\/(\d+)/i)
+  if (match) return match[1]
+  return trimmed
+}
+
 export function RematchSheet({ open, onClose, title, seasonID, onDone }: RematchSheetProps) {
   const season = seasonID != null ? (title.seasons ?? []).find((s) => s.id === seasonID) : undefined
   const [query, setQuery] = useState(getName(title))
@@ -36,11 +43,11 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   const [autoFill, setAutoFill] = useState(false)
   const [seasonAniListID, setSeasonAniListID] = useState('')
 
-  // For an anime series the on-screen AniList link is driven by a season, not
+  // For a series the on-screen AniList link is driven by a season, not
   // the title row — so the manual editor edits that season's mapping (prefer
-  // S1, else the first season). Movies and non-anime use the title row.
+  // S1, else the first season). Movies use the title row.
   const anilistSeason =
-    title.is_anime && title.type !== 'movie'
+    title.type !== 'movie'
       ? ((title.seasons ?? []).find((sn) => sn.season_number === 1) ?? (title.seasons ?? [])[0])
       : undefined
 
@@ -59,7 +66,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     setManualImdb(title.imdb_id ?? '')
     setManualTvdb(title.tvdb_id != null ? String(title.tvdb_id) : '')
     const titleAniList = title.anilist_id != null ? String(title.anilist_id) : ''
-    // For an anime series, prefer the season mapping but fall back to the title
+    // For a series, prefer the season mapping but fall back to the title
     // row, so an existing (invisible) title-level ID surfaces and can migrate to
     // the season on save.
     setManualAnilist(anilistSeason ? (anilistSeason.anilist_id ?? titleAniList) : titleAniList)
@@ -121,7 +128,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
         body: JSON.stringify({
           tmdb_id: manualTmdb.trim(),
           imdb_id: manualImdb.trim(),
-          anilist_id: manualAnilist.trim(),
+          anilist_id: extractAniListID(manualAnilist),
           tvdb_id: manualTvdb.trim(),
           anilist_season_id: anilistSeason ? anilistSeason.id : null,
           auto_fill: autoFill,
@@ -135,15 +142,17 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   }
 
   const handleAddPart = async () => {
-    if (seasonID == null || !seasonAniListID.trim()) return
+    const cleanID = extractAniListID(seasonAniListID)
+    if (seasonID == null || !cleanID) return
     setSaving(true)
     try {
       await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist`, {
         method: 'POST',
-        body: JSON.stringify({ anilist_id: seasonAniListID.trim() }),
+        body: JSON.stringify({ anilist_id: cleanID }),
       })
       setSeasonAniListID('')
       onDone()
+      onClose()
     } catch (err) {
       console.error('Failed to add AniList part:', err)
     } finally {
@@ -217,11 +226,16 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                 Add AniList ID
                 <input type="text" value={seasonAniListID}
                   onInput={(e) => setSeasonAniListID((e.target as HTMLInputElement).value)}
-                  className={s.fieldInput} placeholder="e.g. 145064" autoFocus />
+                  className={s.fieldInput} placeholder="e.g. 26 or https://anilist.co/anime/26" autoFocus />
               </label>
-              <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
-                <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
-              </button>
+              <div className={s.manualActions}>
+                <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
+                  <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
+                </button>
+                <button onClick={onClose} className={s.cancelButton}>
+                  <span className={s.cancelButtonLabel}>Done</span>
+                </button>
+              </div>
             </div>
           </>
         ) : ( /* title-mode unchanged */

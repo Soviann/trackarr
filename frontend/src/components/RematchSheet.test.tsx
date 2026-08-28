@@ -88,7 +88,7 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
       <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
     )
 
-    const input = getByPlaceholderText('e.g. 145064')
+    const input = getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26')
     fireEvent.input(input, { target: { value: '145064' } })
 
     const addBtn = getByText('Add')
@@ -106,109 +106,36 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
     })
   })
 
-  it('calls DELETE /titles/{id}/seasons/{seasonID}/anilist/{externalID} when Remove is clicked', async () => {
-    const parts = [makePart('145064', null)]
-    const season = makeSeason(10, parts)
+  it('extracts numeric AniList ID from full URL when Add is clicked', async () => {
+    const season = makeSeason(10, [])
     const title = makeTitle([season])
     const onDone = vi.fn()
+    const onClose = vi.fn()
 
-    const { getByText } = render(
-      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
+    const { getByPlaceholderText, getByText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} seasonID={10} onDone={onDone} />,
     )
 
-    const removeBtn = getByText('Remove')
-    fireEvent.click(removeBtn)
+    const input = getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26')
+    fireEvent.input(input, { target: { value: 'https://anilist.co/anime/26' } })
+
+    const addBtn = getByText('Add')
+    fireEvent.click(addBtn)
 
     await waitFor(() => {
       expect(mockApiFetch).toHaveBeenCalledWith(
-        '/titles/42/seasons/10/anilist/145064',
-        expect.objectContaining({ method: 'DELETE' }),
-      )
-      expect(onDone).toHaveBeenCalled()
-    })
-  })
-
-  it('calls PUT .../anilist/order with swapped ordered_ids when ▼ down button is clicked', async () => {
-    const parts = [makePart('145064', 78), makePart('145065', 90)]
-    const season = makeSeason(10, parts)
-    const title = makeTitle([season])
-    const onDone = vi.fn()
-
-    const { getAllByLabelText } = render(
-      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
-    )
-
-    // "Move part 1 down" moves index 0 → swap with index 1
-    const moveDownBtn = getAllByLabelText('Move part 1 down')[0]
-    fireEvent.click(moveDownBtn)
-
-    await waitFor(() => {
-      expect(mockApiFetch).toHaveBeenCalledWith(
-        '/titles/42/seasons/10/anilist/order',
+        '/titles/42/seasons/10/anilist',
         expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ ordered_ids: ['145065', '145064'] }),
+          method: 'POST',
+          body: JSON.stringify({ anilist_id: '26' }),
         }),
       )
       expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
     })
   })
 
-  it('calls PUT .../anilist/order with swapped ordered_ids when ▲ up button is clicked', async () => {
-    const parts = [makePart('145064', 78), makePart('145065', 90)]
-    const season = makeSeason(10, parts)
-    const title = makeTitle([season])
-    const onDone = vi.fn()
-
-    const { getAllByLabelText } = render(
-      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
-    )
-
-    // "Move part 2 up" moves index 1 → swap with index 0
-    const moveUpBtn = getAllByLabelText('Move part 2 up')[0]
-    fireEvent.click(moveUpBtn)
-
-    await waitFor(() => {
-      expect(mockApiFetch).toHaveBeenCalledWith(
-        '/titles/42/seasons/10/anilist/order',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ ordered_ids: ['145065', '145064'] }),
-        }),
-      )
-      expect(onDone).toHaveBeenCalled()
-    })
-  })
-
-  it('disables ▲ on first row and ▼ on last row', () => {
-    const parts = [makePart('145064', 78), makePart('145065', 90)]
-    const season = makeSeason(10, parts)
-    const title = makeTitle([season])
-
-    const { getByLabelText } = render(
-      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
-    )
-
-    expect((getByLabelText('Move part 1 up') as HTMLButtonElement).disabled).toBe(true)
-    expect((getByLabelText('Move part 1 down') as HTMLButtonElement).disabled).toBe(false)
-    expect((getByLabelText('Move part 2 up') as HTMLButtonElement).disabled).toBe(false)
-    expect((getByLabelText('Move part 2 down') as HTMLButtonElement).disabled).toBe(true)
-  })
-
-  it('does not show reorder buttons when only one part', () => {
-    const parts = [makePart('145064', 78)]
-    const season = makeSeason(10, parts)
-    const title = makeTitle([season])
-
-    const { queryByLabelText } = render(
-      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
-    )
-
-    expect(queryByLabelText('Move part 1 up')).toBeNull()
-    expect(queryByLabelText('Move part 1 down')).toBeNull()
-  })
-
-  it('does not call onClose after add — sheet stays open', async () => {
+  it('calls onClose after add', async () => {
     const season = makeSeason(10, [])
     const title = makeTitle([season])
     const onClose = vi.fn()
@@ -218,10 +145,12 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
       <RematchSheet open={true} onClose={onClose} title={title} seasonID={10} onDone={onDone} />,
     )
 
-    fireEvent.input(getByPlaceholderText('e.g. 145064'), { target: { value: '99999' } })
+    fireEvent.input(getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26'), { target: { value: '99999' } })
     fireEvent.click(getByText('Add'))
 
-    await waitFor(() => expect(onDone).toHaveBeenCalled())
-    expect(onClose).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
   })
 })

@@ -3,6 +3,8 @@ package handler
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/database"
@@ -22,6 +24,17 @@ func NewSeasonExternalHandler(writeDB *sql.DB) *SeasonExternalHandler {
 	return &SeasonExternalHandler{writeDB: writeDB}
 }
 
+func cleanAniListID(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if idx := strings.Index(raw, "anilist.co/anime/"); idx != -1 {
+		raw = raw[idx+len("anilist.co/anime/"):]
+		if slashIdx := strings.Index(raw, "/"); slashIdx != -1 {
+			raw = raw[:slashIdx]
+		}
+	}
+	return strings.TrimSpace(raw)
+}
+
 // AddAniListID appends an AniList part to a season and enqueues a push.
 // POST /api/titles/{titleID}/seasons/{seasonID}/anilist
 func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Request) error {
@@ -35,12 +48,23 @@ func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Requ
 	if err := httputil.ReadJSON(r, &body, 1024); err != nil {
 		return httputil.BadRequest("Invalid request")
 	}
-	if body.AniListID == "" {
+	aniListID := cleanAniListID(body.AniListID)
+	if aniListID == "" {
 		return httputil.BadRequest("anilist_id required")
+	}
+	if _, err := strconv.ParseInt(aniListID, 10, 64); err != nil {
+		return httputil.BadRequest("invalid anilist_id format")
 	}
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
 		if err := repository.NewSeasonExternalIDWriter(tx).Add(
-			r.Context(), seasonID, repository.ProviderAniList, body.AniListID); err != nil {
+			r.Context(), seasonID, repository.ProviderAniList, aniListID); err != nil {
+			return err
+		}
+		// Ensure parent title is marked as anime
+		if _, err := tx.ExecContext(r.Context(),
+			`UPDATE titles SET is_anime = 1 WHERE id = (SELECT title_id FROM seasons WHERE id = ?) AND is_anime = 0`,
+			seasonID,
+		); err != nil {
 			return err
 		}
 		service.EnqueueAniListSeasonPush(r.Context(), tx, seasonID)

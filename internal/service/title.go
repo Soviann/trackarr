@@ -278,10 +278,28 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 	// series we ALSO write the season mapping that drives the on-screen link.
 	if edit.AniListID != nil {
 		update.AniListID = edit.AniListID
+		isAnime := true
+		update.IsAnime = &isAnime
 	} else {
 		update.ClearAniListID = true
 	}
 	routeAniListToSeason := edit.AniListSeasonID != nil
+	var seasonID int64
+	if edit.AniListSeasonID != nil {
+		seasonID = *edit.AniListSeasonID
+	} else if title.Type != model.TitleTypeMovie && len(title.Seasons) > 0 && edit.AniListID != nil {
+		for _, s := range title.Seasons {
+			if s.SeasonNumber == 1 {
+				seasonID = s.ID
+				routeAniListToSeason = true
+				break
+			}
+		}
+		if !routeAniListToSeason {
+			seasonID = title.Seasons[0].ID
+			routeAniListToSeason = true
+		}
+	}
 
 	// When both poster sources (TMDB, TVDB) are gone, reset the cover so a later
 	// refresh re-derives it from AniList instead of keeping the stale one.
@@ -294,7 +312,6 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 			return err
 		}
 		if routeAniListToSeason {
-			seasonID := *edit.AniListSeasonID
 			writer := repository.NewSeasonExternalIDWriter(tx)
 			if edit.AniListID != nil {
 				if err := writer.Add(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(*edit.AniListID, 10)); err != nil {
