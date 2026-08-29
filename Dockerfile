@@ -7,7 +7,7 @@ COPY frontend/ .
 RUN npx vite build
 
 # Backend build
-FROM golang:1.26-bookworm AS backend
+FROM golang:1.27-bookworm AS backend
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
