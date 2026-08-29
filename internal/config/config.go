@@ -30,6 +30,7 @@ type Config struct {
 	SonarrAPIKey           string
 	ProwlarrURL            string
 	ProwlarrAPIKey         string
+	MetadataLanguage       string
 	DisableBackgroundTasks bool
 }
 
@@ -57,6 +58,7 @@ func Load() (*Config, error) {
 		SonarrAPIKey:           os.Getenv("SONARR_API_KEY"),
 		ProwlarrURL:            os.Getenv("PROWLARR_URL"),
 		ProwlarrAPIKey:         os.Getenv("PROWLARR_API_KEY"),
+		MetadataLanguage:       envOr("METADATA_LANGUAGE", "fr"),
 		DisableBackgroundTasks: os.Getenv("DISABLE_BACKGROUND_TASKS") == "true",
 	}
 

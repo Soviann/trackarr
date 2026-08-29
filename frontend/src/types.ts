@@ -13,6 +13,16 @@ export interface Settings {
   jellyfin_last_scrobble_at?: string | null
 }
 
+export interface PublicConfig {
+  google_client_id?: string
+  google_auth_enabled: boolean
+  password_auth_enabled: boolean
+  auth_mode: string
+  setup_required: boolean
+  vapid_public_key?: string
+  metadata_language?: string
+}
+
 export type TitleType = 'movie' | 'series'
 export type TitleStatus = 'watching' | 'completed' | 'dropped' | 'plan_to_watch'
 export type SeriesStatus = 'returning' | 'ended' | 'cancelled' | 'in_production'

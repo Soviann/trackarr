@@ -212,45 +212,58 @@ func extractMovieTMDB(d *tvdbMovieDetail) int64 {
 	return 0
 }
 
-// Names returns the en/fr translations of this series, keyed by language code.
+func tvdbLangToISO(l string) (string, bool) {
+	switch l {
+	case "eng":
+		return "en", true
+	case "fra":
+		return "fr", true
+	case "deu":
+		return "de", true
+	case "spa":
+		return "es", true
+	case "ita":
+		return "it", true
+	case "por":
+		return "pt", true
+	case "jpn":
+		return "ja", true
+	default:
+		return "", false
+	}
+}
+
+// Names returns the translations of this series, keyed by ISO language code.
 // Exported so the background refresh can backfill names without re-deriving the
 // extraction from the unexported detail type.
 func (d *tvdbSeriesDetail) Names() map[string]string { return extractSeriesNames(d) }
 
-// Names returns the en/fr translations of this movie, keyed by language code.
+// Names returns the translations of this movie, keyed by ISO language code.
 func (d *tvdbMovieDetail) Names() map[string]string { return extractMovieNames(d) }
 
-// extractSeriesNames returns en/fr names from TVDB translations.
+// extractSeriesNames returns multilingual names from TVDB translations.
 func extractSeriesNames(d *tvdbSeriesDetail) map[string]string {
 	result := make(map[string]string)
 	if d.Translations == nil {
 		return result
 	}
 	for _, t := range d.Translations.NameTranslations {
-		if (t.Language == "eng" || t.Language == "fra") && t.Name != "" {
-			lang := "en"
-			if t.Language == "fra" {
-				lang = "fr"
-			}
-			result[lang] = t.Name
+		if iso, ok := tvdbLangToISO(t.Language); ok && t.Name != "" {
+			result[iso] = t.Name
 		}
 	}
 	return result
 }
 
-// extractMovieNames returns en/fr names from TVDB movie translations.
+// extractMovieNames returns multilingual names from TVDB movie translations.
 func extractMovieNames(d *tvdbMovieDetail) map[string]string {
 	result := make(map[string]string)
 	if d.Translations == nil {
 		return result
 	}
 	for _, t := range d.Translations.NameTranslations {
-		if (t.Language == "eng" || t.Language == "fra") && t.Name != "" {
-			lang := "en"
-			if t.Language == "fra" {
-				lang = "fr"
-			}
-			result[lang] = t.Name
+		if iso, ok := tvdbLangToISO(t.Language); ok && t.Name != "" {
+			result[iso] = t.Name
 		}
 	}
 	return result

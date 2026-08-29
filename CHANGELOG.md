@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.5.0] — 2026-08-29
+
+### Ajouté
+- **Langue des métadonnées configurable** : Ajout d'un paramètre dédié dans l'administration (`/admin/settings`) permettant de choisir la langue source prioritaire pour les titres et métadonnées (Français, Anglais, Allemand, Espagnol, Italien, Portugais, Japonais), distinct de la langue de l'interface utilisateur.
+- **Support multilingue étendu (TMDB & TVDB)** : Extraction et enrichissement des traductions de titres dans plusieurs langues lors des recherches et de la synchronisation en arrière-plan.
+- **Résolution dynamique des titres & alternatives** : Priorisation automatique de la langue configurée pour le titre principal et classement adapté des titres alternatifs sur l'ensemble de l'interface.
+
 ## [v1.4.0] — 2026-08-24
 
 ### Ajouté

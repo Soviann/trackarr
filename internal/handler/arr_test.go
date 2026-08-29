@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
@@ -16,6 +15,7 @@ import (
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/testutil"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

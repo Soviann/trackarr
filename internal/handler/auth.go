@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -73,6 +73,7 @@ type PublicConfigResponse struct {
 	AuthMode            string `json:"auth_mode"` // "google", "password", "hybrid"
 	SetupRequired       bool   `json:"setup_required"`
 	VAPIDPublicKey      string `json:"vapid_public_key"`
+	MetadataLanguage    string `json:"metadata_language"`
 }
 
 // PublicConfig returns public unauthenticated configuration for login and setup screens.
@@ -97,8 +98,12 @@ func (h *AuthHandler) PublicConfig(w http.ResponseWriter, r *http.Request) error
 	setupRequired := !hasPassword && !hasGoogle
 
 	var vapidKey string
+	metadataLang := "fr"
 	if h.settings != nil {
 		vapidKey, _ = h.settings.Get(repository.SettingKeyVAPIDPublicKey)
+		if lang, err := h.settings.Get(repository.SettingKeyMetadataLanguage); err == nil && lang != "" {
+			metadataLang = lang
+		}
 	}
 
 	cfg := PublicConfigResponse{
@@ -108,6 +113,7 @@ func (h *AuthHandler) PublicConfig(w http.ResponseWriter, r *http.Request) error
 		AuthMode:            authMode,
 		SetupRequired:       setupRequired,
 		VAPIDPublicKey:      vapidKey,
+		MetadataLanguage:    metadataLang,
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, cfg)

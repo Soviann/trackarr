@@ -8,14 +8,46 @@ export function hexToRgba(hex: string | null | undefined, alpha: number): string
   return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`
 }
 
-/** Returns the best display name for a title. Priority: fr → en → (x-romaji → ja when anime) → first. */
-export function getName(title: Title): string {
+const METADATA_LANG_STORAGE_KEY = 'trackarr_metadata_lang'
+
+let currentMetadataLanguage = 'fr'
+if (typeof localStorage !== 'undefined') {
+  const stored = localStorage.getItem(METADATA_LANG_STORAGE_KEY)
+  if (stored) {
+    currentMetadataLanguage = stored
+  }
+}
+
+export function getPreferredMetadataLanguage(): string {
+  return currentMetadataLanguage
+}
+
+export function setPreferredMetadataLanguage(lang: string): void {
+  if (!lang) return
+  currentMetadataLanguage = lang
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(METADATA_LANG_STORAGE_KEY, lang)
+  }
+}
+
+/** Returns the best display name for a title according to preferred metadata language. Priority: preferred → en/fr → (x-romaji → ja when anime) → first. */
+export function getName(title: Title, preferredLang?: string): string {
   if (!title.names || title.names.length === 0) return '(untitled)'
+  const pref = preferredLang || currentMetadataLanguage || 'fr'
   const pick = (lang: string) => title.names.find((n) => n.language === lang)?.name
-  const fr = pick('fr')
-  if (fr) return fr
-  const en = pick('en')
-  if (en) return en
+  
+  const primary = pick(pref)
+  if (primary) return primary
+
+  if (pref !== 'en') {
+    const en = pick('en')
+    if (en) return en
+  }
+  if (pref !== 'fr') {
+    const fr = pick('fr')
+    if (fr) return fr
+  }
+
   if (title.is_anime) {
     const romaji = pick('x-romaji') ?? pick('ja')
     if (romaji) return romaji
@@ -43,12 +75,13 @@ export function languageLabel(lang: string): { flag: string; label: string } {
  * `title.names`, deduplicated case-insensitively, excluding the one already shown
  * as the main title and the `original_title`. Ordered by language priority.
  */
-export function getAlternativeNames(title: Title): { name: string; language: string }[] {
+export function getAlternativeNames(title: Title, preferredLang?: string): { name: string; language: string }[] {
   if (!title.names || title.names.length === 0) return []
+  const pref = preferredLang || currentMetadataLanguage || 'fr'
   const norm = (s: string) => s.trim().toLowerCase()
-  const shown = new Set<string>([norm(getName(title))])
+  const shown = new Set<string>([norm(getName(title, pref))])
   if (title.original_title) shown.add(norm(title.original_title))
-  const order = ['fr', 'en', 'x-romaji', 'ja']
+  const order = Array.from(new Set([pref, 'fr', 'en', 'x-romaji', 'ja', 'de', 'es', 'it', 'pt']))
   const langRank = (lang: string) => {
     const i = order.indexOf(lang)
     return i === -1 ? order.length : i

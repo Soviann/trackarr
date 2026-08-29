@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -27,17 +27,27 @@ function makeSeason(episodes: Episode[]): Season {
 }
 
 describe('getName', () => {
-  it('prefers French over English', () => {
+  it('prefers French over English by default', () => {
     const t = makeTitle({ names: [makeName('Eng', 'en', true), makeName('Fr', 'fr', false)] })
-    expect(getName(t)).toBe('Fr')
+    expect(getName(t, 'fr')).toBe('Fr')
   })
 
-  it('falls back to English when no French', () => {
-    const t = makeTitle({ names: [makeName('Eng', 'en', false), makeName('De', 'de', false)] })
-    expect(getName(t)).toBe('Eng')
+  it('prefers English when preferredLang is en', () => {
+    const t = makeTitle({ names: [makeName('Eng', 'en', true), makeName('Fr', 'fr', false)] })
+    expect(getName(t, 'en')).toBe('Eng')
   })
 
-  it('falls back to romaji for anime when no fr/en', () => {
+  it('prefers German when preferredLang is de', () => {
+    const t = makeTitle({ names: [makeName('Eng', 'en', true), makeName('Fr', 'fr', false), makeName('De', 'de', false)] })
+    expect(getName(t, 'de')).toBe('De')
+  })
+
+  it('falls back to English when preferred language is not present', () => {
+    const t = makeTitle({ names: [makeName('Eng', 'en', false), makeName('Alt', 'it', false)] })
+    expect(getName(t, 'de')).toBe('Eng')
+  })
+
+  it('falls back to romaji for anime when no preferred/en/fr', () => {
     const t = makeTitle({
       is_anime: true,
       names: [makeName('Shingeki no Kyojin', 'x-romaji', false), makeName('進撃の巨人', 'ja', false)],
@@ -63,6 +73,25 @@ describe('getName', () => {
   it('returns (untitled) for empty names', () => {
     expect(getName(makeTitle())).toBe('(untitled)')
     expect(getName(makeTitle({ names: undefined as unknown as TitleName[] }))).toBe('(untitled)')
+  })
+})
+
+describe('getAlternativeNames', () => {
+  it('returns alternative names ordered with preferred language first', () => {
+    const t = makeTitle({
+      names: [
+        makeName('Inception', 'en', true),
+        makeName('Origine', 'fr', false),
+        makeName('Inception (DE)', 'de', false),
+      ],
+    })
+    const altFR = getAlternativeNames(t, 'fr')
+    // Primary was 'Origine', alternatives should be 'Inception' (en) and 'Inception (DE)' (de)
+    expect(altFR.map(a => a.name)).toEqual(['Inception', 'Inception (DE)'])
+
+    const altEN = getAlternativeNames(t, 'en')
+    // Primary was 'Inception', alternatives should be 'Origine' (fr) and 'Inception (DE)' (de)
+    expect(altEN.map(a => a.name)).toEqual(['Origine', 'Inception (DE)'])
   })
 })
 

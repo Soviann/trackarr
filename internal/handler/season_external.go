@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 // SeasonExternalHandler manages external-ID mappings for individual seasons

@@ -1533,4 +1533,3 @@ func TestTaskQueueWorker_NilCoversSafe(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, t1.CoverURL)
 }
-

@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,6 +65,9 @@ func TestGetSystemSettings(t *testing.T) {
 	assert.Equal(t, "http://tracker.example.com/api/webhook/jellyfin/env-jellyfin-secret", resp.JellyfinWebhookURL)
 	assert.Equal(t, "env-plex-secret", resp.PlexWebhookSecret)
 	assert.Equal(t, "http://tracker.example.com/api/webhook/plex/env-plex-secret", resp.PlexWebhookURL)
+
+	// Default metadata language is fr
+	assert.Equal(t, "fr", resp.MetadataLanguage)
 }
 
 func TestUpdateSystemSettings_AndReload(t *testing.T) {
@@ -74,7 +77,8 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 		"tmdb_api_key": "new-sqlite-tmdb-key",
 		"tvdb_api_key": "new-sqlite-tvdb-key",
 		"radarr_url": "http://192.168.1.50:7878",
-		"radarr_api_key": "radarr-key-999"
+		"radarr_api_key": "radarr-key-999",
+		"metadata_language": "en"
 	}`
 
 	req := httptest.NewRequest("PUT", "/api/admin/system-settings", strings.NewReader(updateBody))
@@ -88,12 +92,17 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "new-sqlite-tmdb-key", tmdbKey)
 
+	metaLang, err := settings.Get("metadata_language")
+	require.NoError(t, err)
+	assert.Equal(t, "en", metaLang)
+
 	radarrURL, err := settings.Get("radarr_url")
 	require.NoError(t, err)
 	assert.Equal(t, "http://192.168.1.50:7878", radarrURL)
 
 	// Verify dynamic reloader returns the new value
 	assert.Equal(t, "new-sqlite-tmdb-key", reloader.Get("tmdb_api_key"))
+	assert.Equal(t, "en", reloader.Get("metadata_language"))
 	assert.Equal(t, "http://192.168.1.50:7878", reloader.Get("radarr_url"))
 
 	_ = db
