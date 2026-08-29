@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"

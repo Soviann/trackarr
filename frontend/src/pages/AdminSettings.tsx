@@ -3,7 +3,18 @@ import { apiFetch } from '../api'
 import { routeTo } from '../routes'
 import { THEMES, getStoredTheme, applyTheme, ThemeId } from '../utils/theme'
 import { useTranslation, LOCALES, Locale } from '../i18n'
+import { setPreferredMetadataLanguage } from '../utils'
 import s from './AdminSettings.module.css'
+
+export const METADATA_LANGUAGES = [
+  { id: 'fr', flag: '🇫🇷', name: 'French', nativeName: 'Français' },
+  { id: 'en', flag: '🇬🇧', name: 'English', nativeName: 'English' },
+  { id: 'de', flag: '🇩🇪', name: 'German', nativeName: 'Deutsch' },
+  { id: 'es', flag: '🇪🇸', name: 'Spanish', nativeName: 'Español' },
+  { id: 'it', flag: '🇮🇹', name: 'Italian', nativeName: 'Italiano' },
+  { id: 'pt', flag: '🇵🇹', name: 'Portuguese', nativeName: 'Português' },
+  { id: 'ja', flag: '🇯🇵', name: 'Japanese', nativeName: '日本語' },
+] as const
 
 interface SystemSettings {
   tmdb_api_key: string
@@ -31,6 +42,7 @@ interface SystemSettings {
   vapid_public_key: string
   vapid_subject: string
   vapid_configured: boolean
+  metadata_language?: string
 }
 
 export function AdminSettings({ path }: { path?: string }) {
@@ -71,6 +83,7 @@ export function AdminSettings({ path }: { path?: string }) {
         prowlarr_api_key: data.prowlarr_api_key || '',
         vapid_public_key: data.vapid_public_key || '',
         vapid_subject: data.vapid_subject || '',
+        metadata_language: data.metadata_language || 'fr',
       })
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load configuration')
@@ -96,6 +109,9 @@ export function AdminSettings({ path }: { path?: string }) {
         method: 'PUT',
         body: JSON.stringify(formValues),
       })
+      if (formValues.metadata_language) {
+        setPreferredMetadataLanguage(formValues.metadata_language)
+      }
       setSuccessMsg('Settings saved and hot-reloaded successfully!')
       await loadSettings()
       setTimeout(() => setSuccessMsg(null), 4000)
@@ -252,11 +268,42 @@ export function AdminSettings({ path }: { path?: string }) {
         <div className={s.sectionCard}>
           <div className={s.sectionHeader}>
             <div className={s.sectionTitle}>
-              <span>🎬 Metadata & Artificial Intelligence</span>
+              <span>🎬 {t('settings.metadataAi')}</span>
             </div>
           </div>
           <div className={s.sectionDesc}>
             These keys enable search, automatic enrichment, and intelligent title reconciliation for movies, TV shows, and anime.
+          </div>
+
+          {/* Primary Metadata Language */}
+          <div className={s.fieldGroup} style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
+            <label className={s.label} style={{ marginBottom: '4px' }}>
+              <span>🌐 {t('settings.metadataLanguage')}</span>
+            </label>
+            <div className={s.sectionDesc} style={{ marginBottom: '12px', fontSize: '13px' }}>
+              {t('settings.metadataLanguageDesc')}
+            </div>
+            <div className={s.themeGrid}>
+              {METADATA_LANGUAGES.map((lang) => {
+                const isActive = (formValues.metadata_language || settings.metadata_language || 'fr') === lang.id
+                return (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => handleChange('metadata_language', lang.id)}
+                    className={`${s.themeCard} ${isActive ? s.themeCardActive : ''}`}
+                  >
+                    <span style={{ fontSize: '20px', lineHeight: 1, flexShrink: 0 }}>
+                      {lang.flag}
+                    </span>
+                    <div className={s.themeInfo}>
+                      <span className={s.themeName}>{lang.nativeName}</span>
+                      <span className={s.themeDesc}>{lang.name}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* TMDB */}

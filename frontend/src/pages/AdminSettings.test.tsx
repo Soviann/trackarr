@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/pr
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { AdminSettings } from './AdminSettings'
 import { apiFetch } from '../api'
+import { setLocale } from '../i18n'
 
 vi.mock('../api', () => ({
   apiFetch: vi.fn(),
@@ -14,6 +15,8 @@ vi.mock('preact-router', () => ({
 describe('AdminSettings Page', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    localStorage.clear()
+    setLocale('en')
   })
 
   afterEach(() => {
@@ -95,13 +98,50 @@ describe('AdminSettings Page', () => {
     render(<AdminSettings />)
 
     await waitFor(() => {
-      expect(screen.getByText('Français')).not.toBeNull()
+      expect(screen.getAllByText('Français').length).toBeGreaterThan(0)
     })
 
-    fireEvent.click(screen.getByText('Français'))
+    const francaisBtns = screen.getAllByText('Français')
+    fireEvent.click(francaisBtns[0])
 
     await waitFor(() => {
       expect(screen.getByText(/Apparence & Thèmes/)).not.toBeNull()
+    })
+  })
+
+  it('allows selecting primary metadata language and saving settings', async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({
+        tmdb_api_key: '',
+        tmdb_configured: false,
+        metadata_language: 'fr',
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({
+        tmdb_api_key: '',
+        tmdb_configured: false,
+        metadata_language: 'en',
+      })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Primary Metadata Language/)).not.toBeNull()
+    })
+
+    // Find the English metadata button (within Metadata section, after Interface English)
+    const englishBtns = screen.getAllByText('English')
+    expect(englishBtns.length).toBeGreaterThan(0)
+    fireEvent.click(englishBtns[englishBtns.length - 1])
+
+    const saveBtn = screen.getByText('Save Settings')
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"metadata_language":"en"'),
+      }))
     })
   })
 })

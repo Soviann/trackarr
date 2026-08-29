@@ -95,7 +95,7 @@
 | Method | Path | Handler | Description |
 |---|---|---|---|
 | GET | `/api/health` | `handler.Health` | Health check endpoint |
-| GET | `/api/config` | `auth.PublicConfig` | Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status) |
+| GET | `/api/config` | `auth.PublicConfig` | Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status, Metadata Language) |
 | POST | `/api/auth/setup` | `auth.Setup` | Initial admin account setup & emergency recovery key generation |
 | POST | `/api/auth/login` | `auth.Login` | Local password login (Bcrypt, constant-time, rate-limited) |
 | POST | `/api/auth/google` | `auth.GoogleCallback` | OAuth Google authentication |

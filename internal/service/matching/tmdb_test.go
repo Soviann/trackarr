@@ -212,9 +212,7 @@ func TestTMDBGetTitleNames(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Fight Club", names["en"])
 	assert.Equal(t, "Fight Club", names["fr"])
-	// German should be filtered out (only en/fr)
-	_, hasDE := names["de"]
-	assert.False(t, hasDE)
+	assert.Equal(t, "Fight Club", names["de"])
 }
 
 func TestTMDBGetTitleNamesPrefersFrFRoverFrCA(t *testing.T) {

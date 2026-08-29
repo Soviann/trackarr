@@ -91,6 +91,8 @@ export const fr: TranslationSchema = {
     appearance: 'Apparence & Thèmes',
     appearanceDesc: 'Choisissez votre thème de couleur et votre langue d’interface préférés.',
     language: 'Langue de l’interface',
+    metadataLanguage: 'Langue principale des métadonnées',
+    metadataLanguageDesc: 'Langue préférée utilisée pour l’affichage des titres et métadonnées.',
     metadataAi: 'Métadonnées & Intelligence Artificielle',
     webhooks: 'Webhooks serveurs multimédia',
     arrConfig: 'Stack Arr (Radarr / Sonarr / Prowlarr)',

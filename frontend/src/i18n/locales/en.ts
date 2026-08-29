@@ -89,6 +89,8 @@ export const en = {
     appearance: 'Appearance & Themes',
     appearanceDesc: 'Choose your preferred color theme and language for Trackarr.',
     language: 'Interface Language',
+    metadataLanguage: 'Primary Metadata Language',
+    metadataLanguageDesc: 'Preferred language used for title names and metadata display.',
     metadataAi: 'Metadata & Artificial Intelligence',
     webhooks: 'Media Server Webhooks',
     arrConfig: 'Arr Stack (Radarr / Sonarr / Prowlarr)',

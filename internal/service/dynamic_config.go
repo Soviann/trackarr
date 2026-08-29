@@ -101,6 +101,8 @@ func (d *DynamicConfigReloader) Get(key string) string {
 		return d.cfg.VAPIDPrivateKey
 	case "vapid_subject":
 		return d.cfg.VAPIDSubject
+	case "metadata_language":
+		return d.cfg.MetadataLanguage
 	default:
 		return ""
 	}

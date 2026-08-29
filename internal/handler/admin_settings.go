@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/go-chi/chi/v5"
 )
 
 type AdminSettingsHandler struct {
@@ -37,30 +37,31 @@ func NewAdminSettingsHandler(
 
 type SystemSettingsResponse struct {
 	TMDBAPIKey            string `json:"tmdb_api_key"`
-	TMDBConfigured         bool   `json:"tmdb_configured"`
+	TMDBConfigured        bool   `json:"tmdb_configured"`
 	TVDBAPIKey            string `json:"tvdb_api_key"`
-	TVDBConfigured         bool   `json:"tvdb_configured"`
-	GeminiAPIKeys          string `json:"gemini_api_keys"`
-	GeminiConfigured       bool   `json:"gemini_configured"`
-	AniListClientID        string `json:"anilist_client_id"`
-	AniListClientSecret    string `json:"anilist_client_secret"`
-	AniListConfigured      bool   `json:"anilist_configured"`
-	JellyfinWebhookSecret  string `json:"jellyfin_webhook_secret"`
-	JellyfinWebhookURL     string `json:"jellyfin_webhook_url"`
-	PlexWebhookSecret      string `json:"plex_webhook_secret"`
-	PlexWebhookURL         string `json:"plex_webhook_url"`
-	RadarrURL              string `json:"radarr_url"`
-	RadarrAPIKey           string `json:"radarr_api_key"`
-	RadarrConfigured       bool   `json:"radarr_configured"`
-	SonarrURL              string `json:"sonarr_url"`
-	SonarrAPIKey           string `json:"sonarr_api_key"`
-	SonarrConfigured       bool   `json:"sonarr_configured"`
-	ProwlarrURL            string `json:"prowlarr_url"`
-	ProwlarrAPIKey         string `json:"prowlarr_api_key"`
-	ProwlarrConfigured     bool   `json:"prowlarr_configured"`
-	VAPIDPublicKey         string `json:"vapid_public_key"`
-	VAPIDSubject           string `json:"vapid_subject"`
-	VAPIDConfigured        bool   `json:"vapid_configured"`
+	TVDBConfigured        bool   `json:"tvdb_configured"`
+	GeminiAPIKeys         string `json:"gemini_api_keys"`
+	GeminiConfigured      bool   `json:"gemini_configured"`
+	AniListClientID       string `json:"anilist_client_id"`
+	AniListClientSecret   string `json:"anilist_client_secret"`
+	AniListConfigured     bool   `json:"anilist_configured"`
+	JellyfinWebhookSecret string `json:"jellyfin_webhook_secret"`
+	JellyfinWebhookURL    string `json:"jellyfin_webhook_url"`
+	PlexWebhookSecret     string `json:"plex_webhook_secret"`
+	PlexWebhookURL        string `json:"plex_webhook_url"`
+	RadarrURL             string `json:"radarr_url"`
+	RadarrAPIKey          string `json:"radarr_api_key"`
+	RadarrConfigured      bool   `json:"radarr_configured"`
+	SonarrURL             string `json:"sonarr_url"`
+	SonarrAPIKey          string `json:"sonarr_api_key"`
+	SonarrConfigured      bool   `json:"sonarr_configured"`
+	ProwlarrURL           string `json:"prowlarr_url"`
+	ProwlarrAPIKey        string `json:"prowlarr_api_key"`
+	ProwlarrConfigured    bool   `json:"prowlarr_configured"`
+	VAPIDPublicKey        string `json:"vapid_public_key"`
+	VAPIDSubject          string `json:"vapid_subject"`
+	VAPIDConfigured       bool   `json:"vapid_configured"`
+	MetadataLanguage      string `json:"metadata_language"`
 }
 
 func maskSecret(s string) string {
@@ -108,32 +109,38 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		plexURL = fmt.Sprintf("%s://%s/api/webhook/plex/%s", scheme, host, plexSecret)
 	}
 
+	metadataLang := get("metadata_language")
+	if metadataLang == "" {
+		metadataLang = "fr"
+	}
+
 	resp := SystemSettingsResponse{
 		TMDBAPIKey:            maskSecret(get("tmdb_api_key")),
-		TMDBConfigured:         get("tmdb_api_key") != "",
+		TMDBConfigured:        get("tmdb_api_key") != "",
 		TVDBAPIKey:            maskSecret(get("tvdb_api_key")),
-		TVDBConfigured:         get("tvdb_api_key") != "",
-		GeminiAPIKeys:          maskSecret(get("gemini_api_keys")),
-		GeminiConfigured:       get("gemini_api_keys") != "",
-		AniListClientID:        get("anilist_client_id"),
-		AniListClientSecret:    maskSecret(get("anilist_client_secret")),
-		AniListConfigured:      get("anilist_client_id") != "",
-		JellyfinWebhookSecret:  jellyfinSecret,
-		JellyfinWebhookURL:     jellyfinURL,
-		PlexWebhookSecret:      plexSecret,
-		PlexWebhookURL:         plexURL,
-		RadarrURL:              get("radarr_url"),
-		RadarrAPIKey:           maskSecret(get("radarr_api_key")),
-		RadarrConfigured:       get("radarr_url") != "" && get("radarr_api_key") != "",
-		SonarrURL:              get("sonarr_url"),
-		SonarrAPIKey:           maskSecret(get("sonarr_api_key")),
-		SonarrConfigured:       get("sonarr_url") != "" && get("sonarr_api_key") != "",
-		ProwlarrURL:            get("prowlarr_url"),
-		ProwlarrAPIKey:         maskSecret(get("prowlarr_api_key")),
-		ProwlarrConfigured:     get("prowlarr_url") != "" && get("prowlarr_api_key") != "",
-		VAPIDPublicKey:         get("vapid_public_key"),
-		VAPIDSubject:           get("vapid_subject"),
-		VAPIDConfigured:        get("vapid_public_key") != "",
+		TVDBConfigured:        get("tvdb_api_key") != "",
+		GeminiAPIKeys:         maskSecret(get("gemini_api_keys")),
+		GeminiConfigured:      get("gemini_api_keys") != "",
+		AniListClientID:       get("anilist_client_id"),
+		AniListClientSecret:   maskSecret(get("anilist_client_secret")),
+		AniListConfigured:     get("anilist_client_id") != "",
+		JellyfinWebhookSecret: jellyfinSecret,
+		JellyfinWebhookURL:    jellyfinURL,
+		PlexWebhookSecret:     plexSecret,
+		PlexWebhookURL:        plexURL,
+		RadarrURL:             get("radarr_url"),
+		RadarrAPIKey:          maskSecret(get("radarr_api_key")),
+		RadarrConfigured:      get("radarr_url") != "" && get("radarr_api_key") != "",
+		SonarrURL:             get("sonarr_url"),
+		SonarrAPIKey:          maskSecret(get("sonarr_api_key")),
+		SonarrConfigured:      get("sonarr_url") != "" && get("sonarr_api_key") != "",
+		ProwlarrURL:           get("prowlarr_url"),
+		ProwlarrAPIKey:        maskSecret(get("prowlarr_api_key")),
+		ProwlarrConfigured:    get("prowlarr_url") != "" && get("prowlarr_api_key") != "",
+		VAPIDPublicKey:        get("vapid_public_key"),
+		VAPIDSubject:          get("vapid_subject"),
+		VAPIDConfigured:       get("vapid_public_key") != "",
+		MetadataLanguage:      metadataLang,
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
@@ -169,6 +176,7 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 		"vapid_public_key":        true,
 		"vapid_private_key":       true,
 		"vapid_subject":           true,
+		"metadata_language":       true,
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
@@ -347,7 +355,7 @@ func (h *AdminSettingsHandler) TestArr(w http.ResponseWriter, r *http.Request) e
 		baseURL = strings.TrimRight(strings.TrimSpace(h.reloader.Get(app+"_url")), "/")
 	}
 	if (apiKey == "" || strings.HasPrefix(apiKey, "••••")) && h.reloader != nil {
-		apiKey = strings.TrimSpace(h.reloader.Get(app+"_api_key"))
+		apiKey = strings.TrimSpace(h.reloader.Get(app + "_api_key"))
 	}
 
 	if baseURL == "" || apiKey == "" {

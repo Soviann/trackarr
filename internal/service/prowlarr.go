@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/golang-lru/v2"
 	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/hashicorp/golang-lru/v2"
 )
 
 type ProwlarrRelease struct {

@@ -7,10 +7,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type ArrHandler struct {

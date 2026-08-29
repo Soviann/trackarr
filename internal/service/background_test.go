@@ -860,4 +860,3 @@ func TestBackgroundService_RefreshTitle_SyncsNamesAndPurgesStaleTranslations(t *
 	assert.Equal(t, "Rakudai Kenja Romaji", romajiName.Name)
 	assert.False(t, romajiName.IsPrimary)
 }
-

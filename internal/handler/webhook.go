@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
+	"github.com/go-chi/chi/v5"
 )
 
 type jellyfinProcessor interface {

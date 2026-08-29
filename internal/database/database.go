@@ -180,4 +180,3 @@ func ResolveDBPath(dataDir string) string {
 	}
 	return filepath.Join(dataDir, "trackarr.db")
 }
-

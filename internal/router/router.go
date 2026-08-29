@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
@@ -16,6 +14,8 @@ import (
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distFS embed.FS, bgSvc *service.BackgroundService, pipeline *matching.Pipeline, shutdownWG *sync.WaitGroup) *chi.Mux {

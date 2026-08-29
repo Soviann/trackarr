@@ -144,12 +144,11 @@ func (c *TMDBClient) GetTVSeasonEpisodes(ctx context.Context, tmdbID int64, seas
 	return resp.Episodes, nil
 }
 
-// GetTitleNames returns multilingual names for a title (en, fr).
+// GetTitleNames returns multilingual names for a title (en, fr, de, es, it, pt, ja).
 // For French, only the strict fr-FR variant is accepted — other regional
 // variants (fr-CA, fr-BE, fr-CH, …) are ignored on purpose so the UI never
 // surfaces a Quebec/Belgian/Swiss title to a France-based user. When fr-FR
-// is missing, no "fr" entry is returned and the display layer falls back
-// to English.
+// is missing, no "fr" entry is returned and the display layer falls back.
 // mediaType should be "movie" or "tv".
 func (c *TMDBClient) GetTitleNames(ctx context.Context, tmdbID int64, mediaType string) (map[string]string, error) {
 	var resp tmdbTranslationsResponse
@@ -172,6 +171,26 @@ func (c *TMDBClient) GetTitleNames(ctx context.Context, tmdbID int64, mediaType 
 		case "fr":
 			if t.ISO3166 == "FR" {
 				names["fr"] = name
+			}
+		case "de":
+			if t.ISO3166 == "DE" || names["de"] == "" {
+				names["de"] = name
+			}
+		case "es":
+			if t.ISO3166 == "ES" || names["es"] == "" {
+				names["es"] = name
+			}
+		case "it":
+			if t.ISO3166 == "IT" || names["it"] == "" {
+				names["it"] = name
+			}
+		case "pt":
+			if t.ISO3166 == "PT" || names["pt"] == "" {
+				names["pt"] = name
+			}
+		case "ja":
+			if t.ISO3166 == "JP" || names["ja"] == "" {
+				names["ja"] = name
 			}
 		}
 	}
