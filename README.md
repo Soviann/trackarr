@@ -13,6 +13,49 @@
 
 ---
 
+## 📸 Showcase
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/01-library.png" alt="Library Grid & Stats" width="100%" />
+        <br />
+        <sub><b>Library & Quick Stats</b></sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/02-continue-watching.png" alt="Continue Watching Queue" width="100%" />
+        <br />
+        <sub><b>Continue Watching Queue</b></sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/03-title-detail.png" alt="Title Detail & Ratings" width="100%" />
+        <br />
+        <sub><b>Title Details & Hero Backdrop</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/04-search.png" alt="Instant Live Search" width="100%" />
+        <br />
+        <sub><b>Live Instant Search</b></sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/05-filters-drawer.png" alt="Advanced Filters Drawer" width="100%" />
+        <br />
+        <sub><b>Filters & Multi-Criteria Sorting</b></sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="docs/screenshots/06-stats.png" alt="Stats & Analytics" width="100%" />
+        <br />
+        <sub><b>Stats & Analytics Dashboard</b></sub>
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
 ## ⚡ Why Trackarr?
 
 - 🚀 **Ultra-Lightweight Go Backend**: Single binary with embedded SQLite WAL and embedded web assets. Idles at **under 30 MB of RAM**, perfectly suited for low-power Synology NAS, Unraid, TrueNAS, Raspberry Pi, and VPS.

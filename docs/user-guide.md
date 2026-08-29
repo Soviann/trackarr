@@ -22,6 +22,12 @@ Welcome to the **Trackarr User Guide**. This document explains how to navigate, 
 
 The **Library** screen is your media command center:
 
+<div align="center">
+  <img src="screenshots/01-library.png" alt="Library Screen" width="300" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/05-filters-drawer.png" alt="Filters Drawer Open" width="300" />
+</div>
+
 ### Status Categories & Filters:
 - **Watching**: Series with at least one aired, unwatched episode.
 - **Caught Up**: A special green sub-status badge on watching cards when you have watched every currently aired episode, but future episodes or seasons are scheduled. It automatically flips back to Watching when a new episode airs.
@@ -49,6 +55,12 @@ The **Library** screen is your media command center:
 
 ## 2. Managing Titles & Episodes
 
+<div align="center">
+  <img src="screenshots/03-title-detail.png" alt="Title Details View" width="300" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/02-continue-watching.png" alt="Continue Watching Queue" width="300" />
+</div>
+
 Opening a title displays its rich details:
 - **Hero & Accent Color**: High-resolution cover art with dynamic backdrop gradient extracted from poster colors.
 - **Streaming Badge**: Displays the Amazon Prime Video badge when the title is available on Prime.
@@ -67,6 +79,10 @@ Opening a title displays its rich details:
 ---
 
 ## 3. Search, URL Paste & Android Sharing
+
+<div align="center">
+  <img src="screenshots/04-search.png" alt="Live Instant Search" width="300" />
+</div>
 
 Adding media to Trackarr is fast and versatile:
 1. **Search by Name**: Search instantly across your local library (with full-text search) or query TMDB for new titles to add.
@@ -101,6 +117,10 @@ Anime and split TV seasons frequently release under separate titles (e.g. *JoJo'
 ---
 
 ## 6. Arr Stack (Radarr, Sonarr, Prowlarr)
+
+<div align="center">
+  <img src="screenshots/07-admin.png" alt="Admin and Integrations Dashboard" width="300" />
+</div>
 
 Trackarr bridges media tracking with your download managers:
 - **Visual Status Lines (Liserés)**:
