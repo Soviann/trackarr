@@ -13,7 +13,12 @@ Welcome to **Trackarr** (`github.com/Soviann/trackarr`). This document provides 
 
 ## 🎯 Approach & Core Rules
 - **Key Context Sources**: Always check `docs/patterns.md` and topic guides in `docs/` (`docs/INDEX.md`) to understand domain logic, routes, and data flows before proposing changes.
-- **Keep Documentation Synchronized**: Update `docs/patterns.md` when adding routes, services, repositories, or UI components. Update the relevant topic doc in `docs/` when adding or modifying user-facing features.
+- **Keep Documentation Synchronized**: Use domain reasoning to identify and update all impacted documentation:
+  - `docs/patterns.md` when routes, services, repositories, models, or UI components change.
+  - `docs/llm.md` when database schemas, models, or API endpoints change.
+  - The relevant topic guide in `docs/` (or `docs/dev/` via `docs/INDEX.md`) when adding or modifying domain features.
+- **Documentation Verification Pass**: Once documentation is edited, systematically perform a review pass to ensure zero broken references, no missing links, and full consistency between the documentation and the actual implementation.
+- **Bundle Documentation with Code**: Never commit documentation updates in a separate trailing commit; always stage and commit documentation changes atomically with the implementation code in the same working commit.
 - **Maintain Changelog**: Keep `CHANGELOG.md` updated with notable user-facing changes, improvements, and fixes under `## [Unreleased]` following the [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) standard.
 - **Robustness Over Ease**: Prefer correct, resilient solutions over quick workarounds.
 - **No Exploratory Waste**: When working on specific files or symbols, navigate and read targeted files directly.
