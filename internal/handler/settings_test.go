@@ -41,6 +41,7 @@ func TestSettingsHandler_Get_Empty(t *testing.T) {
 	_ = json.NewDecoder(rr.Body).Decode(&result)
 	assert.Equal(t, false, result["anilist_connected"])
 	assert.Equal(t, false, result["push_subscribed"])
+	assert.Equal(t, "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn", result["enabled_watch_providers"])
 }
 
 func TestSettingsHandler_Get_AniListConnected(t *testing.T) {

@@ -11,6 +11,7 @@ export interface Settings {
   jellyfin_configured: boolean
   prowlarr_configured?: boolean
   jellyfin_last_scrobble_at?: string | null
+  enabled_watch_providers?: string
 }
 
 export interface PublicConfig {
@@ -21,6 +22,7 @@ export interface PublicConfig {
   setup_required: boolean
   vapid_public_key?: string
   metadata_language?: string
+  enabled_watch_providers?: string
 }
 
 export type TitleType = 'movie' | 'series'

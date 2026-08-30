@@ -94,6 +94,8 @@ export const fr: TranslationSchema = {
     metadataLanguage: 'Langue principale des métadonnées',
     metadataLanguageDesc: 'Langue préférée utilisée pour l’affichage des titres et métadonnées.',
     metadataAi: 'Métadonnées & Intelligence Artificielle',
+    watchProviders: 'Plateformes de streaming & Watch Providers',
+    watchProvidersDesc: 'Sélectionnez vos plateformes actives pour afficher les badges correspondants sur vos titres disponibles.',
     webhooks: 'Webhooks serveurs multimédia',
     arrConfig: 'Stack Arr (Radarr / Sonarr / Prowlarr)',
     notificationsConfig: 'Notifications Web Push',

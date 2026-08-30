@@ -16,8 +16,7 @@ import { RematchSheet } from '../components/RematchSheet'
 import { ArrPushSheet } from '../components/ArrPushSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { StatusBadge } from '../components/StatusBadge'
-import { PrimeBadge } from '../components/PrimeBadge'
-import { isOnPrime } from '../utils/providers'
+import { WatchProviderBadges } from '../components/WatchProviderBadges'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
@@ -253,7 +252,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         )}
         <div style={{ marginTop: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
           <StatusBadge status={title.status} />
-          {isOnPrime(title.watch_providers) && <PrimeBadge />}
+          <WatchProviderBadges providers={title.watch_providers} />
         </div>
       </div>
 

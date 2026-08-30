@@ -34,6 +34,7 @@ const (
 	SettingKeyProwlarrURL           = "prowlarr_url"
 	SettingKeyProwlarrAPIKey        = "prowlarr_api_key"
 	SettingKeyMetadataLanguage      = "metadata_language"
+	SettingKeyEnabledWatchProviders = "enabled_watch_providers"
 )
 
 // SettingRepository reads the settings key-value store. Writes live on
