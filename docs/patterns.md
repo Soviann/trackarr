@@ -9,6 +9,7 @@
 - AniList GraphQL, Prequel Chaining & Multi-Parts: `docs/dev/anilist-sync.md`
 - SQLite WAL, Writer/Reader Contracts & Deadlocks: `docs/dev/database-model.md`
 - Radarr / Sonarr (*arr) Queue & Push Workflow: `docs/dev/arr-integration.md`
+- Background Jobs & Task Queue Architecture: `docs/background-jobs.md`
 
 ## Human / User Documentation
 - Master Index: `docs/INDEX.md`

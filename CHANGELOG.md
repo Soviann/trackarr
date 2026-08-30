@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Documentation
+- **Architecture des tâches d'arrière-plan et Task Queue (`docs/background-jobs.md`)** : Documentation exhaustive du service de rafraîchissement quotidien (`BackgroundService`), de la file de tâches asynchrone SQLite (`TaskQueueWorker`), du cycle de vie des tâches (`pending`, `running`, `sleeping`, `dead`), du rate limiter partagé (`APILimiter`) et du protocole d'arrêt gracieux (`shutdownWG`).
+
 ## [v1.7.0] — 2026-08-30
 
 ### Ajouté
