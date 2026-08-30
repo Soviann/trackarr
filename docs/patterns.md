@@ -199,7 +199,7 @@
 | `SearchBar` | `components/SearchBar.tsx` | Sticky search input bound to `useSearchStore` |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
-| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Franchise relations section on title detail with category filter tabs |
+| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Sagas & Franchise relations card with category filters, timeline/release sort toggle, and collapse/expand |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |
 | `MatchReviewCard` | `components/MatchReviewCard.tsx` | Review card with external ID chips, confirm, and fix actions |
 | `RatingPrompt`| `components/RatingPrompt.tsx` | 10-star rating popup with AniList / IMDb shortcuts |

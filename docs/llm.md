@@ -42,6 +42,7 @@
 - `task_queue`: Asynchronous background jobs (`task_type`, `payload`, `status: 'pending'|'running'|'completed'|'failed'|'dead'`, `attempts`, `run_at`, `dedup_key`).
 - `match_events`: Match audit trail (`title_id`, `kind`, `detail`, `created_at`).
 - `season_external_ids`: Per-part AniList season mappings (`season_id`, `provider: 'anilist'`, `external_id`, `anilist_episode_count`, `anilist_start_date`, `anilist_average_score`, `sort_order`).
+- `title_relations`: Side stories, sagas, and franchise relations (`title_id`, `season_id`, `provider: 'anilist'|'tmdb'|'tvdb'`, `external_id`, `relation_type: 'PREQUEL'|'SEQUEL'|'SPIN_OFF'|'SIDE_STORY'|'ALTERNATIVE'|'COLLECTION'`, `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`).
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
 - `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
