@@ -216,6 +216,12 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `origin_country = ?`)
 		args = append(args, *update.OriginCountry)
 	}
+	if update.ClearPersonalNotes {
+		sets = append(sets, `personal_notes = NULL`)
+	} else if update.PersonalNotes != nil {
+		sets = append(sets, `personal_notes = ?`)
+		args = append(args, *update.PersonalNotes)
+	}
 
 	if len(sets) == 0 {
 		return nil
@@ -529,6 +535,7 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		runtime            = COALESCE(titles.runtime,            src.runtime),
 		origin_country     = COALESCE(titles.origin_country,     src.origin_country),
 		watch_providers    = COALESCE(titles.watch_providers,    src.watch_providers),
+		personal_notes     = COALESCE(titles.personal_notes,     src.personal_notes),
 		my_rating          = COALESCE(titles.my_rating,          src.my_rating),
 		original_title     = COALESCE(titles.original_title,     src.original_title),
 		match_source       = COALESCE(titles.match_source,       src.match_source),

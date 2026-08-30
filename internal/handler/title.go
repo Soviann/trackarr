@@ -331,15 +331,16 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		Status      *model.TitleStatus `json:"status"`
-		MatchStatus *model.MatchStatus `json:"match_status"`
-		MyRating    *int               `json:"my_rating"`
-		Type        *model.TitleType   `json:"type"`
-		IsAnime     *bool              `json:"is_anime"`
-		ArrIgnored  *bool              `json:"arr_ignored"`
+		Status        *model.TitleStatus `json:"status"`
+		MatchStatus   *model.MatchStatus `json:"match_status"`
+		MyRating      *int               `json:"my_rating"`
+		Type          *model.TitleType   `json:"type"`
+		IsAnime       *bool              `json:"is_anime"`
+		ArrIgnored    *bool              `json:"arr_ignored"`
+		PersonalNotes *string            `json:"personal_notes"`
 	}
 
-	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
+	if err := httputil.ReadJSON(r, &body, 65536); err != nil {
 		return httputil.BadRequest("Invalid request")
 	}
 
@@ -349,12 +350,17 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	before, _ := h.titles.GetByID(id)
 
 	update := repository.TitleUpdate{
-		Status:      body.Status,
-		MatchStatus: body.MatchStatus,
-		MyRating:    body.MyRating,
-		Type:        body.Type,
-		IsAnime:     body.IsAnime,
-		ArrIgnored:  body.ArrIgnored,
+		Status:        body.Status,
+		MatchStatus:   body.MatchStatus,
+		MyRating:      body.MyRating,
+		Type:          body.Type,
+		IsAnime:       body.IsAnime,
+		ArrIgnored:    body.ArrIgnored,
+		PersonalNotes: body.PersonalNotes,
+	}
+	if body.PersonalNotes != nil && *body.PersonalNotes == "" {
+		update.ClearPersonalNotes = true
+		update.PersonalNotes = nil
 	}
 
 	typeChanged := body.Type != nil && before != nil && *body.Type != before.Type

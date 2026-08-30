@@ -33,7 +33,7 @@
 ---
 
 ## 3. Database Schema Overview
-- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`).
+- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`).
 - `title_names`: Multilingual title aliases (`title_id`, `name`, `language`, `is_primary`).
 - `title_genres`: Associated genres per title (`title_id`, `genre`).
 - `seasons`: Season entries (`title_id`, `season_number`, `total_episodes`).
@@ -52,7 +52,7 @@
 - `GET /api/titles` : List titles with status/type/genre/person/country filtering, sorting, pagination.
 - `GET /api/titles/{id}` : Full title entity with names, seasons, episodes, cast, external IDs.
 - `POST /api/titles` : Create title (supports manual input or direct URL matching).
-- `PATCH /api/titles/{id}` : Update status, rating, match status, type, anime flag, or arr ignored.
+- `PATCH /api/titles/{id}` : Update status, rating, match status, type, anime flag, arr ignored, or personal notes.
 - `DELETE /api/titles/{id}` : Delete title and cascaded relations.
 - `POST /api/titles/{id}/rematch` : Rematch title with new query or URL.
 - `POST /api/titles/{id}/merge` : Merge source title into target title with optional season offset.

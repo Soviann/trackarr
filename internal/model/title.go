@@ -107,6 +107,7 @@ type Title struct {
 	RadarrID          *int64          `json:"radarr_id,omitempty"`
 	SonarrID          *int64          `json:"sonarr_id,omitempty"`
 	ArrIgnored        bool            `json:"arr_ignored"`
+	PersonalNotes     *string         `json:"personal_notes,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 

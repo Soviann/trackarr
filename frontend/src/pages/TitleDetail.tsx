@@ -24,6 +24,8 @@ import { TitleHistory } from '../components/TitleHistory'
 import { SeasonSideStories } from '../components/SeasonSideStories'
 import { FranchiseRelationsSection } from '../components/FranchiseRelationsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { NextEpisodeHero } from '../components/NextEpisodeHero'
+import { PersonalNotesCard } from '../components/PersonalNotesCard'
 import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
@@ -255,6 +257,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </div>
       </div>
 
+      {/* Next Episode Hero Button & Binge Estimator */}
+      <NextEpisodeHero
+        title={title}
+        onEpisodeToggle={handleEpisodeToggle}
+        onStatusChange={(status) => handleSaveEdit({ status })}
+      />
+
       {/* Ratings card */}
       <div className={s.card} style={{ marginTop: '12px' }}>
         <div className={s.ratingsRow}>
@@ -296,6 +305,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           </button>
         </div>
       )}
+
+      {/* Personal Notes */}
+      <PersonalNotesCard
+        titleId={title.id}
+        initialNotes={title.personal_notes}
+        onSaved={(notes) => setData((prev) => (prev ? { ...prev, personal_notes: notes } : prev))}
+      />
 
       {/* Cast & Crew card */}
       {credits && credits.length > 0 && (

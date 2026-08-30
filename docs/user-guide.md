@@ -63,6 +63,8 @@ The **Library** screen is your media command center:
 
 Opening a title displays its rich details:
 - **Hero & Accent Color**: High-resolution cover art with dynamic backdrop gradient extracted from poster colors.
+- **Next Episode Action & Binge Estimator**: A prominent call-to-action hero card right under the title identity allowing 1-click progression (`▶ Marquer S02E06 comme vu`) without unfolding season lists. Includes real-time binge estimation (*« ⏱️ Reste ~3h 15m (4 épisodes) »* or total duration for Plan to Watch titles).
+- **Personal Notes (Notes personnelles)**: A private notes card on every title with debounced auto-save (500ms) to jot down reminders, personal reviews, quotes, or recommendations.
 - **Streaming Badge**: Displays the Amazon Prime Video badge when the title is available on Prime.
 - **Scores**: Personal score (1–10) on the left, external community scores (TMDB, AniList) on the right.
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.

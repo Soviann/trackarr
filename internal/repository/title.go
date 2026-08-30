@@ -82,30 +82,32 @@ type TitleUpdate struct {
 	ClearTVDBID    bool
 	// ClearCoverURL resets the cover to NULL — used when the TMDB/TVDB poster
 	// source is removed so a later refresh re-derives it (e.g. from AniList).
-	ClearCoverURL     bool
-	ExternalSourceID  *string
-	MatchSource       *string
-	OriginalTitle     *string
-	Type              *model.TitleType
-	IsAnime           *bool
-	Overview          *string
-	Runtime           *int
-	TotalWatchMinutes *int
-	TMDBRating        *float64
-	Credits           *string
-	AniListRating     *int
-	Year              *int
-	ReleaseDate       *string
-	NextAirDate       *string
-	NextAirEpisode    *string
-	AccentHex         *string
-	SimklID           *int64
-	SimklSlug         *string
-	RadarrID          *int64
-	SonarrID          *int64
-	ArrIgnored        *bool
-	WatchProviders    *string // JSON array of model.WatchProvider; "[]" clears
-	OriginCountry     *string // ISO-3166-1 alpha-2; sets titles.origin_country
+	ClearCoverURL      bool
+	ExternalSourceID   *string
+	MatchSource        *string
+	OriginalTitle      *string
+	Type               *model.TitleType
+	IsAnime            *bool
+	Overview           *string
+	Runtime            *int
+	TotalWatchMinutes  *int
+	TMDBRating         *float64
+	Credits            *string
+	AniListRating      *int
+	Year               *int
+	ReleaseDate        *string
+	NextAirDate        *string
+	NextAirEpisode     *string
+	AccentHex          *string
+	SimklID            *int64
+	SimklSlug          *string
+	RadarrID           *int64
+	SonarrID           *int64
+	ArrIgnored         *bool
+	WatchProviders     *string // JSON array of model.WatchProvider; "[]" clears
+	OriginCountry      *string // ISO-3166-1 alpha-2; sets titles.origin_country
+	PersonalNotes      *string
+	ClearPersonalNotes bool
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
@@ -113,11 +115,11 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
 	var createdAtStr, updatedAtStr string
 	var watchProvidersRaw *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, created_at, updated_at FROM titles WHERE id = ?`, id).
+	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, personal_notes, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.ExternalSourceID, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &createdAtStr, &updatedAtStr)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &title.PersonalNotes, &createdAtStr, &updatedAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}

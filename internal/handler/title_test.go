@@ -583,3 +583,46 @@ func TestTitleHandler_FindTitleByURL(t *testing.T) {
 		assert.Equal(t, tc.expected, res.Titles[0].ID)
 	}
 }
+
+func TestTitleHandler_Update_PersonalNotes(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	id := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Personal Notes Title", Language: "en", IsPrimary: true}},
+	)
+
+	// Update with note
+	notes := "Great pacing, recommend to Bob."
+	body, _ := json.Marshal(map[string]any{
+		"personal_notes": notes,
+	})
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", func(w http.ResponseWriter, req *http.Request) {
+		_ = h.Update(w, req)
+	})
+
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var updated model.Title
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&updated))
+	require.NotNil(t, updated.PersonalNotes)
+	assert.Equal(t, notes, *updated.PersonalNotes)
+
+	// Clear note by sending empty string
+	emptyBody, _ := json.Marshal(map[string]any{
+		"personal_notes": "",
+	})
+	req2 := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", id), bytes.NewReader(emptyBody))
+	rr2 := httptest.NewRecorder()
+	r.ServeHTTP(rr2, req2)
+	assert.Equal(t, http.StatusOK, rr2.Code)
+
+	var updated2 model.Title
+	require.NoError(t, json.NewDecoder(rr2.Body).Decode(&updated2))
+	assert.Nil(t, updated2.PersonalNotes)
+}

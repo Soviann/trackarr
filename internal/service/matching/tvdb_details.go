@@ -60,12 +60,12 @@ type tvdbSeriesDetail struct {
 }
 
 type tvdbMovieDetail struct {
-	ID           int64             `json:"id"`
-	Name         string            `json:"name"`
-	Overview     string            `json:"overview"`
-	Year         string            `json:"year"`
-	Image        string            `json:"image"`
-	Genres       []struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Overview string `json:"overview"`
+	Year     string `json:"year"`
+	Image    string `json:"image"`
+	Genres   []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
 	Score        float64           `json:"score"`
