@@ -2,6 +2,9 @@
   "name": "trackarr-frontend",
   "version": "0.0.1",
   "private": true,
+  "scripts": {
+    "lint:i18n": "node scripts/lint-i18n.mjs"
+  },
   "dependencies": {
     "clsx": "^2.1.1",
     "preact": "^10.29.8",

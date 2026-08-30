@@ -34,8 +34,8 @@ test-front: ## Run frontend tests (Vitest + production build)
 lint: ## Run Go linter (golangci-lint)
 	$(EXEC) golangci-lint run ./...
 
-lint-front: ## Run frontend type check (tsc)
-	$(EXEC) bash -c "cd frontend && npx tsc"
+lint-front: ## Run frontend type check (tsc) and i18n audit
+	$(EXEC) bash -c "cd frontend && npx tsc && npm run lint:i18n"
 
 fmt: ## Format Go source code
 	$(EXEC) gofmt -w .

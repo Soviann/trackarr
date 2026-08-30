@@ -51,9 +51,9 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
       ? ((title.seasons ?? []).find((sn) => sn.season_number === 1) ?? (title.seasons ?? [])[0])
       : undefined
 
-  // Le composant reste monté entre les ouvertures : useState ne capte
-  // l'ID que lors du premier rendu (quand seasonID vaut undefined).
-  // Ce useEffect resynchronise la valeur à chaque changement de saison.
+  // The component remains mounted between openings: useState only captures
+  // the ID during initial render (when seasonID is undefined).
+  // This useEffect resynchronizes the value whenever the season changes.
   useEffect(() => {
     setSeasonAniListID('')
   }, [seasonID])

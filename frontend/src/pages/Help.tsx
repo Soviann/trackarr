@@ -179,14 +179,14 @@ const sections: FaqSection[] = [
         ),
       },
       {
-        q: 'What do the colored borders (liserés) and icons on posters mean?',
+        q: 'What do the colored borders and icons on posters mean?',
         a: (
           <ul className={s.bulletList}>
             <li>
-              <strong>Yellow top border (liseré)</strong> on the type badge — Movie is monitored in <strong>Radarr</strong>.
+              <strong>Yellow top border</strong> on the type badge — Movie is monitored in <strong>Radarr</strong>.
             </li>
             <li>
-              <strong>Cyan top border (liseré)</strong> on the type badge — Series is monitored in <strong>Sonarr</strong>.
+              <strong>Cyan top border</strong> on the type badge — Series is monitored in <strong>Sonarr</strong>.
             </li>
             <li>
               <strong>Arr icon badge</strong> — An 18px indicator pill showing a yellow target (Radarr) or cyan waveform (Sonarr) appears next to the status badge on list and search cards.

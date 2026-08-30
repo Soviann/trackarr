@@ -17,7 +17,7 @@ export const LOCALES: LocaleOption[] = [
   {
     id: 'fr',
     name: 'French',
-    nativeName: 'Français',
+    nativeName: 'Français', // i18n-ignore
     flag: '🇫🇷',
   },
 ]

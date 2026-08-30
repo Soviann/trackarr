@@ -14,8 +14,8 @@ export function AnilistCallback({ path }: { path?: string }) {
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.hash.slice(1)).get('access_token')
-    // Le token bearer ne doit jamais persister dans l'URL : on l'efface immédiatement,
-    // que l'échange réussisse ou non (sinon il fuirait via Referer ou l'historique).
+    // The bearer token must never persist in the URL: clear it immediately,
+    // whether exchange succeeds or fails (otherwise it leaks via Referer or browser history).
     if (window.location.hash) {
       history.replaceState(null, '', window.location.pathname)
     }

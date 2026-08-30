@@ -12,6 +12,7 @@ import { TypeBadge } from '../components/TypeBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { useTranslation } from '../i18n'
 import { ReleaseDetailSheet } from '../components/ReleaseDetailSheet'
 import s from './Releases.module.css'
 
@@ -23,22 +24,23 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`
 }
 
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(dateStr: string, t: (k: any, p?: any) => string, locale: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   const now = new Date()
   const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (diffSec < 60) return "À l'instant"
-  if (diffSec < 3600) return `Il y a ${Math.floor(diffSec / 60)} min`
-  if (diffSec < 86400) return `Il y a ${Math.floor(diffSec / 3600)} h`
+  if (diffSec < 60) return t('releases.justNow')
+  if (diffSec < 3600) return t('releases.minutesAgo', { count: Math.floor(diffSec / 60) })
+  if (diffSec < 86400) return t('releases.hoursAgo', { count: Math.floor(diffSec / 3600) })
   const days = Math.floor(diffSec / 86400)
-  if (days === 1) return 'Hier'
-  if (days < 7) return `Il y a ${days} j`
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  if (days === 1) return t('releases.yesterday')
+  if (days < 7) return t('releases.daysAgo', { count: days })
+  return date.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' })
 }
 
 export function Releases(_props: { path?: string }) {
+  const { t, locale } = useTranslation()
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'series'>('all')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [releases, setReleases] = useState<ProwlarrRelease[]>([])
@@ -61,12 +63,12 @@ export function Releases(_props: { path?: string }) {
       const data = await apiFetch<ProwlarrRelease[]>(url)
       setReleases(data ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la récupération des releases')
+      setError(err instanceof Error ? err.message : t('releases.errorFetch'))
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [filterType])
+  }, [filterType, t])
 
   useEffect(() => {
     fetchReleases(false)
@@ -119,7 +121,7 @@ export function Releases(_props: { path?: string }) {
       setAddedMap(prev => ({ ...prev, [rel.guid]: created.id }))
       invalidateLibrary()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'ajout du titre")
+      setError(err instanceof Error ? err.message : t('releases.errorAdd'))
     } finally {
       setAddingGuid(null)
     }
@@ -134,19 +136,19 @@ export function Releases(_props: { path?: string }) {
             type="button"
             onClick={() => route(routeTo.home())}
             className={s.backBtn}
-            aria-label="Retour à la bibliothèque"
+            aria-label={t('releases.backToLibrary')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <h1 className={s.headerTitle}>Releases</h1>
+          <h1 className={s.headerTitle}>{t('releases.title')}</h1>
           <button
             type="button"
             onClick={() => fetchReleases(true)}
             disabled={loading || refreshing}
             className={s.refreshBtn}
-            aria-label="Rafraîchir les releases"
+            aria-label={t('releases.refresh')}
           >
             <svg
               className={clsx(refreshing && s.spinning)}
@@ -176,7 +178,7 @@ export function Releases(_props: { path?: string }) {
                 className={clsx(s.tab, filterType === tab && s.tabActive)}
                 onClick={() => setFilterType(tab)}
               >
-                {tab === 'all' ? 'Tous' : tab === 'movie' ? 'Films' : 'Séries'}
+                {tab === 'all' ? t('releases.typeAll') : tab === 'movie' ? t('releases.typeMovies') : t('releases.typeSeries')}
               </button>
             ))}
           </div>
@@ -186,17 +188,17 @@ export function Releases(_props: { path?: string }) {
               className={clsx(s.yearSelect, yearFilter !== 'all' && s.yearSelectActive)}
               value={yearFilter}
               onChange={e => setYearFilter((e.target as HTMLSelectElement).value)}
-              aria-label="Filtrer par année"
+              aria-label={t('releases.filterByYear')}
             >
-              <option value="all">Toutes années</option>
-              <optgroup label="Périodes récentes">
-                <option value="gte_2025">≥ 2025 (Récent)</option>
+              <option value="all">{t('releases.allYears')}</option>
+              <optgroup label={t('releases.recentPeriods')}>
+                <option value="gte_2025">{t('releases.recentGte2025')}</option>
                 <option value="gte_2024">≥ 2024</option>
                 <option value="gte_2020">≥ 2020</option>
-                <option value="lt_2020">&lt; 2020 (Classiques)</option>
+                <option value="lt_2020">{t('releases.classicsLt2020')}</option>
               </optgroup>
               {availableYears.length > 0 && (
-                <optgroup label="Année exacte">
+                <optgroup label={t('releases.exactYear')}>
                   {availableYears.map(yr => (
                     <option key={yr} value={String(yr)}>
                       {yr}
@@ -210,8 +212,8 @@ export function Releases(_props: { path?: string }) {
                 type="button"
                 className={s.resetYearBtn}
                 onClick={() => setYearFilter('all')}
-                title="Réinitialiser l'année"
-                aria-label="Réinitialiser le filtre d'année"
+                title={t('releases.resetYearFilter')}
+                aria-label={t('releases.resetYearFilter')}
               >
                 ✕
               </button>
@@ -276,7 +278,7 @@ export function Releases(_props: { path?: string }) {
                     <div className={s.metaRow}>
                       <span>{formatBytes(rel.size)}</span>
                       <span className={s.metaDot}>·</span>
-                      <span>{formatRelativeTime(rel.publish_date)}</span>
+                      <span>{formatRelativeTime(rel.publish_date, t, locale)}</span>
                       <span className={s.metaDot}>·</span>
                       <span className={s.seeders}>↑ {rel.seeders} seeds</span>
                     </div>
@@ -293,7 +295,7 @@ export function Releases(_props: { path?: string }) {
                           route(routeTo.title(existingId))
                         }}
                       >
-                        Voir
+                        {t('releases.view')}
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
@@ -309,14 +311,14 @@ export function Releases(_props: { path?: string }) {
                         disabled={addingGuid === rel.guid}
                       >
                         {addingGuid === rel.guid ? (
-                          'Ajout...'
+                          t('releases.adding')
                         ) : (
                           <>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                               <line x1="12" y1="5" x2="12" y2="19" />
                               <line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
-                            Ajouter
+                            {t('releases.add')}
                           </>
                         )}
                       </button>
@@ -330,20 +332,20 @@ export function Releases(_props: { path?: string }) {
 
         {!loading && releases.length > 0 && filteredReleases.length === 0 && !error && (
           <div className={s.emptyState}>
-            <p>Aucune release trouvée pour l'année sélectionnée.</p>
+            <p>{t('releases.emptyYear')}</p>
             <button
               type="button"
               className={s.resetBtn}
               onClick={() => setYearFilter('all')}
             >
-              Réinitialiser le filtre d'année
+              {t('releases.resetYearFilter')}
             </button>
           </div>
         )}
 
         {!loading && releases.length === 0 && !error && (
           <div className={s.emptyState}>
-            <p>Aucune release disponible pour le moment.</p>
+            <p>{t('releases.emptyAll')}</p>
           </div>
         )}
 

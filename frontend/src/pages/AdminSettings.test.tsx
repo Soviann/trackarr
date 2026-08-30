@@ -98,14 +98,14 @@ describe('AdminSettings Page', () => {
     render(<AdminSettings />)
 
     await waitFor(() => {
-      expect(screen.getAllByText('Français').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Français').length).toBeGreaterThan(0) // i18n-ignore
     })
 
-    const francaisBtns = screen.getAllByText('Français')
+    const francaisBtns = screen.getAllByText('Français') // i18n-ignore
     fireEvent.click(francaisBtns[0])
 
     await waitFor(() => {
-      expect(screen.getByText(/Apparence & Thèmes/)).not.toBeNull()
+      expect(screen.getByText(/Apparence & Thèmes/)).not.toBeNull() // i18n-ignore
     })
   })
 
