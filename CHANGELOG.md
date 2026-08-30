@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Statistiques des Acteurs et Réalisateurs les plus vus (`/stats`)** :
+  - Extraction et classement dynamique des 10 acteurs et 10 réalisateurs les plus vus basés sur les crédits de la bibliothèque (`titles.credits`) et l'état de visionnage réel (`last_watched_at` ou statuts `completed` / `watching`).
+  - Barres de progression proportionnelles interactives sur la page Statistiques.
+  - **Tiroir de filmographie interactif (`PersonFilmographyDrawer`)** : Clic sur un acteur ou un réalisateur pour ouvrir un volet déroulant répertoriant tous les titres associés présents dans la médiathèque locale, avec accès direct aux fiches et lien vers la filmographie complète (`/person/:name`).
+- **Internationalisation complète de la page Statistiques (`Stats.tsx`)** :
+  - Support multilingue rigoureux (Français & Anglais) via `useTranslation()` couvrant l'intégralité des libellés de cartes, insights, barres de statistiques et dates d'activité récente.
+
+
 ## [v1.10.1] — 2026-08-30
 
 ### Modifié

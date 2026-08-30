@@ -34,6 +34,8 @@ func TestStatsHandler_Get_EmptyDB(t *testing.T) {
 
 	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.Contains(t, result, "top_actors")
+	assert.Contains(t, result, "top_directors")
 }
 
 func TestStatsHandler_Get_CacheControl(t *testing.T) {

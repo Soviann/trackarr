@@ -250,6 +250,83 @@ func TestStatsRepo_BestStreak(t *testing.T) {
 	assert.Equal(t, 5, best)
 }
 
+func TestStatsRepo_TopActors_And_Directors(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	// Dune: Watched movie, directed by Denis Villeneuve, starring Timothée Chalamet & Zendaya
+	duneCredits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Zendaya","role":"Chani"}]`
+	id1 := createTitle(t, db, "Dune", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(9))
+	_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, duneCredits, id1)
+	require.NoError(t, err)
+
+	// Dune 2: Watched movie, directed by Denis Villeneuve, starring Timothée Chalamet & Florence Pugh
+	dune2Credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Florence Pugh","role":"Princess Irulan"}]`
+	id2 := createTitle(t, db, "Dune Part Two", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(10))
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, dune2Credits, id2)
+	require.NoError(t, err)
+
+	// Wonka: Watching movie, starring Timothée Chalamet, directed by Paul King
+	wonkaCredits := `[{"name":"Paul King","role":"Director"},{"name":"Timothée Chalamet","role":"Willy Wonka"}]`
+	id3 := createTitle(t, db, "Wonka", model.TitleTypeMovie, false, model.TitleStatusWatching, ptr(8))
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, wonkaCredits, id3)
+	require.NoError(t, err)
+
+	// Unwatched movie in plan_to_watch should NOT count
+	oppenheimerCredits := `[{"name":"Christopher Nolan","role":"Director"},{"name":"Cillian Murphy","role":"J. Robert Oppenheimer"},{"name":"Florence Pugh","role":"Jean Tatlock"}]`
+	id4 := createTitle(t, db, "Oppenheimer", model.TitleTypeMovie, false, model.TitleStatusPlanToWatch, nil)
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, oppenheimerCredits, id4)
+	require.NoError(t, err)
+
+	// Test TopActors
+	actors, err := repo.TopActors(context.Background(), 10)
+	require.NoError(t, err)
+	require.NotEmpty(t, actors)
+
+	// Timothée Chalamet: 3 watched titles (Dune, Dune 2, Wonka)
+	assert.Equal(t, "Timothée Chalamet", actors[0].Name)
+	assert.Equal(t, 3, actors[0].Count)
+
+	// Florence Pugh has 1 (Dune 2, since Oppenheimer is in plan_to_watch)
+	// Zendaya has 1 (Dune)
+	actorNames := make(map[string]int)
+	for _, a := range actors {
+		actorNames[a.Name] = a.Count
+	}
+	assert.Equal(t, 1, actorNames["Florence Pugh"])
+	assert.Equal(t, 1, actorNames["Zendaya"])
+	assert.NotContains(t, actorNames, "Cillian Murphy", "unwatched titles should not be included")
+	assert.NotContains(t, actorNames, "Denis Villeneuve", "directors should not be in top actors")
+
+	// Test TopDirectors
+	directors, err := repo.TopDirectors(context.Background(), 10)
+	require.NoError(t, err)
+	require.NotEmpty(t, directors)
+
+	// Denis Villeneuve: 2 watched titles (Dune, Dune 2)
+	assert.Equal(t, "Denis Villeneuve", directors[0].Name)
+	assert.Equal(t, 2, directors[0].Count)
+
+	// Paul King: 1 watched title (Wonka)
+	assert.Equal(t, "Paul King", directors[1].Name)
+	assert.Equal(t, 1, directors[1].Count)
+
+	dirNames := make(map[string]int)
+	for _, d := range directors {
+		dirNames[d.Name] = d.Count
+	}
+	assert.NotContains(t, dirNames, "Christopher Nolan", "unwatched titles director should not be included")
+	assert.NotContains(t, dirNames, "Timothée Chalamet", "actors should not be in top directors")
+
+	// Test GetAll integrates top_actors and top_directors
+	resp, err := repo.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp.TopActors)
+	assert.NotEmpty(t, resp.TopDirectors)
+	assert.Equal(t, "Timothée Chalamet", resp.TopActors[0].Name)
+	assert.Equal(t, "Denis Villeneuve", resp.TopDirectors[0].Name)
+}
+
 // Helper to create a title with a rating
 func createTitle(t *testing.T, db *sql.DB, name string, titleType model.TitleType, isAnime bool, status model.TitleStatus, rating *int) int64 {
 	t.Helper()

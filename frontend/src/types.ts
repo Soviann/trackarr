@@ -195,6 +195,11 @@ export interface Episode {
 }
 
 // Stats
+export interface PersonStat {
+  name: string
+  count: number
+}
+
 export interface StatsResponse {
   overview: StatsOverview
   ratings: StatsRatings
@@ -202,6 +207,8 @@ export interface StatsResponse {
   fun_stats: FunStat[]
   year_summary: StatsYear
   genres: Array<{ genre: string; count: number }>
+  top_actors?: PersonStat[]
+  top_directors?: PersonStat[]
   streaks: {
     current: number
     best: number
