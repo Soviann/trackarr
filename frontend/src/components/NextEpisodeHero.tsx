@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import type { Title, TitleStatus } from '../types'
-import { formatBingeTime, formatDate, unwatchedEpisodesCount, totalEpisodes } from '../utils'
+import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes } from '../utils'
+import { useTranslation } from '../i18n'
 import s from './NextEpisodeHero.module.css'
 
 interface NextEpisodeHeroProps {
@@ -10,11 +11,11 @@ interface NextEpisodeHeroProps {
 }
 
 export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: NextEpisodeHeroProps) {
+  const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
 
   const isMovie = title.type === 'movie'
   const isPlanToWatch = title.status === 'plan_to_watch'
-  const isWatching = title.status === 'watching'
 
   // Default runtime per episode: title runtime if present, or 24m for anime, 45m for standard series
   const epRuntime = title.runtime && title.runtime > 0 ? title.runtime : (title.is_anime ? 24 : 45)
@@ -30,7 +31,9 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
       <div className={s.container}>
         <div className={s.heroCard}>
           <div className={s.headerRow}>
-            <span className={s.label}>Film {isPlanToWatch ? 'à voir' : 'en cours'}</span>
+            <span className={s.label}>
+              {isPlanToWatch ? t('hero.movieToWatch') : t('hero.movieWatching')}
+            </span>
             <span className={s.bingeEstimate}>⏱️ {formatBingeTime(movieDuration)}</span>
           </div>
           <button
@@ -50,7 +53,7 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            Marquer le film comme vu
+            {t('hero.markMovieWatched')}
           </button>
         </div>
       </div>
@@ -101,11 +104,11 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              Épisode suivant
+              {t('hero.nextEpisode')}
             </span>
             {unwatchedCount > 0 && (
               <span className={s.bingeEstimate}>
-                ⏱️ Reste ~{formatBingeTime(remainingMinutes)} ({unwatchedCount} ep.)
+                ⏱️ {t('hero.bingeRemaining')}{formatBingeTime(remainingMinutes)} ({unwatchedCount} ep.)
               </span>
             )}
           </div>
@@ -124,7 +127,7 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            Marquer {epCode} comme vu
+            {t('hero.markEpisodeWatched', { ep: epCode })}
           </button>
         </div>
       </div>
@@ -138,7 +141,12 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
         <div className={s.planCard}>
           <div className={s.planInfo}>
             <span>⏱️</span>
-            <span>Durée totale estimée : ~{formatBingeTime(totalMinutes)} ({totalCount} épisodes)</span>
+            <span>
+              {t('hero.planEstimatedDuration', {
+                time: formatBingeTime(totalMinutes),
+                count: totalCount,
+              })}
+            </span>
           </div>
         </div>
       </div>

@@ -23,7 +23,7 @@ describe('CalendarWeekTimeline', () => {
 
   it('renders week navigation and days', () => {
     const { getByText, getAllByText } = render(<CalendarWeekTimeline events={mockEvents} />)
-    expect(getByText('Cette semaine')).toBeTruthy()
+    expect(getByText('This week')).toBeTruthy()
     expect(getAllByText('Solo Leveling').length).toBeGreaterThan(0)
   })
 })

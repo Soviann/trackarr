@@ -7,21 +7,35 @@ import { CalendarWeekTimeline } from '../components/CalendarWeekTimeline'
 import { CalendarIcalModal } from '../components/CalendarIcalModal'
 import type { CalendarEvent, CalendarViewMode } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useTranslation, type Locale, type TranslationKey } from '../i18n'
 import s from './ComingUp.module.css'
 
-function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'teal' | 'muted' } {
+function airDateBadge(
+  dateStr: string,
+  locale: Locale,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): { label: string; variant: 'amber' | 'teal' | 'muted' } {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const air = new Date(dateStr)
   air.setHours(0, 0, 0, 0)
   const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
-  if (diffDays === 0) return { label: "Aujourd'hui", variant: 'amber' }
-  if (diffDays <= 6) return { label: air.toLocaleDateString('fr-FR', { weekday: 'short' }), variant: 'teal' }
-  return { label: `dans ${diffDays} j`, variant: 'muted' }
+  if (diffDays === 0) return { label: t('calendar.today'), variant: 'amber' }
+  if (diffDays <= 6) {
+    return {
+      label: air.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { weekday: 'short' }),
+      variant: 'teal',
+    }
+  }
+  return { label: t('calendar.inDays', { days: diffDays }), variant: 'muted' }
 }
 
-function toTile(ev: CalendarEvent): PosterTileItem {
-  const { label, variant } = airDateBadge(ev.air_date)
+function toTile(
+  ev: CalendarEvent,
+  locale: Locale,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): PosterTileItem {
+  const { label, variant } = airDateBadge(ev.air_date, locale, t)
   const epTag =
     ev.season_number != null && ev.episode_number != null
       ? `S${String(ev.season_number).padStart(2, '0')}E${String(ev.episode_number).padStart(2, '0')}`
@@ -42,6 +56,7 @@ function toTile(ev: CalendarEvent): PosterTileItem {
 }
 
 export function ComingUp(_props: { path?: string }) {
+  const { t, locale } = useTranslation()
   const [viewMode, setViewMode] = useState<CalendarViewMode>(() => {
     const saved = localStorage.getItem('trackarr_calendar_view')
     if (saved === 'week' || saved === 'list' || saved === 'month') {
@@ -75,10 +90,10 @@ export function ComingUp(_props: { path?: string }) {
       })
       .catch((err) => {
         if (ctrl.signal.aborted) return
-        setError(err instanceof Error ? err.message : 'Impossible de charger le calendrier')
+        setError(err instanceof Error ? err.message : t('calendar.loadError'))
       })
     return () => ctrl.abort()
-  }, [])
+  }, [t])
 
   const filteredEvents = useMemo(() => {
     if (!events) return []
@@ -94,17 +109,20 @@ export function ComingUp(_props: { path?: string }) {
       {/* Header */}
       <div className={s.header}>
         <div className={s.headerLeft}>
-          <button onClick={() => history.back()} aria-label="Retour" className={s.backBtn}>
+          <button onClick={() => history.back()} aria-label={t('common.back')} className={s.backBtn}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
           <div className={s.headerText}>
-            <span className={s.label}>// Calendrier</span>
+            <span className={s.label}>// {t('calendar.title')}</span>
             {events && (
               <span className={s.count}>
-                {filteredEvents.length} sortie{filteredEvents.length === 1 ? '' : 's'} à venir
+                {t('calendar.upcomingCount', {
+                  count: filteredEvents.length,
+                  plural: filteredEvents.length === 1 ? '' : 's',
+                })}
               </span>
             )}
           </div>
@@ -113,23 +131,23 @@ export function ComingUp(_props: { path?: string }) {
         <button
           onClick={() => setIsIcalOpen(true)}
           className={s.icalBtn}
-          title="S'abonner au flux iCal"
+          title={t('calendar.icalFeed')}
         >
           <span>📅</span>
-          <span>Flux iCal</span>
+          <span>{t('calendar.icalFeed')}</span>
         </button>
       </div>
 
       {/* Control Bar: View selector + Category filters */}
       <div className={s.controlBar}>
-        <div className={s.viewSelector} role="tablist" aria-label="Mode de vue">
+        <div className={s.viewSelector} role="tablist" aria-label={t('calendar.title')}>
           <button
             role="tab"
             aria-selected={viewMode === 'month'}
             className={`${s.viewTab}${viewMode === 'month' ? ` ${s.viewTabActive}` : ''}`}
             onClick={() => handleSetViewMode('month')}
           >
-            📅 Mois
+            📅 {t('calendar.viewMonth')}
           </button>
           <button
             role="tab"
@@ -137,7 +155,7 @@ export function ComingUp(_props: { path?: string }) {
             className={`${s.viewTab}${viewMode === 'week' ? ` ${s.viewTabActive}` : ''}`}
             onClick={() => handleSetViewMode('week')}
           >
-            📆 Semaine
+            📆 {t('calendar.viewWeek')}
           </button>
           <button
             role="tab"
@@ -145,28 +163,28 @@ export function ComingUp(_props: { path?: string }) {
             className={`${s.viewTab}${viewMode === 'list' ? ` ${s.viewTabActive}` : ''}`}
             onClick={() => handleSetViewMode('list')}
           >
-            📋 Liste
+            📋 {t('calendar.viewList')}
           </button>
         </div>
 
-        <div className={s.typeFilters} role="group" aria-label="Filtres par type">
+        <div className={s.typeFilters} role="group" aria-label="Filters">
           <button
             className={`${s.typeChip}${typeFilter === 'all' ? ` ${s.typeChipActive}` : ''}`}
             onClick={() => setTypeFilter('all')}
           >
-            Tous
+            {t('franchise.all')}
           </button>
           <button
             className={`${s.typeChip}${typeFilter === 'movie' ? ` ${s.typeChipActive}` : ''}`}
             onClick={() => setTypeFilter('movie')}
           >
-            🎬 Films
+            🎬 {t('franchise.movies')}
           </button>
           <button
             className={`${s.typeChip}${typeFilter === 'series' ? ` ${s.typeChipActive}` : ''}`}
             onClick={() => setTypeFilter('series')}
           >
-            📺 Séries
+            📺 {t('franchise.series')}
           </button>
           <button
             className={`${s.typeChip}${typeFilter === 'anime' ? ` ${s.typeChipActive}` : ''}`}
@@ -182,7 +200,7 @@ export function ComingUp(_props: { path?: string }) {
       {/* Main Content Area */}
       <div className={s.contentArea}>
         {events === null && (
-          <div className={s.grid} aria-busy="true" aria-label="Chargement du calendrier">
+          <div className={s.grid} aria-busy="true" aria-label={t('common.loading')}>
             {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className={s.skeletonTile} aria-hidden="true" />
             ))}
@@ -190,7 +208,7 @@ export function ComingUp(_props: { path?: string }) {
         )}
 
         {events && filteredEvents.length === 0 && (
-          <div className={s.empty}>Aucune sortie prévue pour les critères sélectionnés.</div>
+          <div className={s.empty}>{t('calendar.emptyFiltered')}</div>
         )}
 
         {events && filteredEvents.length > 0 && (
@@ -200,7 +218,7 @@ export function ComingUp(_props: { path?: string }) {
             {viewMode === 'list' && (
               <div className={s.grid}>
                 {filteredEvents.map((ev) => (
-                  <PosterTile key={ev.id} item={toTile(ev)} />
+                  <PosterTile key={ev.id} item={toTile(ev, locale, t)} />
                 ))}
               </div>
             )}

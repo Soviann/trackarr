@@ -2,6 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import { routeTo } from '../routes'
 import type { CalendarEvent } from '../types'
+import { useTranslation } from '../i18n'
 import { WatchProviderBadges } from './WatchProviderBadges'
 import s from './CalendarWeekTimeline.module.css'
 
@@ -26,6 +27,9 @@ function getMonday(d: Date): Date {
 }
 
 export function CalendarWeekTimeline({ events }: Props) {
+  const { t, locale } = useTranslation()
+  const activeLocaleTag = locale === 'fr' ? 'fr-FR' : 'en-US'
+
   const today = useMemo(() => new Date(), [])
   const todayStr = useMemo(() => formatYMD(today), [today])
 
@@ -68,7 +72,7 @@ export function CalendarWeekTimeline({ events }: Props) {
   }
 
   const weekEnd = weekDays[6].date
-  const weekLabel = `${weekDays[0].date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+  const weekLabel = `${weekDays[0].date.toLocaleDateString(activeLocaleTag, { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString(activeLocaleTag, { day: 'numeric', month: 'short', year: 'numeric' })}`
 
   return (
     <div className={s.container}>
@@ -79,12 +83,12 @@ export function CalendarWeekTimeline({ events }: Props) {
         </div>
         <div className={s.navControls}>
           <button onClick={goToToday} className={s.todayBtn}>
-            Cette semaine
+            {t('calendar.thisWeek')}
           </button>
-          <button onClick={prevWeek} aria-label="Semaine précédente" className={s.navBtn}>
+          <button onClick={prevWeek} aria-label={t('calendar.prevWeek')} className={s.navBtn}>
             ‹
           </button>
-          <button onClick={nextWeek} aria-label="Semaine suivante" className={s.navBtn}>
+          <button onClick={nextWeek} aria-label={t('calendar.nextWeek')} className={s.navBtn}>
             ›
           </button>
         </div>
@@ -104,18 +108,18 @@ export function CalendarWeekTimeline({ events }: Props) {
               <div className={s.dayHeader}>
                 <div className={s.dayDate}>
                   <span className={s.dayWeekday}>
-                    {date.toLocaleDateString('fr-FR', { weekday: 'long' })}
+                    {date.toLocaleDateString(activeLocaleTag, { weekday: 'long' })}
                   </span>
                   <span className={s.dayNum}>
-                    {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {date.toLocaleDateString(activeLocaleTag, { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
-                {isToday && <span className={s.todayBadge}>Aujourd'hui</span>}
+                {isToday && <span className={s.todayBadge}>{t('calendar.today')}</span>}
               </div>
 
               <div className={s.dayEvents}>
                 {dayEvents.length === 0 ? (
-                  <div className={s.emptyDay}>Aucune sortie</div>
+                  <div className={s.emptyDay}>{t('calendar.emptyDay')}</div>
                 ) : (
                   dayEvents.map((ev) => {
                     const epTag =
@@ -148,7 +152,7 @@ export function CalendarWeekTimeline({ events }: Props) {
                           <div className={s.epBadgeRow}>
                             {epTag && <span className={s.epBadge}>{epTag}</span>}
                             <span className={s.typeBadge}>
-                              {ev.is_anime ? 'Anime' : ev.type === 'movie' ? 'Film' : 'Série'}
+                              {ev.is_anime ? 'Anime' : ev.type === 'movie' ? t('franchise.movies') : t('franchise.series')}
                             </span>
                           </div>
                           {ev.episode_name && (

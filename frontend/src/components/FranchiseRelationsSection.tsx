@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import type { TitleRelation } from '../types'
 import { routeTo } from '../routes'
 import { aniListMediaUrl, getCoverUrl } from '../utils'
+import { useTranslation } from '../i18n'
 import s from './FranchiseRelationsSection.module.css'
 
 interface FranchiseRelationsSectionProps {
@@ -15,6 +16,7 @@ type SortOrderType = 'timeline' | 'release'
 const DEFAULT_VISIBLE_COUNT = 3
 
 export function FranchiseRelationsSection({ relations }: FranchiseRelationsSectionProps) {
+  const { t } = useTranslation()
   const [filter, setFilter] = useState<FilterCategory>('all')
   const [sortOrder, setSortOrder] = useState<SortOrderType>('timeline')
   const [isExpanded, setIsExpanded] = useState(false)
@@ -29,12 +31,12 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
   const providerLabel = useMemo(() => {
     const providers = Array.from(new Set(relations.map((r) => r.provider)))
     if (providers.length === 1) {
-      if (providers[0] === 'tmdb') return 'Saga TMDB'
-      if (providers[0] === 'tvdb') return 'TheTVDB Univers'
-      if (providers[0] === 'anilist') return 'AniList Relations'
+      if (providers[0] === 'tmdb') return t('franchise.sagaTmdb')
+      if (providers[0] === 'tvdb') return t('franchise.tvdbUniverse')
+      if (providers[0] === 'anilist') return t('franchise.anilistRelations')
     }
-    return isMainlyCollection ? 'Saga & Collection' : 'Univers & Franchise'
-  }, [relations, isMainlyCollection])
+    return isMainlyCollection ? t('franchise.sagaCollection') : t('franchise.universeFranchise')
+  }, [relations, isMainlyCollection, t])
 
   const sortedRelations = useMemo(() => {
     const list = [...relations]
@@ -120,7 +122,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
       <div className={s.cardHeader}>
         <div className={s.cardLabelWrap}>
           <span className={s.cardLabel}>
-            {isMainlyCollection ? 'Saga & Collection' : 'Univers & Franchise'}
+            {isMainlyCollection ? t('franchise.sagaCollection') : t('franchise.universeFranchise')}
           </span>
           <span className={s.providerBadge}>{providerLabel}</span>
           <span className={s.countBadge}>({relations.length})</span>
@@ -128,22 +130,22 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
 
         <div className={s.controlsArea}>
           {relations.length > 1 && (
-            <div className={s.sortToggle} role="group" aria-label="Ordre d'affichage">
+            <div className={s.sortToggle} role="group" aria-label="Sort">
               <button
                 type="button"
                 className={`${s.sortBtn} ${sortOrder === 'timeline' ? s.sortBtnActive : ''}`}
                 onClick={() => setSortOrder('timeline')}
-                title="Ordre chronologique de l'histoire"
+                title={t('franchise.sortTimeline')}
               >
-                ⏱️ Chronologie
+                {t('franchise.sortTimeline')}
               </button>
               <button
                 type="button"
                 className={`${s.sortBtn} ${sortOrder === 'release' ? s.sortBtnActive : ''}`}
                 onClick={() => setSortOrder('release')}
-                title="Ordre par date de sortie"
+                title={t('franchise.sortRelease')}
               >
-                📅 Sortie
+                {t('franchise.sortRelease')}
               </button>
             </div>
           )}
@@ -154,7 +156,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
               className={`${s.filterBtn} ${filter === 'all' ? s.filterBtnActive : ''}`}
               onClick={() => setFilter('all')}
             >
-              Tous ({relations.length})
+              {t('franchise.all')} ({relations.length})
             </button>
             {movieCount > 0 && (
               <button
@@ -162,7 +164,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                 className={`${s.filterBtn} ${filter === 'movies' ? s.filterBtnActive : ''}`}
                 onClick={() => setFilter('movies')}
               >
-                Films ({movieCount})
+                {t('franchise.movies')} ({movieCount})
               </button>
             )}
             {seriesCount > 0 && (
@@ -171,7 +173,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                 className={`${s.filterBtn} ${filter === 'series' ? s.filterBtnActive : ''}`}
                 onClick={() => setFilter('series')}
               >
-                Séries ({seriesCount})
+                {t('franchise.series')} ({seriesCount})
               </button>
             )}
             {ovaCount > 0 && (
@@ -180,7 +182,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                 className={`${s.filterBtn} ${filter === 'ovas' ? s.filterBtnActive : ''}`}
                 onClick={() => setFilter('ovas')}
               >
-                OAVs ({ovaCount})
+                {t('franchise.ovas')} ({ovaCount})
               </button>
             )}
             {spinOffCount > 0 && (
@@ -189,7 +191,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                 className={`${s.filterBtn} ${filter === 'spinoffs' ? s.filterBtnActive : ''}`}
                 onClick={() => setFilter('spinoffs')}
               >
-                Spin-offs ({spinOffCount})
+                {t('franchise.spinoffs')} ({spinOffCount})
               </button>
             )}
           </div>
@@ -201,17 +203,18 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
           const isWatched = rel.matched_status === 'completed'
           const isMatched = rel.matched_title_id != null
 
-          let positionLabel = rel.format === 'MOVIE' ? 'Film' : rel.format === 'TV' ? 'Série' : rel.format
+          let positionLabel =
+            rel.format === 'MOVIE' ? t('franchise.movies') : rel.format === 'TV' ? t('franchise.series') : rel.format
           if (rel.season_number != null) {
             positionLabel += ` · S${rel.season_number}`
           } else if (rel.relation_type === 'PREQUEL') {
-            positionLabel = 'Préquelle'
+            positionLabel = t('franchise.prequel')
           } else if (rel.relation_type === 'SEQUEL') {
-            positionLabel = 'Suite'
+            positionLabel = t('franchise.sequel')
           } else if (rel.relation_type === 'SPIN_OFF') {
-            positionLabel = 'Spin-off'
+            positionLabel = t('franchise.spinoffs')
           } else if (rel.relation_type === 'COLLECTION') {
-            positionLabel = 'Saga'
+            positionLabel = t('franchise.saga')
           }
 
           const extUrl = getExternalUrl(rel)
@@ -245,10 +248,10 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                   <span className={s.relTag}>{positionLabel}</span>
                   {isMatched ? (
                     <span className={isWatched ? s.statusBadgeWatched : s.statusBadgeUnwatched}>
-                      {isWatched ? '✓ Vu' : 'À voir'}
+                      {isWatched ? `✓ ${t('franchise.watchedTrackarr')}` : t('franchise.planToWatch')}
                     </span>
                   ) : (
-                    <span className={s.statusBadgeAdd}>+ Ajouter</span>
+                    <span className={s.statusBadgeAdd}>{t('franchise.addMissing')}</span>
                   )}
                 </div>
 
@@ -267,7 +270,7 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                       rel="noopener noreferrer"
                       className={s.extLink}
                       onClick={(e) => e.stopPropagation()}
-                      title={`Voir sur ${providerName}`}
+                      title={t('franchise.seeOnProvider', { provider: providerName })}
                     >
                       <span>{providerName}</span>
                       <span>↗</span>
@@ -286,7 +289,9 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
           className={s.expandToggle}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {isExpanded ? 'Voir moins' : `Voir plus (${remainingCount > 0 ? `+${remainingCount}` : ''})`}
+          {isExpanded
+            ? t('franchise.showLess')
+            : t('franchise.showMore', { count: Math.max(0, remainingCount) })}
         </button>
       )}
     </div>

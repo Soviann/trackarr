@@ -58,10 +58,10 @@ describe('NextEpisodeHero', () => {
 
     expect(getByText('S01E02')).not.toBeNull()
     expect(getByText('Second Episode')).not.toBeNull()
-    expect(getByText(/Reste ~50m/)).not.toBeNull()
-    expect(getByText(/Marquer S01E02 comme vu/)).not.toBeNull()
+    expect(getByText(/Left ~50m/)).not.toBeNull()
+    expect(getByText(/Mark S01E02 as watched/)).not.toBeNull()
 
-    const btn = getByText(/Marquer S01E02 comme vu/).closest('button')
+    const btn = getByText(/Mark S01E02 as watched/).closest('button')
     expect(btn).not.toBeNull()
     fireEvent.click(btn!)
     expect(onToggle).toHaveBeenCalledWith(102)
@@ -101,10 +101,10 @@ describe('NextEpisodeHero', () => {
       <NextEpisodeHero title={movieTitle} onEpisodeToggle={vi.fn()} onStatusChange={onStatusChange} />
     )
 
-    expect(getByText(/Film à voir/)).not.toBeNull()
+    expect(getByText(/Movie watchlist/)).not.toBeNull()
     expect(getByText(/2h 05m/)).not.toBeNull()
 
-    const btn = getByText('Marquer le film comme vu').closest('button')
+    const btn = getByText('Mark movie as watched').closest('button')
     expect(btn).not.toBeNull()
     fireEvent.click(btn!)
     expect(onStatusChange).toHaveBeenCalledWith('completed')

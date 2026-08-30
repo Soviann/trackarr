@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Internationalisation Frontend & Uniformisation i18n (`en.ts` / `fr.ts`)** :
+  - Extraction de l'ensemble des textes statiques résiduels dans le dictionnaire i18n (`en.ts` pour l'anglais par défaut et `fr.ts` pour le français).
+  - Internationalisation complète des composants : `NextEpisodeHero`, `PersonalNotesCard`, `ComingUp`, `CalendarMonthGrid`, `CalendarWeekTimeline`, `CalendarIcalModal`, `FranchiseRelationsSection`, et `SeasonSideStories`.
+  - Formatage dynamique des dates et jours de la semaine selon la locale active (`fr-FR` ou `en-US`).
+  - Ajout d'une règle d'architecture stricte dans `AGENTS.md` interdisant les chaînes de caractères localisées en dur dans les composants JSX/TSX.
+
 ## [v1.10.0] — 2026-08-30
 
 ### Ajouté

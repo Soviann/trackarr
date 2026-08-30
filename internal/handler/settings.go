@@ -22,13 +22,13 @@ type prowlarrChecker interface {
 }
 
 type SettingsResponse struct {
-	AniListConnected       bool       `json:"anilist_connected"`
-	AniListTokenInvalid    bool       `json:"anilist_token_invalid"`
-	PushSubscribed         bool       `json:"push_subscribed"`
-	TVDBConnected          bool       `json:"tvdb_connected"`
-	JellyfinConfigured     bool       `json:"jellyfin_configured"`
-	ProwlarrConfigured     bool       `json:"prowlarr_configured"`
-	JellyfinLastScrobble   *time.Time `json:"jellyfin_last_scrobble_at"`
+	AniListConnected      bool       `json:"anilist_connected"`
+	AniListTokenInvalid   bool       `json:"anilist_token_invalid"`
+	PushSubscribed        bool       `json:"push_subscribed"`
+	TVDBConnected         bool       `json:"tvdb_connected"`
+	JellyfinConfigured    bool       `json:"jellyfin_configured"`
+	ProwlarrConfigured    bool       `json:"prowlarr_configured"`
+	JellyfinLastScrobble  *time.Time `json:"jellyfin_last_scrobble_at"`
 	EnabledWatchProviders string     `json:"enabled_watch_providers,omitempty"`
 }
 
@@ -71,13 +71,13 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, SettingsResponse{
-		AniListConnected:       anilistErr == nil,
-		AniListTokenInvalid:    tokenInvalid == "true",
-		PushSubscribed:         pushErr == nil,
-		TVDBConnected:          h.tvdbReady,
-		JellyfinConfigured:     h.jellyfinConfigured,
-		ProwlarrConfigured:     prowlarrConfigured,
-		JellyfinLastScrobble:   lastScrobble,
+		AniListConnected:      anilistErr == nil,
+		AniListTokenInvalid:   tokenInvalid == "true",
+		PushSubscribed:        pushErr == nil,
+		TVDBConnected:         h.tvdbReady,
+		JellyfinConfigured:    h.jellyfinConfigured,
+		ProwlarrConfigured:    prowlarrConfigured,
+		JellyfinLastScrobble:  lastScrobble,
 		EnabledWatchProviders: enabledWP,
 	})
 	return nil

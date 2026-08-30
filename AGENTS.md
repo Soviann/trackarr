@@ -63,6 +63,7 @@ All build, test, and lint commands run inside the Docker container via `Makefile
 
 ### Frontend (Preact / TypeScript)
 - **Strict Typing**: No `any` types. Shared data interfaces live in `frontend/src/types.ts`.
+- **Internationalization (i18n)**: English is the default source language for all frontend code, components, tests, and comments. Never hardcode French (or other non-English) strings directly in TSX/JSX components. All user-facing UI labels, placeholders, buttons, badges, and error messages must be defined in `frontend/src/i18n/locales/en.ts` (English) and translated in `frontend/src/i18n/locales/fr.ts` (French), accessed via `useTranslation()`.
 - **Centralized Routing**: Use `routeTo.*` builders and `ROUTE_PATHS` defined in `frontend/src/routes.ts` for all navigation and link URLs.
 - **Styling**: Component-scoped CSS modules (`ComponentName.module.css`). Use theme variables defined in `frontend/src/theme.ts` / `index.css`.
 - **PWA & Cache Invalidation**: The Service Worker aggressively caches static assets. When verifying frontend changes in the browser, append a timestamp query parameter (e.g. `?t=$(date +%s)`) to bust the cache.

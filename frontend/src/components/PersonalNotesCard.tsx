@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { apiFetch } from '../api'
+import { useTranslation } from '../i18n'
 import s from './PersonalNotesCard.module.css'
 
 interface PersonalNotesCardProps {
@@ -11,6 +12,7 @@ interface PersonalNotesCardProps {
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export function PersonalNotesCard({ titleId, initialNotes, onSaved }: PersonalNotesCardProps) {
+  const { t } = useTranslation()
   const [text, setText] = useState<string>(initialNotes ?? '')
   const [status, setStatus] = useState<SaveStatus>('idle')
   const debounceTimerRef = useRef<number | null>(null)
@@ -83,7 +85,7 @@ export function PersonalNotesCard({ titleId, initialNotes, onSaved }: PersonalNo
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
-          Notes personnelles
+          {t('notes.title')}
         </div>
         {status !== 'idle' && (
           <span
@@ -95,19 +97,19 @@ export function PersonalNotesCard({ titleId, initialNotes, onSaved }: PersonalNo
                 : s.statusError
             }`}
           >
-            {status === 'saving' && 'Sauvegarde...'}
-            {status === 'saved' && 'Enregistré'}
-            {status === 'error' && 'Erreur de sauvegarde'}
+            {status === 'saving' && t('notes.saving')}
+            {status === 'saved' && t('notes.saved')}
+            {status === 'error' && t('notes.error')}
           </span>
         )}
       </div>
       <textarea
         id="personal_notes"
         name="personal_notes"
-        aria-label="Notes personnelles"
+        aria-label={t('notes.title')}
         className={s.textarea}
         value={text}
-        placeholder="Ajouter une note personnelle, un rappel, une citation..."
+        placeholder={t('notes.placeholder')}
         onInput={handleChange}
         onBlur={handleBlur}
       />

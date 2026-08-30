@@ -42,10 +42,10 @@ describe('FranchiseRelationsSection', () => {
     ]
     const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    expect(getByText('Univers & Franchise')).toBeTruthy()
-    expect(getByText('Tous (3)')).toBeTruthy()
-    expect(getByText('Films (1)')).toBeTruthy()
-    expect(getByText('OAVs (1)')).toBeTruthy()
+    expect(getByText('Universe & Franchise')).toBeTruthy()
+    expect(getByText('All (3)')).toBeTruthy()
+    expect(getByText('Movies (1)')).toBeTruthy()
+    expect(getByText('OVAs (1)')).toBeTruthy()
     expect(getByText('Spin-offs (1)')).toBeTruthy()
   })
 
@@ -60,17 +60,17 @@ describe('FranchiseRelationsSection', () => {
     expect(getByText('OVA 1')).toBeTruthy()
 
     // Filter to movies
-    fireEvent.click(getByText('Films (1)'))
+    fireEvent.click(getByText('Movies (1)'))
     expect(getByText('Movie 1')).toBeTruthy()
     expect(queryByText('OVA 1')).toBeNull()
 
     // Filter to OVAs
-    fireEvent.click(getByText('OAVs (1)'))
+    fireEvent.click(getByText('OVAs (1)'))
     expect(queryByText('Movie 1')).toBeNull()
     expect(getByText('OVA 1')).toBeTruthy()
 
     // Back to All
-    fireEvent.click(getByText('Tous (2)'))
+    fireEvent.click(getByText('All (2)'))
     expect(getByText('Movie 1')).toBeTruthy()
     expect(getByText('OVA 1')).toBeTruthy()
   })
@@ -83,9 +83,9 @@ describe('FranchiseRelationsSection', () => {
     ]
     const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    expect(getByText('✓ Vu')).toBeTruthy()
-    expect(getByText('À voir')).toBeTruthy()
-    expect(getByText('+ Ajouter')).toBeTruthy()
+    expect(getByText('✓ Watched (Trackarr)')).toBeTruthy()
+    expect(getByText('Plan to Watch')).toBeTruthy()
+    expect(getByText('+ Add')).toBeTruthy()
   })
 
   it('renders TMDB movie saga collection with Saga & Collection title', () => {
@@ -96,7 +96,7 @@ describe('FranchiseRelationsSection', () => {
     const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
     expect(getByText('Saga & Collection')).toBeTruthy()
-    expect(getByText('Saga TMDB')).toBeTruthy()
+    expect(getByText('TMDB Saga')).toBeTruthy()
     expect(getByText('Harry Potter 1')).toBeTruthy()
     expect(getByText('Harry Potter 2')).toBeTruthy()
   })
@@ -109,17 +109,17 @@ describe('FranchiseRelationsSection', () => {
     const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
     // Toggle to Release Date
-    const releaseBtn = getByText('📅 Sortie')
+    const releaseBtn = getByText('📅 Release')
     fireEvent.click(releaseBtn)
     expect(releaseBtn.className).toContain('sortBtnActive')
 
     // Toggle back to Timeline
-    const timelineBtn = getByText('⏱️ Chronologie')
+    const timelineBtn = getByText('⏱️ Timeline')
     fireEvent.click(timelineBtn)
     expect(timelineBtn.className).toContain('sortBtnActive')
   })
 
-  it('collapses by default above 3 items and expands when clicking Voir plus', () => {
+  it('collapses by default above 3 items and expands when clicking Show more', () => {
     const rels = [
       makeRelation({ id: 1, external_id: 1, title: 'Item 1' }),
       makeRelation({ id: 2, external_id: 2, title: 'Item 2' }),
@@ -136,20 +136,20 @@ describe('FranchiseRelationsSection', () => {
     expect(queryByText('Item 4')).toBeNull()
     expect(queryByText('Item 5')).toBeNull()
 
-    // Button shows "Voir plus (+2)"
-    const toggleBtn = getByText('Voir plus (+2)')
+    // Button shows "Show more (+2)"
+    const toggleBtn = getByText('Show more (+2)')
     expect(toggleBtn).toBeTruthy()
 
     // Expand
     fireEvent.click(toggleBtn)
     expect(getByText('Item 4')).toBeTruthy()
     expect(getByText('Item 5')).toBeTruthy()
-    expect(getByText('Voir moins')).toBeTruthy()
+    expect(getByText('Show less')).toBeTruthy()
 
     // Collapse back
-    fireEvent.click(getByText('Voir moins'))
+    fireEvent.click(getByText('Show less'))
     expect(queryByText('Item 4')).toBeNull()
     expect(queryByText('Item 5')).toBeNull()
-    expect(getByText('Voir plus (+2)')).toBeTruthy()
+    expect(getByText('Show more (+2)')).toBeTruthy()
   })
 })

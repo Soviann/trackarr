@@ -2,6 +2,7 @@ import { useState, useMemo } from 'preact/hooks'
 import { route } from 'preact-router'
 import { routeTo } from '../routes'
 import type { CalendarEvent } from '../types'
+import { useTranslation } from '../i18n'
 import { WatchProviderBadges } from './WatchProviderBadges'
 import s from './CalendarMonthGrid.module.css'
 
@@ -9,7 +10,7 @@ interface Props {
   events: CalendarEvent[]
 }
 
-const WEEKDAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const WEEKDAY_INDEXES = [1, 2, 3, 4, 5, 6, 0] // Mon=1 ... Sun=0
 
 function formatYMD(d: Date): string {
   const y = d.getFullYear()
@@ -19,6 +20,18 @@ function formatYMD(d: Date): string {
 }
 
 export function CalendarMonthGrid({ events }: Props) {
+  const { t, locale } = useTranslation()
+  const activeLocaleTag = locale === 'fr' ? 'fr-FR' : 'en-US'
+
+  const weekdayNames = useMemo(() => {
+    // Generate Mon-Sun short names dynamically from locale
+    return WEEKDAY_INDEXES.map((dayIdx) => {
+      // 2026-08-31 is a Monday
+      const sample = new Date(2026, 7, 24 + (dayIdx === 0 ? 6 : dayIdx - 1))
+      return sample.toLocaleDateString(activeLocaleTag, { weekday: 'short' })
+    })
+  }, [activeLocaleTag])
+
   const today = useMemo(() => new Date(), [])
   const todayStr = useMemo(() => formatYMD(today), [today])
 
@@ -94,7 +107,7 @@ export function CalendarMonthGrid({ events }: Props) {
     setSelectedDateStr(todayStr)
   }
 
-  const monthLabel = currentDate.toLocaleDateString('fr-FR', {
+  const monthLabel = currentDate.toLocaleDateString(activeLocaleTag, {
     month: 'long',
     year: 'numeric',
   })
@@ -110,12 +123,12 @@ export function CalendarMonthGrid({ events }: Props) {
         </div>
         <div className={s.navControls}>
           <button onClick={goToToday} className={s.todayBtn}>
-            Aujourd'hui
+            {t('calendar.today')}
           </button>
-          <button onClick={prevMonth} aria-label="Mois précédent" className={s.navBtn}>
+          <button onClick={prevMonth} aria-label={t('calendar.prevMonth')} className={s.navBtn}>
             ‹
           </button>
-          <button onClick={nextMonth} aria-label="Mois suivant" className={s.navBtn}>
+          <button onClick={nextMonth} aria-label={t('calendar.nextMonth')} className={s.navBtn}>
             ›
           </button>
         </div>
@@ -124,7 +137,7 @@ export function CalendarMonthGrid({ events }: Props) {
       {/* Grid */}
       <div className={s.gridWrapper}>
         <div className={s.weekDaysHeader}>
-          {WEEKDAY_NAMES.map((name) => (
+          {weekdayNames.map((name) => (
             <div key={name} className={s.weekDayName}>
               {name}
             </div>
@@ -196,7 +209,9 @@ export function CalendarMonthGrid({ events }: Props) {
                     )
                   })}
                   {dayEvents.length > 2 && (
-                    <span className={s.moreEventsNote}>+{dayEvents.length - 2} de plus</span>
+                    <span className={s.moreEventsNote}>
+                      {t('calendar.moreCount', { count: dayEvents.length - 2 })}
+                    </span>
                   )}
                 </div>
               </div>
@@ -210,8 +225,8 @@ export function CalendarMonthGrid({ events }: Props) {
         <div className={s.selectedDaySection}>
           <div className={s.selectedDayHeader}>
             <span className={s.selectedDayTitle}>
-              Sorties du{' '}
-              {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+              {t('calendar.releasesFor')}{' '}
+              {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString(activeLocaleTag, {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',

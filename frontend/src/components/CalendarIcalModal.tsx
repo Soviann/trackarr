@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { apiFetch } from '../api'
 import type { CalendarTokenResponse } from '../types'
+import { useTranslation } from '../i18n'
 import { ErrorBanner } from './ErrorBanner'
 import s from './CalendarIcalModal.module.css'
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function CalendarIcalModal({ isOpen, onClose }: Props) {
+  const { t } = useTranslation()
   const [tokenData, setTokenData] = useState<CalendarTokenResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,12 +28,12 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
         setTokenData(data)
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Impossible de charger le flux iCal')
+        setError(err instanceof Error ? err.message : t('calendar.loadError'))
       })
       .finally(() => {
         setLoading(false)
       })
-  }, [isOpen])
+  }, [isOpen, t])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,7 +54,7 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     } catch {
-      setError('Impossible de copier automatiquement dans le presse-papier')
+      setError(t('calendar.loadError'))
     }
   }
 
@@ -72,7 +74,7 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
       })
       setTokenData(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec de la régénération du token')
+      setError(err instanceof Error ? err.message : t('calendar.loadError'))
     } finally {
       setLoading(false)
     }
@@ -89,9 +91,9 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
         <div className={s.header}>
           <div className={s.headerTitle}>
             <span>📅</span>
-            <span>Abonnement au Flux iCal</span>
+            <span>{t('calendar.icalModalTitle')}</span>
           </div>
-          <button onClick={onClose} aria-label="Fermer" className={s.closeBtn}>
+          <button onClick={onClose} aria-label={t('common.close')} className={s.closeBtn}>
             ✕
           </button>
         </div>
@@ -101,16 +103,16 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
           {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
           <p className={s.desc}>
-            Abonnez-vous à votre flux Trackarr pour afficher automatiquement les épisodes et films à venir dans votre calendrier (Apple Calendar, Google Calendar, Outlook).
+            {t('calendar.icalModalDesc')}
           </p>
 
           {loading && !tokenData ? (
-            <div className={s.loadingPlaceholder}>Génération du flux en cours...</div>
+            <div className={s.loadingPlaceholder}>{t('common.loading')}</div>
           ) : tokenData ? (
             <>
               {/* URL Box */}
               <div className={s.urlSection}>
-                <label className={s.urlLabel}>Lien d'abonnement personnel</label>
+                <label className={s.urlLabel}>{t('calendar.personalUrl')}</label>
                 <div className={s.urlBox}>
                   <input
                     type="text"
@@ -120,7 +122,7 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                   <button onClick={handleCopy} className={s.copyBtn}>
-                    {copied ? '✓ Copié !' : 'Copier'}
+                    {copied ? t('calendar.copied') : t('calendar.copyUrl')}
                   </button>
                 </div>
               </div>
@@ -149,16 +151,16 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
 
               {/* Step-by-step Guides */}
               <div className={s.guideSection}>
-                <div className={s.guideTitle}>Comment s'abonner :</div>
+                <div className={s.guideTitle}>{t('calendar.howToSubscribe')}</div>
                 <ul className={s.guideList}>
                   <li>
-                    <strong>Apple Calendar (iOS / macOS) :</strong> Cliquez sur le bouton <em>Apple Calendar</em> ou allez dans <em>Fichier → Nouvel abonnement à un calendrier</em> et collez l'URL.
+                    {t('calendar.appleGuide')}
                   </li>
                   <li>
-                    <strong>Google Calendar :</strong> Cliquez sur <em>Google Calendar</em> ou dans les paramètres de Google Agenda, cliquez sur <em>Autres agendas (+) → À partir de l'URL</em>.
+                    {t('calendar.googleGuide')}
                   </li>
                   <li>
-                    <strong>Outlook :</strong> Allez dans <em>Ajouter un calendrier → S'abonner à partir du web</em> et collez l'URL.
+                    {t('calendar.outlookGuide')}
                   </li>
                 </ul>
               </div>
@@ -170,7 +172,7 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
         {tokenData && (
           <div className={s.footer}>
             <button onClick={handleRegenerate} className={s.regenBtn}>
-              {confirmRegen ? '⚠️ Confirmer la réinitialisation du token' : 'Regénérer le lien secret'}
+              {confirmRegen ? t('calendar.regenConfirm') : t('calendar.regenToken')}
             </button>
           </div>
         )}

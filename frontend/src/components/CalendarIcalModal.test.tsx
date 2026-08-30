@@ -34,7 +34,7 @@ describe('CalendarIcalModal', () => {
     )
 
     await waitFor(() => {
-      expect(getByText('Abonnement au Flux iCal')).toBeTruthy()
+      expect(getByText('iCal Calendar Subscription')).toBeTruthy()
       expect(getAllByText(/Apple Calendar/).length).toBeGreaterThan(0)
       expect(getAllByText(/Google Calendar/).length).toBeGreaterThan(0)
     })
