@@ -10,7 +10,7 @@ export function ErrorBanner({ message, onRetry, onDismiss }: Props) {
   if (!message) return null
 
   return (
-    <div className={s.banner}>
+    <div className={s.banner} role="alert">
       <span className={s.message}>{message}</span>
       {onRetry && (
         <button onClick={onRetry} className={s.retryButton}>

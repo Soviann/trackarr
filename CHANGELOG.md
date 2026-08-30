@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.11.1] — 2026-08-30
+
+### Ajouté
+- **Audit et Linter i18n anti-français hardcodé (`make test-front` & `make lint-front`)** :
+  - Mise en place d'un moteur d'analyse statique (`frontend/src/i18n/checker.ts`) détectant automatiquement les chaînes de caractères, textes JSX, attributs UI et commentaires en français hors du dictionnaire `locales/fr.ts`.
+  - Intégration d'un test Vitest (`src/i18n/i18n-audit.test.ts`) et d'un script CLI (`npm run lint:i18n`) vérifiant à la fois l'absence de texte hardcodé et la parité stricte des clés et paramètres de traduction entre `en.ts` et `fr.ts`.
+  - Prise en charge des annotations d'exception inline `// i18n-ignore`.
+  - Internationalisation complète de la page des releases (`Releases.tsx`).
+
 ## [v1.11.0] — 2026-08-30
 
 ### Ajouté

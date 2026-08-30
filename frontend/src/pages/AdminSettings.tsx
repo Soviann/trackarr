@@ -8,12 +8,12 @@ import { ALL_WATCH_PROVIDERS, DEFAULT_ENABLED_PROVIDERS, setEnabledWatchProvider
 import s from './AdminSettings.module.css'
 
 export const METADATA_LANGUAGES = [
-  { id: 'fr', flag: '🇫🇷', name: 'French', nativeName: 'Français' },
+  { id: 'fr', flag: '🇫🇷', name: 'French', nativeName: 'Français' }, // i18n-ignore
   { id: 'en', flag: '🇬🇧', name: 'English', nativeName: 'English' },
   { id: 'de', flag: '🇩🇪', name: 'German', nativeName: 'Deutsch' },
-  { id: 'es', flag: '🇪🇸', name: 'Spanish', nativeName: 'Español' },
+  { id: 'es', flag: '🇪🇸', name: 'Spanish', nativeName: 'Español' }, // i18n-ignore
   { id: 'it', flag: '🇮🇹', name: 'Italian', nativeName: 'Italiano' },
-  { id: 'pt', flag: '🇵🇹', name: 'Portuguese', nativeName: 'Português' },
+  { id: 'pt', flag: '🇵🇹', name: 'Portuguese', nativeName: 'Português' }, // i18n-ignore
   { id: 'ja', flag: '🇯🇵', name: 'Japanese', nativeName: '日本語' },
 ] as const
 

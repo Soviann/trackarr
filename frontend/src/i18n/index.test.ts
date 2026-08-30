@@ -9,15 +9,15 @@ describe('i18n system', () => {
 
   it('translates simple keys in English and French', () => {
     expect(translate('en', 'nav.library')).toBe('Library')
-    expect(translate('fr', 'nav.library')).toBe('Bibliothèque')
+    expect(translate('fr', 'nav.library')).toBe('Bibliothèque') // i18n-ignore
 
     expect(translate('en', 'status.watching')).toBe('Watching')
-    expect(translate('fr', 'status.watching')).toBe('En cours')
+    expect(translate('fr', 'status.watching')).toBe('En cours') // i18n-ignore
   })
 
   it('interpolates parameters correctly', () => {
     expect(translate('en', 'details.openInArr', { app: 'Radarr' })).toBe('Open in Radarr')
-    expect(translate('fr', 'details.openInArr', { app: 'Sonarr' })).toBe('Ouvrir dans Sonarr')
+    expect(translate('fr', 'details.openInArr', { app: 'Sonarr' })).toBe('Ouvrir dans Sonarr') // i18n-ignore
   })
 
   it('persists selected locale to localStorage', () => {

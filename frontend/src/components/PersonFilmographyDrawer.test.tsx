@@ -96,13 +96,13 @@ describe('PersonFilmographyDrawer', () => {
     render(
       <PersonFilmographyDrawer
         open={true}
-        personName="Timothée Chalamet"
+        personName="Timothée Chalamet" // i18n-ignore
         role="actor"
         onClose={vi.fn()}
       />
     )
 
-    expect(screen.getByText('Timothée Chalamet')).toBeTruthy()
+    expect(screen.getByText('Timothée Chalamet')).toBeTruthy() // i18n-ignore
     expect(screen.getByText('Loading...')).toBeTruthy()
   })
 

@@ -26,7 +26,7 @@ const baseStats: StatsResponse = {
   fun_stats: [],
   year_summary: { titles_added: 0, episodes_watched: 0, completions: 0 },
   genres: [{ genre: 'Action', count: 5 }],
-  top_actors: [{ name: 'Timothée Chalamet', count: 3 }],
+  top_actors: [{ name: 'Timothée Chalamet', count: 3 }], // i18n-ignore
   top_directors: [{ name: 'Denis Villeneuve', count: 2 }],
   streaks: { current: 0, best: 0 },
   total_watch_minutes: 60,
@@ -60,7 +60,7 @@ describe('Stats', () => {
     render(<Stats />)
 
     expect(screen.getByText('// TOP ACTORS')).toBeTruthy()
-    expect(screen.getByText('Timothée Chalamet')).toBeTruthy()
+    expect(screen.getByText('Timothée Chalamet')).toBeTruthy() // i18n-ignore
     expect(screen.getByText('// TOP DIRECTORS')).toBeTruthy()
     expect(screen.getByText('Denis Villeneuve')).toBeTruthy()
   })
@@ -70,12 +70,12 @@ describe('Stats', () => {
     const { Stats } = await import('./Stats')
     render(<Stats />)
 
-    const actorBtn = screen.getByText('Timothée Chalamet')
+    const actorBtn = screen.getByText('Timothée Chalamet') // i18n-ignore
     fireEvent.click(actorBtn)
 
     // The drawer should open with the actor name in the header
     await waitFor(() => {
-      const headings = screen.getAllByText('Timothée Chalamet')
+      const headings = screen.getAllByText('Timothée Chalamet') // i18n-ignore
       expect(headings.length).toBeGreaterThanOrEqual(2)
     })
   })
