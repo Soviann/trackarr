@@ -131,25 +131,6 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
     )
   }
 
-  // If no unwatched episodes remain and title is watching -> caught up
-  if (isWatching && unwatchedCount === 0 && totalCount > 0) {
-    return (
-      <div className={s.container}>
-        <div className={s.caughtUpCard}>
-          <div className={s.caughtUpIcon}>✨</div>
-          <div className={s.caughtUpContent}>
-            <div className={s.caughtUpTitle}>Vous êtes à jour !</div>
-            <div className={s.caughtUpSub}>
-              {title.next_air_date
-                ? `Prochain épisode prévu le ${formatDate(title.next_air_date)}`
-                : 'Tous les épisodes disponibles ont été vus.'}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // If title is plan to watch with no next episode detected yet (empty season list or not started)
   if (isPlanToWatch && totalCount > 0) {
     return (
