@@ -111,15 +111,18 @@ type TitleUpdate struct {
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
+	var createdAtStr, updatedAtStr string
 	var watchProvidersRaw *string
 	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, created_at, updated_at FROM titles WHERE id = ?`, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.ExternalSourceID, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &title.CreatedAt, &title.UpdatedAt)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &createdAtStr, &updatedAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
+	title.CreatedAt = parseSQLiteTimeVal(createdAtStr)
+	title.UpdatedAt = parseSQLiteTimeVal(updatedAtStr)
 	title.FirstWatchedAt = parseSQLiteTime(firstWatchedAtStr)
 	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 	title.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
@@ -163,6 +166,13 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		return nil, fmt.Errorf("iterate title genres: %w", err)
 	}
 	genreRows.Close()
+
+	// Load franchise relations (side stories, movies, OVAs, spin-offs)
+	rels, err := NewTitleRelationRepository(r.db).GetByTitleID(context.Background(), id)
+	if err != nil {
+		return nil, fmt.Errorf("get title relations: %w", err)
+	}
+	title.Relations = rels
 
 	if title.Type == model.TitleTypeMovie {
 		return title, nil

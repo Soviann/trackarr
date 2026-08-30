@@ -65,9 +65,39 @@ export interface Title {
   updated_at: string
   names: TitleName[]
   seasons: Season[]
+  relations?: TitleRelation[]
   next_episode?: NextEpisode
   matched_name?: string
   matched_language?: string
+}
+
+export interface TitleRelation {
+  id: number
+  title_id: number
+  season_id?: number | null
+  season_number?: number | null
+  provider: string
+  external_id: number
+  relation_type: string
+  format: string
+  title: string
+  romaji_title?: string | null
+  cover_url?: string | null
+  year?: number | null
+  score?: number | null
+  episode_count?: number | null
+  duration?: number | null
+  overview?: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+
+  matched_title_id?: number | null
+  matched_status?: TitleStatus | null
+  matched_rating?: number | null
+  matched_type?: TitleType | null
+  matched_radarr_id?: number | null
+  matched_sonarr_id?: number | null
 }
 
 export interface GenreCount {

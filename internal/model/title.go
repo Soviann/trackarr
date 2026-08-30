@@ -116,8 +116,9 @@ type Title struct {
 	CaughtUp bool `json:"caught_up"`
 
 	// Loaded relations
-	Names   []TitleName `json:"names,omitempty"`
-	Seasons []Season    `json:"seasons,omitempty"`
+	Names     []TitleName     `json:"names,omitempty"`
+	Seasons   []Season        `json:"seasons,omitempty"`
+	Relations []TitleRelation `json:"relations,omitempty"`
 
 	// Listing-only: next unwatched episode for quick mark
 	NextEpisode *NextEpisode `json:"next_episode,omitempty"`
