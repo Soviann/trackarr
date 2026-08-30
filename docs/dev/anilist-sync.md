@@ -8,9 +8,16 @@
 - Relations & Prequel Traversal: `internal/service/matching/anilist_relations.go`
 - Client & GraphQL: `internal/service/matching/anilist*.go`
 - State Push Service: `internal/service/anilist_push.go`
-- Repository: `internal/repository/season_external_ids.go` (`SeasonExternalIDRepository`, `SeasonExternalIDWriter`)
+- Repository: `internal/repository/season_external_ids.go`, `internal/repository/title_relation*.go`
 - Task Handlers: `internal/service/task_handlers.go` (`TaskTypeAniListPushSeason`, `TaskTypeAniListPushMovie`)
-- Frontend Components: `frontend/src/components/SeasonAniListStrip.tsx`, `frontend/src/components/RematchSheet.tsx`
+- Frontend Components: `frontend/src/components/SeasonAniListStrip.tsx`, `frontend/src/components/SeasonSideStories.tsx`, `frontend/src/components/FranchiseRelationsSection.tsx`, `frontend/src/components/RematchSheet.tsx`
+
+## Franchise Relations & Side Stories (`title_relations`)
+Database table: `title_relations` (Migration 042, PK: `id`, Unique: `title_id, provider, external_id`):
+- Connects anime series to their chronological side stories, movies, OVAs, and spin-offs discovered via AniList `relations.edges`.
+- Relations attached to a specific season part are stored with `season_id` (rendering in-line at the end of the parent season).
+- Non-series relations (e.g. standalone movies or franchise spin-offs) are surfaced in the dedicated "Univers & Franchise" section.
+- Resolves local library matches dynamically (`matched_title_id`) via `LEFT JOIN titles mt ON mt.anilist_id = tr.external_id` for instant watch tracking and navigation.
 
 ## AniList Season Chain Traversal
 `AniListClient.ResolveSeasonChain(ctx, id)` resolves the root franchise series by traversing `PREQUEL` edges:

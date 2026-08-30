@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Side Stories & Films AniList dans la timeline des saisons** : Intégration directe des films et OAVs rattachés à la fin des épisodes de la saison parente (ex: *My Hero Academia: Two Heroes* affiché chronologiquement après la Saison 2), avec support de plusieurs hors-séries par saison, statuts de visionnage et bascule rapide.
+- **Section Univers & Franchise** : Ajout d'une section dédiée sur la fiche des animes récapitulant l'ensemble des films, OAVs, résumés et spin-offs reliés via AniList, avec filtres par catégorie (*Tous*, *Films*, *OAVs*, *Spin-offs*) et indicateurs de suivi.
+- **Ajout direct des titres manquants** : Bouton d'action direct `[+ Ajouter]` sur les cartes et blocs de side stories absentes de la médiathèque redirigeant automatiquement vers l'écran d'ajout/validation (`/admin/validate`) pré-rempli avec l'entrée AniList.
+- **Réconciliation automatique & Push AniList** : Détection dynamique des films et hors-séries présents dans la médiathèque locale avec synchronisation croisée du statut de visionnage vers AniList.
+
+### Corrigé
+- **Content-Security-Policy pour les jaquettes distantes** : Prise en charge des domaines CDN AniList (`s4.anilist.co`, `*.anilist.co`) et TVDB (`artworks.thetvdb.com`) dans la directive `img-src` de la CSP pour l'affichage direct des affiches externes.
+
 ## [v1.5.0] — 2026-08-29
 
 ### Ajouté

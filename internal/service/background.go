@@ -21,6 +21,7 @@ import (
 type aniListSeasonScoreClient interface {
 	GetAnimeDetails(ctx context.Context, anilistID int64) (*matching.AniListDetails, error)
 	SearchAnime(ctx context.Context, query string) ([]matching.AniListSearchResult, error)
+	GetFranchiseRelations(ctx context.Context, anilistID int64) ([]matching.FranchiseRelationNode, error)
 }
 
 type BackgroundService struct {
@@ -215,6 +216,7 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 	// one bad mapping never breaks the rest of the refresh.
 	if s.anilist != nil && title.IsAnime {
 		s.refreshAniListSeasonScores(ctx, title, &result)
+		s.refreshAniListRelations(ctx, title, &result)
 	}
 
 	// Step 1e: AniList ID auto-backfill for anime titles missing an AniList link.
