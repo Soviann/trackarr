@@ -310,6 +310,36 @@ export interface UpcomingTitle {
   radarr_id?: number | null
 }
 
+export interface CalendarEvent {
+  id: string
+  title_id: number
+  title_name: string
+  type: TitleType
+  is_anime: boolean
+  cover_url: string | null
+  air_date: string
+  episode_id?: number | null
+  season_number?: number | null
+  episode_number?: number | null
+  episode_name?: string | null
+  next_air_episode?: string | null
+  status: string
+  watch_providers?: WatchProvider[]
+  accent_hex?: string | null
+  overview?: string | null
+  sonarr_id?: number | null
+  radarr_id?: number | null
+}
+
+export interface CalendarTokenResponse {
+  token: string
+  feed_url: string
+  http_url: string
+  webcal_url: string
+}
+
+export type CalendarViewMode = 'month' | 'week' | 'list'
+
 export interface SeasonAuditProposal {
   source_title_id: number
   source_name: string

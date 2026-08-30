@@ -88,6 +88,7 @@
 | `CoverService` | `internal/service/cover.go` | Cover downloading and accent color extraction (`colorextract/`) | `docs/patterns.md` |
 | `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
+| `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation, token rotation & range queries | `docs/user-guide.md` |
 | `BackgroundService` | `internal/service/background.go` | Daily metadata refresh crons and name sync | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
@@ -114,6 +115,10 @@
 | POST | `/api/auth/logout` | `auth.Logout` | Clear JWT auth cookie |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
+| GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |
+| GET | `/api/calendar/events` | `calendarHandler.GetEvents` | In-app calendar events for interactive multi-view calendar |
+| GET | `/api/calendar/token` | `calendarHandler.GetToken` | Retrieve active iCal subscription token & webcal URLs |
+| POST | `/api/calendar/token/regenerate` | `calendarHandler.RegenerateToken` | Rotate iCal secret token |
 | GET | `/api/covers/{filename}` | `covers.Serve` | Serve cached cover image |
 | GET | `/covers/{filename}` | `covers.Serve` | Legacy top-level cover route without `/api` prefix |
 | GET | `/api/titles` | `titles.List` | Paginated library list with filters and search |
@@ -210,6 +215,9 @@
 | `NextEpisodeHero` | `components/NextEpisodeHero.tsx` | Prominent call-to-action hero card with 1-click next episode mark & binge duration estimator |
 | `PersonalNotesCard` | `components/PersonalNotesCard.tsx` | Private memo/notes card on title detail with debounced auto-save |
 | `WatchProviderBadges` | `components/WatchProviderBadges.tsx` | Streaming provider badges (Netflix, Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) |
+| `CalendarMonthGrid` | `components/CalendarMonthGrid.tsx` | 7-column monthly interactive grid with today indicator & selected day release cards |
+| `CalendarWeekTimeline` | `components/CalendarWeekTimeline.tsx` | 7-day weekly timeline view with rich release cards |
+| `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |

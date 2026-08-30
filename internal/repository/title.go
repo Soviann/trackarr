@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -38,6 +39,28 @@ type UpcomingItem struct {
 	NextAirEpisode *string               `json:"next_air_episode"`
 	Status         string                `json:"status"`
 	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
+	SonarrID       *int64                `json:"sonarr_id,omitempty"`
+	RadarrID       *int64                `json:"radarr_id,omitempty"`
+}
+
+// CalendarEventItem represents an air event (episode or title) in the calendar.
+type CalendarEventItem struct {
+	ID             string                `json:"id"`
+	TitleID        int64                 `json:"title_id"`
+	TitleName      string                `json:"title_name"`
+	Type           string                `json:"type"`
+	IsAnime        bool                  `json:"is_anime"`
+	CoverURL       *string               `json:"cover_url"`
+	AirDate        string                `json:"air_date"`
+	EpisodeID      *int64                `json:"episode_id,omitempty"`
+	SeasonNumber   *int                  `json:"season_number,omitempty"`
+	EpisodeNumber  *int                  `json:"episode_number,omitempty"`
+	EpisodeName    *string               `json:"episode_name,omitempty"`
+	NextAirEpisode *string               `json:"next_air_episode,omitempty"`
+	Status         string                `json:"status"`
+	WatchProviders []model.WatchProvider `json:"watch_providers,omitempty"`
+	AccentHex      *string               `json:"accent_hex,omitempty"`
+	Overview       *string               `json:"overview,omitempty"`
 	SonarrID       *int64                `json:"sonarr_id,omitempty"`
 	RadarrID       *int64                `json:"radarr_id,omitempty"`
 }
@@ -661,4 +684,194 @@ func (r *TitleRepository) ReviewCount(_ context.Context) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM titles WHERE match_status IN ('pending_review', 'unconfirmed')`).Scan(&count)
 	return count, err
+}
+
+// ListCalendarEvents returns calendar events (unwatched episodes and title airings/releases)
+// within the [from, to] date range for tracked titles (watching, plan_to_watch, or completed returning).
+func (r *TitleRepository) ListCalendarEvents(from, to string) ([]CalendarEventItem, error) {
+	if from == "" {
+		from = "1970-01-01"
+	}
+	if to == "" {
+		to = "2099-12-31"
+	}
+
+	var items []CalendarEventItem
+	seen := make(map[string]bool)
+
+	// 1. Query unwatched episodes with air_date in [from, to]
+	epQuery := `
+		SELECT e.id, e.episode, e.name, e.air_date, s.season_number,
+		       t.id, t.type, t.is_anime, t.cover_url,
+		       COALESCE(` + displayNameExpr + `, '') AS title_name,
+		       t.status, t.watch_providers, t.accent_hex, t.overview,
+		       t.sonarr_id, t.radarr_id
+		FROM episodes e
+		JOIN seasons s ON s.id = e.season_id
+		JOIN titles t ON t.id = s.title_id
+		WHERE (t.status IN ('watching', 'plan_to_watch') OR (t.status = 'completed' AND t.series_status = 'returning'))
+		  AND e.air_date IS NOT NULL AND e.air_date != ''
+		  AND e.air_date >= ? AND e.air_date <= ?
+		  AND e.watched = 0
+		ORDER BY e.air_date ASC, s.season_number ASC, e.episode ASC`
+
+	epRows, err := r.db.Query(epQuery, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("list calendar episodes: %w", err)
+	}
+	defer epRows.Close()
+
+	for epRows.Next() {
+		var epID int64
+		var epNum int
+		var epName *string
+		var airDate string
+		var seasonNum int
+		var titleID int64
+		var tType string
+		var isAnime bool
+		var coverURL *string
+		var titleName string
+		var status string
+		var watchProvidersRaw *string
+		var accentHex *string
+		var overview *string
+		var sonarrID *int64
+		var radarrID *int64
+
+		if err := epRows.Scan(&epID, &epNum, &epName, &airDate, &seasonNum,
+			&titleID, &tType, &isAnime, &coverURL,
+			&titleName, &status, &watchProvidersRaw, &accentHex, &overview,
+			&sonarrID, &radarrID); err != nil {
+			return nil, fmt.Errorf("scan calendar episode: %w", err)
+		}
+
+		item := CalendarEventItem{
+			ID:             fmt.Sprintf("ep-%d", epID),
+			TitleID:        titleID,
+			TitleName:      titleName,
+			Type:           tType,
+			IsAnime:        isAnime,
+			CoverURL:       coverURL,
+			AirDate:        airDate,
+			EpisodeID:      &epID,
+			SeasonNumber:   &seasonNum,
+			EpisodeNumber:  &epNum,
+			EpisodeName:    epName,
+			Status:         status,
+			WatchProviders: parseWatchProviders(watchProvidersRaw),
+			AccentHex:      accentHex,
+			Overview:       overview,
+			SonarrID:       sonarrID,
+			RadarrID:       radarrID,
+		}
+		items = append(items, item)
+		seen[fmt.Sprintf("%d-%s", titleID, airDate)] = true
+	}
+	if err := epRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate calendar episodes: %w", err)
+	}
+
+	// 2. Query title-level air dates (movies or series next_air_date without duplicate episode)
+	titleQuery := `
+		SELECT t.id, t.type, t.is_anime, t.cover_url,
+		       COALESCE(` + displayNameExpr + `, '') AS title_name,
+		       COALESCE(t.next_air_date, CASE WHEN t.type = 'movie' THEN t.release_date ELSE NULL END) AS air_date,
+		       t.next_air_episode, t.status, t.watch_providers, t.accent_hex, t.overview,
+		       t.sonarr_id, t.radarr_id
+		FROM titles t
+		WHERE (t.status IN ('watching', 'plan_to_watch') OR (t.status = 'completed' AND t.series_status = 'returning'))
+		  AND (
+		    (t.next_air_date IS NOT NULL AND t.next_air_date >= ? AND t.next_air_date <= ?)
+		    OR (t.type = 'movie' AND t.release_date IS NOT NULL AND t.release_date >= ? AND t.release_date <= ?)
+		  )
+		ORDER BY air_date ASC`
+
+	titleRows, err := r.db.Query(titleQuery, from, to, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("list calendar titles: %w", err)
+	}
+	defer titleRows.Close()
+
+	for titleRows.Next() {
+		var titleID int64
+		var tType string
+		var isAnime bool
+		var coverURL *string
+		var titleName string
+		var airDate string
+		var nextAirEp *string
+		var status string
+		var watchProvidersRaw *string
+		var accentHex *string
+		var overview *string
+		var sonarrID *int64
+		var radarrID *int64
+
+		if err := titleRows.Scan(&titleID, &tType, &isAnime, &coverURL,
+			&titleName, &airDate, &nextAirEp, &status, &watchProvidersRaw,
+			&accentHex, &overview, &sonarrID, &radarrID); err != nil {
+			return nil, fmt.Errorf("scan calendar title: %w", err)
+		}
+
+		key := fmt.Sprintf("%d-%s", titleID, airDate)
+		if seen[key] {
+			continue
+		}
+
+		item := CalendarEventItem{
+			ID:             fmt.Sprintf("title-%d-%s", titleID, airDate),
+			TitleID:        titleID,
+			TitleName:      titleName,
+			Type:           tType,
+			IsAnime:        isAnime,
+			CoverURL:       coverURL,
+			AirDate:        airDate,
+			NextAirEpisode: nextAirEp,
+			Status:         status,
+			WatchProviders: parseWatchProviders(watchProvidersRaw),
+			AccentHex:      accentHex,
+			Overview:       overview,
+			SonarrID:       sonarrID,
+			RadarrID:       radarrID,
+		}
+		items = append(items, item)
+		seen[key] = true
+	}
+	if err := titleRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate calendar titles: %w", err)
+	}
+
+	// Sort chronologically
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].AirDate != items[j].AirDate {
+			return items[i].AirDate < items[j].AirDate
+		}
+		if items[i].TitleName != items[j].TitleName {
+			return items[i].TitleName < items[j].TitleName
+		}
+		s1, s2 := 0, 0
+		if items[i].SeasonNumber != nil {
+			s1 = *items[i].SeasonNumber
+		}
+		if items[j].SeasonNumber != nil {
+			s2 = *items[j].SeasonNumber
+		}
+		if s1 != s2 {
+			return s1 < s2
+		}
+		e1, e2 := 0, 0
+		if items[i].EpisodeNumber != nil {
+			e1 = *items[i].EpisodeNumber
+		}
+		if items[j].EpisodeNumber != nil {
+			e2 = *items[j].EpisodeNumber
+		}
+		return e1 < e2
+	})
+
+	if items == nil {
+		items = []CalendarEventItem{}
+	}
+	return items, nil
 }

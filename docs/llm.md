@@ -44,7 +44,7 @@
 - `season_external_ids`: Per-part AniList season mappings (`season_id`, `provider: 'anilist'`, `external_id`, `anilist_episode_count`, `anilist_start_date`, `anilist_average_score`, `sort_order`).
 - `title_relations`: Side stories, sagas, and franchise relations (`title_id`, `season_id`, `provider: 'anilist'|'tmdb'|'tvdb'`, `external_id`, `relation_type: 'PREQUEL'|'SEQUEL'|'SPIN_OFF'|'SIDE_STORY'|'ALTERNATIVE'|'COLLECTION'`, `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`).
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
-- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, notification preferences). Sessions use signed JWT in HTTP cookies.
+- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
 
@@ -60,6 +60,10 @@
 - `GET /api/titles/resolve` : Resolve external metadata from direct URL (IMDb, TMDB, TVDB, AniList).
 - `GET /api/titles/continue-watching` : List in-progress titles with progress ratios.
 - `GET /api/titles/upcoming` : List series with upcoming air dates.
+- `GET /api/calendar.ics` : Public token-secured RFC 5545 iCalendar feed (`?token=...`).
+- `GET /api/calendar/events` : List calendar events for in-app month/week/list views.
+- `GET /api/calendar/token` : Get active calendar token and subscription URLs.
+- `POST /api/calendar/token/regenerate` : Rotate calendar secret token.
 - `GET /api/titles/review-count` : Badge count for unconfirmed/pending review titles.
 - `POST /api/titles/batch-delete` : Delete multiple titles in a single transaction.
 - `POST /api/titles/batch-status` : Update status for multiple titles.

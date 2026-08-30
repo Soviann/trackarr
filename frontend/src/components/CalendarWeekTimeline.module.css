@@ -1,0 +1,218 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.weekNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xs);
+}
+
+.navTitle {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.navControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.navBtn {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.navBtn:hover {
+  background: var(--bg-elev2);
+  border-color: var(--border-strong);
+}
+
+.todayBtn {
+  height: 32px;
+  padding: 0 var(--space-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.todayBtn:hover {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.dayColumn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease;
+}
+
+.todayColumn {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-wash);
+}
+
+.dayHeader {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elev2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dayDate {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.dayWeekday {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: capitalize;
+}
+
+.dayNum {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--ink-dim);
+}
+
+.todayBadge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.05em;
+}
+
+.dayEvents {
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.emptyDay {
+  padding: var(--space-lg) var(--space-sm);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--ink-mute);
+}
+
+.eventCard {
+  display: flex;
+  gap: var(--space-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.eventCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: var(--bg-elev2);
+}
+
+.poster {
+  width: 52px;
+  height: 78px;
+  border-radius: var(--radius-poster);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg-elev);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.titleName {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.epBadge {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.typeBadge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+.epName {
+  font-size: var(--font-size-xs);
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

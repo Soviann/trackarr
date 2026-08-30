@@ -100,6 +100,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	seasonAudit := handler.NewSeasonAuditHandler(seasonAuditSvc)
 	clientErrors := &handler.ClientErrorHandler{}
 
+	calendarSvc := service.NewCalendarService(writeDB, titleReadRepo, settingRepo)
+	calendarHandler := handler.NewCalendarHandler(calendarSvc, writeDB, settingRepo)
+
 	reloader := service.NewDynamicConfigReloader(
 		cfg, writeDB, settingRepo, pipeline, bgSvc, nil, nil, realPushSvc,
 		func(jellyfin, plex, fallback string) {
@@ -129,12 +132,19 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		r.With(webhookRateLimit).Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(webhooks.HandleJellyfin))
 		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
 
+		// Calendar iCal feed (unauthenticated, secured by secret token query parameter)
+		r.Get("/calendar.ics", httputil.WrapHandler(calendarHandler.ServeICS))
+
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(mw.JWTAuth(jwtSecret))
+
+			r.Get("/calendar/events", httputil.WrapHandler(calendarHandler.GetEvents))
+			r.Get("/calendar/token", httputil.WrapHandler(calendarHandler.GetToken))
+			r.Post("/calendar/token/regenerate", httputil.WrapHandler(calendarHandler.RegenerateToken))
 
 			r.Post("/auth/change-password", httputil.WrapHandler(auth.ChangePassword))
 			r.Post("/auth/recovery-key/regenerate", httputil.WrapHandler(auth.RegenerateRecoveryKey))
