@@ -54,21 +54,23 @@ type tvdbSeriesDetail struct {
 	Status struct {
 		Name string `json:"name"`
 	} `json:"status"`
+	Lists        []TVDBListBrief   `json:"lists"`
 	RemoteIDs    []tvdbRemoteID    `json:"remoteIds"`
 	Translations *tvdbTranslations `json:"translations"`
 }
 
 type tvdbMovieDetail struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Overview string `json:"overview"`
-	Year     string `json:"year"`
-	Image    string `json:"image"`
-	Genres   []struct {
+	ID           int64             `json:"id"`
+	Name         string            `json:"name"`
+	Overview     string            `json:"overview"`
+	Year         string            `json:"year"`
+	Image        string            `json:"image"`
+	Genres       []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
 	Score        float64           `json:"score"`
 	Runtime      *int              `json:"runtime"`
+	Lists        []TVDBListBrief   `json:"lists"`
 	RemoteIDs    []tvdbRemoteID    `json:"remoteIds"`
 	Translations *tvdbTranslations `json:"translations"`
 }

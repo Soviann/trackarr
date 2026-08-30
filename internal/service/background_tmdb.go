@@ -83,6 +83,8 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 		title.TVDBID = &tvdbID
 	}
 
+	s.refreshTMDBMovieCollection(ctx, title, details, result)
+
 	return tmdbNames
 }
 

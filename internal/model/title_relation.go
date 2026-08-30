@@ -13,6 +13,7 @@ const (
 	RelationPrequel     RelationType = "PREQUEL"
 	RelationSequel      RelationType = "SEQUEL"
 	RelationCharacter   RelationType = "CHARACTER"
+	RelationCollection  RelationType = "COLLECTION"
 )
 
 type TitleRelation struct {

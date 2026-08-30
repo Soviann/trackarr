@@ -147,3 +147,77 @@ func TestTitleRelations_DeleteForTitle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
+
+func TestTitleRelations_TMDB_And_TVDB_Matching(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	parentID := testutil.InsertTitle(t, db, "Harry Potter 1", false)
+	localMovieID := testutil.InsertTitle(t, db, "Harry Potter 2", false)
+	localSeriesID := testutil.InsertTitle(t, db, "Better Call Saul", false)
+	ctx := context.Background()
+
+	// Assign TMDB and TVDB IDs
+	_, err := db.ExecContext(ctx, "UPDATE titles SET tmdb_id = 672, status = 'completed', my_rating = 9 WHERE id = ?", localMovieID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "UPDATE titles SET tvdb_id = 273181, status = 'plan_to_watch' WHERE id = ?", localSeriesID)
+	require.NoError(t, err)
+
+	repo := repository.NewTitleRelationRepository(db)
+	y2002, y2015, y2004 := 2002, 2015, 2004
+	relations := []model.TitleRelation{
+		{
+			TitleID:      parentID,
+			Provider:     "tmdb",
+			ExternalID:   672,
+			RelationType: model.RelationCollection,
+			Format:       "MOVIE",
+			Title:        "Harry Potter and the Chamber of Secrets",
+			Year:         &y2002,
+		},
+		{
+			TitleID:      parentID,
+			Provider:     "tvdb",
+			ExternalID:   273181,
+			RelationType: model.RelationSpinOff,
+			Format:       "TV",
+			Title:        "Better Call Saul",
+			Year:         &y2015,
+		},
+		{
+			TitleID:      parentID,
+			Provider:     "tmdb",
+			ExternalID:   999999, // Unmatched
+			RelationType: model.RelationCollection,
+			Format:       "MOVIE",
+			Title:        "Harry Potter 3",
+			Year:         &y2004,
+		},
+	}
+
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, parentID, relations)
+	})
+	require.NoError(t, err)
+
+	got, err := repo.GetByTitleID(ctx, parentID)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+
+	// TMDB matched
+	assert.Equal(t, "tmdb", got[0].Provider)
+	assert.Equal(t, &localMovieID, got[0].MatchedTitleID)
+	require.NotNil(t, got[0].MatchedStatus)
+	assert.Equal(t, model.TitleStatusCompleted, *got[0].MatchedStatus)
+	require.NotNil(t, got[0].MatchedRating)
+	assert.Equal(t, 9, *got[0].MatchedRating)
+
+	// TVDB matched
+	assert.Equal(t, "tvdb", got[1].Provider)
+	assert.Equal(t, &localSeriesID, got[1].MatchedTitleID)
+	require.NotNil(t, got[1].MatchedStatus)
+	assert.Equal(t, model.TitleStatusPlanToWatch, *got[1].MatchedStatus)
+
+	// Unmatched
+	assert.Equal(t, int64(999999), got[2].ExternalID)
+	assert.Nil(t, got[2].MatchedTitleID)
+}
+

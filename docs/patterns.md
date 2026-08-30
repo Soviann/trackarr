@@ -52,7 +52,7 @@
 | `Task` | `internal/model/task.go` | Background queue item (`ID`, `Type`, `Payload`, `Status`, `Attempts`, `RunAt`, `DedupKey`). |
 | `MatchEvent`| `internal/model/match_event.go` | Match audit trail (`ID`, `TitleID`, `Kind`, `Detail`, `CreatedAt`). |
 | `Setting` | `internal/model/setting.go` | Key-value string pair (`Key`, `Value`). |
-| `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, and franchise relations (`TitleID`, `SeasonID`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
+| `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
 
 ### Repositories (`internal/repository/`)
 
