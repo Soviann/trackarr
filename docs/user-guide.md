@@ -68,6 +68,7 @@ Opening a title displays its rich details:
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
 - **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
+- **Sagas, Universes & Franchise Relations**: Dedicated card surfacing related works for movies (TMDB collections like *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies). Features a sorting toggle (⏱️ Chronologie vs 📅 Sortie), category filters (*Films*, *Séries*, *OAVs*, *Spin-offs*), default collapse above 3 items with *Voir plus*, local library status badges (`✓ Vu`, `À voir`), and a 1-click `[+ Ajouter]` button for missing titles.
 - **AniList Season Strip**: Community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries).
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.
