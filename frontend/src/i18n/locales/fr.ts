@@ -136,7 +136,7 @@ export const fr: TranslationSchema = {
   },
   calendar: {
     title: 'Calendrier',
-    comingUp: 'Sorties à venir',
+    comingUp: 'Coming Up',
     upcomingCount: '{count} sortie{plural} à venir',
     icalFeed: 'Flux iCal',
     viewMonth: 'Mois',

@@ -116,7 +116,7 @@ export function ComingUp(_props: { path?: string }) {
             </svg>
           </button>
           <div className={s.headerText}>
-            <span className={s.label}>// {t('calendar.title')}</span>
+            <span className={s.label}>// {t('calendar.comingUp')}</span>
             {events && (
               <span className={s.count}>
                 {t('calendar.upcomingCount', {
