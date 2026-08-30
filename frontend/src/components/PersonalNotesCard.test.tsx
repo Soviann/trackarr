@@ -29,7 +29,7 @@ describe('PersonalNotesCard', () => {
       <PersonalNotesCard titleId={42} initialNotes="" onSaved={onSaved} />
     )
 
-    const textarea = getByPlaceholderText(/Ajouter une note personnelle/) as HTMLTextAreaElement
+    const textarea = getByPlaceholderText(/Add personal notes/) as HTMLTextAreaElement
     fireEvent.input(textarea, { target: { value: 'New note' } })
 
     expect(spy).not.toHaveBeenCalled()
@@ -50,7 +50,7 @@ describe('PersonalNotesCard', () => {
       <PersonalNotesCard titleId={42} initialNotes="" />
     )
 
-    const textarea = getByPlaceholderText(/Ajouter une note personnelle/) as HTMLTextAreaElement
+    const textarea = getByPlaceholderText(/Add personal notes/) as HTMLTextAreaElement
     fireEvent.input(textarea, { target: { value: 'Blur note' } })
     fireEvent.blur(textarea)
 

@@ -2,6 +2,7 @@ import { route } from 'preact-router'
 import type { TitleRelation } from '../types'
 import { routeTo } from '../routes'
 import { aniListMediaUrl, getCoverUrl } from '../utils'
+import { useTranslation } from '../i18n'
 import s from './SeasonSideStories.module.css'
 
 interface SeasonSideStoriesProps {
@@ -10,31 +11,33 @@ interface SeasonSideStoriesProps {
   onToggleWatched?: (relation: TitleRelation) => void
 }
 
-function formatFormat(format: string): { label: string; className: string } {
-  switch (format.toUpperCase()) {
-    case 'MOVIE':
-      return { label: 'Film', className: s.formatBadge }
-    case 'OVA':
-      return { label: 'OAV', className: `${s.formatBadge} ${s.formatBadgeOva}` }
-    case 'SPECIAL':
-      return { label: 'Spécial', className: `${s.formatBadge} ${s.formatBadgeSpecial}` }
-    case 'ONA':
-      return { label: 'ONA', className: `${s.formatBadge} ${s.formatBadgeSpecial}` }
-    default:
-      return { label: format, className: s.formatBadge }
-  }
-}
-
-function formatDuration(minutes?: number | null): string | null {
-  if (!minutes || minutes <= 0) return null
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m} min`
-}
-
 export function SeasonSideStories({ seasonNumber, sideStories, onToggleWatched }: SeasonSideStoriesProps) {
+  const { t } = useTranslation()
+
   if (!sideStories || sideStories.length === 0) {
     return null
+  }
+
+  const formatFormat = (format: string): { label: string; className: string } => {
+    switch (format.toUpperCase()) {
+      case 'MOVIE':
+        return { label: t('franchise.movies'), className: s.formatBadge }
+      case 'OVA':
+        return { label: t('franchise.ovas'), className: `${s.formatBadge} ${s.formatBadgeOva}` }
+      case 'SPECIAL':
+        return { label: t('sideStories.special'), className: `${s.formatBadge} ${s.formatBadgeSpecial}` }
+      case 'ONA':
+        return { label: 'ONA', className: `${s.formatBadge} ${s.formatBadgeSpecial}` }
+      default:
+        return { label: format, className: s.formatBadge }
+    }
+  }
+
+  const formatDuration = (minutes?: number | null): string | null => {
+    if (!minutes || minutes <= 0) return null
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m} min`
   }
 
   return (
@@ -44,11 +47,14 @@ export function SeasonSideStories({ seasonNumber, sideStories, onToggleWatched }
           <span>🎬</span>
           <span>
             {sideStories.length === 1
-              ? `Side Story recommandée après la Saison ${seasonNumber}`
-              : `Side Stories recommandées après la Saison ${seasonNumber} (${sideStories.length})`}
+              ? t('sideStories.recommendedAfterSeason', { season: seasonNumber })
+              : t('sideStories.recommendedAfterSeasonPlural', {
+                  season: seasonNumber,
+                  count: sideStories.length,
+                })}
           </span>
         </div>
-        <span className={s.headerTag}>Ordre chronologique</span>
+        <span className={s.headerTag}>{t('sideStories.chronologicalOrder')}</span>
       </div>
 
       {sideStories.map((rel) => {
@@ -95,7 +101,7 @@ export function SeasonSideStories({ seasonNumber, sideStories, onToggleWatched }
                     onClick={() => onToggleWatched?.(rel)}
                   >
                     <span>{isWatched ? '✓' : '○'}</span>
-                    <span>{isWatched ? 'Vu (Trackarr)' : 'Marquer comme vu'}</span>
+                    <span>{isWatched ? t('franchise.watchedTrackarr') : t('franchise.markWatched')}</span>
                   </button>
 
                   <button
@@ -103,13 +109,13 @@ export function SeasonSideStories({ seasonNumber, sideStories, onToggleWatched }
                     className={s.actionLink}
                     onClick={() => route(routeTo.title(rel.matched_title_id!))}
                   >
-                    <span>Fiche {rel.format === 'MOVIE' ? 'film' : 'titre'}</span>
+                    <span>{rel.format === 'MOVIE' ? t('franchise.viewMovie') : t('franchise.viewTitle')}</span>
                     <span>↗</span>
                   </button>
                 </>
               ) : (
                 <>
-                  <span className={s.unmatchedBadge}>Non présent</span>
+                  <span className={s.unmatchedBadge}>{t('sideStories.notInLibrary')}</span>
                   <button
                     type="button"
                     className={s.addBtn}
@@ -122,14 +128,14 @@ export function SeasonSideStories({ seasonNumber, sideStories, onToggleWatched }
                     }
                   >
                     <span>+</span>
-                    <span>Ajouter</span>
+                    <span>{t('common.add')}</span>
                   </button>
                   <a
                     href={aniListMediaUrl(rel.external_id)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={s.actionLink}
-                    title="Voir sur AniList"
+                    title={t('franchise.seeOnProvider', { provider: 'AniList' })}
                   >
                     <span>AniList</span>
                     <span>↗</span>

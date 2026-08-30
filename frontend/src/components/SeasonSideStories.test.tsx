@@ -38,8 +38,8 @@ describe('SeasonSideStories', () => {
     const rel = makeRelation()
     const { getByText } = render(<SeasonSideStories seasonNumber={2} sideStories={[rel]} />)
 
-    expect(getByText('Side Story recommandée après la Saison 2')).toBeTruthy()
-    expect(getByText('Film')).toBeTruthy()
+    expect(getByText('Recommended Side Story after Season 2')).toBeTruthy()
+    expect(getByText('Movies')).toBeTruthy()
     expect(getByText('My Hero Academia: Two Heroes')).toBeTruthy()
     expect(getByText('2018')).toBeTruthy()
     expect(getByText('· 1h 36m')).toBeTruthy()
@@ -54,10 +54,10 @@ describe('SeasonSideStories', () => {
       <SeasonSideStories seasonNumber={2} sideStories={[rel1, rel2]} />
     )
 
-    expect(getByText('Side Stories recommandées après la Saison 2 (2)')).toBeTruthy()
+    expect(getByText('Recommended Side Stories after Season 2 (2)')).toBeTruthy()
     expect(getByText('Two Heroes')).toBeTruthy()
     expect(getByText('Training of the Dead')).toBeTruthy()
-    expect(getByText('OAV')).toBeTruthy()
+    expect(getByText('OVAs')).toBeTruthy()
   })
 
   it('shows matched title watched button and calls onToggleWatched when clicked', () => {
@@ -70,13 +70,13 @@ describe('SeasonSideStories', () => {
       <SeasonSideStories seasonNumber={2} sideStories={[rel]} onToggleWatched={onToggle} />
     )
 
-    const btn = getByText('Vu (Trackarr)')
+    const btn = getByText('Watched (Trackarr)')
     expect(btn).toBeTruthy()
     fireEvent.click(btn)
     expect(onToggle).toHaveBeenCalledWith(rel)
   })
 
-  it('shows unmatched AniList link and + Ajouter button when title is not in library', () => {
+  it('shows unmatched AniList link and + Add button when title is not in library', () => {
     const rel = makeRelation({
       matched_title_id: null,
       external_id: 101347,
@@ -85,8 +85,8 @@ describe('SeasonSideStories', () => {
       <SeasonSideStories seasonNumber={2} sideStories={[rel]} />
     )
 
-    expect(getByText('Non présent')).toBeTruthy()
-    expect(getByText('Ajouter')).toBeTruthy()
+    expect(getByText('Not in library')).toBeTruthy()
+    expect(getByText('Add')).toBeTruthy()
     const link = getByText('AniList').closest('a')
     expect(link?.getAttribute('href')).toBe('https://anilist.co/anime/101347')
   })

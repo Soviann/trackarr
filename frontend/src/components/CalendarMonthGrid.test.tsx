@@ -33,9 +33,9 @@ describe('CalendarMonthGrid', () => {
 
   it('renders month navigation and weekday headers', () => {
     const { getByText } = render(<CalendarMonthGrid events={mockEvents} />)
-    expect(getByText('Lun')).toBeTruthy()
-    expect(getByText('Dim')).toBeTruthy()
-    expect(getByText("Aujourd'hui")).toBeTruthy()
+    expect(getByText('Mon')).toBeTruthy()
+    expect(getByText('Sun')).toBeTruthy()
+    expect(getByText('Today')).toBeTruthy()
   })
 
   it('renders event pills on matching dates', () => {
