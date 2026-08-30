@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.8.1] — 2026-08-30
+
+### Modifié
+- **Épuration de la fiche titre (`NextEpisodeHero`)** : Suppression du bandeau redondant de félicitations lorsque tous les épisodes sont vus, l'état étant déjà clairement indiqué par le badge et le statut de la série.
+
 ## [v1.8.0] — 2026-08-30
 
 ### Ajouté
