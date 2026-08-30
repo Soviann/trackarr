@@ -15,9 +15,9 @@ function airDateBadge(dateStr: string): { label: string; variant: 'amber' | 'tea
   const air = new Date(dateStr)
   air.setHours(0, 0, 0, 0)
   const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
-  if (diffDays === 0) return { label: 'Today', variant: 'amber' }
-  if (diffDays <= 6) return { label: air.toLocaleDateString('en-US', { weekday: 'short' }), variant: 'teal' }
-  return { label: `in ${diffDays}d`, variant: 'muted' }
+  if (diffDays === 0) return { label: "Aujourd'hui", variant: 'amber' }
+  if (diffDays <= 6) return { label: air.toLocaleDateString('fr-FR', { weekday: 'short' }), variant: 'teal' }
+  return { label: `dans ${diffDays} j`, variant: 'muted' }
 }
 
 function toTile(ev: CalendarEvent): PosterTileItem {
