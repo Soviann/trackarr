@@ -98,7 +98,7 @@
 | Method | Path | Handler | Description |
 |---|---|---|---|
 | GET | `/api/health` | `handler.Health` | Health check endpoint |
-| GET | `/api/config` | `auth.PublicConfig` | Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status, Metadata Language) |
+| GET | `/api/config` | `auth.PublicConfig` | Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status, Metadata Language, Enabled Watch Providers) |
 | POST | `/api/auth/setup` | `auth.Setup` | Initial admin account setup & emergency recovery key generation |
 | POST | `/api/auth/login` | `auth.Login` | Local password login (Bcrypt, constant-time, rate-limited) |
 | POST | `/api/auth/google` | `auth.GoogleCallback` | OAuth Google authentication |
@@ -209,6 +209,7 @@
 | `ReleaseDetailSheet` | `components/ReleaseDetailSheet.tsx` | Slide-up modal sheet displaying torrent metadata, scene release name, external links and 1-click addition button |
 | `NextEpisodeHero` | `components/NextEpisodeHero.tsx` | Prominent call-to-action hero card with 1-click next episode mark & binge duration estimator |
 | `PersonalNotesCard` | `components/PersonalNotesCard.tsx` | Private memo/notes card on title detail with debounced auto-save |
+| `WatchProviderBadges` | `components/WatchProviderBadges.tsx` | Streaming provider badges (Netflix, Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |

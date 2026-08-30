@@ -68,6 +68,7 @@ func TestGetSystemSettings(t *testing.T) {
 
 	// Default metadata language is fr
 	assert.Equal(t, "fr", resp.MetadataLanguage)
+	assert.Equal(t, "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn", resp.EnabledWatchProviders)
 }
 
 func TestUpdateSystemSettings_AndReload(t *testing.T) {
@@ -78,7 +79,8 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 		"tvdb_api_key": "new-sqlite-tvdb-key",
 		"radarr_url": "http://192.168.1.50:7878",
 		"radarr_api_key": "radarr-key-999",
-		"metadata_language": "en"
+		"metadata_language": "en",
+		"enabled_watch_providers": "netflix,prime,crunchyroll"
 	}`
 
 	req := httptest.NewRequest("PUT", "/api/admin/system-settings", strings.NewReader(updateBody))
@@ -95,6 +97,10 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 	metaLang, err := settings.Get("metadata_language")
 	require.NoError(t, err)
 	assert.Equal(t, "en", metaLang)
+
+	watchProviders, err := settings.Get("enabled_watch_providers")
+	require.NoError(t, err)
+	assert.Equal(t, "netflix,prime,crunchyroll", watchProviders)
 
 	radarrURL, err := settings.Get("radarr_url")
 	require.NoError(t, err)

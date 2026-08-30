@@ -67,13 +67,14 @@ func (h *AuthHandler) JWTSecret() string {
 }
 
 type PublicConfigResponse struct {
-	GoogleClientID      string `json:"google_client_id"`
-	GoogleAuthEnabled   bool   `json:"google_auth_enabled"`
-	PasswordAuthEnabled bool   `json:"password_auth_enabled"`
-	AuthMode            string `json:"auth_mode"` // "google", "password", "hybrid"
-	SetupRequired       bool   `json:"setup_required"`
-	VAPIDPublicKey      string `json:"vapid_public_key"`
-	MetadataLanguage    string `json:"metadata_language"`
+	GoogleClientID        string `json:"google_client_id"`
+	GoogleAuthEnabled     bool   `json:"google_auth_enabled"`
+	PasswordAuthEnabled   bool   `json:"password_auth_enabled"`
+	AuthMode              string `json:"auth_mode"` // "google", "password", "hybrid"
+	SetupRequired         bool   `json:"setup_required"`
+	VAPIDPublicKey        string `json:"vapid_public_key"`
+	MetadataLanguage      string `json:"metadata_language"`
+	EnabledWatchProviders string `json:"enabled_watch_providers,omitempty"`
 }
 
 // PublicConfig returns public unauthenticated configuration for login and setup screens.
@@ -99,21 +100,26 @@ func (h *AuthHandler) PublicConfig(w http.ResponseWriter, r *http.Request) error
 
 	var vapidKey string
 	metadataLang := "fr"
+	enabledWP := "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn"
 	if h.settings != nil {
 		vapidKey, _ = h.settings.Get(repository.SettingKeyVAPIDPublicKey)
 		if lang, err := h.settings.Get(repository.SettingKeyMetadataLanguage); err == nil && lang != "" {
 			metadataLang = lang
 		}
+		if wp, err := h.settings.Get(repository.SettingKeyEnabledWatchProviders); err == nil && wp != "" {
+			enabledWP = wp
+		}
 	}
 
 	cfg := PublicConfigResponse{
-		GoogleClientID:      h.clientID,
-		GoogleAuthEnabled:   hasGoogle && (authMode == "google" || authMode == "hybrid"),
-		PasswordAuthEnabled: hasPassword && (authMode == "password" || authMode == "hybrid"),
-		AuthMode:            authMode,
-		SetupRequired:       setupRequired,
-		VAPIDPublicKey:      vapidKey,
-		MetadataLanguage:    metadataLang,
+		GoogleClientID:        h.clientID,
+		GoogleAuthEnabled:     hasGoogle && (authMode == "google" || authMode == "hybrid"),
+		PasswordAuthEnabled:   hasPassword && (authMode == "password" || authMode == "hybrid"),
+		AuthMode:              authMode,
+		SetupRequired:         setupRequired,
+		VAPIDPublicKey:        vapidKey,
+		MetadataLanguage:      metadataLang,
+		EnabledWatchProviders: enabledWP,
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, cfg)

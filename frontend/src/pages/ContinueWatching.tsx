@@ -3,7 +3,6 @@ import { apiFetch } from '../api'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { ContinueWatchingTitle } from '../types'
-import { isOnPrime } from '../utils/providers'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './PresetLibrary.module.css'
 
@@ -18,7 +17,7 @@ function toTile(t: ContinueWatchingTitle): PosterTileItem {
     name: t.name,
     sublabel: t.next_air_episode ?? '',
     progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
-    onPrime: isOnPrime(t.watch_providers),
+    watch_providers: t.watch_providers,
   }
 }
 

@@ -35,4 +35,22 @@ describe('PosterTile', () => {
     const badge = container.querySelector('[aria-label="Movie (Tracked on Radarr)"]')
     expect(badge).not.toBeNull()
   })
+
+  it('renders streaming provider badges when watch_providers are given', () => {
+    const item: PosterTileItem = {
+      id: 3,
+      type: 'series',
+      cover_url: null,
+      name: 'Dan Da Dan',
+      sublabel: 'S01E01',
+      watch_providers: [
+        { id: 8, name: 'Netflix' },
+        { id: 283, name: 'Crunchyroll' },
+      ],
+    }
+
+    const { getByText } = render(<PosterTile item={item} />)
+    expect(getByText('netflix')).not.toBeNull()
+    expect(getByText('crunchyroll')).not.toBeNull()
+  })
 })

@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.9.0] — 2026-08-30
+
+### Ajouté
+- **Watch Providers Configurables (`WatchProviderBadges`)** : Remplacement de l'ancien badge statique Prime par un composant multi-plateformes dynamique prenant en charge 9 services de streaming reconnus (Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, Animation Digital Network).
+- **Gestion des plateformes actives dans les Paramètres (`/admin/settings`)** : Nouvelle section permettant d'activer ou désactiver individuellement chaque plateforme de streaming avec prévisualisation des badges colorés.
+- **Support complet multi-écrans** : Affichage des badges de streaming sur la fiche titre (`TitleDetail`), les cartes compactes de reprise de lecture (`ContinueWatching`), et les sorties à venir (`ComingUp`).
+- **Synchronisation backend des préférences** : Clé de paramètre `enabled_watch_providers` stockée dans SQLite, exposée dans `/api/config`, `/api/settings` et `/api/admin/system-settings` avec rechargement à chaud.
+
 ## [v1.8.1] — 2026-08-30
 
 ### Modifié

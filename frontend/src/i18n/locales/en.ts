@@ -92,6 +92,8 @@ export const en = {
     metadataLanguage: 'Primary Metadata Language',
     metadataLanguageDesc: 'Preferred language used for title names and metadata display.',
     metadataAi: 'Metadata & Artificial Intelligence',
+    watchProviders: 'Streaming Platforms & Watch Providers',
+    watchProvidersDesc: 'Select active streaming platforms to display badges on titles available for streaming in your catalog.',
     webhooks: 'Media Server Webhooks',
     arrConfig: 'Arr Stack (Radarr / Sonarr / Prowlarr)',
     notificationsConfig: 'Web Push Notifications',

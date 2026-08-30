@@ -33,6 +33,7 @@ import { usePush } from './hooks/usePush'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import { updateBadge } from './utils/badge'
 import { setPreferredMetadataLanguage } from './utils'
+import { setEnabledWatchProviders } from './utils/providers'
 import { useTitleStore, useSearchStore } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ROUTE_PATHS } from './routes'
@@ -53,6 +54,7 @@ export function App() {
     fetch('/api/config').then(r => r.json()).then(cfg => {
       if (cfg.vapid_public_key) setVapidKey(cfg.vapid_public_key)
       if (cfg.metadata_language) setPreferredMetadataLanguage(cfg.metadata_language)
+      if (cfg.enabled_watch_providers !== undefined) setEnabledWatchProviders(cfg.enabled_watch_providers)
     }).catch((err) => {
       console.error('Failed to load config:', err)
     })

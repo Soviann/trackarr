@@ -105,6 +105,7 @@ func TestPublicConfig(t *testing.T) {
 	assert.True(t, cfg1.SetupRequired)
 	assert.False(t, cfg1.GoogleAuthEnabled)
 	assert.False(t, cfg1.PasswordAuthEnabled)
+	assert.Equal(t, "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn", cfg1.EnabledWatchProviders)
 
 	// Case 2: Google configured only
 	h2 := handler.NewAuthHandler(db, settings, testJWTSecret, testAllowedEmail, testClientID, false)

@@ -3,7 +3,6 @@ import { apiFetch } from '../api'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { UpcomingTitle } from '../types'
-import { isOnPrime } from '../utils/providers'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './PresetLibrary.module.css'
 
@@ -30,7 +29,7 @@ function toTile(t: UpcomingTitle): PosterTileItem {
     name: t.name,
     sublabel: label,
     sublabelVariant: variant,
-    onPrime: isOnPrime(t.watch_providers),
+    watch_providers: t.watch_providers,
   }
 }
 

@@ -144,4 +144,40 @@ describe('AdminSettings Page', () => {
       }))
     })
   })
+
+  it('allows toggling streaming watch providers and saving settings', async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({
+        tmdb_api_key: '',
+        tmdb_configured: false,
+        enabled_watch_providers: 'netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn',
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({
+        tmdb_api_key: '',
+        tmdb_configured: false,
+        enabled_watch_providers: 'netflix,prime',
+      })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Streaming Platforms & Watch Providers/)).not.toBeNull()
+    })
+
+    // Find and toggle Netflix button
+    const netflixBtn = screen.getByText('Netflix').closest('button')
+    expect(netflixBtn).not.toBeNull()
+    fireEvent.click(netflixBtn!)
+
+    const saveBtn = screen.getByText('Save Settings')
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('enabled_watch_providers'),
+      }))
+    })
+  })
 })

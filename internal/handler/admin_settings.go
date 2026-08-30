@@ -62,6 +62,7 @@ type SystemSettingsResponse struct {
 	VAPIDSubject          string `json:"vapid_subject"`
 	VAPIDConfigured       bool   `json:"vapid_configured"`
 	MetadataLanguage      string `json:"metadata_language"`
+	EnabledWatchProviders string `json:"enabled_watch_providers"`
 }
 
 func maskSecret(s string) string {
@@ -114,6 +115,11 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		metadataLang = "fr"
 	}
 
+	enabledWP := get("enabled_watch_providers")
+	if enabledWP == "" {
+		enabledWP = "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn"
+	}
+
 	resp := SystemSettingsResponse{
 		TMDBAPIKey:            maskSecret(get("tmdb_api_key")),
 		TMDBConfigured:        get("tmdb_api_key") != "",
@@ -141,6 +147,7 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		VAPIDSubject:          get("vapid_subject"),
 		VAPIDConfigured:       get("vapid_public_key") != "",
 		MetadataLanguage:      metadataLang,
+		EnabledWatchProviders: enabledWP,
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
@@ -177,6 +184,7 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 		"vapid_private_key":       true,
 		"vapid_subject":           true,
 		"metadata_language":       true,
+		"enabled_watch_providers": true,
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {

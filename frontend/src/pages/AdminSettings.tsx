@@ -4,6 +4,7 @@ import { routeTo } from '../routes'
 import { THEMES, getStoredTheme, applyTheme, ThemeId } from '../utils/theme'
 import { useTranslation, LOCALES, Locale } from '../i18n'
 import { setPreferredMetadataLanguage } from '../utils'
+import { ALL_WATCH_PROVIDERS, DEFAULT_ENABLED_PROVIDERS, setEnabledWatchProviders } from '../utils/providers'
 import s from './AdminSettings.module.css'
 
 export const METADATA_LANGUAGES = [
@@ -43,6 +44,7 @@ interface SystemSettings {
   vapid_subject: string
   vapid_configured: boolean
   metadata_language?: string
+  enabled_watch_providers?: string
 }
 
 export function AdminSettings({ path }: { path?: string }) {
@@ -84,6 +86,7 @@ export function AdminSettings({ path }: { path?: string }) {
         vapid_public_key: data.vapid_public_key || '',
         vapid_subject: data.vapid_subject || '',
         metadata_language: data.metadata_language || 'fr',
+        enabled_watch_providers: data.enabled_watch_providers !== undefined ? data.enabled_watch_providers : DEFAULT_ENABLED_PROVIDERS,
       })
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load configuration')
@@ -111,6 +114,9 @@ export function AdminSettings({ path }: { path?: string }) {
       })
       if (formValues.metadata_language) {
         setPreferredMetadataLanguage(formValues.metadata_language)
+      }
+      if (formValues.enabled_watch_providers !== undefined) {
+        setEnabledWatchProviders(formValues.enabled_watch_providers)
       }
       setSuccessMsg('Settings saved and hot-reloaded successfully!')
       await loadSettings()
@@ -458,7 +464,70 @@ export function AdminSettings({ path }: { path?: string }) {
           </div>
         </div>
 
-        {/* 2. MEDIA SERVERS & WEBHOOKS */}
+        {/* 2. STREAMING PLATFORMS & WATCH PROVIDERS */}
+        <div className={s.sectionCard}>
+          <div className={s.sectionHeader}>
+            <div className={s.sectionTitle}>
+              <span>📺 {t('settings.watchProviders')}</span>
+            </div>
+          </div>
+          <div className={s.sectionDesc}>
+            {t('settings.watchProvidersDesc')}
+          </div>
+          <div className={s.themeGrid}>
+            {ALL_WATCH_PROVIDERS.map((provider) => {
+              const currentEnabled = new Set(
+                (formValues.enabled_watch_providers ?? DEFAULT_ENABLED_PROVIDERS)
+                  .split(',')
+                  .map((x) => x.trim())
+                  .filter(Boolean)
+              )
+              const isEnabled = currentEnabled.has(provider.id)
+              const toggle = () => {
+                const next = new Set(currentEnabled)
+                if (isEnabled) {
+                  next.delete(provider.id)
+                } else {
+                  next.add(provider.id)
+                }
+                handleChange('enabled_watch_providers', Array.from(next).join(','))
+              }
+              return (
+                <button
+                  key={provider.id}
+                  type="button"
+                  onClick={toggle}
+                  className={`${s.themeCard} ${isEnabled ? s.themeCardActive : ''}`}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span
+                    style={{
+                      background: provider.bg,
+                      color: provider.color,
+                      border: provider.border ?? 'none',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      textTransform: 'lowercase',
+                      letterSpacing: '0.02em',
+                      lineHeight: 1.2,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {provider.shortName}
+                  </span>
+                  <div className={s.themeInfo}>
+                    <span className={s.themeName}>{provider.name}</span>
+                    <span className={s.themeDesc}>{isEnabled ? 'Active' : 'Disabled'}</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 3. MEDIA SERVERS & WEBHOOKS */}
         <div className={s.sectionCard}>
           <div className={s.sectionHeader}>
             <div className={s.sectionTitle}>
