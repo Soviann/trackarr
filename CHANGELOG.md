@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.11.0] — 2026-08-30
+
 ### Ajouté
 - **Statistiques des Acteurs et Réalisateurs les plus vus (`/stats`)** :
   - Extraction et classement dynamique des 10 acteurs et 10 réalisateurs les plus vus basés sur les crédits de la bibliothèque (`titles.credits`) et l'état de visionnage réel (`last_watched_at` ou statuts `completed` / `watching`).
