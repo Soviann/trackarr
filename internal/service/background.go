@@ -205,9 +205,10 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		s.refreshFromAniList(ctx, title, &result)
 	}
 
-	// Step 1c: TVDB enrichment — fetch rating, cover fallback, and tvdb_id cross-ref
+	// Step 1c: TVDB enrichment — fetch rating, cover fallback, tvdb_id cross-ref, and franchise relations
 	if s.tvdb != nil {
 		tvdbNames = s.refreshFromTVDB(ctx, title, &result)
+		s.refreshTVDBRelations(ctx, title, &result)
 	}
 
 	// Step 1d: AniList per-season community score (anime only). Each mapped

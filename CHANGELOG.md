@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.7.0] — 2026-08-30
+
+### Ajouté
+- **Sagas de films (TMDB Collections)** : Détection et affichage de l'ensemble des films d'une même saga cinématographique (ex: *Harry Potter*, *Dune*, *Le Seigneur des Anneaux*, *Star Wars*, *Fast & Furious*) dans la section « Saga & Collection », avec correspondance automatique des films possédés et bouton `[+ Ajouter]` pour les manquants.
+- **Univers de séries & Spin-offs (TheTVDB Franchises)** : Regroupement et affichage des séries préquelles, suites et spin-offs rattachés à un univers télévisé (ex: *Breaking Bad* ↔ *Better Call Saul* ↔ *El Camino*, *Game of Thrones* ↔ *House of the Dragon*).
+- **Sélecteur d'ordre de visionnage (Chronologique vs Date de sortie)** : Bascule dynamique permettant de visionner une saga ou un univers soit par ordre chronologique de l'histoire (⏱️ Chronologie), soit par ordre de diffusion historique (📅 Sortie).
+- **Intégration visuelle en carte standard & Repliage par défaut** : Formatage harmonieux au design de la fiche titre (`.card` avec fond élevé, bordure et typographie standard) et repliage automatique au-dessus de 3 résultats avec bouton interactif « Voir plus (+N) » / « Voir moins ».
+- **Intégration au rafraîchissement unitaire et global** : Récupération et mise à jour automatique des sagas TMDB et univers TVDB lors du rafraîchissement d'une fiche (`POST /api/titles/:id/refresh`) et lors du cycle global (`POST /api/admin/refresh-all` et cron).
+- **Réconciliation multi-providers unifiée** : Extension de la jointure SQL de relations pour réconcilier en simultané les identifiants AniList, TMDB et TheTVDB avec l'état de la bibliothèque locale.
+
 ## [v1.6.0] — 2026-08-30
 
 ### Ajouté

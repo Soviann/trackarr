@@ -449,6 +449,11 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         )}
       </div>
 
+      {/* Franchise & Univers Relations */}
+      {title.relations && title.relations.length > 0 && (
+        <FranchiseRelationsSection relations={title.relations} />
+      )}
+
       {/* Historique button */}
       <div className={s.historyBtnWrap}>
         <button className={s.historyBtn} onClick={() => setShowHistory(true)}>
@@ -515,11 +520,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             />
           )}
         </div>
-      )}
-
-      {/* Franchise & Univers Relations */}
-      {title.relations && title.relations.length > 0 && (
-        <FranchiseRelationsSection relations={title.relations} />
       )}
 
       {/* Action drawer */}

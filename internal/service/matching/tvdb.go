@@ -40,6 +40,12 @@ func NewTVDBClient(apiKey string) *TVDBClient {
 // SetBaseURL overrides the TVDB base URL (for tests).
 func (c *TVDBClient) SetBaseURL(u string) { c.baseURL = u }
 
+// SetTokenForTest sets the cached JWT token (for tests).
+func (c *TVDBClient) SetTokenForTest(token string) { c.token = token }
+
+// TokenForTest returns the cached JWT token (for tests).
+func (c *TVDBClient) TokenForTest() string { return c.token }
+
 // Login authenticates with the TVDB API and caches the JWT token.
 func (c *TVDBClient) Login(ctx context.Context) error {
 	body, err := json.Marshal(map[string]string{"apikey": c.apiKey})

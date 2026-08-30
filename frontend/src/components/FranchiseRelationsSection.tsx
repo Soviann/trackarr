@@ -9,112 +9,218 @@ interface FranchiseRelationsSectionProps {
   relations: TitleRelation[]
 }
 
-type FilterCategory = 'all' | 'movies' | 'ovas' | 'spinoffs'
+type FilterCategory = 'all' | 'movies' | 'series' | 'ovas' | 'spinoffs'
+type SortOrderType = 'timeline' | 'release'
+
+const DEFAULT_VISIBLE_COUNT = 3
 
 export function FranchiseRelationsSection({ relations }: FranchiseRelationsSectionProps) {
   const [filter, setFilter] = useState<FilterCategory>('all')
+  const [sortOrder, setSortOrder] = useState<SortOrderType>('timeline')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const movieCount = useMemo(() => relations.filter((r) => r.format === 'MOVIE').length, [relations])
+  const seriesCount = useMemo(() => relations.filter((r) => r.format === 'TV').length, [relations])
   const ovaCount = useMemo(() => relations.filter((r) => ['OVA', 'SPECIAL', 'ONA'].includes(r.format)).length, [relations])
   const spinOffCount = useMemo(() => relations.filter((r) => r.relation_type === 'SPIN_OFF').length, [relations])
+
+  const isMainlyCollection = useMemo(() => relations.every((r) => r.provider === 'tmdb' || r.relation_type === 'COLLECTION'), [relations])
+
+  const providerLabel = useMemo(() => {
+    const providers = Array.from(new Set(relations.map((r) => r.provider)))
+    if (providers.length === 1) {
+      if (providers[0] === 'tmdb') return 'Saga TMDB'
+      if (providers[0] === 'tvdb') return 'TheTVDB Univers'
+      if (providers[0] === 'anilist') return 'AniList Relations'
+    }
+    return isMainlyCollection ? 'Saga & Collection' : 'Univers & Franchise'
+  }, [relations, isMainlyCollection])
+
+  const sortedRelations = useMemo(() => {
+    const list = [...relations]
+    if (sortOrder === 'release') {
+      return list.sort((a, b) => {
+        const yearA = a.year ?? 9999
+        const yearB = b.year ?? 9999
+        if (yearA !== yearB) return yearA - yearB
+        return (a.title || '').localeCompare(b.title || '')
+      })
+    }
+    // Default 'timeline': sort by season_number (if any), then sort_order, then year
+    return list.sort((a, b) => {
+      if (a.season_number != null && b.season_number != null) {
+        if (a.season_number !== b.season_number) return a.season_number - b.season_number
+      }
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      const yearA = a.year ?? 9999
+      const yearB = b.year ?? 9999
+      return yearA - yearB
+    })
+  }, [relations, sortOrder])
 
   const filteredRelations = useMemo(() => {
     switch (filter) {
       case 'movies':
-        return relations.filter((r) => r.format === 'MOVIE')
+        return sortedRelations.filter((r) => r.format === 'MOVIE')
+      case 'series':
+        return sortedRelations.filter((r) => r.format === 'TV')
       case 'ovas':
-        return relations.filter((r) => ['OVA', 'SPECIAL', 'ONA'].includes(r.format))
+        return sortedRelations.filter((r) => ['OVA', 'SPECIAL', 'ONA'].includes(r.format))
       case 'spinoffs':
-        return relations.filter((r) => r.relation_type === 'SPIN_OFF')
+        return sortedRelations.filter((r) => r.relation_type === 'SPIN_OFF')
       default:
-        return relations
+        return sortedRelations
     }
-  }, [relations, filter])
+  }, [sortedRelations, filter])
+
+  const visibleRelations = useMemo(() => {
+    if (isExpanded || filteredRelations.length <= DEFAULT_VISIBLE_COUNT) {
+      return filteredRelations
+    }
+    return filteredRelations.slice(0, DEFAULT_VISIBLE_COUNT)
+  }, [filteredRelations, isExpanded])
 
   if (!relations || relations.length === 0) {
     return null
+  }
+
+  const getExternalUrl = (rel: TitleRelation): string => {
+    if (rel.provider === 'tmdb') {
+      return rel.format === 'TV'
+        ? `https://www.themoviedb.org/tv/${rel.external_id}`
+        : `https://www.themoviedb.org/movie/${rel.external_id}`
+    }
+    if (rel.provider === 'tvdb') {
+      return rel.format === 'MOVIE'
+        ? `https://thetvdb.com/dereferrer/movies/${rel.external_id}`
+        : `https://thetvdb.com/dereferrer/series/${rel.external_id}`
+    }
+    return aniListMediaUrl(rel.external_id)
+  }
+
+  const getProviderName = (provider: string): string => {
+    if (provider === 'tmdb') return 'TMDB'
+    if (provider === 'tvdb') return 'TheTVDB'
+    return 'AniList'
   }
 
   const handleCardClick = (rel: TitleRelation) => {
     if (rel.matched_title_id != null) {
       route(routeTo.title(rel.matched_title_id))
     } else {
-      route(
-        `/admin/validate?q=${encodeURIComponent(
-          aniListMediaUrl(rel.external_id)
-        )}&name=${encodeURIComponent(rel.title)}`
-      )
+      const extUrl = getExternalUrl(rel)
+      route(`/admin/validate?q=${encodeURIComponent(extUrl)}&name=${encodeURIComponent(rel.title)}`)
     }
   }
 
+  const remainingCount = filteredRelations.length - DEFAULT_VISIBLE_COUNT
+
   return (
-    <div className={s.section}>
-      <div className={s.headerRow}>
-        <div className={s.titleArea}>
-          <div className={s.title}>
-            <span>🌐</span>
-            <span>Univers & Franchise</span>
-            <span className={s.providerBadge}>AniList Relations</span>
-          </div>
-          <div className={s.subtitle}>
-            Films, OAVs et spin-offs rattachés à la franchise ({relations.length})
-          </div>
+    <div className={s.card}>
+      <div className={s.cardHeader}>
+        <div className={s.cardLabelWrap}>
+          <span className={s.cardLabel}>
+            {isMainlyCollection ? 'Saga & Collection' : 'Univers & Franchise'}
+          </span>
+          <span className={s.providerBadge}>{providerLabel}</span>
+          <span className={s.countBadge}>({relations.length})</span>
         </div>
 
-        <div className={s.filterTabs}>
-          <button
-            type="button"
-            className={`${s.filterBtn} ${filter === 'all' ? s.filterBtnActive : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            Tous ({relations.length})
-          </button>
-          {movieCount > 0 && (
+        <div className={s.controlsArea}>
+          {relations.length > 1 && (
+            <div className={s.sortToggle} role="group" aria-label="Ordre d'affichage">
+              <button
+                type="button"
+                className={`${s.sortBtn} ${sortOrder === 'timeline' ? s.sortBtnActive : ''}`}
+                onClick={() => setSortOrder('timeline')}
+                title="Ordre chronologique de l'histoire"
+              >
+                ⏱️ Chronologie
+              </button>
+              <button
+                type="button"
+                className={`${s.sortBtn} ${sortOrder === 'release' ? s.sortBtnActive : ''}`}
+                onClick={() => setSortOrder('release')}
+                title="Ordre par date de sortie"
+              >
+                📅 Sortie
+              </button>
+            </div>
+          )}
+
+          <div className={s.filterTabs}>
             <button
               type="button"
-              className={`${s.filterBtn} ${filter === 'movies' ? s.filterBtnActive : ''}`}
-              onClick={() => setFilter('movies')}
+              className={`${s.filterBtn} ${filter === 'all' ? s.filterBtnActive : ''}`}
+              onClick={() => setFilter('all')}
             >
-              Films ({movieCount})
+              Tous ({relations.length})
             </button>
-          )}
-          {ovaCount > 0 && (
-            <button
-              type="button"
-              className={`${s.filterBtn} ${filter === 'ovas' ? s.filterBtnActive : ''}`}
-              onClick={() => setFilter('ovas')}
-            >
-              OAVs ({ovaCount})
-            </button>
-          )}
-          {spinOffCount > 0 && (
-            <button
-              type="button"
-              className={`${s.filterBtn} ${filter === 'spinoffs' ? s.filterBtnActive : ''}`}
-              onClick={() => setFilter('spinoffs')}
-            >
-              Spin-offs ({spinOffCount})
-            </button>
-          )}
+            {movieCount > 0 && (
+              <button
+                type="button"
+                className={`${s.filterBtn} ${filter === 'movies' ? s.filterBtnActive : ''}`}
+                onClick={() => setFilter('movies')}
+              >
+                Films ({movieCount})
+              </button>
+            )}
+            {seriesCount > 0 && (
+              <button
+                type="button"
+                className={`${s.filterBtn} ${filter === 'series' ? s.filterBtnActive : ''}`}
+                onClick={() => setFilter('series')}
+              >
+                Séries ({seriesCount})
+              </button>
+            )}
+            {ovaCount > 0 && (
+              <button
+                type="button"
+                className={`${s.filterBtn} ${filter === 'ovas' ? s.filterBtnActive : ''}`}
+                onClick={() => setFilter('ovas')}
+              >
+                OAVs ({ovaCount})
+              </button>
+            )}
+            {spinOffCount > 0 && (
+              <button
+                type="button"
+                className={`${s.filterBtn} ${filter === 'spinoffs' ? s.filterBtnActive : ''}`}
+                onClick={() => setFilter('spinoffs')}
+              >
+                Spin-offs ({spinOffCount})
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className={s.grid}>
-        {filteredRelations.map((rel) => {
+        {visibleRelations.map((rel) => {
           const isWatched = rel.matched_status === 'completed'
           const isMatched = rel.matched_title_id != null
 
-          let positionLabel = rel.format === 'MOVIE' ? 'Film' : rel.format
+          let positionLabel = rel.format === 'MOVIE' ? 'Film' : rel.format === 'TV' ? 'Série' : rel.format
           if (rel.season_number != null) {
-            positionLabel += ` · Après S${rel.season_number}`
+            positionLabel += ` · S${rel.season_number}`
+          } else if (rel.relation_type === 'PREQUEL') {
+            positionLabel = 'Préquelle'
+          } else if (rel.relation_type === 'SEQUEL') {
+            positionLabel = 'Suite'
           } else if (rel.relation_type === 'SPIN_OFF') {
             positionLabel = 'Spin-off'
+          } else if (rel.relation_type === 'COLLECTION') {
+            positionLabel = 'Saga'
           }
+
+          const extUrl = getExternalUrl(rel)
+          const providerName = getProviderName(rel.provider)
 
           return (
             <div
-              key={rel.id || rel.external_id}
-              className={s.card}
+              key={rel.id || `${rel.provider}-${rel.external_id}`}
+              className={s.itemCard}
               onClick={() => handleCardClick(rel)}
               role="button"
               tabIndex={0}
@@ -129,13 +235,13 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                   <img src={getCoverUrl(rel.cover_url)!} alt={rel.title} className={s.coverImg} loading="lazy" />
                 ) : (
                   <div className={s.coverFallback}>
-                    {rel.format === 'MOVIE' ? '🎬' : '🎞'}
+                    {rel.format === 'MOVIE' ? '🎬' : rel.format === 'TV' ? '📺' : '🎞'}
                   </div>
                 )}
               </div>
 
-              <div className={s.cardBody}>
-                <div className={s.cardTop}>
+              <div className={s.itemBody}>
+                <div className={s.itemTop}>
                   <span className={s.relTag}>{positionLabel}</span>
                   {isMatched ? (
                     <span className={isWatched ? s.statusBadgeWatched : s.statusBadgeUnwatched}>
@@ -146,24 +252,24 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
                   )}
                 </div>
 
-                <div className={s.cardTitle} title={rel.title}>
+                <div className={s.itemTitle} title={rel.title}>
                   {rel.title}
                 </div>
 
-                <div className={s.cardMeta}>
+                <div className={s.itemMeta}>
                   {rel.year && <span>{rel.year}</span>}
                   {rel.duration && <span>· {rel.duration} min</span>}
                   {rel.score != null && <span style={{ color: '#22d3ee' }}>★ {rel.score}%</span>}
                   {!isMatched && (
                     <a
-                      href={aniListMediaUrl(rel.external_id)}
+                      href={extUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={s.extLink}
                       onClick={(e) => e.stopPropagation()}
-                      title="Voir sur AniList"
+                      title={`Voir sur ${providerName}`}
                     >
-                      <span>AniList</span>
+                      <span>{providerName}</span>
                       <span>↗</span>
                     </a>
                   )}
@@ -173,6 +279,16 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
           )
         })}
       </div>
+
+      {filteredRelations.length > DEFAULT_VISIBLE_COUNT && (
+        <button
+          type="button"
+          className={s.expandToggle}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? 'Voir moins' : `Voir plus (${remainingCount > 0 ? `+${remainingCount}` : ''})`}
+        </button>
+      )}
     </div>
   )
 }

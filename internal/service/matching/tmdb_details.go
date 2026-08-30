@@ -58,6 +58,7 @@ type TMDBMovieDetails struct {
 	VoteAverage    float64             `json:"vote_average"`
 	Credits        *TMDBCredits        `json:"credits"`
 	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
+	BelongsToCollection *TMDBCollectionInfo `json:"belongs_to_collection"`
 	ExternalIDs    *struct {
 		IMDBID string `json:"imdb_id"`
 		TVDBID int64  `json:"tvdb_id"`

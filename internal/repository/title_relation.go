@@ -32,7 +32,11 @@ const selectTitleRelationsQuery = `
 		mt.sonarr_id AS matched_sonarr_id
 	FROM title_relations tr
 	LEFT JOIN seasons s ON s.id = tr.season_id
-	LEFT JOIN titles mt ON (tr.provider = 'anilist' AND mt.anilist_id = tr.external_id)
+	LEFT JOIN titles mt ON (
+		(tr.provider = 'anilist' AND mt.anilist_id = tr.external_id) OR
+		(tr.provider = 'tmdb' AND mt.tmdb_id = tr.external_id) OR
+		(tr.provider = 'tvdb' AND mt.tvdb_id = tr.external_id)
+	)
 `
 
 func scanTitleRelation(rows *sql.Rows) (model.TitleRelation, error) {

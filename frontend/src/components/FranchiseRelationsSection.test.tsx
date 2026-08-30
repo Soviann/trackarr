@@ -81,10 +81,75 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 2, matched_title_id: 51, matched_status: 'watching', title: 'Movie En cours' }),
       makeRelation({ id: 3, matched_title_id: null, title: 'Movie Absent' }),
     ]
-    const { getByText, getAllByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
     expect(getByText('✓ Vu')).toBeTruthy()
     expect(getByText('À voir')).toBeTruthy()
     expect(getByText('+ Ajouter')).toBeTruthy()
+  })
+
+  it('renders TMDB movie saga collection with Saga & Collection title', () => {
+    const rels = [
+      makeRelation({ id: 1, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 671, format: 'MOVIE', title: 'Harry Potter 1', year: 2001 }),
+      makeRelation({ id: 2, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 672, format: 'MOVIE', title: 'Harry Potter 2', year: 2002 }),
+    ]
+    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+
+    expect(getByText('Saga & Collection')).toBeTruthy()
+    expect(getByText('Saga TMDB')).toBeTruthy()
+    expect(getByText('Harry Potter 1')).toBeTruthy()
+    expect(getByText('Harry Potter 2')).toBeTruthy()
+  })
+
+  it('toggles sort order between timeline and release date', () => {
+    const rels = [
+      makeRelation({ id: 1, sort_order: 2, year: 2010, title: 'B Movie' }),
+      makeRelation({ id: 2, sort_order: 1, year: 2020, title: 'A Movie' }),
+    ]
+    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+
+    // Toggle to Release Date
+    const releaseBtn = getByText('📅 Sortie')
+    fireEvent.click(releaseBtn)
+    expect(releaseBtn.className).toContain('sortBtnActive')
+
+    // Toggle back to Timeline
+    const timelineBtn = getByText('⏱️ Chronologie')
+    fireEvent.click(timelineBtn)
+    expect(timelineBtn.className).toContain('sortBtnActive')
+  })
+
+  it('collapses by default above 3 items and expands when clicking Voir plus', () => {
+    const rels = [
+      makeRelation({ id: 1, external_id: 1, title: 'Item 1' }),
+      makeRelation({ id: 2, external_id: 2, title: 'Item 2' }),
+      makeRelation({ id: 3, external_id: 3, title: 'Item 3' }),
+      makeRelation({ id: 4, external_id: 4, title: 'Item 4' }),
+      makeRelation({ id: 5, external_id: 5, title: 'Item 5' }),
+    ]
+    const { getByText, queryByText } = render(<FranchiseRelationsSection relations={rels} />)
+
+    // Items 1, 2, 3 visible by default
+    expect(getByText('Item 1')).toBeTruthy()
+    expect(getByText('Item 2')).toBeTruthy()
+    expect(getByText('Item 3')).toBeTruthy()
+    expect(queryByText('Item 4')).toBeNull()
+    expect(queryByText('Item 5')).toBeNull()
+
+    // Button shows "Voir plus (+2)"
+    const toggleBtn = getByText('Voir plus (+2)')
+    expect(toggleBtn).toBeTruthy()
+
+    // Expand
+    fireEvent.click(toggleBtn)
+    expect(getByText('Item 4')).toBeTruthy()
+    expect(getByText('Item 5')).toBeTruthy()
+    expect(getByText('Voir moins')).toBeTruthy()
+
+    // Collapse back
+    fireEvent.click(getByText('Voir moins'))
+    expect(queryByText('Item 4')).toBeNull()
+    expect(queryByText('Item 5')).toBeNull()
+    expect(getByText('Voir plus (+2)')).toBeTruthy()
   })
 })

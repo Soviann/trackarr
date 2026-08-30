@@ -271,6 +271,12 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		}
 	}
 
+	// Load franchise, side story, and saga relations
+	relRepo := NewTitleRelationRepository(r.db)
+	if rels, err := relRepo.GetByTitleID(context.Background(), id); err == nil {
+		title.Relations = rels
+	}
+
 	return title, nil
 }
 
