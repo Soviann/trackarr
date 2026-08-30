@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.6.0] — 2026-08-30
+
 ### Ajouté
 - **Side Stories & Films AniList dans la timeline des saisons** : Intégration directe des films et OAVs rattachés à la fin des épisodes de la saison parente (ex: *My Hero Academia: Two Heroes* affiché chronologiquement après la Saison 2), avec support de plusieurs hors-séries par saison, statuts de visionnage et bascule rapide.
 - **Section Univers & Franchise** : Ajout d'une section dédiée sur la fiche des animes récapitulant l'ensemble des films, OAVs, résumés et spin-offs reliés via AniList, avec filtres par catégorie (*Tous*, *Films*, *OAVs*, *Spin-offs*) et indicateurs de suivi.
