@@ -67,7 +67,7 @@ describe('NextEpisodeHero', () => {
     expect(onToggle).toHaveBeenCalledWith(102)
   })
 
-  it('renders caught up card when all episodes in watching series are watched', () => {
+  it('renders nothing when all episodes in watching series are watched', () => {
     const caughtUpTitle: Title = {
       ...baseTitle,
       seasons: [
@@ -83,8 +83,8 @@ describe('NextEpisodeHero', () => {
       ],
     }
 
-    const { getByText } = render(<NextEpisodeHero title={caughtUpTitle} onEpisodeToggle={vi.fn()} />)
-    expect(getByText('Vous êtes à jour !')).not.toBeNull()
+    const { container } = render(<NextEpisodeHero title={caughtUpTitle} onEpisodeToggle={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
   })
 
   it('renders movie in plan to watch with duration and quick mark button', () => {
