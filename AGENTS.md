@@ -20,6 +20,7 @@ Welcome to **Trackarr** (`github.com/Soviann/trackarr`). This document provides 
 - **Documentation Verification Pass**: Once documentation is edited, systematically perform a review pass to ensure zero broken references, no missing links, and full consistency between the documentation and the actual implementation.
 - **Bundle Documentation with Code**: Never commit documentation updates in a separate trailing commit; always stage and commit documentation changes atomically with the implementation code in the same working commit.
 - **Maintain Changelog**: Keep `CHANGELOG.md` updated with notable user-facing changes, improvements, and fixes under `## [Unreleased]` following the [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) standard.
+- **Never Release or Tag Autonomously**: Never create git tags, bump release versions, push tags, or trigger deployments on your own initiative. Releases and deployments must strictly be initiated only when explicitly instructed by the user.
 - **Robustness Over Ease**: Prefer correct, resilient solutions over quick workarounds.
 - **No Exploratory Waste**: When working on specific files or symbols, navigate and read targeted files directly.
 

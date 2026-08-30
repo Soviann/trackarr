@@ -3,9 +3,11 @@ import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { formatWatchtime, getCoverUrl } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
-import type { StatsResponse, FunStat, ActivityEvent } from '../types'
+import type { StatsResponse, FunStat, ActivityEvent, PersonStat } from '../types'
 import { routeTo } from '../routes'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { PersonFilmographyDrawer } from '../components/PersonFilmographyDrawer'
+import { useTranslation, type TranslationKey } from '../i18n'
 import s from './Stats.module.css'
 
 const funStatIcons: Record<string, string> = {
@@ -22,41 +24,68 @@ const funStatIcons: Record<string, string> = {
   trophy: '\u{1F3C6}',
 }
 
-export function Stats({ path }: { path?: string }) {
+export function Stats({ path: _path }: { path?: string }) {
+  const { t, locale } = useTranslation()
   const { data, loading } = useApi<StatsResponse>('/stats')
+  const [selectedPerson, setSelectedPerson] = useState<{ name: string; role: 'actor' | 'director' } | null>(null)
 
   if (loading || !data) {
     return (
       <div className={s.loading}>
-        Loading...
+        {t('common.loading')}
       </div>
     )
   }
 
   return (
     <div className={s.page}>
-      <h1 className={s.pageTitle}>Stats</h1>
+      <h1 className={s.pageTitle}>{t('stats.title')}</h1>
 
-      <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} />
-      <GenreSection genres={data.genres ?? []} />
-      <RatingsSection ratings={data.ratings} />
-      <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} />
-      {data.fun_stats.length > 0 && <FunStatsSection stats={data.fun_stats} />}
-      <YearSection year={data.year_summary} />
-      <ActivitySection />
+      <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} t={t} />
+      <GenreSection genres={data.genres ?? []} t={t} />
+      <TopActorsSection
+        actors={data.top_actors ?? []}
+        onSelectPerson={(name) => setSelectedPerson({ name, role: 'actor' })}
+        t={t}
+      />
+      <TopDirectorsSection
+        directors={data.top_directors ?? []}
+        onSelectPerson={(name) => setSelectedPerson({ name, role: 'director' })}
+        t={t}
+      />
+      <RatingsSection ratings={data.ratings} t={t} />
+      <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} t={t} />
+      {data.fun_stats.length > 0 && <FunStatsSection stats={data.fun_stats} t={t} />}
+      <YearSection year={data.year_summary} t={t} />
+      <ActivitySection t={t} locale={locale} />
+
+      <PersonFilmographyDrawer
+        open={selectedPerson !== null}
+        personName={selectedPerson?.name ?? null}
+        role={selectedPerson?.role}
+        onClose={() => setSelectedPerson(null)}
+      />
     </div>
   )
 }
 
-function OverviewSection({ overview, watchtimeMinutes }: { overview: StatsResponse['overview']; watchtimeMinutes?: number }) {
+function OverviewSection({
+  overview,
+  watchtimeMinutes,
+  t,
+}: {
+  overview: StatsResponse['overview']
+  watchtimeMinutes?: number
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   return (
     <section className={s.section}>
       <div className={s.statGrid}>
-        <StatCard label="// TITLES TRACKED" value={overview.total_titles.toLocaleString('en-US')} />
-        <StatCard label="// EPISODES WATCHED" value={overview.episodes_watched.toLocaleString('en-US')} />
-        <StatCard label="// COMPLETED" value={`${Math.round(overview.completion_rate * 100)}%`} />
-        <StatCard label="// AVG RATING" value={overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '—'} />
-        <StatCard label="// WATCH TIME" value={formatWatchtime(watchtimeMinutes) ?? '—'} wide />
+        <StatCard label={t('stats.titlesTracked')} value={overview.total_titles.toLocaleString('en-US')} />
+        <StatCard label={t('stats.episodesWatched')} value={overview.episodes_watched.toLocaleString('en-US')} />
+        <StatCard label={t('stats.completed')} value={`${Math.round(overview.completion_rate * 100)}%`} />
+        <StatCard label={t('stats.avgRating')} value={overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '—'} />
+        <StatCard label={t('stats.watchTime')} value={formatWatchtime(watchtimeMinutes) ?? '—'} wide />
       </div>
     </section>
   )
@@ -71,12 +100,18 @@ function StatCard({ label, value, wide }: { label: string; value: string; wide?:
   )
 }
 
-function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
+function RatingsSection({
+  ratings,
+  t,
+}: {
+  ratings: StatsResponse['ratings']
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   const max = Math.max(...ratings.distribution, 1)
 
   return (
     <section className={s.section}>
-      <SectionLabel>Ratings</SectionLabel>
+      <SectionLabel>{t('stats.ratings')}</SectionLabel>
       {[...ratings.distribution].reverse().map((count, i) => {
         const rating = 10 - i
         return (
@@ -99,10 +134,16 @@ function RatingsSection({ ratings }: { ratings: StatsResponse['ratings'] }) {
   )
 }
 
-function FunStatsSection({ stats }: { stats: FunStat[] }) {
+function FunStatsSection({
+  stats,
+  t,
+}: {
+  stats: FunStat[]
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   return (
     <section className={s.section}>
-      <SectionLabel>Did you know?</SectionLabel>
+      <SectionLabel>{t('stats.didYouKnow')}</SectionLabel>
       <div className={s.funStatList}>
         {stats.map((stat) => (
           <div key={stat.id} className={s.funStatCard}>
@@ -119,13 +160,19 @@ function FunStatsSection({ stats }: { stats: FunStat[] }) {
   )
 }
 
-function GenreSection({ genres }: { genres: StatsResponse['genres'] }) {
+function GenreSection({
+  genres,
+  t,
+}: {
+  genres: StatsResponse['genres']
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   if (genres.length === 0) return null
-  const max = Math.max(...genres.map(g => g.count), 1)
+  const max = Math.max(...genres.map((g) => g.count), 1)
   return (
     <section className={s.section}>
-      <SectionLabel>Top Genres</SectionLabel>
-      {genres.map(g => (
+      <SectionLabel>{t('stats.topGenres')}</SectionLabel>
+      {genres.map((g) => (
         <div key={g.genre} className={s.barRow}>
           <span className={s.barLabel}>{g.genre}</span>
           <div className={s.barTrack}>
@@ -141,25 +188,109 @@ function GenreSection({ genres }: { genres: StatsResponse['genres'] }) {
   )
 }
 
-function StreakSection({ streaks }: { streaks: StatsResponse['streaks'] }) {
+function TopActorsSection({
+  actors,
+  onSelectPerson,
+  t,
+}: {
+  actors: PersonStat[]
+  onSelectPerson: (name: string) => void
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
+  if (actors.length === 0) return null
+  const max = Math.max(...actors.map((a) => a.count), 1)
+  return (
+    <section className={s.section}>
+      <SectionLabel>{t('stats.topActors')}</SectionLabel>
+      {actors.map((a) => (
+        <button
+          key={a.name}
+          type="button"
+          className={s.personRow}
+          onClick={() => onSelectPerson(a.name)}
+          title={t('stats.actorCount', { count: a.count, plural: a.count === 1 ? '' : 's' })}
+        >
+          <span className={s.personLabel}>{a.name}</span>
+          <div className={s.barTrack}>
+            <div
+              className={s.barFill}
+              style={{ width: `${(a.count / max) * 100}%` }}
+            />
+          </div>
+          <span className={s.barValue}>{a.count}</span>
+        </button>
+      ))}
+    </section>
+  )
+}
+
+function TopDirectorsSection({
+  directors,
+  onSelectPerson,
+  t,
+}: {
+  directors: PersonStat[]
+  onSelectPerson: (name: string) => void
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
+  if (directors.length === 0) return null
+  const max = Math.max(...directors.map((d) => d.count), 1)
+  return (
+    <section className={s.section}>
+      <SectionLabel>{t('stats.topDirectors')}</SectionLabel>
+      {directors.map((d) => (
+        <button
+          key={d.name}
+          type="button"
+          className={s.personRow}
+          onClick={() => onSelectPerson(d.name)}
+          title={t('stats.directorCount', { count: d.count, plural: d.count === 1 ? '' : 's' })}
+        >
+          <span className={s.personLabel}>{d.name}</span>
+          <div className={s.barTrack}>
+            <div
+              className={s.barFill}
+              style={{ width: `${(d.count / max) * 100}%` }}
+            />
+          </div>
+          <span className={s.barValue}>{d.count}</span>
+        </button>
+      ))}
+    </section>
+  )
+}
+
+function StreakSection({
+  streaks,
+  t,
+}: {
+  streaks: StatsResponse['streaks']
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   if (streaks.current === 0 && streaks.best === 0) return null
   return (
     <section className={s.section}>
       <div className={s.streakRow}>
         <div className={s.streakCard}>
           <div className={s.streakValue}>🔥 {streaks.current}d</div>
-          <div className={s.streakLabel}>Current streak</div>
+          <div className={s.streakLabel}>{t('stats.currentStreak')}</div>
         </div>
         <div className={s.streakCard}>
           <div className={s.streakValue}>🏆 {streaks.best}d</div>
-          <div className={s.streakLabel}>Best streak</div>
+          <div className={s.streakLabel}>{t('stats.bestStreak')}</div>
         </div>
       </div>
     </section>
   )
 }
 
-function ActivitySection() {
+function ActivitySection({
+  t,
+  locale,
+}: {
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+  locale: string
+}) {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -176,7 +307,7 @@ function ActivitySection() {
       const data = await apiFetch<ActivityEvent[]>(
         `/stats/activity?limit=${LIMIT}&offset=${off}`
       )
-      setEvents(prev => [...prev, ...data])
+      setEvents((prev) => [...prev, ...data])
       setOffset(off + LIMIT)
       setHasMore(data.length === LIMIT)
     } catch (e) {
@@ -186,32 +317,36 @@ function ActivitySection() {
     }
   }
 
-  useEffect(() => { loadMore() }, [])
+  useEffect(() => {
+    loadMore()
+  }, [])
 
   // Group events by calendar date, then by title+season into episode ranges
   const grouped = groupByDate(events)
 
   return (
     <section className={s.sectionLast}>
-      <SectionLabel>Recent activity</SectionLabel>
+      <SectionLabel>{t('stats.recentActivity')}</SectionLabel>
       {Object.entries(grouped).map(([date, evts]) => {
-        const rows = groupActivityEvents(evts)
+        const rows = groupActivityEvents(evts, t)
         return (
           <div key={date}>
-            <div className={s.activityDateHeader}>{formatDateHeader(date)}</div>
+            <div className={s.activityDateHeader}>{formatDateHeader(date, locale, t)}</div>
             {rows.map((row) => {
               const coverUrl = getCoverUrl(row.coverUrl)
               return (
                 <a key={row.key} href={routeTo.title(row.titleId)} className={s.activityRow}>
-                  {coverUrl
-                    ? <img className={s.activityThumb} src={coverUrl} alt="" role="presentation" loading="lazy" />
-                    : <div className={s.activityThumbPlaceholder} />}
+                  {coverUrl ? (
+                    <img className={s.activityThumb} src={coverUrl} alt="" role="presentation" loading="lazy" />
+                  ) : (
+                    <div className={s.activityThumbPlaceholder} />
+                  )}
                   <div className={s.activityInfo}>
                     <span className={s.activityTitle}>{row.titleName}</span>
                     <span className={s.activitySub}>{row.subLabel}</span>
                   </div>
                   <span className={`${s.activityBadge} ${s[`badge_${row.isCompletion ? 'done' : row.titleType}`]}`}>
-                    {row.isCompletion ? 'Completed' : row.titleType === 'movie' ? 'Movie' : 'Episode'}
+                    {row.isCompletion ? t('stats.completedBadge') : row.titleType === 'movie' ? t('stats.movie') : t('stats.episode')}
                   </span>
                 </a>
               )
@@ -222,7 +357,7 @@ function ActivitySection() {
       {error && <ErrorBanner message={error} onRetry={loadMore} onDismiss={() => setError('')} />}
       {hasMore && (
         <button className={s.loadMoreBtn} onClick={loadMore} disabled={loading}>
-          {loading ? 'Loading…' : 'Load more'}
+          {loading ? t('common.loading') : t('stats.loadMore')}
         </button>
       )}
     </section>
@@ -240,7 +375,10 @@ interface ActivityRow {
   watchedAt: string
 }
 
-function groupActivityEvents(evts: ActivityEvent[]): ActivityRow[] {
+function groupActivityEvents(
+  evts: ActivityEvent[],
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): ActivityRow[] {
   // Sub-group by (title_id, season_number)
   const buckets = new Map<string, ActivityEvent[]>()
   for (const ev of evts) {
@@ -260,11 +398,12 @@ function groupActivityEvents(evts: ActivityEvent[]): ActivityRow[] {
     for (const range of ranges) {
       const label = formatRangeLabel(range)
       const isSingle = range.items.length === 1
-      const subLabel = rep.title_type === 'movie'
-        ? 'Movie'
-        : isSingle && range.episodeName
-          ? `${label} — ${range.episodeName}`
-          : label
+      const subLabel =
+        rep.title_type === 'movie'
+          ? t('stats.movie')
+          : isSingle && range.episodeName
+            ? `${label} — ${range.episodeName}`
+            : label
 
       rows.push({
         key: `${rep.title_id}-${range.seasonNumber}-${range.startEp}-${range.endEp}`,
@@ -273,9 +412,11 @@ function groupActivityEvents(evts: ActivityEvent[]): ActivityRow[] {
         coverUrl: rep.cover_url,
         titleType: rep.title_type,
         subLabel,
-        isCompletion: range.items.some(e => e.is_completion),
-        watchedAt: range.items.reduce((max, e) =>
-          e.watched_at > max ? e.watched_at : max, range.items[0].watched_at),
+        isCompletion: range.items.some((e) => e.is_completion),
+        watchedAt: range.items.reduce(
+          (max, e) => (e.watched_at > max ? e.watched_at : max),
+          range.items[0].watched_at
+        ),
       })
     }
   }
@@ -294,25 +435,38 @@ function groupByDate(evts: ActivityEvent[]): Record<string, ActivityEvent[]> {
   }, {} as Record<string, ActivityEvent[]>)
 }
 
-function formatDateHeader(dateStr: string): string {
+function formatDateHeader(
+  dateStr: string,
+  locale: string,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
   const today = new Date().toISOString().split('T')[0]
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().split('T')[0]
-  if (dateStr === today) return 'Today'
-  if (dateStr === yesterday) return 'Yesterday'
-  return new Date(dateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })
+  if (dateStr === today) return t('stats.today')
+  if (dateStr === yesterday) return t('stats.yesterday')
+  return new Date(dateStr).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
+    day: 'numeric',
+    month: 'long',
+  })
 }
 
-function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
+function YearSection({
+  year,
+  t,
+}: {
+  year: StatsResponse['year_summary']
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
   const currentYear = new Date().getFullYear()
   const cards = [
-    { value: year.titles_added, label: 'Added' },
-    { value: year.episodes_watched, label: 'Episodes' },
-    { value: year.completions, label: 'Completed' },
+    { value: year.titles_added, label: t('stats.added') },
+    { value: year.episodes_watched, label: t('stats.episodes') },
+    { value: year.completions, label: t('stats.completed') },
   ]
 
   return (
     <section className={s.section}>
-      <SectionLabel>{`${currentYear} in numbers`}</SectionLabel>
+      <SectionLabel>{t('stats.yearInNumbers', { year: currentYear })}</SectionLabel>
       <div className={s.yearGrid}>
         {cards.map((card) => (
           <div key={card.label} className={s.yearCard}>
@@ -326,5 +480,6 @@ function YearSection({ year }: { year: StatsResponse['year_summary'] }) {
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return <h2 className={s.sectionHeader}>{`// ${children.toUpperCase()}`}</h2>
+  const text = children.startsWith('//') ? children : `// ${children.toUpperCase()}`
+  return <h2 className={s.sectionHeader}>{text}</h2>
 }

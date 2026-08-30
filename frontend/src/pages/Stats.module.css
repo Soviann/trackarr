@@ -72,6 +72,38 @@
   text-align: right;
 }
 
+/* Interactive Person Bar Rows (Actors & Directors) */
+.personRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.personRow:hover {
+  background: var(--bg-elev2);
+}
+
+.personLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--ink);
+  min-width: 130px;
+  max-width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
 /* Overview — 5 stat cards */
 .statGrid {
   display: grid;

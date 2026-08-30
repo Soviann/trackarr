@@ -1,0 +1,92 @@
+.content {
+  padding: 0 var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerLeft {
+  min-width: 0;
+  flex: 1;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.roleIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--ink-dim);
+  margin-top: 2px;
+}
+
+.viewAllBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.viewAllBtn:hover {
+  opacity: 0.85;
+}
+
+.listWrapper {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-right: 2px;
+}
+
+.loading {
+  padding: var(--space-xl) 0;
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: var(--font-size-sm);
+}
+
+.empty {
+  padding: var(--space-xl) 0;
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: var(--font-size-sm);
+}

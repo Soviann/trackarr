@@ -1,5 +1,11 @@
 package model
 
+// PersonStat holds an actor or director name and their watched titles count.
+type PersonStat struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
 // StatsResponse is the full response for GET /api/stats.
 type StatsResponse struct {
 	Overview          StatsOverview  `json:"overview"`
@@ -8,6 +14,8 @@ type StatsResponse struct {
 	FunStats          []FunStat      `json:"fun_stats"`
 	Year              StatsYear      `json:"year_summary"`
 	Genres            any            `json:"genres"`
+	TopActors         []PersonStat   `json:"top_actors"`
+	TopDirectors      []PersonStat   `json:"top_directors"`
 	Streaks           StatsStreaks   `json:"streaks"`
 	TotalWatchMinutes int            `json:"total_watch_minutes"`
 	// Library strip — compact at-a-glance figures.

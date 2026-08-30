@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor } from '@testing-library/preact'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import type { StatsResponse, ActivityEvent } from '../types'
 
 const apiFetchMock = vi.fn()
@@ -14,13 +14,20 @@ vi.mock('../hooks/useApi', () => ({
   useApi: (path: string | null) => useApiMock(path),
 }))
 
+vi.mock('../store', () => ({
+  useTitleStore: (_sel: (s: unknown) => unknown) =>
+    (_sel as (s: { sort: { field: string } }) => unknown)({ sort: { field: 'name' } }),
+}))
+
 const baseStats: StatsResponse = {
   overview: { total_titles: 1, total_movies: 1, total_series: 0, total_anime: 0, episodes_watched: 1, completion_rate: 1, average_rating: 8 },
   ratings: { distribution: Array(11).fill(0), average_by_type: {}, insight: '' },
   breakdown: { by_status: {}, by_type: {} },
   fun_stats: [],
   year_summary: { titles_added: 0, episodes_watched: 0, completions: 0 },
-  genres: [],
+  genres: [{ genre: 'Action', count: 5 }],
+  top_actors: [{ name: 'Timothée Chalamet', count: 3 }],
+  top_directors: [{ name: 'Denis Villeneuve', count: 2 }],
   streaks: { current: 0, best: 0 },
   total_watch_minutes: 60,
   watched_this_year: 0,
@@ -28,11 +35,49 @@ const baseStats: StatsResponse = {
   minutes_this_week: 0,
 }
 
-describe('Stats — Recent activity', () => {
+describe('Stats', () => {
   beforeEach(() => {
     apiFetchMock.mockReset()
     useApiMock.mockReset()
-    useApiMock.mockReturnValue({ data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() })
+    useApiMock.mockImplementation((path: string | null) => {
+      if (path === '/stats') {
+        return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      if (path?.startsWith('/titles?person=')) {
+        return { data: { titles: [], total: 0, has_more: false }, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      return { data: null, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+    })
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('renders top actors and top directors sections', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    expect(screen.getByText('// TOP ACTORS')).toBeTruthy()
+    expect(screen.getByText('Timothée Chalamet')).toBeTruthy()
+    expect(screen.getByText('// TOP DIRECTORS')).toBeTruthy()
+    expect(screen.getByText('Denis Villeneuve')).toBeTruthy()
+  })
+
+  it('clicking an actor opens the person filmography drawer', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    const actorBtn = screen.getByText('Timothée Chalamet')
+    fireEvent.click(actorBtn)
+
+    // The drawer should open with the actor name in the header
+    await waitFor(() => {
+      const headings = screen.getAllByText('Timothée Chalamet')
+      expect(headings.length).toBeGreaterThanOrEqual(2)
+    })
   })
 
   it('activity row href uses singular SPA route /title/:id (not plural)', async () => {

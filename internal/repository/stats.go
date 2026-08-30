@@ -57,6 +57,16 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 		return nil, fmt.Errorf("stats genres: %w", err)
 	}
 
+	topActors, err := r.TopActors(ctx, 10)
+	if err != nil {
+		return nil, fmt.Errorf("stats top actors: %w", err)
+	}
+
+	topDirectors, err := r.TopDirectors(ctx, 10)
+	if err != nil {
+		return nil, fmt.Errorf("stats top directors: %w", err)
+	}
+
 	currentStreak, err := r.CurrentStreak(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("stats current streak: %w", err)
@@ -84,12 +94,14 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 	}
 
 	return &model.StatsResponse{
-		Overview:  *overview,
-		Ratings:   *ratings,
-		Breakdown: *breakdown,
-		FunStats:  funStats,
-		Year:      *yearSummary,
-		Genres:    genres,
+		Overview:     *overview,
+		Ratings:      *ratings,
+		Breakdown:    *breakdown,
+		FunStats:     funStats,
+		Year:         *yearSummary,
+		Genres:       genres,
+		TopActors:    topActors,
+		TopDirectors: topDirectors,
 		Streaks: model.StatsStreaks{
 			Current: currentStreak,
 			Best:    bestStreak,
@@ -720,4 +732,74 @@ func computeBestStreak(days []string) int {
 		}
 	}
 	return best
+}
+
+// TopActors returns the top N actors by distinct watched titles count.
+func (r *StatsRepository) TopActors(ctx context.Context, limit int) ([]model.PersonStat, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT
+			json_extract(je.value, '$.name') AS name,
+			COUNT(DISTINCT t.id) AS count
+		FROM titles t, json_each(t.credits) je
+		WHERE t.credits IS NOT NULL
+		  AND t.credits != ''
+		  AND t.credits != '[]'
+		  AND json_valid(t.credits) = 1
+		  AND json_extract(je.value, '$.role') != 'Director'
+		  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
+		  AND json_extract(je.value, '$.name') IS NOT NULL
+		  AND trim(json_extract(je.value, '$.name')) != ''
+		GROUP BY name
+		ORDER BY count DESC, name ASC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top actors: %w", err)
+	}
+	defer rows.Close()
+
+	results := []model.PersonStat{}
+	for rows.Next() {
+		var p model.PersonStat
+		if err := rows.Scan(&p.Name, &p.Count); err != nil {
+			return nil, fmt.Errorf("stats: actor scan: %w", err)
+		}
+		results = append(results, p)
+	}
+	return results, rows.Err()
+}
+
+// TopDirectors returns the top N directors by distinct watched titles count.
+func (r *StatsRepository) TopDirectors(ctx context.Context, limit int) ([]model.PersonStat, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT
+			json_extract(je.value, '$.name') AS name,
+			COUNT(DISTINCT t.id) AS count
+		FROM titles t, json_each(t.credits) je
+		WHERE t.credits IS NOT NULL
+		  AND t.credits != ''
+		  AND t.credits != '[]'
+		  AND json_valid(t.credits) = 1
+		  AND json_extract(je.value, '$.role') = 'Director'
+		  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
+		  AND json_extract(je.value, '$.name') IS NOT NULL
+		  AND trim(json_extract(je.value, '$.name')) != ''
+		GROUP BY name
+		ORDER BY count DESC, name ASC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top directors: %w", err)
+	}
+	defer rows.Close()
+
+	results := []model.PersonStat{}
+	for rows.Next() {
+		var p model.PersonStat
+		if err := rows.Scan(&p.Name, &p.Count); err != nil {
+			return nil, fmt.Errorf("stats: director scan: %w", err)
+		}
+		results = append(results, p)
+	}
+	return results, rows.Err()
 }

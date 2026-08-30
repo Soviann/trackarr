@@ -70,7 +70,7 @@
 | `Setting` | `Get` | `Set`, `Delete` |
 | `MatchEvent` | `ListRecent` (includes cover URL join) | `Create` |
 | `SeasonAudit` | `ListDismissals` | `Dismiss` |
-| `Stats` | `TotalWatchMinutes`, `TopGenres`, `CurrentStreak`, `BestStreak` | N/A (read-only) |
+| `Stats` | `TotalWatchMinutes`, `TopGenres`, `TopActors`, `TopDirectors`, `CurrentStreak`, `BestStreak` | N/A (read-only) |
 | `Activity` | `List` (paginated scrobble events) | N/A (read-only) |
 | `History` | `GetByTitleID` (title watch log) | N/A (read-only) |
 
@@ -218,6 +218,7 @@
 | `CalendarMonthGrid` | `components/CalendarMonthGrid.tsx` | 7-column monthly interactive grid with today indicator & selected day release cards |
 | `CalendarWeekTimeline` | `components/CalendarWeekTimeline.tsx` | 7-day weekly timeline view with rich release cards |
 | `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
+| `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |
