@@ -128,9 +128,12 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
         close(true)
       }
     }
+    if (typeof document === 'undefined') return
     document.addEventListener('pointerdown', handler)
     return () => {
-      document.removeEventListener('pointerdown', handler)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('pointerdown', handler)
+      }
     }
   }, [phase, close])
 

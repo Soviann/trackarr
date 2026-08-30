@@ -234,6 +234,31 @@ export function formatWatchtime(minutes: number | null | undefined): string | nu
   return `${h}h ${m}m`
 }
 
+/** Formats binge estimation duration (e.g. "3h 15m", "45m", "1j 4h", "2j"). */
+export function formatBingeTime(minutes: number | null | undefined): string {
+  if (!minutes || minutes <= 0) return '0m'
+  const days = Math.floor(minutes / (24 * 60))
+  const remainingMinsAfterDays = minutes % (24 * 60)
+  const hours = Math.floor(remainingMinsAfterDays / 60)
+  const mins = remainingMinsAfterDays % 60
+
+  if (days > 0) {
+    return hours > 0 ? `${days}j ${hours}h` : `${days}j`
+  }
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins.toString().padStart(2, '0')}m` : `${hours}h`
+  }
+  return `${mins}m`
+}
+
+/** Returns the total unwatched episodes across all seasons. */
+export function unwatchedEpisodesCount(title: Title): number {
+  return (title.seasons ?? []).reduce(
+    (sum, s) => sum + (s.episodes ?? []).filter((e) => !e.watched).length,
+    0
+  )
+}
+
 /**
  * Compact watchtime for tight strips (e.g. Library stats line). Always returns
  * a non-empty string — `0m` for zero — so the strip never shows a hole.

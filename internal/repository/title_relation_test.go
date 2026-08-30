@@ -220,4 +220,3 @@ func TestTitleRelations_TMDB_And_TVDB_Matching(t *testing.T) {
 	assert.Equal(t, int64(999999), got[2].ExternalID)
 	assert.Nil(t, got[2].MatchedTitleID)
 }
-

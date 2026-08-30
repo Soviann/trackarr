@@ -58,6 +58,8 @@ export interface Title {
   credits: string | null
   anilist_rating: number | null
   release_date: string | null
+  next_air_date?: string | null
+  next_air_episode?: string | null
   last_watched_at?: string
   last_refreshed_at?: string
   caught_up?: boolean
@@ -67,6 +69,7 @@ export interface Title {
   seasons: Season[]
   relations?: TitleRelation[]
   next_episode?: NextEpisode
+  personal_notes?: string | null
   matched_name?: string
   matched_language?: string
 }

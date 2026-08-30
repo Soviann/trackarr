@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, getCoverUrl } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, unwatchedEpisodesCount, formatBingeTime, getCoverUrl } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -296,3 +296,44 @@ describe('formatMatchSource', () => {
     expect(formatMatchSource('custom_provider_test')).toBe('custom provider test')
   })
 })
+
+describe('formatBingeTime', () => {
+  it('formats 0 or negative minutes as 0m', () => {
+    expect(formatBingeTime(0)).toBe('0m')
+    expect(formatBingeTime(-10)).toBe('0m')
+    expect(formatBingeTime(null)).toBe('0m')
+  })
+
+  it('formats minutes under 1 hour', () => {
+    expect(formatBingeTime(45)).toBe('45m')
+  })
+
+  it('formats hours and minutes', () => {
+    expect(formatBingeTime(195)).toBe('3h 15m')
+    expect(formatBingeTime(60)).toBe('1h')
+    expect(formatBingeTime(65)).toBe('1h 05m')
+  })
+
+  it('formats days and hours', () => {
+    expect(formatBingeTime(1500)).toBe('1j 1h')
+    expect(formatBingeTime(1440)).toBe('1j')
+    expect(formatBingeTime(2880)).toBe('2j')
+  })
+})
+
+describe('unwatchedEpisodesCount', () => {
+  it('counts unwatched episodes correctly across seasons', () => {
+    const s1 = makeSeason([makeEpisode(true), makeEpisode(false)])
+    const s2 = makeSeason([makeEpisode(false), makeEpisode(false)])
+    const t = makeTitle({ seasons: [s1, s2] })
+    expect(unwatchedEpisodesCount(t)).toBe(3)
+  })
+
+  it('returns 0 when all episodes are watched or seasons empty', () => {
+    const s1 = makeSeason([makeEpisode(true), makeEpisode(true)])
+    const t = makeTitle({ seasons: [s1] })
+    expect(unwatchedEpisodesCount(t)).toBe(0)
+    expect(unwatchedEpisodesCount(makeTitle({ seasons: [] }))).toBe(0)
+  })
+})
+

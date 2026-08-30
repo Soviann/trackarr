@@ -1726,3 +1726,40 @@ func TestTitleWriter_Update_ConvertToMovie_PurgesSeasons(t *testing.T) {
 	assert.Nil(t, got.SeriesStatus)
 	assert.Empty(t, got.Seasons)
 }
+
+func TestTitleRepository_PersonalNotes(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2025,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Notes Test", Language: "en", IsPrimary: true}})
+
+	// Initially nil
+	got, err := repo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, got.PersonalNotes)
+
+	// Set notes
+	notes := "Must watch director's cut. Recommended by Alice."
+	testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{
+		PersonalNotes: &notes,
+	})
+
+	got, err = repo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, got.PersonalNotes)
+	assert.Equal(t, notes, *got.PersonalNotes)
+
+	// Clear notes
+	testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{
+		ClearPersonalNotes: true,
+	})
+
+	got, err = repo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, got.PersonalNotes)
+}

@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.8.0] — 2026-08-30
+
+### Ajouté
+- **Bouton Héroïque Épisode Suivant (`NextEpisodeHero`)** : Bouton d'action proéminent sur la fiche titre permettant de marquer le prochain épisode non visionné comme vu d'un seul clic (`▶ Marquer S02E06 comme vu`), sans avoir à déplier la liste des saisons.
+- **Calculateur de Binge & Temps restant** : Estimation en temps réel de la durée nécessaire pour rattraper une série en cours (*« ⏱️ Reste ~3h 15m (4 ép.) »*) ou de la durée totale estimée pour les œuvres en liste à voir (*Plan to Watch*) et les films.
+- **Notes Personnelles (`PersonalNotesCard`)** : Bloc de texte épuré sur chaque fiche titre avec auto-sauvegarde asynchrone débouncée (500ms) permettant d'ajouter et d'éditer des notes, mémos ou recommandations privées.
+- **Migration de schéma SQLite (043)** : Ajout de la colonne `personal_notes TEXT` sur la table `titles`, intégrée aux modèles Go, à la lecture/écriture transactionnelle (`TitleWriter`), à l'endpoint `PATCH /api/titles/{id}` et à la fusion de titres (`Merge`).
+
 ### Documentation
 - **Architecture des tâches d'arrière-plan et Task Queue (`docs/background-jobs.md`)** : Documentation exhaustive du service de rafraîchissement quotidien (`BackgroundService`), de la file de tâches asynchrone SQLite (`TaskQueueWorker`), du cycle de vie des tâches (`pending`, `running`, `sleeping`, `dead`), du rate limiter partagé (`APILimiter`) et du protocole d'arrêt gracieux (`shutdownWG`).
 

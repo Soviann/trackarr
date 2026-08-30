@@ -46,20 +46,20 @@ type TMDBCrewMember struct {
 }
 
 type TMDBMovieDetails struct {
-	ID             int64               `json:"id"`
-	Title          string              `json:"title"`
-	Overview       string              `json:"overview"`
-	ReleaseDate    string              `json:"release_date"`
-	PosterPath     *string             `json:"poster_path"`
-	IMDBID         string              `json:"imdb_id"`
-	Genres         []TMDBGenre         `json:"genres"`
-	OriginCountry  []string            `json:"origin_country"`
-	Runtime        *int                `json:"runtime"`
-	VoteAverage    float64             `json:"vote_average"`
-	Credits        *TMDBCredits        `json:"credits"`
-	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
+	ID                  int64               `json:"id"`
+	Title               string              `json:"title"`
+	Overview            string              `json:"overview"`
+	ReleaseDate         string              `json:"release_date"`
+	PosterPath          *string             `json:"poster_path"`
+	IMDBID              string              `json:"imdb_id"`
+	Genres              []TMDBGenre         `json:"genres"`
+	OriginCountry       []string            `json:"origin_country"`
+	Runtime             *int                `json:"runtime"`
+	VoteAverage         float64             `json:"vote_average"`
+	Credits             *TMDBCredits        `json:"credits"`
+	WatchProviders      *tmdbWatchProviders `json:"watch/providers"`
 	BelongsToCollection *TMDBCollectionInfo `json:"belongs_to_collection"`
-	ExternalIDs    *struct {
+	ExternalIDs         *struct {
 		IMDBID string `json:"imdb_id"`
 		TVDBID int64  `json:"tvdb_id"`
 	} `json:"external_ids"`
