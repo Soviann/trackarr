@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.10.1] — 2026-08-30
+
 ### Modifié
 - **Internationalisation Frontend & Uniformisation i18n (`en.ts` / `fr.ts`)** :
   - Extraction de l'ensemble des textes statiques résiduels dans le dictionnaire i18n (`en.ts` pour l'anglais par défaut et `fr.ts` pour le français).
