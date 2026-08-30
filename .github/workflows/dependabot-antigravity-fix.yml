@@ -29,6 +29,33 @@ jobs:
           if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot PR detected with failing CI. Notifying Antigravity..."
             gh pr comment "$PR_NUM" --body "/antigravity La CI a échoué sur cette PR Dependabot. Merci d'analyser l'échec CI, de corriger le code ou la configuration des dépendances, et de pousser la correction sur cette PR."
+
+            # Check if an open issue for this PR already exists to avoid duplicates
+            EXISTING_ISSUE=$(gh issue list --repo "${{ github.repository }}" --state open --search "Échec CI Dependabot PR #${PR_NUM} in:title" --json number --jq '.[0].number')
+            if [ -z "$EXISTING_ISSUE" ] || [ "$EXISTING_ISSUE" = "null" ]; then
+              PR_TITLE=$(gh api repos/${{ github.repository }}/pulls/$PR_NUM --jq '.title')
+              cat << BODY_EOF > issue_body.md
+🔔 cc @${{ github.repository_owner }}
+
+### 🤖 Échec CI sur la Pull Request Dependabot
+La CI a échoué sur la mise à jour automatique des dépendances :
+- **Pull Request** : #${PR_NUM} - ${PR_TITLE}
+- **URL** : https://github.com/${{ github.repository }}/pull/${PR_NUM}
+- **Workflow Run** : https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+
+---
+/antigravity Merci d'analyser l'échec CI sur la PR #${PR_NUM}, de corriger les incompatibilités ou tests cassés, et de mettre à jour la PR.
+BODY_EOF
+
+              gh issue create \
+                --repo "${{ github.repository }}" \
+                --title "[Dependabot]: Échec CI Dependabot PR #${PR_NUM}" \
+                --body-file issue_body.md \
+                --label "antigravity" \
+                --assignee "${{ github.repository_owner }}"
+            else
+              echo "An open issue (#$EXISTING_ISSUE) already exists for PR #$PR_NUM."
+            fi
           else
             echo "PR author is not dependabot[bot], skipping auto-notification."
           fi

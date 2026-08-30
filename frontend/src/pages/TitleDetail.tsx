@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'preact/hooks'
 import type { JSX } from 'preact'
 import { route } from 'preact-router'
-import type { Title } from '../types'
+import type { Title, TitleRelation } from '../types'
 import { useApi } from '../hooks/useApi'
 import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
@@ -21,6 +21,8 @@ import { isOnPrime } from '../utils/providers'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
+import { SeasonSideStories } from '../components/SeasonSideStories'
+import { FranchiseRelationsSection } from '../components/FranchiseRelationsSection'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
@@ -96,6 +98,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const total = current?.total_episodes ?? currentEps.length
   const pct = total > 0 ? (watched / total) * 100 : 0
 
+  const activeSeasonSideStories = useMemo(() => {
+    if (!current || !title.relations) return []
+    return title.relations.filter(
+      (r) =>
+        (r.season_id != null && r.season_id === current.id) ||
+        (r.season_number != null && r.season_number === current.season_number)
+    )
+  }, [current?.id, current?.season_number, title.relations])
+
   const genres = title.genres
   const credits = parseJSON<{ name: string; role: string }[]>(title.credits)
 
@@ -117,6 +128,31 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     } catch (e) {
       setActionError('Failed to update episode')
       mutate()
+    }
+  }
+
+  const handleToggleSideStoryWatched = async (rel: TitleRelation) => {
+    if (!rel.matched_title_id) return
+    const isCompleted = rel.matched_status === 'completed'
+    const newStatus = isCompleted ? 'plan_to_watch' : 'completed'
+    try {
+      await apiFetch(`/titles/${rel.matched_title_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      })
+      setData((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          relations: (prev.relations ?? []).map((r) =>
+            r.id === rel.id || r.external_id === rel.external_id
+              ? { ...r, matched_status: newStatus }
+              : r
+          ),
+        }
+      })
+    } catch (e) {
+      setActionError('Failed to update title status')
     }
   }
 
@@ -469,7 +505,21 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             .map((ep) => (
               <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
             ))}
+
+          {/* Side stories for the active season */}
+          {activeSeasonSideStories.length > 0 && (
+            <SeasonSideStories
+              seasonNumber={current.season_number}
+              sideStories={activeSeasonSideStories}
+              onToggleWatched={handleToggleSideStoryWatched}
+            />
+          )}
         </div>
+      )}
+
+      {/* Franchise & Univers Relations */}
+      {title.relations && title.relations.length > 0 && (
+        <FranchiseRelationsSection relations={title.relations} />
       )}
 
       {/* Action drawer */}
