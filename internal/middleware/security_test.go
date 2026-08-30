@@ -25,4 +25,5 @@ func TestSecurityHeadersCSPAllowsTMDBImages(t *testing.T) {
 		}
 	}
 	assert.Contains(t, imgSrc, "https://image.tmdb.org")
+	assert.Contains(t, imgSrc, "https://s4.anilist.co")
 }

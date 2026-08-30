@@ -167,3 +167,129 @@ func (s *BackgroundService) backfillAniListID(ctx context.Context, title *reposi
 		}
 	}
 }
+
+// refreshAniListRelations walks every mapped season part and queries AniList relations
+// to collect side stories, movies, OVAs, and spin-offs, saving them to title_relations.
+func (s *BackgroundService) refreshAniListRelations(ctx context.Context, title *repository.TitleLite, result *RefreshResult) {
+	if s.anilist == nil || !title.IsAnime {
+		return
+	}
+	if invalid, _ := s.settings.Get(repository.SettingKeyAniListTokenInvalid); invalid == "true" {
+		return
+	}
+
+	partsBySeason, err := s.seasonExtIDs.ListPartsForTitle(ctx, title.ID, repository.ProviderAniList)
+	if err != nil {
+		log.Printf("background anilist relations: list parts for title %d: %v", title.ID, err)
+		return
+	}
+
+	var relations []model.TitleRelation
+	seenExternal := make(map[int64]bool)
+
+	// Collect relations for each season
+	for seasonID, parts := range partsBySeason {
+		for _, part := range parts {
+			if err := ctx.Err(); err != nil {
+				return
+			}
+			anilistID, err := strconv.ParseInt(part.ExternalID, 10, 64)
+			if err != nil {
+				continue
+			}
+
+			nodes, err := s.anilist.GetFranchiseRelations(ctx, anilistID)
+			if err != nil {
+				log.Printf("background anilist relations: fetch %d: %v", anilistID, err)
+				_ = s.limiter.Wait(ctx)
+				continue
+			}
+			result.Refreshed = true
+
+			sid := seasonID
+			for _, node := range nodes {
+				if seenExternal[node.ID] {
+					continue
+				}
+				seenExternal[node.ID] = true
+
+				var romajiPtr *string
+				if node.RomajiTitle != "" && node.RomajiTitle != node.Title {
+					romajiPtr = &node.RomajiTitle
+				}
+				var coverPtr *string
+				if node.CoverURL != "" {
+					coverPtr = &node.CoverURL
+				}
+
+				relations = append(relations, model.TitleRelation{
+					TitleID:      title.ID,
+					SeasonID:     &sid,
+					Provider:     repository.ProviderAniList,
+					ExternalID:   node.ID,
+					RelationType: model.RelationType(node.RelationType),
+					Format:       node.Format,
+					Title:        node.Title,
+					RomajiTitle:  romajiPtr,
+					CoverURL:     coverPtr,
+					Year:         node.Year,
+					Score:        node.Score,
+					EpisodeCount: node.EpisodeCount,
+					Duration:     node.Duration,
+					Overview:     node.Overview,
+					SortOrder:    len(relations) + 1,
+				})
+			}
+			_ = s.limiter.Wait(ctx)
+		}
+	}
+
+	// Also check root title AniListID if present and not yet covered
+	if title.AniListID != nil && !seenExternal[*title.AniListID] {
+		nodes, err := s.anilist.GetFranchiseRelations(ctx, *title.AniListID)
+		if err == nil {
+			result.Refreshed = true
+			for _, node := range nodes {
+				if seenExternal[node.ID] {
+					continue
+				}
+				seenExternal[node.ID] = true
+
+				var romajiPtr *string
+				if node.RomajiTitle != "" && node.RomajiTitle != node.Title {
+					romajiPtr = &node.RomajiTitle
+				}
+				var coverPtr *string
+				if node.CoverURL != "" {
+					coverPtr = &node.CoverURL
+				}
+
+				relations = append(relations, model.TitleRelation{
+					TitleID:      title.ID,
+					SeasonID:     nil,
+					Provider:     repository.ProviderAniList,
+					ExternalID:   node.ID,
+					RelationType: model.RelationType(node.RelationType),
+					Format:       node.Format,
+					Title:        node.Title,
+					RomajiTitle:  romajiPtr,
+					CoverURL:     coverPtr,
+					Year:         node.Year,
+					Score:        node.Score,
+					EpisodeCount: node.EpisodeCount,
+					Duration:     node.Duration,
+					Overview:     node.Overview,
+					SortOrder:    len(relations) + 1,
+				})
+			}
+		}
+	}
+
+	if len(relations) > 0 {
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, title.ID, relations)
+		}); err != nil {
+			log.Printf("background anilist relations: persist for title %d: %v", title.ID, err)
+		}
+	}
+}

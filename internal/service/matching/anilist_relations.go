@@ -14,12 +14,51 @@ query ($id: Int) {
     relations {
       edges {
         relationType
-        node { id type format title { romaji english } }
+        node {
+          id
+          type
+          format
+          title { romaji english }
+          coverImage { large medium }
+          startDate { year month day }
+          averageScore
+          episodes
+          duration
+          description
+        }
       }
     }
   }
 }
 `
+
+type relationNode struct {
+	ID     int64  `json:"id"`
+	Type   string `json:"type"`
+	Format string `json:"format"`
+	Title  struct {
+		Romaji  string `json:"romaji"`
+		English string `json:"english"`
+	} `json:"title"`
+	CoverImage struct {
+		Large  string `json:"large"`
+		Medium string `json:"medium"`
+	} `json:"coverImage"`
+	StartDate struct {
+		Year  *int `json:"year"`
+		Month *int `json:"month"`
+		Day   *int `json:"day"`
+	} `json:"startDate"`
+	AverageScore *int    `json:"averageScore"`
+	Episodes     *int    `json:"episodes"`
+	Duration     *int    `json:"duration"`
+	Description  *string `json:"description"`
+}
+
+type relationEdge struct {
+	RelationType string       `json:"relationType"`
+	Node         relationNode `json:"node"`
+}
 
 type relationMedia struct {
 	ID     int64  `json:"id"`
@@ -29,18 +68,7 @@ type relationMedia struct {
 		English string `json:"english"`
 	} `json:"title"`
 	Relations struct {
-		Edges []struct {
-			RelationType string `json:"relationType"`
-			Node         struct {
-				ID     int64  `json:"id"`
-				Type   string `json:"type"`
-				Format string `json:"format"`
-				Title  struct {
-					Romaji  string `json:"romaji"`
-					English string `json:"english"`
-				} `json:"title"`
-			} `json:"node"`
-		} `json:"edges"`
+		Edges []relationEdge `json:"edges"`
 	} `json:"relations"`
 }
 
@@ -59,6 +87,66 @@ func (c *AniListClient) getRelations(ctx context.Context, id int64) (*relationMe
 		return nil, fmt.Errorf("get relations: %w", err)
 	}
 	return &resp.Media, nil
+}
+
+// FranchiseRelationNode represents a related anime node from the AniList relations graph.
+type FranchiseRelationNode struct {
+	ID           int64
+	RelationType string
+	Format       string
+	Title        string
+	RomajiTitle  string
+	CoverURL     string
+	Year         *int
+	Score        *int
+	EpisodeCount *int
+	Duration     *int
+	Overview     *string
+}
+
+// GetFranchiseRelations returns all side stories, movies, spin-offs, and specials
+// linked to an AniList media ID (excluding manga adaptations and main TV/ONA seasons).
+func (c *AniListClient) GetFranchiseRelations(ctx context.Context, id int64) ([]FranchiseRelationNode, error) {
+	current, err := c.getRelations(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []FranchiseRelationNode
+	for _, e := range current.Relations.Edges {
+		if e.Node.Type != "ANIME" {
+			continue
+		}
+		// Skip main TV/ONA prequel/sequel edges as they are primary seasons
+		if (e.RelationType == "PREQUEL" || e.RelationType == "SEQUEL") && seriesFormat(e.Node.Format) {
+			continue
+		}
+
+		title := e.Node.Title.English
+		if title == "" {
+			title = e.Node.Title.Romaji
+		}
+
+		coverURL := e.Node.CoverImage.Large
+		if coverURL == "" {
+			coverURL = e.Node.CoverImage.Medium
+		}
+
+		out = append(out, FranchiseRelationNode{
+			ID:           e.Node.ID,
+			RelationType: e.RelationType,
+			Format:       e.Node.Format,
+			Title:        title,
+			RomajiTitle:  e.Node.Title.Romaji,
+			CoverURL:     coverURL,
+			Year:         e.Node.StartDate.Year,
+			Score:        e.Node.AverageScore,
+			EpisodeCount: e.Node.Episodes,
+			Duration:     e.Node.Duration,
+			Overview:     e.Node.Description,
+		})
+	}
+	return out, nil
 }
 
 // SeasonChain is the outcome of walking an entry's PREQUEL chain on AniList.

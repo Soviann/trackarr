@@ -71,18 +71,7 @@ func makeMedia(id int64, format, nodeType, title string, prequels ...prequelEdge
 	}
 	m.Title.English = title
 	for _, p := range prequels {
-		edge := struct {
-			RelationType string `json:"relationType"`
-			Node         struct {
-				ID     int64  `json:"id"`
-				Type   string `json:"type"`
-				Format string `json:"format"`
-				Title  struct {
-					Romaji  string `json:"romaji"`
-					English string `json:"english"`
-				} `json:"title"`
-			} `json:"node"`
-		}{}
+		var edge relationEdge
 		edge.RelationType = "PREQUEL"
 		edge.Node.ID = p.id
 		edge.Node.Type = "ANIME"
@@ -258,29 +247,12 @@ func TestPickPrequel_Preference(t *testing.T) {
 	// that is not TV/ONA as "other", so test the real case: edge with Type=MANGA
 	// must be skipped because pickPrequel filters on Node.Type == "ANIME").
 	mMangaOnly := makeMedia(1, "TV", "ANIME", "Start")
-	mMangaOnly.Relations.Edges = append(mMangaOnly.Relations.Edges, struct {
-		RelationType string `json:"relationType"`
-		Node         struct {
-			ID     int64  `json:"id"`
-			Type   string `json:"type"`
-			Format string `json:"format"`
-			Title  struct {
-				Romaji  string `json:"romaji"`
-				English string `json:"english"`
-			} `json:"title"`
-		} `json:"node"`
-	}{
-		RelationType: "PREQUEL",
-		Node: struct {
-			ID     int64  `json:"id"`
-			Type   string `json:"type"`
-			Format string `json:"format"`
-			Title  struct {
-				Romaji  string `json:"romaji"`
-				English string `json:"english"`
-			} `json:"title"`
-		}{ID: 200, Type: "MANGA", Format: "MANGA"},
-	})
+	var edgeManga relationEdge
+	edgeManga.RelationType = "PREQUEL"
+	edgeManga.Node.ID = 200
+	edgeManga.Node.Type = "MANGA"
+	edgeManga.Node.Format = "MANGA"
+	mMangaOnly.Relations.Edges = append(mMangaOnly.Relations.Edges, edgeManga)
 	assert.Equal(t, int64(0), pickPrequel(&mMangaOnly), "MANGA-type prequel must be ignored; node treated as root")
 }
 
@@ -288,29 +260,12 @@ func TestPickPrequel_Preference(t *testing.T) {
 // is a MANGA source — pickPrequel must return 0 and the entry becomes its own root.
 func TestResolveSeasonChain_MangaOnlyPrequel(t *testing.T) {
 	idTV := makeMedia(70, "TV", "ANIME", "Manga Adaptation")
-	idTV.Relations.Edges = append(idTV.Relations.Edges, struct {
-		RelationType string `json:"relationType"`
-		Node         struct {
-			ID     int64  `json:"id"`
-			Type   string `json:"type"`
-			Format string `json:"format"`
-			Title  struct {
-				Romaji  string `json:"romaji"`
-				English string `json:"english"`
-			} `json:"title"`
-		} `json:"node"`
-	}{
-		RelationType: "PREQUEL",
-		Node: struct {
-			ID     int64  `json:"id"`
-			Type   string `json:"type"`
-			Format string `json:"format"`
-			Title  struct {
-				Romaji  string `json:"romaji"`
-				English string `json:"english"`
-			} `json:"title"`
-		}{ID: 71, Type: "MANGA", Format: "MANGA"},
-	})
+	var edgeManga2 relationEdge
+	edgeManga2.RelationType = "PREQUEL"
+	edgeManga2.Node.ID = 71
+	edgeManga2.Node.Type = "MANGA"
+	edgeManga2.Node.Format = "MANGA"
+	idTV.Relations.Edges = append(idTV.Relations.Edges, edgeManga2)
 
 	stubs := relationStub{70: idTV}
 	client := newRelationsTestServer(t, stubs)
@@ -364,4 +319,65 @@ func TestResolveSeasonChain_TVChainWithMovieRoot(t *testing.T) {
 	// id81 is TV but id80 (MOVIE) is not a series, so seasons count = 1 (id81 itself).
 	assert.Equal(t, 1, chain.SeasonNumber)
 	assert.False(t, chain.IsRoot)
+}
+
+func TestGetFranchiseRelations(t *testing.T) {
+	var m relationMedia
+	m.ID = 200
+	m.Format = "TV"
+	m.Title.English = "My Hero Academia Season 2"
+
+	year := 2018
+	score := 82
+	dur := 96
+
+	var edgeMovie relationEdge
+	edgeMovie.RelationType = "SIDE_STORY"
+	edgeMovie.Node.ID = 101347
+	edgeMovie.Node.Type = "ANIME"
+	edgeMovie.Node.Format = "MOVIE"
+	edgeMovie.Node.Title.English = "My Hero Academia: Two Heroes"
+	edgeMovie.Node.CoverImage.Large = "https://example.com/two_heroes.jpg"
+	edgeMovie.Node.StartDate.Year = &year
+	edgeMovie.Node.AverageScore = &score
+	edgeMovie.Node.Duration = &dur
+
+	var edgeOVA relationEdge
+	edgeOVA.RelationType = "SIDE_STORY"
+	edgeOVA.Node.ID = 98565
+	edgeOVA.Node.Type = "ANIME"
+	edgeOVA.Node.Format = "OVA"
+	edgeOVA.Node.Title.English = "Training of the Dead"
+
+	var edgeTVSeq relationEdge
+	edgeTVSeq.RelationType = "SEQUEL"
+	edgeTVSeq.Node.ID = 300
+	edgeTVSeq.Node.Type = "ANIME"
+	edgeTVSeq.Node.Format = "TV"
+	edgeTVSeq.Node.Title.English = "Season 3"
+
+	var edgeManga relationEdge
+	edgeManga.RelationType = "ADAPTATION"
+	edgeManga.Node.ID = 85486
+	edgeManga.Node.Type = "MANGA"
+
+	m.Relations.Edges = append(m.Relations.Edges, edgeMovie, edgeOVA, edgeTVSeq, edgeManga)
+
+	stubs := relationStub{200: m}
+	client := newRelationsTestServer(t, stubs)
+
+	nodes, err := client.GetFranchiseRelations(context.Background(), 200)
+	require.NoError(t, err)
+	require.Len(t, nodes, 2)
+
+	assert.Equal(t, int64(101347), nodes[0].ID)
+	assert.Equal(t, "MOVIE", nodes[0].Format)
+	assert.Equal(t, "My Hero Academia: Two Heroes", nodes[0].Title)
+	assert.Equal(t, 2018, *nodes[0].Year)
+	assert.Equal(t, 82, *nodes[0].Score)
+	assert.Equal(t, 96, *nodes[0].Duration)
+
+	assert.Equal(t, int64(98565), nodes[1].ID)
+	assert.Equal(t, "OVA", nodes[1].Format)
+	assert.Equal(t, "Training of the Dead", nodes[1].Title)
 }

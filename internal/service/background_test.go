@@ -90,11 +90,12 @@ func newBackgroundServiceWithTMDB(t *testing.T, tmdb *matching.TMDBClient) (*ser
 // scoreByID maps an AniList media id to the averageScore the fake should
 // return; errByID overrides the response with an error for that id.
 type fakeAniListSeasonScoreClient struct {
-	scoreByID    map[int64]int
-	errByID      map[int64]error
-	detailsByID  map[int64]*matching.AniListDetails
-	searchResult map[string][]matching.AniListSearchResult
-	calls        []int64
+	scoreByID     map[int64]int
+	errByID       map[int64]error
+	detailsByID   map[int64]*matching.AniListDetails
+	searchResult  map[string][]matching.AniListSearchResult
+	relationsByID map[int64][]matching.FranchiseRelationNode
+	calls         []int64
 }
 
 func (f *fakeAniListSeasonScoreClient) GetAnimeDetails(_ context.Context, id int64) (*matching.AniListDetails, error) {
@@ -115,6 +116,15 @@ func (f *fakeAniListSeasonScoreClient) GetAnimeDetails(_ context.Context, id int
 func (f *fakeAniListSeasonScoreClient) SearchAnime(_ context.Context, query string) ([]matching.AniListSearchResult, error) {
 	if res, ok := f.searchResult[query]; ok {
 		return res, nil
+	}
+	return nil, nil
+}
+
+func (f *fakeAniListSeasonScoreClient) GetFranchiseRelations(_ context.Context, id int64) ([]matching.FranchiseRelationNode, error) {
+	if f.relationsByID != nil {
+		if rels, ok := f.relationsByID[id]; ok {
+			return rels, nil
+		}
 	}
 	return nil, nil
 }
@@ -859,4 +869,64 @@ func TestBackgroundService_RefreshTitle_SyncsNamesAndPurgesStaleTranslations(t *
 	require.True(t, ok)
 	assert.Equal(t, "Rakudai Kenja Romaji", romajiName.Name)
 	assert.False(t, romajiName.IsPrimary)
+}
+
+func TestBackgroundService_RefreshAniListRelations(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+	titleID := testutil.InsertTitle(t, db, "My Hero Academia", true)
+	seasonID := testutil.InsertSeason(t, db, titleID, 2)
+
+	// Attach AniList ID 21856 to Season 2
+	seasonExtRepo := repository.NewSeasonExternalIDRepository(db)
+	require.NoError(t, seasonExtRepo.Add(context.Background(), seasonID, repository.ProviderAniList, "21856"))
+
+	year := 2018
+	score := 82
+	dur := 96
+	overview := "All Might and Deku visit I-Island."
+
+	fakeAniList := &fakeAniListSeasonScoreClient{
+		relationsByID: map[int64][]matching.FranchiseRelationNode{
+			21856: {
+				{
+					ID:           101347,
+					RelationType: "SIDE_STORY",
+					Format:       "MOVIE",
+					Title:        "My Hero Academia: Two Heroes",
+					RomajiTitle:  "Boku no Hero Academia the Movie: Futari no Hero",
+					Year:         &year,
+					Score:        &score,
+					Duration:     &dur,
+					Overview:     &overview,
+				},
+				{
+					ID:           98565,
+					RelationType: "SIDE_STORY",
+					Format:       "OVA",
+					Title:        "Training of the Dead",
+				},
+			},
+		},
+	}
+	svc.SetAniList(fakeAniList)
+
+	require.NoError(t, svc.RefreshByID(context.Background(), titleID))
+
+	// Verify title loaded with relations
+	got, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.Len(t, got.Relations, 2)
+
+	assert.Equal(t, int64(101347), got.Relations[0].ExternalID)
+	assert.Equal(t, "My Hero Academia: Two Heroes", got.Relations[0].Title)
+	assert.Equal(t, "MOVIE", got.Relations[0].Format)
+	assert.Equal(t, model.RelationSideStory, got.Relations[0].RelationType)
+	require.NotNil(t, got.Relations[0].SeasonID)
+	assert.Equal(t, seasonID, *got.Relations[0].SeasonID)
+	require.NotNil(t, got.Relations[0].SeasonNumber)
+	assert.Equal(t, 2, *got.Relations[0].SeasonNumber)
+
+	assert.Equal(t, int64(98565), got.Relations[1].ExternalID)
+	assert.Equal(t, "Training of the Dead", got.Relations[1].Title)
+	assert.Equal(t, "OVA", got.Relations[1].Format)
 }
