@@ -6,6 +6,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.10.0] — 2026-08-30
+
+### Ajouté
+- **Calendrier In-App Multi-Vues (`/coming-up`)** : Refonte complète de la page des sorties à venir avec un sélecteur de mode de vue à 3 options :
+  - **Grille Mensuelle (`CalendarMonthGrid`)** : Calendrier 7 colonnes (Lundi–Dimanche) avec navigation temporelle fluide, retour « Aujourd'hui », pastilles interactives par statut et miniatures de sorties du jour sélectionné.
+  - **Frise Hebdomadaire (`CalendarWeekTimeline`)** : Colonnes détaillées pour chaque jour de la semaine avec jaquettes, badge épisode (`S02E08`), titre d'épisode et badges de plateformes de streaming.
+  - **Vue Liste Classique** : Préservation du mode grille d'affiches avec badges relatifs (`Today`, `in 5d`) et restauration automatique de la position de défilement (`useScrollRestoration`).
+  - **Filtres par Catégorie** : Filtrage instantané par *Tous*, *🎬 Films*, *📺 Séries* et *⛩️ Anime*.
+  - **Persistance des préférences** : Sauvegarde automatique du mode de vue favori dans le `localStorage`.
+- **Flux d'Abonnement iCal Synchronisé (RFC 5545)** :
+  - Endpoint public tokenisé `GET /api/calendar.ics?token=...` servant un flux d'agenda iCalendar conforme (all-day events, `VEVENT`, UIDs déterministes, repliement de lignes à 75 octets et échappement des caractères spéciaux).
+  - Modal d'abonnement `CalendarIcalModal` avec copie d'URL 1-clic, boutons directs d'abonnement Apple Calendar (`webcal://`) et Google Calendar, guides d'utilisation pas-à-pas et rotation de token secret (`POST /api/calendar/token/regenerate`).
+- **Nouveaux Endpoints Backend** :
+  - `GET /api/calendar.ics` : Flux calendrier RFC 5545.
+  - `GET /api/calendar/events` : Données d'événements calendaires enrichies pour l'interface utilisateur.
+  - `GET /api/calendar/token` & `POST /api/calendar/token/regenerate` : Gestion et rotation du token de calendrier dans SQLite `settings`.
+
 ## [v1.9.0] — 2026-08-30
 
 ### Ajouté

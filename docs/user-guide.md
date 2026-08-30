@@ -53,6 +53,24 @@ The **Library** screen is your media command center:
 
 ---
 
+## 1.1. Multi-View Calendar & iCal Export (`/coming-up`)
+
+The **Calendar** page (`/coming-up`) provides a complete schedule of upcoming episodes and movie releases for all titles in your watchlist (`watching`, `plan_to_watch`, or returning `completed`):
+
+- **3 Visualisation Modes**:
+  - **📅 Monthly Grid (Grille Mois)**: Standard 7-column calendar (Mon–Sun) with month navigation, "Today" highlight, per-day event pills and category color coding (Anime, Series, Movies). Tapping any day opens a rich card overview below the grid.
+  - **📆 Weekly Timeline (Semaine)**: 7-day detailed view highlighting day-by-day releases with high-res posters, episode badges (`S02E08`), episode titles, and streaming provider badges.
+  - **📋 Classic List (Liste)**: Poster grid sorted chronologically with relative countdown badges (`Today`, `Wed`, `in 5d`) and scroll position restoration.
+- **Category Filter Chips**: Quick filtering by *Tous*, *🎬 Films*, *📺 Séries TV*, and *⛩️ Anime*.
+- **iCal Subscription Feed (RFC 5545)**:
+  - Accessible via the **📅 Flux iCal** button in the header.
+  - Generates a personal, token-secured feed (`/api/calendar.ics?token=...`).
+  - 1-click subscription buttons for **Apple Calendar** (`webcal://`) and **Google Calendar**.
+  - Includes detailed event descriptions (episode number, streaming platforms, status, overview, and direct Trackarr link) with background 6-hour refresh interval.
+  - Security option to regenerate and rotate the secret calendar token at any time.
+
+---
+
 ## 2. Managing Titles & Episodes
 
 <div align="center">
