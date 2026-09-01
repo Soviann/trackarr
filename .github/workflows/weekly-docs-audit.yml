@@ -38,10 +38,7 @@ jobs:
             exit 0
           fi
 
-          # 3. List modified files across the recent commits
-          MODIFIED_FILES=$(git log --since="7 days ago" --name-only --pretty="" | sort -u | grep -v '^$' || true)
-
-          # 4. Compose Issue body
+          # 3. Compose Issue body
           ISSUE_TITLE="[Audit]: Audit hebdomadaire de la documentation et des règles LLM"
 
           cat << 'BODY_EOF' > issue_body.md
@@ -54,13 +51,6 @@ jobs:
           ```text
           BODY_EOF
           echo "$RECENT_COMMITS" >> issue_body.md
-          cat << 'BODY_EOF' >> issue_body.md
-          ```
-
-          #### Fichiers modifiés au cours de la semaine :
-          ```text
-          BODY_EOF
-          echo "$MODIFIED_FILES" >> issue_body.md
           cat << 'BODY_EOF' >> issue_body.md
           ```
 

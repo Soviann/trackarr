@@ -113,6 +113,7 @@ stateDiagram-v2
 | `anilist_push_movie` | `AniListPushMoviePayload`<br>(`title_id`) | Pushes watch status and user rating for anime movies to AniList GraphQL. |
 | `radarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a movie to the configured Radarr instance download queue with quality profile and root folder settings. |
 | `sonarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a television series to the configured Sonarr instance download queue. |
+| `generate_wrapped` | `GenerateWrappedPayload`<br>(`year`) | Compiles and persists an annual Wrapped snapshot into `wrapped_snapshots` and triggers a Web Push notification (`notif_wrapped_ready`). Automatically enqueued at midnight on January 1st for the past year, or manually triggered from Admin / Stats. |
 
 ---
 
