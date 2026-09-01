@@ -341,3 +341,92 @@ func createTitle(t *testing.T, db *sql.DB, name string, titleType model.TitleTyp
 	names := []model.TitleName{{Name: name, Language: "en", IsPrimary: true}}
 	return testutil.CreateTitle(t, db, title, names)
 }
+
+func TestStatsRepository_GetWrappedData(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	duneID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2026, Runtime: ptr(166),
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+		MyRating: ptr(9),
+	}, []model.TitleName{{Name: "Dune: Part Two", Language: "en", IsPrimary: true}})
+
+	shogunID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2026, Runtime: ptr(60),
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+		MyRating: ptr(10),
+	}, []model.TitleName{{Name: "Shōgun", Language: "en", IsPrimary: true}})
+
+	solID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, IsAnime: true, Year: 2026, Runtime: ptr(24),
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+		MyRating: ptr(8),
+	}, []model.TitleName{{Name: "Solo Leveling", Language: "en", IsPrimary: true}})
+
+	// Add watch events in 2026
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: duneID, Source: model.WatchEventSourcePlex, CreatedAt: time.Date(2026, 3, 10, 21, 0, 0, 0, time.UTC)})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: duneID, Source: model.WatchEventSourcePlex, CreatedAt: time.Date(2026, 4, 15, 22, 0, 0, 0, time.UTC)})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: shogunID, Source: model.WatchEventSourcePlex, CreatedAt: time.Date(2026, 5, 1, 20, 0, 0, 0, time.UTC)})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: solID, Source: model.WatchEventSourcePlex, CreatedAt: time.Date(2026, 6, 1, 14, 0, 0, 0, time.UTC)})
+
+	raw, resp, err := repo.GetWrappedData(context.Background(), 2026)
+	require.NoError(t, err)
+	require.NotNil(t, raw)
+	require.NotNil(t, resp)
+
+	assert.Equal(t, 2026, resp.Year)
+	assert.Equal(t, 3, resp.Overview.TotalTitles)
+	assert.Equal(t, 1, resp.Overview.TotalMovies)
+	assert.Equal(t, 1, resp.Overview.TotalSeries)
+	assert.Equal(t, 1, resp.Overview.TotalAnime)
+	assert.NotEmpty(t, resp.TopFavorites.Movies)
+	assert.Equal(t, "Dune: Part Two", resp.TopFavorites.Movies[0].Title)
+	assert.NotEmpty(t, resp.TopFavorites.Series)
+	assert.Equal(t, "Shōgun", resp.TopFavorites.Series[0].Title)
+	assert.NotEmpty(t, resp.TopFavorites.Anime)
+	assert.Equal(t, "Solo Leveling", resp.TopFavorites.Anime[0].Title)
+
+	require.NotNil(t, resp.RewatchChampion)
+	assert.Equal(t, "Dune: Part Two", resp.RewatchChampion.Title.Title)
+	assert.Equal(t, 2, resp.RewatchChampion.TotalPlays)
+}
+
+func TestStatsRepository_GetWrappedData_ManualVsAutomatedScrobbles(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	// Movie A: 5 manual events (should count as 1 play)
+	manualMovieID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2026, Runtime: ptr(120),
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Manual Movie", Language: "en", IsPrimary: true}})
+
+	for i := 0; i < 5; i++ {
+		testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+			TitleID:   manualMovieID,
+			Source:    model.WatchEventSourceManual,
+			CreatedAt: time.Date(2026, 6, 20, 14, 48, 36, 0, time.UTC),
+		})
+	}
+
+	// Movie B: 3 Plex/Jellyfin events (should count as 3 plays)
+	plexMovieID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2026, Runtime: ptr(120),
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Plex Movie", Language: "en", IsPrimary: true}})
+
+	for i := 0; i < 3; i++ {
+		testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+			TitleID:   plexMovieID,
+			Source:    model.WatchEventSourcePlex,
+			CreatedAt: time.Date(2026, time.Month(1+i), 10, 20, 0, 0, 0, time.UTC),
+		})
+	}
+
+	_, resp, err := repo.GetWrappedData(context.Background(), 2026)
+	require.NoError(t, err)
+	require.NotNil(t, resp.RewatchChampion)
+	assert.Equal(t, "Plex Movie", resp.RewatchChampion.Title.Title)
+	assert.Equal(t, 3, resp.RewatchChampion.TotalPlays)
+}

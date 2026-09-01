@@ -72,6 +72,11 @@ type AniListPushMoviePayload struct {
 	TitleID int64 `json:"title_id"`
 }
 
+// GenerateWrappedPayload carries the year for the annual retrospective compilation.
+type GenerateWrappedPayload struct {
+	Year int `json:"year"`
+}
+
 // AniListPusher is the subset of AniListPushService the worker depends on.
 // Kept narrow so tests can inject a fake without wiring the real HTTP client.
 type AniListPusher interface {
@@ -84,6 +89,8 @@ type TaskQueueWorker struct {
 	log         *slog.Logger
 	tasks       *repository.TaskRepository
 	titles      *repository.TitleRepository
+	wrappedRepo *repository.WrappedRepository
+	statsRepo   *repository.StatsRepository
 	pipeline    *matching.Pipeline
 	tmdb        *matching.TMDBClient
 	anilist     *matching.AniListClient
@@ -113,18 +120,20 @@ func NewTaskQueueWorker(
 	writeDB *sql.DB,
 ) *TaskQueueWorker {
 	return &TaskQueueWorker{
-		log:      slog.With("worker", "taskqueue"),
-		tasks:    tasks,
-		titles:   titles,
-		pipeline: pipeline,
-		tmdb:     tmdb,
-		anilist:  anilist,
-		push:     push,
-		settings: settings,
-		dataDir:  dataDir,
-		limiter:  NewAPILimiter(2, 1),
-		titleSvc: titleSvc,
-		writeDB:  writeDB,
+		log:         slog.With("worker", "taskqueue"),
+		tasks:       tasks,
+		titles:      titles,
+		wrappedRepo: repository.NewWrappedRepository(writeDB),
+		statsRepo:   repository.NewStatsRepository(writeDB),
+		pipeline:    pipeline,
+		tmdb:        tmdb,
+		anilist:     anilist,
+		push:        push,
+		settings:    settings,
+		dataDir:     dataDir,
+		limiter:     NewAPILimiter(2, 1),
+		titleSvc:    titleSvc,
+		writeDB:     writeDB,
 	}
 }
 
@@ -323,6 +332,8 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		err = w.handleArrPush(ctx, task, logger, "radarr")
 	case model.TaskTypeSonarrPush:
 		err = w.handleArrPush(ctx, task, logger, "sonarr")
+	case model.TaskTypeGenerateWrapped:
+		err = w.handleGenerateWrapped(ctx, task, logger)
 	default:
 		logger.Warn("unknown task type", "taskType", task.TaskType)
 		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -709,6 +720,7 @@ const (
 	NotifRatingPrompt = "notif_rating_prompt"
 	NotifDeadTask     = "notif_dead_task"
 	NotifSeriesEnded  = "notif_series_ended"
+	NotifWrappedReady = "notif_wrapped_ready"
 )
 
 // IsNotificationEnabled checks whether a notification type is enabled.

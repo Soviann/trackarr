@@ -3,6 +3,10 @@ import { render, cleanup } from '@testing-library/preact'
 import { CalendarMonthGrid } from './CalendarMonthGrid'
 import type { CalendarEvent } from '../types'
 
+const now = new Date()
+const yyyy = now.getFullYear()
+const mm = String(now.getMonth() + 1).padStart(2, '0')
+
 const mockEvents: CalendarEvent[] = [
   {
     id: 'ep-1',
@@ -11,19 +15,19 @@ const mockEvents: CalendarEvent[] = [
     type: 'series',
     is_anime: true,
     cover_url: '/covers/frieren.jpg',
-    air_date: '2026-08-15',
+    air_date: `${yyyy}-${mm}-15`,
     season_number: 1,
     episode_number: 5,
     status: 'watching',
   },
   {
-    id: 'title-20-2026-08-20',
+    id: `title-20-${yyyy}-${mm}-20`,
     title_id: 20,
     title_name: 'Dune 3',
     type: 'movie',
     is_anime: false,
     cover_url: '/covers/dune.jpg',
-    air_date: '2026-08-20',
+    air_date: `${yyyy}-${mm}-20`,
     status: 'plan_to_watch',
   },
 ]

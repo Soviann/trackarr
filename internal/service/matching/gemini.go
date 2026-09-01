@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/Soviann/trackarr/internal/model"
 )
 
 const geminiAPIURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
@@ -276,4 +278,127 @@ func parseJSONFromResponse(text string, dest any) error {
 	cleaned = strings.TrimSpace(cleaned)
 
 	return json.Unmarshal([]byte(cleaned), dest)
+}
+
+// GenerateWrappedStory generates an AI-powered personality, annual summary, witty quote, and tailored fun facts.
+func (c *GeminiClient) GenerateWrappedStory(ctx context.Context, stats *model.WrappedRawStats) (*model.WrappedAIPersona, error) {
+	if c == nil || len(c.apiKeys) == 0 || stats == nil {
+		return FallbackWrappedPersona(stats), nil
+	}
+
+	statsJSON, err := json.Marshal(stats)
+	if err != nil {
+		return FallbackWrappedPersona(stats), nil
+	}
+
+	prompt := fmt.Sprintf(`You are Trackarr Wrapped's creative narrator and pop-culture commentator.
+Given the following raw annual viewing statistics for the user in year %d:
+%s
+
+Generate an engaging, witty, perceptive, and concise annual retrospective in JSON format.
+CRITICAL CONSTRAINT: Keep all texts short and punchy so that the entire persona fits cleanly on a single mobile screen without scrolling.
+
+Requirements:
+1. "title": A catchy, evocative viewing archetype title (max 4-5 words, e.g. "The Nocturnal Crime Sleuth", "The Weekend Marathoner").
+2. "badges": An array of exactly 2-3 short badge labels (1-2 words each, e.g. ["Night Owl", "Binge Legend"]).
+3. "quote": Exactly 1 short, witty, memorable one-liner quote (max 15 words).
+4. "summary": Exactly 1 concise sentence celebrating their year in media (max 25 words).
+5. "fun_facts": An array of exactly 2 short, crisp bullet points highlighting surprising numbers from their raw stats (each max 12-15 words).
+
+Respond with ONLY a valid JSON object:
+{
+  "title": "string",
+  "badges": ["badge 1", "badge 2"],
+  "quote": "string",
+  "summary": "string",
+  "fun_facts": ["fact 1", "fact 2"]
+}`, stats.Year, string(statsJSON))
+
+	body, err := c.generate(ctx, prompt)
+	if err != nil {
+		return FallbackWrappedPersona(stats), nil
+	}
+
+	var result model.WrappedAIPersona
+	if err := parseJSONFromResponse(body, &result); err != nil || result.Title == "" {
+		return FallbackWrappedPersona(stats), nil
+	}
+
+	if len(result.FunFacts) == 0 {
+		fallback := FallbackWrappedPersona(stats)
+		result.FunFacts = fallback.FunFacts
+	}
+
+	return &result, nil
+}
+
+// FallbackWrappedPersona generates deterministic personas and insights when AI is unavailable.
+func FallbackWrappedPersona(stats *model.WrappedRawStats) *model.WrappedAIPersona {
+	if stats == nil {
+		return &model.WrappedAIPersona{
+			Title:    "The Dedicated Viewer",
+			Summary:  "A steady and enjoyable year of media discovery.",
+			Quote:    "Another year, another watchlist conquered.",
+			FunFacts: []string{"Tracked and saved for posterity."},
+			Badges:   []string{"Viewer"},
+		}
+	}
+
+	title := "The Eclectic Explorer"
+	summary := fmt.Sprintf("You logged %d titles and %d episodes in %d, spanning rich genres and thrilling stories.", stats.TotalTitles, stats.EpisodesWatched, stats.Year)
+	quote := "One more episode never hurt anyone."
+	badges := []string{"Dedicated Streamer"}
+
+	switch {
+	case stats.TotalAnime > stats.TotalMovies && stats.TotalAnime > stats.TotalSeries:
+		title = "The Anime Connoisseur"
+		summary = fmt.Sprintf("Anime was your undisputed domain in %d with %d titles tracked and endless seasons enjoyed.", stats.Year, stats.TotalAnime)
+		quote = "Subbed over dubbed, always and forever."
+		badges = append(badges, "Anime Devotee")
+	case stats.NightOwlPct >= 50:
+		title = "The Midnight Binger"
+		summary = fmt.Sprintf("You thrived in the quiet hours of the night in %d, watching %d%% of your screen time after dark.", stats.Year, stats.NightOwlPct)
+		quote = "Sleep is optional, the next cliffhanger is not."
+		badges = append(badges, "Night Owl")
+	case stats.TotalMovies >= stats.TotalSeries && stats.TotalMovies > 0:
+		title = "The Celluloid Cinephile"
+		summary = fmt.Sprintf("A true lover of feature films, you immersed yourself in %d cinema gems throughout %d.", stats.TotalMovies, stats.Year)
+		quote = "Cinema is a matter of what's in the frame and what's out."
+		badges = append(badges, "Cinephile")
+	case stats.LongestBingeEps >= 6:
+		title = "The Marathon Champion"
+		summary = fmt.Sprintf("When you commit to a story, nothing stops you — powering through %d episodes in a single day.", stats.LongestBingeEps)
+		quote = "Are you still watching? Absolutely."
+		badges = append(badges, "Binge Legend")
+	}
+
+	var funFacts []string
+	if stats.NightOwlPct > 0 {
+		funFacts = append(funFacts, fmt.Sprintf("%d%% of your watch sessions happened after 8 PM.", stats.NightOwlPct))
+	}
+	if stats.LongestBingeEps >= 3 && stats.LongestBingeTitle != "" {
+		funFacts = append(funFacts, fmt.Sprintf("Your biggest binge was %d episodes of %s in a single day.", stats.LongestBingeEps, stats.LongestBingeTitle))
+	} else if stats.BestStreakDays >= 3 {
+		funFacts = append(funFacts, fmt.Sprintf("You maintained a peak daily watch streak of %d consecutive days.", stats.BestStreakDays))
+	}
+	if stats.PeakDayOfWeek != "" {
+		funFacts = append(funFacts, fmt.Sprintf("%s was your favorite day of the week to watch.", stats.PeakDayOfWeek))
+	} else if len(stats.TopGenres) > 0 {
+		funFacts = append(funFacts, fmt.Sprintf("Your most-watched genre was %s.", stats.TopGenres[0]))
+	}
+
+	if len(funFacts) == 0 {
+		funFacts = []string{
+			fmt.Sprintf("Logged %d titles in %d.", stats.TotalTitles, stats.Year),
+			"A dedicated year of media tracking on Trackarr.",
+		}
+	}
+
+	return &model.WrappedAIPersona{
+		Title:    title,
+		Summary:  summary,
+		Quote:    quote,
+		FunFacts: funFacts,
+		Badges:   badges,
+	}
 }

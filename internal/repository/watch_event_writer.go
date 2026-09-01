@@ -22,6 +22,17 @@ func NewWatchEventWriter(tx *sql.Tx) *WatchEventWriter {
 }
 
 func (w *WatchEventWriter) Create(ctx context.Context, event *model.WatchEvent) (int64, error) {
+	if !event.CreatedAt.IsZero() {
+		res, err := w.tx.ExecContext(ctx,
+			`INSERT INTO watch_events (title_id, episode_id, source, raw_payload, created_at) VALUES (?, ?, ?, ?, ?)`,
+			event.TitleID, event.EpisodeID, event.Source, event.RawPayload, event.CreatedAt,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("create watch event: %w", err)
+		}
+		return res.LastInsertId()
+	}
+
 	res, err := w.tx.ExecContext(ctx,
 		`INSERT INTO watch_events (title_id, episode_id, source, raw_payload) VALUES (?, ?, ?, ?)`,
 		event.TitleID, event.EpisodeID, event.Source, event.RawPayload,

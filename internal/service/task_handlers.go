@@ -11,6 +11,7 @@ import (
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/Soviann/trackarr/internal/service/matching"
 )
 
 func (w *TaskQueueWorker) handleRefresh(ctx context.Context, task model.Task, logger *slog.Logger) error {
@@ -184,4 +185,63 @@ func (w *TaskQueueWorker) handleAniListPushMovie(ctx context.Context, task model
 	}
 	_ = logger
 	return w.anilistPush.PushMovieState(ctx, payload.TitleID)
+}
+
+func (w *TaskQueueWorker) handleGenerateWrapped(ctx context.Context, task model.Task, logger *slog.Logger) error {
+	var payload GenerateWrappedPayload
+	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
+		return fmt.Errorf("decode generate_wrapped payload: %w", err)
+	}
+	if payload.Year <= 0 {
+		return fmt.Errorf("invalid year %d for generate_wrapped", payload.Year)
+	}
+
+	logger = logger.With("year", payload.Year)
+	logger.Info("generating wrapped retrospective snapshot")
+
+	if w.statsRepo == nil || w.wrappedRepo == nil {
+		return fmt.Errorf("statsRepo or wrappedRepo not configured on worker")
+	}
+
+	// 1. Gather stats data
+	rawStats, data, err := w.statsRepo.GetWrappedData(ctx, payload.Year)
+	if err != nil {
+		return fmt.Errorf("get wrapped data for %d: %w", payload.Year, err)
+	}
+
+	// 2. Generate persona (Gemini or Fallback)
+	var persona *model.WrappedAIPersona
+	if w.pipeline != nil && w.pipeline.AI() != nil {
+		var aiErr error
+		persona, aiErr = w.pipeline.AI().GenerateWrappedStory(ctx, rawStats)
+		if aiErr != nil {
+			// If not max attempts, fail task so task queue retries with backoff
+			if task.Attempts < 5 {
+				return fmt.Errorf("gemini wrapped generation failed: %w", aiErr)
+			}
+			logger.Warn("gemini wrapped generation failed after max attempts, falling back to deterministic persona", "err", aiErr)
+		}
+	}
+	if persona == nil {
+		persona = matching.FallbackWrappedPersona(rawStats)
+	}
+	data.Persona = *persona
+
+	// 3. Save snapshot in database
+	if err := w.wrappedRepo.SaveSnapshot(ctx, payload.Year, data); err != nil {
+		return fmt.Errorf("save wrapped snapshot for %d: %w", payload.Year, err)
+	}
+	logger.Info("wrapped retrospective snapshot saved successfully", "year", payload.Year)
+
+	// 4. Send Web Push notification if enabled
+	if w.push != nil && IsNotificationEnabled(w.settings, NotifWrappedReady) {
+		title := "Trackarr Wrapped"
+		body := fmt.Sprintf("✨ Votre Trackarr Wrapped %d est prêt ! Découvrez votre rétrospective de l'année.", payload.Year)
+		link := fmt.Sprintf("/wrapped?year=%d", payload.Year)
+		if pushErr := w.push.SendNotification(ctx, title, body, link); pushErr != nil {
+			logger.Warn("send wrapped push notification failed", "err", pushErr)
+		}
+	}
+
+	return nil
 }

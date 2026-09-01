@@ -396,3 +396,66 @@ export interface ArrTitleDetails {
   has_file: boolean
   size_on_disk?: number
 }
+
+export interface WrappedTitleItem {
+  id: number
+  title: string
+  original_title?: string | null
+  year: number
+  type: TitleType
+  is_anime: boolean
+  cover_url?: string | null
+  accent_hex?: string | null
+  my_rating?: number | null
+  watch_count: number
+  release_date?: string | null
+  genres?: string[] | null
+}
+
+export interface WrappedCategoryTop {
+  movies: WrappedTitleItem[]
+  series: WrappedTitleItem[]
+  anime: WrappedTitleItem[]
+}
+
+export interface WrappedRewatch {
+  title: WrappedTitleItem
+  total_plays: number
+  is_movie: boolean
+  distinct_episodes?: number
+  total_episodes?: number
+}
+
+export interface WrappedAIPersona {
+  title: string
+  summary: string
+  quote: string
+  fun_facts: string[]
+  badges?: string[]
+}
+
+export interface WrappedResponse {
+  year: number
+  available_years: number[]
+  overview: StatsOverview
+  total_watch_minutes: number
+  top_favorites: WrappedCategoryTop
+  top_releases: WrappedCategoryTop
+  rewatch_champion?: WrappedRewatch | null
+  top_genres: { genre: string; count: number }[]
+  top_actors: PersonStat[]
+  top_directors: PersonStat[]
+  persona: WrappedAIPersona
+  created_at?: string | null
+}
+
+export interface WrappedArchiveItem {
+  year: number
+  persona_title: string
+  persona_badges?: string[]
+  total_watch_minutes: number
+  total_titles: number
+  top_cover_url?: string | null
+  created_at: string
+}
+

@@ -1,0 +1,769 @@
+.container {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background-color: #0d0f14;
+  color: #fff;
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(48px) brightness(0.28) saturate(1.4);
+  transform: scale(1.15);
+  transition: background-image 0.6s ease-in-out;
+  pointer-events: none;
+}
+
+.gradientOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.15), transparent 70%),
+              linear-gradient(to bottom, rgba(13, 15, 20, 0.6) 0%, rgba(13, 15, 20, 0.95) 100%);
+  pointer-events: none;
+}
+
+.topBar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 6px;
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.progressContainer {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  height: 4px;
+}
+
+.progressBarBg {
+  flex: 1;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 2px;
+  transform-origin: left;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.yearBadge {
+  background: linear-gradient(135deg, #f59e0b, #ec4899);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yearSelect {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.yearSelect option {
+  background: #181b22;
+  color: #fff;
+}
+
+.controlBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.controlBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.mainStage {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 6px 16px 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tapZoneLeft,
+.tapZoneRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  z-index: 15;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.tapZoneLeft {
+  left: 0;
+}
+
+.tapZoneRight {
+  right: 0;
+}
+
+.slideContent {
+  position: relative;
+  z-index: 20;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: slideFadeIn 0.35s ease-out;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 4px 28px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.slideContent::-webkit-scrollbar {
+  width: 4px;
+}
+
+.slideContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.slideHeader {
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.slideTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  background: linear-gradient(135deg, #ffffff 30%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.slideSubtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* Slide 1: Overview Grid */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.overviewHeroCard {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(139, 92, 246, 0.2));
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  padding: 20px;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.overviewHeroValue {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #f43f5e;
+  letter-spacing: -0.02em;
+}
+
+.overviewHeroEquivalent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(244, 63, 94, 0.18);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  margin: 6px auto;
+}
+
+.overviewHeroLabel {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4px;
+}
+
+.overviewMiniCard {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 16px;
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+}
+
+.overviewMiniValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.overviewMiniLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+/* Category Tabs & Cards (Slides 2 & 3) */
+.categoryTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.categoryTab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.categoryTabActive {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.titlesList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.titleRowCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: left;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.rankBadge {
+  font-size: 1.2rem;
+  font-weight: 900;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rank1 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+}
+
+.rank2 {
+  background: linear-gradient(135deg, #94a3b8, #cbd5e1);
+  color: #000;
+}
+
+.rank3 {
+  background: linear-gradient(135deg, #b45309, #d97706);
+  color: #fff;
+}
+
+.posterThumb {
+  width: 44px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.titleRowInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRowName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleRowMeta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.ratingPill {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Slide 4: Rewatch Champion */
+.rewatchHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.rewatchCover {
+  width: 160px;
+  height: 230px;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 63, 94, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.rewatchTitle {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.rewatchBadge {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+}
+
+.rewatchSubBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+}
+
+/* Slide 5: Talents & Genres */
+.castGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.castSection {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: left;
+}
+
+.castSectionTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #a855f7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.castList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.castItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.castName {
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.castCount {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.genresSection {
+  grid-column: 1 / -1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: left;
+}
+
+.genrePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genrePill {
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Slide 6: AI Persona */
+.personaCard {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.8), rgba(88, 28, 135, 0.8));
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  border-radius: 16px;
+  padding: 16px 18px;
+  width: 100%;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.personaIcon {
+  font-size: 2.2rem;
+}
+
+.personaArchetype {
+  font-size: 1.35rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f472b6, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.personaBadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.personaBadgeItem {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.personaQuote {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  border-left: 3px solid #f472b6;
+  padding-left: 10px;
+  margin: 0;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.personaSummary {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.funFactsBox {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.funFactsTitle {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f472b6;
+  margin-bottom: 6px;
+}
+
+.funFactsList {
+  margin: 0;
+  padding-left: 14px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.finalActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.replayBtn,
+.exitBtn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.replayBtn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.replayBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.exitBtn {
+  background: linear-gradient(135deg, #f43f5e, #ec4899);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+}
+
+.replayBtn:hover,
+.exitBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.archivedDateLabel {
+  font-size: 0.72rem;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.5));
+  text-align: center;
+  margin-top: 2px;
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.loadingSpinner {
+  font-size: 3.2rem;
+  animation: pulseGlow 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.4));
+  }
+  50% {
+    transform: scale(1.15) rotate(15deg);
+    filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.8));
+  }
+}
+
+.loadingTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  background: linear-gradient(135deg, #f472b6, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.loadingSubtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  gap: 14px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 3rem;
+}
+
+.emptyTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.emptyDesc {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 320px;
+  margin: 0;
+}
+
+.emptyActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+  max-width: 300px;
+}

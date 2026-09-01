@@ -9,6 +9,183 @@
   padding: 0 var(--space-lg) var(--space-lg);
 }
 
+.wrappedBanner {
+  margin: 0 var(--space-lg) var(--space-xl);
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(139, 92, 246, 0.18));
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  border-radius: var(--radius-lg, 12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wrappedBanner:hover {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.22), rgba(139, 92, 246, 0.25));
+  border-color: rgba(236, 72, 153, 0.5);
+  transform: translateY(-1px);
+}
+
+.wrappedBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wrappedBannerIcon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.wrappedBannerTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.wrappedBannerSubtitle {
+  font-size: 0.85rem;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.7));
+  margin-top: 2px;
+}
+
+.wrappedBannerBtn {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.wrappedBannerBtn:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+}
+
+.archivesSubtitle {
+  font-size: 0.85rem;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.6));
+  margin: -4px 0 14px;
+}
+
+.archivesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.archiveCard {
+  background: var(--bg-elev1, #1e2029);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.archiveCard:hover {
+  border-color: rgba(236, 72, 153, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.archiveCover {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: #0d0f14;
+}
+
+.archiveCoverPlaceholder {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #1e2029, #282a36);
+}
+
+.archiveCardContent {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.archiveYearBadge {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+
+.archivePersonaTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.archiveMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.65));
+}
+
+.archiveBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.archiveBadgeItem {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-dim, rgba(255, 255, 255, 0.8));
+}
+
+.archiveViewBtn {
+  margin-top: auto;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.archiveViewBtn:hover {
+  background: rgba(236, 72, 153, 0.2);
+  border-color: rgba(236, 72, 153, 0.5);
+}
+
 .loading {
   padding: 20px;
   color: var(--ink);

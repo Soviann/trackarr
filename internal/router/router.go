@@ -91,7 +91,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
 	settings := handler.NewSettingsHandler(settingRepo, eventRepo, tvdbReady, cfg.JellyfinWebhookSecret != "" || cfg.PlexWebhookSecret != "" || cfg.WebhookSecret != "", prowlarrSvc)
-	stats := handler.NewStatsHandler(statsRepo)
+	wrappedRepo := repository.NewWrappedRepository(writeDB)
+	stats := handler.NewStatsHandler(statsRepo, wrappedRepo, pipeline)
 	genres := handler.NewGenreHandler(genreReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)
 	history := handler.NewHistoryHandler(historyRepo)
@@ -184,6 +185,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
 
 			r.Get("/stats", httputil.WrapHandler(stats.Get))
+			r.Get("/stats/wrapped", httputil.WrapHandler(stats.GetWrapped))
+			r.Get("/stats/wrapped/archives", httputil.WrapHandler(stats.GetWrappedArchives))
+			r.Post("/stats/wrapped/generate", httputil.WrapHandler(stats.RegenerateWrapped))
 			r.Get("/stats/activity", httputil.WrapHandler(activity.List))
 			r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
 			r.Get("/genres", httputil.WrapHandler(genres.List))

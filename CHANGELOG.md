@@ -6,6 +6,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+
+## [v1.12.0] — 2026-09-01
+
+### Ajouté
+- **Trackarr Wrapped & Rétrospective Annuelle par IA Gemini (`/wrapped`)** :
+  - **Expérience interactive multi-diapositives (Story Player)** : Lecteur immersif à 6 diapositives avec défilement automatique, barre de progression dynamique, mise en pause par appui prolongé ou bouton dédié, navigation tactile/clavier et sélecteur d'année.
+  - **Diapositive 1 (Vue d'ensemble)** : Métriques annuelles clés (temps total de visionnage avec équivalents parlants en jours/mois/années, titres découverts, épisodes scrobblés, note moyenne, taux de complétion précis).
+  - **Diapositive 2 (Coups de Cœur)** : Top 3 par catégorie (Films, Séries TV, Anime) avec médailles, affiches et notes personnelles.
+  - **Diapositive 3 (Meilleures Sorties)** : Top des nouveautés parues et visionnées au cours de l'année.
+  - **Diapositive 4 (Champion du Revisionnage)** : Calcul rigoureux des véritables cycles de revisionnage (différenciation des scrobbles automatiques Plex/Jellyfin/Emby comptabilisés en intégralité et des marquages manuels en lot/fusions plafonnés à 1, avec détail des épisodes distincts).
+  - **Diapositive 5 (Cast, Équipe & Genres)** : Répartition des genres favoris et classement des acteurs et réalisateurs les plus vus de l'année.
+  - **Diapositive 6 (Persona IA Gemini)** : Profil cinéphile sur mesure généré par Gemini (titre d'archétype concis, badges, citation marquante, rétrospective synthétique d'une phrase et anecdotes/faits insolites percutants) avec repli déterministe hors-ligne.
+  - **Instantanés Immuables en Base & Compilation Automatique au 1er Janvier** : Table SQLite `wrapped_snapshots` figeant les rétrospectives des années passées (aucun recalcul entre consultations). Tâche de fond `generate_wrapped` s'exécutant au 1er janvier pour compiler automatiquement l'année écoulée et envoyer une notification Web Push (`notif_wrapped_ready`).
+  - **Galerie d'Archives des Bilans Passés sur `/stats`** : Section dédiée affichant les cartes d'archives de toutes les années précédentes (année, affiche principale, archétype IA, badges de persona, temps total de visionnage et lien direct vers l'histoire).
+  - **Bannière d'accès direct sur `/stats`** et support bilingue complet (anglais & français).
+
+
 ## [v1.11.1] — 2026-08-30
 
 ### Ajouté
