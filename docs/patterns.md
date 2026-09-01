@@ -148,6 +148,9 @@
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
 | DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |
 | GET | `/api/stats` | `stats.Get` | Library metrics & insight cards |
+| GET | `/api/stats/wrapped` | `stats.GetWrapped` | Annual retrospective metrics, top favorites/releases & Gemini AI persona |
+| GET | `/api/stats/wrapped/archives` | `stats.GetWrappedArchives` | List all archived Wrapped snapshots for gallery display |
+| POST | `/api/stats/wrapped/generate` | `stats.RegenerateWrapped` | Force generation & SQLite persistence of Wrapped snapshot |
 | GET | `/api/stats/activity` | `activity.List` | Paginated watch history feed |
 | GET | `/api/match-events` | `matchEvents.List` | Audit trail of auto-matches |
 | GET | `/api/genres` | `genres.List` | List genres with counts |
@@ -236,6 +239,7 @@
 | `/stats` | `Stats` | `pages/Stats.tsx` |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` |
+| `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` |
 | `/login` | `Login` | `pages/Login.tsx` |
 | `/setup` | `Setup` | `pages/Setup.tsx` |
 | `/match-review` | `MatchReview` | `pages/MatchReview.tsx` |

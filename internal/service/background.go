@@ -28,6 +28,8 @@ type BackgroundService struct {
 	writeDB      *sql.DB
 	titles       *repository.TitleRepository
 	seasonExtIDs *repository.SeasonExternalIDRepository
+	wrappedRepo  *repository.WrappedRepository
+	statsRepo    *repository.StatsRepository
 	tvdb         *matching.TVDBClient     // optional — nil if TVDB_API_KEY not set
 	anilist      aniListSeasonScoreClient // optional — nil disables per-season AniList score refresh
 	settings     *repository.SettingRepository
@@ -50,6 +52,8 @@ func NewBackgroundService(
 		writeDB:      writeDB,
 		titles:       titles,
 		seasonExtIDs: repository.NewSeasonExternalIDRepository(writeDB),
+		wrappedRepo:  repository.NewWrappedRepository(writeDB),
+		statsRepo:    repository.NewStatsRepository(writeDB),
 		settings:     settings,
 		tmdb:         tmdb,
 		covers:       covers,
@@ -554,6 +558,7 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 				}
 				log.Println("background: starting initial refresh")
 				s.RefreshTitles(ctx)
+				s.checkAnnualWrapped(ctx)
 
 				ticker := time.NewTicker(interval)
 				defer ticker.Stop()
@@ -565,6 +570,7 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 					case <-ticker.C:
 						log.Println("background: starting scheduled refresh")
 						s.RefreshTitles(ctx)
+						s.checkAnnualWrapped(ctx)
 
 						day := time.Now().Weekday()
 						log.Printf("background: starting unused covers cleanup for %s", day.String())
@@ -578,6 +584,51 @@ func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Durat
 			}
 		}
 	}()
+}
+
+// checkAnnualWrapped scans all calendar years with watch activity and enqueues
+// background generation tasks for any year lacking a stored snapshot.
+func (s *BackgroundService) checkAnnualWrapped(ctx context.Context) {
+	if s == nil || s.wrappedRepo == nil || s.statsRepo == nil {
+		return
+	}
+
+	years, err := s.statsRepo.AvailableYears(ctx)
+	if err != nil {
+		log.Printf("background: check available years: %v", err)
+		return
+	}
+
+	for _, y := range years {
+		if y < 2000 {
+			continue
+		}
+
+		has, err := s.wrappedRepo.HasSnapshot(ctx, y)
+		if err != nil {
+			log.Printf("background: check wrapped snapshot for %d: %v", y, err)
+			continue
+		}
+		if has {
+			continue
+		}
+
+		payload, err := json.Marshal(GenerateWrappedPayload{Year: y})
+		if err != nil {
+			log.Printf("background: marshal generate_wrapped payload for %d: %v", y, err)
+			continue
+		}
+
+		dedupKey := fmt.Sprintf("generate_wrapped:%d", y)
+		if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeGenerateWrapped, string(payload), &dedupKey)
+			return e
+		}); enqErr != nil {
+			log.Printf("background: enqueue generate_wrapped for %d: %v", y, enqErr)
+		} else {
+			log.Printf("background: enqueued generate_wrapped for year %d", y)
+		}
+	}
 }
 
 func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, titleID int64, err error) {

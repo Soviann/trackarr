@@ -44,6 +44,7 @@
 - `season_external_ids`: Per-part AniList season mappings (`season_id`, `provider: 'anilist'`, `external_id`, `anilist_episode_count`, `anilist_start_date`, `anilist_average_score`, `sort_order`).
 - `title_relations`: Side stories, sagas, and franchise relations (`title_id`, `season_id`, `provider: 'anilist'|'tmdb'|'tvdb'`, `external_id`, `relation_type: 'PREQUEL'|'SEQUEL'|'SPIN_OFF'|'SIDE_STORY'|'ALTERNATIVE'|'COLLECTION'`, `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`).
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
+- `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`).
 - `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
@@ -85,6 +86,9 @@
 - `POST /api/arr/push/{id}` : Push title to Radarr/Sonarr download queue.
 - `GET /api/releases` & `POST /api/releases/add` : Browse Prowlarr releases feed and 1-click import.
 - `GET /api/stats` : Return global statistics, genre distribution, top actors & top directors, streaks, and fun stats.
+- `GET /api/stats/wrapped` : Annual retrospective stats (overview, category tops, release tops, rewatch champion, top cast/genres, and Gemini AI persona).
+- `GET /api/stats/wrapped/archives` : List all archived Wrapped snapshots.
+- `POST /api/stats/wrapped/generate` : Force generation and persistence of Wrapped snapshot for a given year.
 - `GET /api/stats/activity` : Paginated feed of watch activity events.
 
 ---

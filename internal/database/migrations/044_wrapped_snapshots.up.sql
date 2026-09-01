@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS wrapped_snapshots (
+    year INTEGER PRIMARY KEY,
+    data_json TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

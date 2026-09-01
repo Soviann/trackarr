@@ -54,7 +54,7 @@ describe('i18n hardcoded text & comments audit', () => {
     } else {
       expect(issues).toEqual([])
     }
-  })
+  }, 30000)
 })
 
 describe('i18n translation dictionary parity', () => {

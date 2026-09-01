@@ -12,6 +12,7 @@ const (
 	TaskTypeAniListPushMovie  TaskType = "anilist_push_movie"
 	TaskTypeRadarrPush        TaskType = "radarr_push"
 	TaskTypeSonarrPush        TaskType = "sonarr_push"
+	TaskTypeGenerateWrapped   TaskType = "generate_wrapped"
 )
 
 type TaskStatus string

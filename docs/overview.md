@@ -16,6 +16,7 @@
 - ***arr Stack Integration**: Live checks with Radarr and Sonarr, colored status borders, and direct queue management.
 - **Prowlarr Releases Feed**: 1-click addition from your indexer releases into Trackarr.
 - **Smart Matching Engine**: Resolves external IDs across TMDB, TVDB, IMDb, and AniList with Gemini AI verification.
+- **Trackarr Wrapped**: Interactive multi-slide annual retrospective with Gemini AI viewing persona, top favorites, release rankings, rewatch champion, and custom fun facts.
 
 ### What Trackarr Intentionally Does NOT Do
 - **Not a Social Review Platform**: No lengthy review writing (provides 1-click links to TMDB, IMDb, and AniList instead).

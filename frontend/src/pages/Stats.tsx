@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'preact/hooks'
+import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { formatWatchtime, getCoverUrl } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
-import type { StatsResponse, FunStat, ActivityEvent, PersonStat } from '../types'
+import type { StatsResponse, FunStat, ActivityEvent, PersonStat, WrappedArchiveItem } from '../types'
 import { routeTo } from '../routes'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PersonFilmographyDrawer } from '../components/PersonFilmographyDrawer'
@@ -27,6 +28,7 @@ const funStatIcons: Record<string, string> = {
 export function Stats({ path: _path }: { path?: string }) {
   const { t, locale } = useTranslation()
   const { data, loading } = useApi<StatsResponse>('/stats')
+  const { data: archives } = useApi<WrappedArchiveItem[]>('/stats/wrapped/archives')
   const [selectedPerson, setSelectedPerson] = useState<{ name: string; role: 'actor' | 'director' } | null>(null)
 
   if (loading || !data) {
@@ -40,6 +42,33 @@ export function Stats({ path: _path }: { path?: string }) {
   return (
     <div className={s.page}>
       <h1 className={s.pageTitle}>{t('stats.title')}</h1>
+
+      <div className={s.wrappedBanner} onClick={() => route(routeTo.wrapped())}>
+        <div className={s.wrappedBannerContent}>
+          <div className={s.wrappedBannerIcon}>✨</div>
+          <div>
+            <div className={s.wrappedBannerTitle}>
+              {t('wrapped.bannerTitle', { year: new Date().getFullYear() })}
+            </div>
+            <div className={s.wrappedBannerSubtitle}>
+              {t('wrapped.bannerSubtitle')}
+            </div>
+          </div>
+        </div>
+        <button
+          className={s.wrappedBannerBtn}
+          onClick={(e) => {
+            e.stopPropagation()
+            route(routeTo.wrapped())
+          }}
+        >
+          {t('wrapped.bannerButton')} →
+        </button>
+      </div>
+
+      {archives && archives.length > 0 && (
+        <WrappedArchivesSection archives={archives} t={t} />
+      )}
 
       <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} t={t} />
       <GenreSection genres={data.genres ?? []} t={t} />
@@ -482,4 +511,64 @@ function YearSection({
 function SectionLabel({ children }: { children: string }) {
   const text = children.startsWith('//') ? children : `// ${children.toUpperCase()}`
   return <h2 className={s.sectionHeader}>{text}</h2>
+}
+
+function WrappedArchivesSection({
+  archives,
+  t,
+}: {
+  archives: WrappedArchiveItem[]
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+}) {
+  return (
+    <section className={s.section}>
+      <SectionLabel>{t('wrapped.archivesSectionTitle')}</SectionLabel>
+      <p className={s.archivesSubtitle}>{t('wrapped.archivesSectionSubtitle')}</p>
+      <div className={s.archivesGrid}>
+        {archives.map((a) => {
+          const cover = getCoverUrl(a.top_cover_url)
+          const watchTimeStr = formatWatchtime(a.total_watch_minutes) || '—'
+          return (
+            <div
+              key={a.year}
+              className={s.archiveCard}
+              onClick={() => route(routeTo.wrapped(a.year))}
+            >
+              {cover ? (
+                <img src={cover} alt={a.persona_title} className={s.archiveCover} />
+              ) : (
+                <div className={s.archiveCoverPlaceholder}>🎬</div>
+              )}
+              <div className={s.archiveCardContent}>
+                <div className={s.archiveYearBadge}>{a.year}</div>
+                <div className={s.archivePersonaTitle}>{a.persona_title}</div>
+                <div className={s.archiveMetaRow}>
+                  <span>⏱️ {watchTimeStr}</span>
+                  <span>🎬 {a.total_titles} titles</span>
+                </div>
+                {a.persona_badges && a.persona_badges.length > 0 && (
+                  <div className={s.archiveBadges}>
+                    {a.persona_badges.slice(0, 2).map((b) => (
+                      <span key={b} className={s.archiveBadgeItem}>
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  className={s.archiveViewBtn}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    route(routeTo.wrapped(a.year))
+                  }}
+                >
+                  {t('wrapped.viewArchive')} →
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
 }

@@ -12,12 +12,6 @@ import (
 	"github.com/Soviann/trackarr/internal/model"
 )
 
-// GenreStat holds a genre name and the number of titles in that genre.
-type GenreStat struct {
-	Genre string `json:"genre"`
-	Count int    `json:"count"`
-}
-
 type StatsRepository struct {
 	db database.DBTX
 }
@@ -610,7 +604,7 @@ func (r *StatsRepository) TotalWatchMinutes(ctx context.Context) (int, error) {
 
 // TopGenres returns the top N genres by title count.
 // Returns an empty slice gracefully if the title_genres table does not exist (soft dependency on search-filter plan).
-func (r *StatsRepository) TopGenres(ctx context.Context, limit int) ([]GenreStat, error) {
+func (r *StatsRepository) TopGenres(ctx context.Context, limit int) ([]model.GenreStat, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT genre, COUNT(*) AS count
 		FROM title_genres
@@ -623,9 +617,9 @@ func (r *StatsRepository) TopGenres(ctx context.Context, limit int) ([]GenreStat
 	}
 	defer rows.Close()
 
-	var results []GenreStat
+	var results []model.GenreStat
 	for rows.Next() {
-		var g GenreStat
+		var g model.GenreStat
 		if err := rows.Scan(&g.Genre, &g.Count); err != nil {
 			return nil, fmt.Errorf("stats: genre scan: %w", err)
 		}
@@ -802,4 +796,514 @@ func (r *StatsRepository) TopDirectors(ctx context.Context, limit int) ([]model.
 		results = append(results, p)
 	}
 	return results, rows.Err()
+}
+
+// AvailableYears returns all calendar years containing watch events, sorted descending.
+func (r *StatsRepository) AvailableYears(ctx context.Context) ([]int, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT CAST(strftime('%Y', created_at) AS INTEGER) AS y
+		FROM watch_events
+		WHERE created_at IS NOT NULL
+		ORDER BY y DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("stats: available years: %w", err)
+	}
+	defer rows.Close()
+
+	var years []int
+	for rows.Next() {
+		var y int
+		if err := rows.Scan(&y); err == nil && y > 1900 {
+			years = append(years, y)
+		}
+	}
+	if len(years) == 0 {
+		years = []int{time.Now().Year()}
+	}
+	return years, nil
+}
+
+func (r *StatsRepository) queryWrappedTitleItems(ctx context.Context, query string, args ...any) ([]model.WrappedTitleItem, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []model.WrappedTitleItem
+	for rows.Next() {
+		var item model.WrappedTitleItem
+		var name string
+		var origTitle, cover, accent, releaseDate sql.NullString
+		var rating sql.NullInt64
+		if err := rows.Scan(
+			&item.ID,
+			&name,
+			&origTitle,
+			&item.Year,
+			&item.Type,
+			&item.IsAnime,
+			&cover,
+			&accent,
+			&rating,
+			&item.WatchCount,
+			&releaseDate,
+		); err != nil {
+			return nil, err
+		}
+		item.Title = name
+		if origTitle.Valid && origTitle.String != "" {
+			item.OriginalTitle = &origTitle.String
+		}
+		if cover.Valid && cover.String != "" {
+			item.CoverURL = &cover.String
+		}
+		if accent.Valid && accent.String != "" {
+			item.AccentHex = &accent.String
+		}
+		if releaseDate.Valid && releaseDate.String != "" {
+			item.ReleaseDate = &releaseDate.String
+		}
+		if rating.Valid {
+			rVal := int(rating.Int64)
+			item.MyRating = &rVal
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+// GetWrappedData collects raw stats and partial WrappedResponse for the specified year.
+func (r *StatsRepository) GetWrappedData(ctx context.Context, year int) (*model.WrappedRawStats, *model.WrappedResponse, error) {
+	availableYears, err := r.AvailableYears(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	targetYear := year
+	if targetYear <= 0 {
+		targetYear = availableYears[0]
+	}
+
+	yearStart := fmt.Sprintf("%04d-01-01 00:00:00", targetYear)
+	yearEnd := fmt.Sprintf("%04d-01-01 00:00:00", targetYear+1)
+
+	// 1. Overview for year
+	var totalTitles, totalMovies, totalSeries, totalAnime, completions int
+	var avgRating sql.NullFloat64
+	err = r.db.QueryRowContext(ctx, `
+		SELECT
+			COUNT(DISTINCT t.id),
+			COUNT(DISTINCT CASE WHEN t.type = 'movie' THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.type = 'series' AND t.is_anime = 0 THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.is_anime = 1 THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END),
+			AVG(t.my_rating)
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ?
+	`, yearStart, yearEnd).Scan(&totalTitles, &totalMovies, &totalSeries, &totalAnime, &completions, &avgRating)
+	if err != nil {
+		return nil, nil, fmt.Errorf("wrapped overview: %w", err)
+	}
+
+	var episodesWatched int
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM watch_events
+		WHERE episode_id IS NOT NULL AND created_at >= ? AND created_at < ?
+	`, yearStart, yearEnd).Scan(&episodesWatched)
+
+	var totalWatchMinutes int
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(t.runtime), 0)
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ? AND t.runtime IS NOT NULL
+	`, yearStart, yearEnd).Scan(&totalWatchMinutes)
+
+	completionRate := 0.0
+	if totalTitles > 0 {
+		completionRate = math.Round(float64(completions)/float64(totalTitles)*100) / 100
+	}
+	averageRating := 0.0
+	if avgRating.Valid {
+		averageRating = math.Round(avgRating.Float64*10) / 10
+	}
+
+	overview := model.StatsOverview{
+		TotalTitles:     totalTitles,
+		TotalMovies:     totalMovies,
+		TotalSeries:     totalSeries,
+		TotalAnime:      totalAnime,
+		EpisodesWatched: episodesWatched,
+		CompletionRate:  completionRate,
+		AverageRating:   averageRating,
+	}
+
+	// 2. Top Favorites (Movies, Series, Anime)
+	const selectTitleFields = `
+		SELECT
+			t.id,
+			` + displayNameExpr + ` AS name,
+			t.original_title,
+			t.year,
+			t.type,
+			t.is_anime,
+			t.cover_url,
+			t.accent_hex,
+			t.my_rating,
+			CASE
+				WHEN (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) = 0
+					THEN (COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') THEN 1 END) +
+					      CASE WHEN COUNT(CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') THEN 1 END) > 0 THEN 1 ELSE 0 END)
+				ELSE (COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN 1 END) +
+				      COUNT(DISTINCT CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN we.episode_id END))
+			END AS watch_count,
+			t.release_date
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ?
+	`
+
+	favMovies, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.type = 'movie'
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd)
+
+	favSeries, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.type = 'series' AND t.is_anime = 0
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd)
+
+	favAnime, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.is_anime = 1
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd)
+
+	topFavorites := model.WrappedCategoryTop{
+		Movies: favMovies,
+		Series: favSeries,
+		Anime:  favAnime,
+	}
+
+	// 3. Top Releases of the Year
+	yearStr := fmt.Sprintf("%04d", targetYear)
+	relMovies, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.type = 'movie'
+		AND (t.year = ? OR strftime('%Y', t.release_date) = ?)
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd, targetYear, yearStr)
+
+	relSeries, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.type = 'series' AND t.is_anime = 0
+		AND (t.year = ? OR strftime('%Y', t.release_date) = ?)
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd, targetYear, yearStr)
+
+	relAnime, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+		AND t.is_anime = 1
+		AND (t.year = ? OR strftime('%Y', t.release_date) = ?)
+		GROUP BY t.id
+		ORDER BY COALESCE(t.my_rating, 0) DESC, watch_count DESC, t.id DESC
+		LIMIT 3
+	`, yearStart, yearEnd, targetYear, yearStr)
+
+	topReleases := model.WrappedCategoryTop{
+		Movies: relMovies,
+		Series: relSeries,
+		Anime:  relAnime,
+	}
+
+	// 4. Rewatch Champion
+	// Automated scrobbles (plex, jellyfin, emby) are counted in full;
+	// manual marks/backfills are capped at 1 per title (movies) or 1 per episode (series).
+	var rewatchChamp *model.WrappedRewatch
+	var bestTitleID int64
+	var isMovie bool
+	var totalEffectivePlays, distinctEps int
+	var cycles float64
+
+	champRow := r.db.QueryRowContext(ctx, `
+		SELECT
+			t.id,
+			(SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) = 0 AS is_pure_movie,
+			CASE
+				WHEN (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) = 0
+					THEN (COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') THEN 1 END) +
+					      CASE WHEN COUNT(CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') THEN 1 END) > 0 THEN 1 ELSE 0 END)
+				ELSE (COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN 1 END) +
+				      COUNT(DISTINCT CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN we.episode_id END))
+			END AS effective_plays,
+			COUNT(DISTINCT we.episode_id) AS distinct_eps,
+			CASE
+				-- Episodic titles:
+				WHEN (SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = t.id) > 0 THEN
+					CASE
+						WHEN COUNT(DISTINCT we.episode_id) > 0 THEN
+							((COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN 1 END) +
+							  COUNT(DISTINCT CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') AND we.episode_id IS NOT NULL THEN we.episode_id END)) * 1.0 /
+							 COUNT(DISTINCT we.episode_id))
+						ELSE 1.0
+					END
+				-- Pure movies:
+				ELSE (COUNT(CASE WHEN we.source IN ('plex', 'jellyfin', 'emby') THEN 1 END) +
+				      CASE WHEN COUNT(CASE WHEN we.source NOT IN ('plex', 'jellyfin', 'emby') THEN 1 END) > 0 THEN 1 ELSE 0 END) * 1.0
+			END AS cycles
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ?
+		GROUP BY t.id
+		ORDER BY cycles DESC, effective_plays DESC, t.id DESC
+		LIMIT 1
+	`, yearStart, yearEnd)
+
+	if err := champRow.Scan(&bestTitleID, &isMovie, &totalEffectivePlays, &distinctEps, &cycles); err == nil && bestTitleID > 0 {
+		champItems, _ := r.queryWrappedTitleItems(ctx, selectTitleFields+`
+			AND t.id = ?
+			GROUP BY t.id
+			LIMIT 1
+		`, yearStart, yearEnd, bestTitleID)
+
+		if len(champItems) > 0 {
+			topItem := champItems[0]
+			calcPlays := totalEffectivePlays
+			if !isMovie {
+				calcPlays = int(math.Round(cycles))
+				if calcPlays < 1 {
+					calcPlays = 1
+				}
+			}
+
+			rewatchChamp = &model.WrappedRewatch{
+				Title:            topItem,
+				TotalPlays:       calcPlays,
+				IsMovie:          isMovie,
+				DistinctEpisodes: distinctEps,
+				TotalEpisodes:    totalEffectivePlays,
+			}
+		}
+	}
+
+	// 5. Top Genres in Year
+	genreRows, err := r.db.QueryContext(ctx, `
+		SELECT tg.genre, COUNT(DISTINCT t.id) AS count
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		JOIN title_genres tg ON tg.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ?
+		GROUP BY tg.genre
+		ORDER BY count DESC
+		LIMIT 5
+	`, yearStart, yearEnd)
+	var topGenres []model.GenreStat
+	if err == nil {
+		for genreRows.Next() {
+			var g model.GenreStat
+			if err := genreRows.Scan(&g.Genre, &g.Count); err == nil {
+				topGenres = append(topGenres, g)
+			}
+		}
+		genreRows.Close()
+	}
+
+	// 6. Top Actors in Year
+	actorRows, err := r.db.QueryContext(ctx, `
+		SELECT
+			json_extract(je.value, '$.name') AS name,
+			COUNT(DISTINCT t.id) AS count
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id,
+		json_each(t.credits) je
+		WHERE we.created_at >= ? AND we.created_at < ?
+		  AND t.credits IS NOT NULL AND t.credits != '' AND t.credits != '[]'
+		  AND json_valid(t.credits) = 1
+		  AND json_extract(je.value, '$.role') != 'Director'
+		  AND json_extract(je.value, '$.name') IS NOT NULL
+		  AND trim(json_extract(je.value, '$.name')) != ''
+		GROUP BY name
+		ORDER BY count DESC, name ASC
+		LIMIT 5
+	`, yearStart, yearEnd)
+	var topActors []model.PersonStat
+	if err == nil {
+		for actorRows.Next() {
+			var p model.PersonStat
+			if err := actorRows.Scan(&p.Name, &p.Count); err == nil {
+				topActors = append(topActors, p)
+			}
+		}
+		actorRows.Close()
+	}
+
+	// 7. Top Directors in Year
+	directorRows, err := r.db.QueryContext(ctx, `
+		SELECT
+			json_extract(je.value, '$.name') AS name,
+			COUNT(DISTINCT t.id) AS count
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id,
+		json_each(t.credits) je
+		WHERE we.created_at >= ? AND we.created_at < ?
+		  AND t.credits IS NOT NULL AND t.credits != '' AND t.credits != '[]'
+		  AND json_valid(t.credits) = 1
+		  AND json_extract(je.value, '$.role') = 'Director'
+		  AND json_extract(je.value, '$.name') IS NOT NULL
+		  AND trim(json_extract(je.value, '$.name')) != ''
+		GROUP BY name
+		ORDER BY count DESC, name ASC
+		LIMIT 5
+	`, yearStart, yearEnd)
+	var topDirectors []model.PersonStat
+	if err == nil {
+		for directorRows.Next() {
+			var p model.PersonStat
+			if err := directorRows.Scan(&p.Name, &p.Count); err == nil {
+				topDirectors = append(topDirectors, p)
+			}
+		}
+		directorRows.Close()
+	}
+
+	// 8. Raw Rhythm Metrics (Night owl %, Peak day of week, Peak month, Longest binge, Best streak)
+	var nightCount, allEvents int
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT
+			COALESCE(SUM(CASE WHEN CAST(strftime('%H', created_at) AS INTEGER) >= 20 OR CAST(strftime('%H', created_at) AS INTEGER) < 6 THEN 1 ELSE 0 END), 0),
+			COUNT(*)
+		FROM watch_events
+		WHERE created_at >= ? AND created_at < ?
+	`, yearStart, yearEnd).Scan(&nightCount, &allEvents)
+	nightOwlPct := 0
+	if allEvents > 0 {
+		nightOwlPct = int(math.Round(float64(nightCount) / float64(allEvents) * 100))
+	}
+
+	var peakDay string
+	var peakDayCount int
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT
+			CASE CAST(strftime('%w', created_at) AS INTEGER)
+				WHEN 0 THEN 'Sunday'
+				WHEN 1 THEN 'Monday'
+				WHEN 2 THEN 'Tuesday'
+				WHEN 3 THEN 'Wednesday'
+				WHEN 4 THEN 'Thursday'
+				WHEN 5 THEN 'Friday'
+				WHEN 6 THEN 'Saturday'
+			END AS dow,
+			COUNT(*) AS cnt
+		FROM watch_events
+		WHERE created_at >= ? AND created_at < ?
+		GROUP BY strftime('%w', created_at)
+		ORDER BY cnt DESC
+		LIMIT 1
+	`, yearStart, yearEnd).Scan(&peakDay, &peakDayCount)
+
+	var peakMonthStr string
+	var peakMonthCount int
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT strftime('%Y-%m', created_at) AS m, COUNT(*) AS cnt
+		FROM watch_events
+		WHERE created_at >= ? AND created_at < ?
+		GROUP BY m
+		ORDER BY cnt DESC
+		LIMIT 1
+	`, yearStart, yearEnd).Scan(&peakMonthStr, &peakMonthCount)
+
+	peakMonth := peakMonthStr
+	if t, err := time.Parse("2006-01", peakMonthStr); err == nil {
+		peakMonth = t.Month().String()
+	}
+
+	var bingeEps int
+	var bingeTitle string
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) AS cnt, `+displayNameExpr+` AS name
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE we.created_at >= ? AND we.created_at < ? AND we.episode_id IS NOT NULL
+		GROUP BY t.id, DATE(we.created_at)
+		ORDER BY cnt DESC
+		LIMIT 1
+	`, yearStart, yearEnd).Scan(&bingeEps, &bingeTitle)
+
+	streakRows, _ := r.db.QueryContext(ctx, `
+		SELECT DISTINCT DATE(created_at) AS day
+		FROM watch_events
+		WHERE created_at >= ? AND created_at < ?
+		ORDER BY day ASC
+	`, yearStart, yearEnd)
+	var streakDays []string
+	if streakRows != nil {
+		for streakRows.Next() {
+			var d string
+			if err := streakRows.Scan(&d); err == nil {
+				streakDays = append(streakDays, d)
+			}
+		}
+		streakRows.Close()
+	}
+	bestStreak := computeBestStreak(streakDays)
+
+	var topGenreNames []string
+	for _, g := range topGenres {
+		topGenreNames = append(topGenreNames, g.Genre)
+	}
+	var topActorNames []string
+	for _, a := range topActors {
+		topActorNames = append(topActorNames, a.Name)
+	}
+	var topDirectorNames []string
+	for _, d := range topDirectors {
+		topDirectorNames = append(topDirectorNames, d.Name)
+	}
+
+	rawStats := &model.WrappedRawStats{
+		Year:              targetYear,
+		TotalTitles:       totalTitles,
+		TotalMovies:       totalMovies,
+		TotalSeries:       totalSeries,
+		TotalAnime:        totalAnime,
+		EpisodesWatched:   episodesWatched,
+		TotalWatchMinutes: totalWatchMinutes,
+		AverageRating:     averageRating,
+		NightOwlPct:       nightOwlPct,
+		PeakDayOfWeek:     peakDay,
+		PeakMonth:         peakMonth,
+		LongestBingeEps:   bingeEps,
+		LongestBingeTitle: bingeTitle,
+		BestStreakDays:    bestStreak,
+		TopGenres:         topGenreNames,
+		TopActors:         topActorNames,
+		TopDirectors:      topDirectorNames,
+		TopFavorites:      topFavorites,
+		TopReleases:       topReleases,
+		RewatchChampion:   rewatchChamp,
+	}
+
+	response := &model.WrappedResponse{
+		Year:              targetYear,
+		AvailableYears:    availableYears,
+		Overview:          overview,
+		TotalWatchMinutes: totalWatchMinutes,
+		TopFavorites:      topFavorites,
+		TopReleases:       topReleases,
+		RewatchChampion:   rewatchChamp,
+		TopGenres:         topGenres,
+		TopActors:         topActors,
+		TopDirectors:      topDirectors,
+	}
+
+	return rawStats, response, nil
 }

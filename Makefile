@@ -26,7 +26,7 @@ shell: ## Shell into application container
 	$(EXEC) bash
 
 test: ## Run all Go unit tests
-	$(EXEC) go test -tags sqlite_fts5 ./... -v -count=1
+	$(EXEC) go test -tags "sqlite_fts5 fts5" ./... -v -count=1
 
 test-front: ## Run frontend tests (Vitest + production build)
 	$(EXEC) bash -c "cd frontend && npx vitest run && npx vite build"

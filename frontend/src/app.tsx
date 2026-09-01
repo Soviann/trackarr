@@ -17,6 +17,7 @@ import { MatchReview } from './pages/MatchReview'
 import { Login } from './pages/Login'
 import { Setup } from './pages/Setup'
 import { Stats } from './pages/Stats'
+import { Wrapped } from './pages/Wrapped'
 import { Admin } from './pages/Admin'
 import { AdminSettings } from './pages/AdminSettings'
 import { AdminAuth } from './pages/AdminAuth'
@@ -154,7 +155,7 @@ export function App() {
   const handleTmdbRatingMinChange = useCallback((v: string) => {
     setFilter({ tmdb_rating_min: v || undefined })
   }, [setFilter])
-  const hideNavbar = currentPath.startsWith('/login')
+  const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/wrapped')
   const pathname = currentPath.split('?')[0]
   const isSearch = pathname === '/search'
   const showDrawer = pathname === '/' || isSearch
@@ -215,6 +216,8 @@ export function App() {
           <Search path={ROUTE_PATHS.search} />
           <Add path={ROUTE_PATHS.add} />
           <Stats path={ROUTE_PATHS.stats} />
+          <Wrapped path={ROUTE_PATHS.wrapped} />
+          <Wrapped path={ROUTE_PATHS.wrappedYear} />
           <Login path={ROUTE_PATHS.login} />
           <Setup path={ROUTE_PATHS.setup} />
           <TitleDetail path={ROUTE_PATHS.title} />
