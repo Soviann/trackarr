@@ -26,9 +26,10 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - **Rule**: Post-commit side effects (e.g. backfilling, push notifications, webhooks, queue dispatching) must be returned to the caller and executed **after** `WithTxContext` finishes and commits.
 
 ## Tables & Primary Schema Entities
-- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`/`anime`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`.
+- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`/`anime`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`.
 - `title_names`: Multilingual and alternative aliases. Columns: `id`, `title_id`, `name`, `language`, `is_primary`.
 - `title_genres`: Associated genres per title. Columns: `title_id`, `genre`.
+- `title_relations`: Side stories, sagas, and franchise relations. Columns: `id`, `title_id`, `season_id`, `provider` (`anilist`/`tmdb`/`tvdb`), `external_id`, `relation_type` (`PREQUEL`/`SEQUEL`/`SPIN_OFF`/`SIDE_STORY`/`ALTERNATIVE`/`COLLECTION`), `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`, `created_at`.
 - `seasons`: Seasons of a series. Columns: `id`, `title_id`, `season_number`, `total_episodes`.
 - `season_external_ids`: Per-part external IDs (split-cour anime). Primary Key: `(season_id, provider, external_id)`. Columns: `season_id`, `provider` (`anilist`), `external_id`, `anilist_episode_count`, `anilist_start_date`, `anilist_average_score`, `sort_order`, `created_at`, `updated_at`.
 - `episodes`: Episodes per season. Columns: `id`, `season_id`, `episode`, `name`, `air_date`, `watched`, `watched_at`, `external_source_id`.
@@ -36,7 +37,8 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - `task_queue`: Asynchronous background jobs. Columns: `id`, `task_type`, `payload`, `status` (`pending`/`running`/`completed`/`failed`/`dead`), `attempts`, `max_attempts`, `run_at`, `created_at`, `updated_at`, `last_error`, `dedup_key`.
 - `match_events`: Audit log for automated actions. Columns: `id`, `title_id`, `kind` (`auto_confirmed`, `season_attached`), `detail`, `created_at`.
 - `season_audit_dismissals`: Discarded duplicate merge proposals. Primary Key: `(source_title_id, target_title_id)`. Columns: `source_title_id`, `target_title_id`, `created_at`.
-- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, notification preferences, etc.). Columns: `key`, `value`.
+- `wrapped_snapshots`: Immutable annual retrospective snapshots. Primary Key: `year`. Columns: `year`, `data_json`, `created_at`.
+- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences, etc.). Columns: `key`, `value`.
 
 ## Title Merge Invariants (`TitleWriter.Merge`)
 When merging a `sourceID` title into `destID`:

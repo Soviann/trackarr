@@ -54,6 +54,7 @@
 | `MatchEvent`| `internal/model/match_event.go` | Match audit trail (`ID`, `TitleID`, `Kind`, `Detail`, `CreatedAt`). |
 | `Setting` | `internal/model/setting.go` | Key-value string pair (`Key`, `Value`). |
 | `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
+| `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, actor/director rankings, and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
 
 ### Repositories (`internal/repository/`)
 
@@ -70,7 +71,8 @@
 | `Setting` | `Get` | `Set`, `Delete` |
 | `MatchEvent` | `ListRecent` (includes cover URL join) | `Create` |
 | `SeasonAudit` | `ListDismissals` | `Dismiss` |
-| `Stats` | `TotalWatchMinutes`, `TopGenres`, `TopActors`, `TopDirectors`, `CurrentStreak`, `BestStreak` | N/A (read-only) |
+| `Stats` | `TotalWatchMinutes`, `TopGenres`, `TopActors`, `TopDirectors`, `CurrentStreak`, `BestStreak`, `GetWrappedData` | N/A (read-only) |
+| `Wrapped` | `GetSnapshot`, `HasSnapshot`, `ListArchives` | `SaveSnapshot`, `DeleteSnapshot` |
 | `Activity` | `List` (paginated scrobble events) | N/A (read-only) |
 | `History` | `GetByTitleID` (title watch log) | N/A (read-only) |
 
@@ -198,18 +200,27 @@
 | Component | File | Purpose |
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 4-tab bottom navigation bar |
+| `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
+| `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar and quick mark action |
 | `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge |
 | `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids |
+| `PosterStrip` | `components/PosterStrip.tsx` | Horizontal scrolling strip of poster thumbnails |
+| `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
+| `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
+| `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Caught Up*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Collapsible segmented filter panel with 3 tabs: Status & Type, Genres & Origin, Dates & Ratings |
 | `SearchBar` | `components/SearchBar.tsx` | Sticky search input bound to `useSearchStore` |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
+| `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |
+| `EpisodeRow` | `components/EpisodeRow.tsx` | Episode listing row with title, air date, and interactive toggle checkmark |
 | `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Sagas & Franchise relations card with category filters, timeline/release sort toggle, and collapse/expand |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |
+| `AniListSheet`| `components/AniListSheet.tsx` | Slide-up modal sheet for editing AniList multi-part season associations |
 | `MatchReviewCard` | `components/MatchReviewCard.tsx` | Review card with external ID chips, confirm, and fix actions |
 | `RatingPrompt`| `components/RatingPrompt.tsx` | 10-star rating popup with AniList / IMDb shortcuts |
 | `EditSheet` | `components/EditSheet.tsx` | Quick edit for status, type, and display title |
@@ -222,9 +233,14 @@
 | `CalendarWeekTimeline` | `components/CalendarWeekTimeline.tsx` | 7-day weekly timeline view with rich release cards |
 | `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
 | `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
+| `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
+| `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions |
+| `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |
+| `ErrorBanner` | `components/ErrorBanner.tsx` | Dismissible alert banner for API and network errors |
+| `ErrorBoundary` | `components/ErrorBoundary.tsx` | React error boundary with error recovery fallback |
 
 ### Pages Map (`frontend/src/pages/`)
 
