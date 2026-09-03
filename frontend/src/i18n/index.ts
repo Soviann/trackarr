@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useCallback } from 'preact/hooks'
 import { en, type TranslationSchema } from './locales/en'
 import { fr } from './locales/fr'
 import { Locale, LOCALES } from './types'
@@ -90,9 +90,9 @@ export function useTranslation() {
     }
   }, [])
 
-  const t = (key: TranslationKey, params?: Record<string, string | number>) => {
+  const t = useCallback((key: TranslationKey, params?: Record<string, string | number>) => {
     return translate(locale, key, params)
-  }
+  }, [locale])
 
   return { t, locale, setLocale, locales: LOCALES }
 }

@@ -43,6 +43,7 @@ export function Releases(_props: { path?: string }) {
   const { t, locale } = useTranslation()
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'series'>('all')
   const [yearFilter, setYearFilter] = useState<string>('all')
+  const [indexerFilter, setIndexerFilter] = useState<string>('all')
   const [releases, setReleases] = useState<ProwlarrRelease[]>([])
   const [selectedRelease, setSelectedRelease] = useState<ProwlarrRelease | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,8 +55,11 @@ export function Releases(_props: { path?: string }) {
   const invalidateLibrary = useTitleStore(st => st.invalidate)
 
   const fetchReleases = useCallback(async (forceRefresh = false) => {
-    if (forceRefresh) setRefreshing(true)
-    else setLoading(true)
+    if (forceRefresh || releases.length > 0) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -68,11 +72,21 @@ export function Releases(_props: { path?: string }) {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [filterType, t])
+  }, [filterType, releases.length, t])
 
   useEffect(() => {
     fetchReleases(false)
-  }, [fetchReleases])
+  }, [filterType])
+
+  const availableIndexers = useMemo(() => {
+    const names = new Set<string>()
+    for (const r of releases) {
+      if (r.indexer && r.indexer.trim()) {
+        names.add(r.indexer.trim())
+      }
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [releases])
 
   const availableYears = useMemo(() => {
     const years = new Set<number>()
@@ -86,6 +100,9 @@ export function Releases(_props: { path?: string }) {
 
   const filteredReleases = useMemo(() => {
     return releases.filter(rel => {
+      if (indexerFilter !== 'all' && rel.indexer !== indexerFilter && String(rel.indexer_id) !== indexerFilter) {
+        return false
+      }
       if (yearFilter === 'all') return true
       if (yearFilter.startsWith('gte_')) {
         const minYear = parseInt(yearFilter.replace('gte_', ''), 10)
@@ -98,7 +115,7 @@ export function Releases(_props: { path?: string }) {
       const targetYear = parseInt(yearFilter, 10)
       return rel.year === targetYear
     })
-  }, [releases, yearFilter])
+  }, [releases, yearFilter, indexerFilter])
 
   const handleAdd = async (rel: ProwlarrRelease) => {
     if (addingGuid) return
@@ -168,7 +185,7 @@ export function Releases(_props: { path?: string }) {
           </button>
         </div>
 
-        {/* Filter Row: Type Tabs + Year Selector */}
+        {/* Filter Row: Type Tabs + Filter Controls (Indexer + Year) */}
         <div className={s.filterRow}>
           <div className={s.tabs}>
             {(['all', 'movie', 'series'] as const).map(tab => (
@@ -183,41 +200,72 @@ export function Releases(_props: { path?: string }) {
             ))}
           </div>
 
-          <div className={s.yearFilter}>
-            <select
-              className={clsx(s.yearSelect, yearFilter !== 'all' && s.yearSelectActive)}
-              value={yearFilter}
-              onChange={e => setYearFilter((e.target as HTMLSelectElement).value)}
-              aria-label={t('releases.filterByYear')}
-            >
-              <option value="all">{t('releases.allYears')}</option>
-              <optgroup label={t('releases.recentPeriods')}>
-                <option value="gte_2025">{t('releases.recentGte2025')}</option>
-                <option value="gte_2024">≥ 2024</option>
-                <option value="gte_2020">≥ 2020</option>
-                <option value="lt_2020">{t('releases.classicsLt2020')}</option>
-              </optgroup>
-              {availableYears.length > 0 && (
-                <optgroup label={t('releases.exactYear')}>
-                  {availableYears.map(yr => (
-                    <option key={yr} value={String(yr)}>
-                      {yr}
+          <div className={s.filterControls}>
+            {availableIndexers.length > 1 && (
+              <div className={s.selectWrap}>
+                <select
+                  className={clsx(s.filterSelect, indexerFilter !== 'all' && s.filterSelectActive)}
+                  value={indexerFilter}
+                  onChange={e => setIndexerFilter((e.target as HTMLSelectElement).value)}
+                  aria-label={t('releases.filterByIndexer')}
+                >
+                  <option value="all">{t('releases.allIndexers')}</option>
+                  {availableIndexers.map(idx => (
+                    <option key={idx} value={idx}>
+                      {idx}
                     </option>
                   ))}
-                </optgroup>
-              )}
-            </select>
-            {yearFilter !== 'all' && (
-              <button
-                type="button"
-                className={s.resetYearBtn}
-                onClick={() => setYearFilter('all')}
-                title={t('releases.resetYearFilter')}
-                aria-label={t('releases.resetYearFilter')}
-              >
-                ✕
-              </button>
+                </select>
+                {indexerFilter !== 'all' && (
+                  <button
+                    type="button"
+                    className={s.resetFilterBtn}
+                    onClick={() => setIndexerFilter('all')}
+                    title={t('releases.resetIndexerFilter')}
+                    aria-label={t('releases.resetIndexerFilter')}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             )}
+
+            <div className={s.selectWrap}>
+              <select
+                className={clsx(s.filterSelect, yearFilter !== 'all' && s.filterSelectActive)}
+                value={yearFilter}
+                onChange={e => setYearFilter((e.target as HTMLSelectElement).value)}
+                aria-label={t('releases.filterByYear')}
+              >
+                <option value="all">{t('releases.allYears')}</option>
+                <optgroup label={t('releases.recentPeriods')}>
+                  <option value="gte_2025">{t('releases.recentGte2025')}</option>
+                  <option value="gte_2024">≥ 2024</option>
+                  <option value="gte_2020">≥ 2020</option>
+                  <option value="lt_2020">{t('releases.classicsLt2020')}</option>
+                </optgroup>
+                {availableYears.length > 0 && (
+                  <optgroup label={t('releases.exactYear')}>
+                    {availableYears.map(yr => (
+                      <option key={yr} value={String(yr)}>
+                        {yr}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {yearFilter !== 'all' && (
+                <button
+                  type="button"
+                  className={s.resetFilterBtn}
+                  onClick={() => setYearFilter('all')}
+                  title={t('releases.resetYearFilter')}
+                  aria-label={t('releases.resetYearFilter')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -240,10 +288,11 @@ export function Releases(_props: { path?: string }) {
               const existingId = rel.existing_title_id ?? addedMap[rel.guid]
               const existingStatus = rel.existing_status ?? (addedMap[rel.guid] ? 'plan_to_watch' : undefined)
               const coverUrl = getCoverUrl(rel.poster_url)
+              const stableKey = `${rel.indexer_id || rel.indexer || 'idx'}-${rel.guid || rel.download_url || `${rel.title}-${rel.size}`}`
 
               return (
                 <div
-                  key={rel.guid}
+                  key={stableKey}
                   className={s.card}
                   onClick={() => setSelectedRelease(rel)}
                 >
@@ -276,11 +325,13 @@ export function Releases(_props: { path?: string }) {
                     </div>
 
                     <div className={s.metaRow}>
+                      {rel.indexer && <span className={s.indexerBadge}>{rel.indexer}</span>}
+                      {rel.indexer && <span className={s.metaDot}>·</span>}
                       <span>{formatBytes(rel.size)}</span>
                       <span className={s.metaDot}>·</span>
                       <span>{formatRelativeTime(rel.publish_date, t, locale)}</span>
                       <span className={s.metaDot}>·</span>
-                      <span className={s.seeders}>↑ {rel.seeders} seeds</span>
+                      <span className={s.seeders}>↑ {rel.seeders} {t('releases.seeds')}</span>
                     </div>
                   </div>
 
@@ -332,11 +383,14 @@ export function Releases(_props: { path?: string }) {
 
         {!loading && releases.length > 0 && filteredReleases.length === 0 && !error && (
           <div className={s.emptyState}>
-            <p>{t('releases.emptyYear')}</p>
+            <p>{(yearFilter !== 'all' || indexerFilter !== 'all') ? t('releases.emptyFiltered') : t('releases.emptyYear')}</p>
             <button
               type="button"
               className={s.resetBtn}
-              onClick={() => setYearFilter('all')}
+              onClick={() => {
+                setYearFilter('all')
+                setIndexerFilter('all')
+              }}
             >
               {t('releases.resetYearFilter')}
             </button>

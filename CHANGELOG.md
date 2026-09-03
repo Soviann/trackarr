@@ -6,8 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Sélecteur d'indexeur et badges sur la page Releases (`/releases`)** :
+  - Extraction dynamique des indexeurs Prowlarr disponibles depuis les résultats et ajout d'un menu déroulant interactif pour filtrer la liste par indexeur.
+  - Affichage du badge de l'indexeur sur chaque carte de release et dans le panneau de détails (`ReleaseDetailSheet`).
 
-## [v1.12.0] — 2026-09-01
+### Corrigé
+- **Scintillement rapide (*flickering*) de la liste des releases (`/releases`)** :
+  - Mémoïsation de la fonction de traduction `t` dans `useTranslation()` via `useCallback` pour éviter l'instanciation de nouvelles références à chaque rendu, éliminant la boucle infinie de re-fetch et d'affichage des skeletons.
+  - Génération de clés composites déterministes `${indexerId}-${guid}` pour empêcher les collisions de clés Preact lorsque plusieurs indexeurs sont activés dans Prowlarr.
+  - Internationalisation complète des labels et boutons du composant `ReleaseDetailSheet`.
 
 ### Ajouté
 - **Trackarr Wrapped & Rétrospective Annuelle par IA Gemini (`/wrapped`)** :

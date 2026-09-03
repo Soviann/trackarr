@@ -6,6 +6,7 @@ import { BottomSheet } from './BottomSheet'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import { useTranslation } from '../i18n'
 import s from './ReleaseDetailSheet.module.css'
 
 interface ReleaseDetailSheetProps {
@@ -25,10 +26,10 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`
 }
 
-function formatFullDate(dateStr: string): string {
+function formatFullDate(dateStr: string, locale: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)
-  return date.toLocaleDateString('fr-FR', {
+  return date.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -45,6 +46,7 @@ export function ReleaseDetailSheet({
   existingTitleId,
   existingStatus,
 }: ReleaseDetailSheetProps) {
+  const { t, locale } = useTranslation()
   if (!release) return null
 
   const coverUrl = getCoverUrl(release.poster_url)
@@ -56,7 +58,7 @@ export function ReleaseDetailSheet({
     : null
 
   return (
-    <BottomSheet open={!!release} onClose={onClose} ariaLabel="Release Details">
+    <BottomSheet open={!!release} onClose={onClose} ariaLabel={t('releases.releaseDetails')}>
       <div className={s.sheet}>
         {/* Header with Poster & Essential info */}
         <div className={s.header}>
@@ -84,18 +86,18 @@ export function ReleaseDetailSheet({
 
             <div className={s.metaList}>
               <div className={s.metaItem}>
-                <span>Size:</span>
+                <span>{t('releases.size')}:</span>
                 <strong>{formatBytes(release.size)}</strong>
               </div>
               <div className={s.metaItem}>
-                <span>Published:</span>
-                <span>{formatFullDate(release.publish_date)}</span>
+                <span>{t('releases.published')}:</span>
+                <span>{formatFullDate(release.publish_date, locale)}</span>
               </div>
               <div className={s.metaItem}>
-                <span>Peers:</span>
-                <span className={s.seeders}>↑ {release.seeders} seeds</span>
+                <span>{t('releases.peers')}:</span>
+                <span className={s.seeders}>↑ {release.seeders} {t('releases.seeds')}</span>
                 <span>·</span>
-                <span>↓ {release.leechers} leeches</span>
+                <span>↓ {release.leechers} {t('releases.leeches')}</span>
               </div>
             </div>
           </div>
@@ -103,7 +105,7 @@ export function ReleaseDetailSheet({
 
         {/* Raw Scene Release Name */}
         <div className={s.section}>
-          <div className={s.sectionLabel}>Release Name ({release.indexer || 'Prowlarr'})</div>
+          <div className={s.sectionLabel}>{t('releases.releaseName')} ({release.indexer || 'Prowlarr'})</div>
           <div className={s.rawBox}>
             {release.title}
           </div>
@@ -111,7 +113,7 @@ export function ReleaseDetailSheet({
 
         {/* External links */}
         <div className={s.section}>
-          <div className={s.sectionLabel}>External Links</div>
+          <div className={s.sectionLabel}>{t('releases.externalLinks')}</div>
           <div className={s.linksRow}>
             {release.info_url && (
               <a
@@ -125,7 +127,7 @@ export function ReleaseDetailSheet({
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                {release.indexer || 'Prowlarr'} Page
+                {t('releases.indexerPage', { indexer: release.indexer || 'Prowlarr' })}
               </a>
             )}
 
@@ -174,7 +176,7 @@ export function ReleaseDetailSheet({
                 route(routeTo.title(existingTitleId))
               }}
             >
-              View in Trackarr
+              {t('releases.viewInTrackarr')}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
@@ -187,14 +189,14 @@ export function ReleaseDetailSheet({
               disabled={adding}
             >
               {adding ? (
-                'Adding...'
+                t('releases.adding')
               ) : (
                 <>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
-                  Add to Library (Plan to Watch)
+                  {t('releases.addToLibraryPlan')}
                 </>
               )}
             </button>
