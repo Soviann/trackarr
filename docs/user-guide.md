@@ -172,7 +172,7 @@ Trackarr bridges media tracking with your download managers:
   - **Cyan top border**: Series is tracked in **Sonarr**.
 - **Arr Icon Badges**: 18px indicator pills on search and list cards showing Radarr target or Sonarr waveform.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), with defaults configurable at `/admin/arr`.
-- **Prowlarr Releases**: Access incoming releases on `/releases` with 1-click **+ Add** to Trackarr.
+- **Prowlarr Releases**: Access incoming releases on `/releases` with multi-indexer filtering, year filtering, and 1-click **+ Add** to Trackarr.
 
 ---
 

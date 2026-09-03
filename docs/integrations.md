@@ -68,4 +68,4 @@ Manage your media library and track availability seamlessly:
 - **Cyan Top Border**: Series is managed and monitored in **Sonarr**.
 - **Arr Icon Badges**: 18px indicator pills on search and list cards.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**).
-- **Prowlarr Releases**: View indexer releases on `/releases` and add media directly to Trackarr with 1-click **+ Add**.
+- **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, and add media directly to Trackarr with 1-click **+ Add**.

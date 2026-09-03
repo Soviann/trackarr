@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+
+## [v1.12.1] — 2026-09-03
+
 ### Ajouté
 - **Sélecteur d'indexeur et badges sur la page Releases (`/releases`)** :
   - Extraction dynamique des indexeurs Prowlarr disponibles depuis les résultats et ajout d'un menu déroulant interactif pour filtrer la liste par indexeur.
@@ -17,8 +20,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Génération de clés composites déterministes `${indexerId}-${guid}` pour empêcher les collisions de clés Preact lorsque plusieurs indexeurs sont activés dans Prowlarr.
   - Internationalisation complète des labels et boutons du composant `ReleaseDetailSheet`.
 
-### Ajouté
-- **Trackarr Wrapped & Rétrospective Annuelle par IA Gemini (`/wrapped`)** :
+
+## [v1.12.0] — 2026-09-01
   - **Expérience interactive multi-diapositives (Story Player)** : Lecteur immersif à 6 diapositives avec défilement automatique, barre de progression dynamique, mise en pause par appui prolongé ou bouton dédié, navigation tactile/clavier et sélecteur d'année.
   - **Diapositive 1 (Vue d'ensemble)** : Métriques annuelles clés (temps total de visionnage avec équivalents parlants en jours/mois/années, titres découverts, épisodes scrobblés, note moyenne, taux de complétion précis).
   - **Diapositive 2 (Coups de Cœur)** : Top 3 par catégorie (Films, Séries TV, Anime) avec médailles, affiches et notes personnelles.
