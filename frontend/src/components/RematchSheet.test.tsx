@@ -53,12 +53,88 @@ function makeTitle(seasons: Season[] = []): Title {
 
 describe('RematchSheet — season mode (multi-link AniList manager)', () => {
   beforeEach(() => {
-    mockApiFetch.mockResolvedValue(undefined)
+    mockApiFetch.mockResolvedValue([])
   })
 
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  it('automatically searches AniList on open with title name', async () => {
+    const season = makeSeason(10, [])
+    const title = makeTitle([season])
+
+    render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
+    )
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith('/anilist/search?query=My%20Anime')
+    })
+  })
+
+  it('renders search results and links anime on click', async () => {
+    mockApiFetch.mockImplementation(async (url: string) => {
+      if (url.startsWith('/anilist/search')) {
+        return [
+          {
+            id: 154587,
+            romaji_title: 'Sousou no Frieren',
+            english_title: "Frieren: Beyond Journey's End",
+            title: "Frieren: Beyond Journey's End",
+            year: 2023,
+            format: 'TV',
+            episodes: 28,
+            poster_url: 'https://example.com/poster.jpg',
+          },
+        ]
+      }
+      return undefined
+    })
+
+    const season = makeSeason(10, [])
+    const title = makeTitle([season])
+    const onDone = vi.fn()
+    const onClose = vi.fn()
+
+    const { getByText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} seasonID={10} onDone={onDone} />,
+    )
+
+    await waitFor(() => {
+      expect(getByText("Frieren: Beyond Journey's End")).toBeTruthy()
+      expect(getByText("Sousou no Frieren")).toBeTruthy()
+      expect(getByText("#154587")).toBeTruthy()
+    })
+
+    fireEvent.click(getByText("Frieren: Beyond Journey's End"))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/seasons/10/anilist',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ anilist_id: '154587' }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('renders the external AniList search link with prefilled query', () => {
+    const season = makeSeason(10, [])
+    const title = makeTitle([season])
+
+    const { getByText } = render(
+      <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={vi.fn()} />,
+    )
+
+    const link = getByText(/Search on AniList\.co/i).closest('a')
+    expect(link).toBeTruthy()
+    expect(link?.getAttribute('href')).toBe('https://anilist.co/search/anime?search=My%20Anime')
+    expect(link?.getAttribute('target')).toBe('_blank')
   })
 
   it('lists both parts with Remove buttons when season has two anilist_parts', () => {
@@ -84,9 +160,12 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
     const title = makeTitle([season])
     const onDone = vi.fn()
 
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText, getByPlaceholderText } = render(
       <RematchSheet open={true} onClose={vi.fn()} title={title} seasonID={10} onDone={onDone} />,
     )
+
+    // Expand manual section
+    fireEvent.click(getByText(/Manual AniList ID/i))
 
     const input = getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26')
     fireEvent.input(input, { target: { value: '145064' } })
@@ -112,9 +191,11 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
     const onDone = vi.fn()
     const onClose = vi.fn()
 
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText, getByPlaceholderText } = render(
       <RematchSheet open={true} onClose={onClose} title={title} seasonID={10} onDone={onDone} />,
     )
+
+    fireEvent.click(getByText(/Manual AniList ID/i))
 
     const input = getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26')
     fireEvent.input(input, { target: { value: 'https://anilist.co/anime/26' } })
@@ -130,25 +211,6 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
           body: JSON.stringify({ anilist_id: '26' }),
         }),
       )
-      expect(onDone).toHaveBeenCalled()
-      expect(onClose).toHaveBeenCalled()
-    })
-  })
-
-  it('calls onClose after add', async () => {
-    const season = makeSeason(10, [])
-    const title = makeTitle([season])
-    const onClose = vi.fn()
-    const onDone = vi.fn()
-
-    const { getByPlaceholderText, getByText } = render(
-      <RematchSheet open={true} onClose={onClose} title={title} seasonID={10} onDone={onDone} />,
-    )
-
-    fireEvent.input(getByPlaceholderText('e.g. 26 or https://anilist.co/anime/26'), { target: { value: '99999' } })
-    fireEvent.click(getByText('Add'))
-
-    await waitFor(() => {
       expect(onDone).toHaveBeenCalled()
       expect(onClose).toHaveBeenCalled()
     })

@@ -112,7 +112,7 @@ Opening a title displays its rich details:
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
 - **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
 - **Sagas, Universes & Franchise Relations**: Dedicated card surfacing related works for movies (TMDB collections like *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies). Features a sorting toggle (⏱️ Chronologie vs 📅 Sortie), category filters (*Films*, *Séries*, *OAVs*, *Spin-offs*), default collapse above 3 items with *Voir plus*, local library status badges (`✓ Vu`, `À voir`), and a 1-click `[+ Ajouter]` button for missing titles.
-- **AniList Season Strip**: Community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries).
+- **AniList Season Strip**: Per-season community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries). Clicking **Link entry** or ✎ opens the season linker with instant in-app AniList search (with posters, media format, episode count, and 1-click linking) plus a direct *Search on AniList.co ↗* browser shortcut.
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.
   - **Edit**: Modify title type (Movie/Series), anime flag, or watch status.
@@ -181,7 +181,7 @@ Trackarr bridges media tracking with your download managers:
 When AniList OAuth is connected:
 - **Automatic Push**: Episode watch events, status changes, and ratings push to AniList in the background.
 - **Multi-Part & Prequel Trees**: Trackarr automatically maps multi-part seasons (e.g. *Attack on Titan Final Season*) to individual AniList media entries using its internal season parts resolver.
-- **Season AniList Strip**: View community scores per season and re-link specific anime entries with the ✎ button.
+- **Season AniList Strip & Live Search**: View community scores per season and re-link specific anime entries with the ✎ button or *Link entry*. The season mapping sheet instantly searches AniList in the background using the series title, displaying rich result cards (poster, Romaji/English title, format, year, episode count) that can be linked in a single tap, alongside a *Search on AniList.co ↗* browser shortcut and manual ID fallback.
 
 ---
 

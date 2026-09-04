@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import type { Title } from '../types'
+import type { AniListSearchResult, Title } from '../types'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
@@ -42,6 +42,11 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   const [manualTvdb, setManualTvdb] = useState('')
   const [autoFill, setAutoFill] = useState(false)
   const [seasonAniListID, setSeasonAniListID] = useState('')
+  const [anilistQuery, setAnilistQuery] = useState(getName(title))
+  const [anilistResults, setAnilistResults] = useState<AniListSearchResult[]>([])
+  const [searchingAniList, setSearchingAniList] = useState(false)
+  const [hasSearchedAniList, setHasSearchedAniList] = useState(false)
+  const [showManualSeason, setShowManualSeason] = useState(false)
 
   // For a series the on-screen AniList link is driven by a season, not
   // the title row — so the manual editor edits that season's mapping (prefer
@@ -51,17 +56,22 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
       ? ((title.seasons ?? []).find((sn) => sn.season_number === 1) ?? (title.seasons ?? [])[0])
       : undefined
 
-  // The component remains mounted between openings: useState only captures
-  // the ID during initial render (when seasonID is undefined).
-  // This useEffect resynchronizes the value whenever the season changes.
+  // Resynchronize season state whenever the season changes or sheet opens.
   useEffect(() => {
     setSeasonAniListID('')
   }, [seasonID])
 
-  // Prefill the manual fields with the title's current IDs each time the sheet
-  // opens, so the user sees and edits real values (blank = remove the ID).
+  // Prefill fields and perform initial search each time the sheet opens
   useEffect(() => {
     if (!open) return
+    if (seasonID != null) {
+      const initialQuery = getName(title)
+      setAnilistQuery(initialQuery)
+      setSeasonAniListID('')
+      setShowManualSeason(false)
+      doAniListSearch(initialQuery)
+      return
+    }
     setManualTmdb(title.tmdb_id != null ? String(title.tmdb_id) : '')
     setManualImdb(title.imdb_id ?? '')
     setManualTvdb(title.tvdb_id != null ? String(title.tvdb_id) : '')
@@ -72,7 +82,42 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     setManualAnilist(anilistSeason ? (anilistSeason.anilist_id ?? titleAniList) : titleAniList)
     setAutoFill(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, title.id])
+  }, [open, title.id, seasonID])
+
+  const doAniListSearch = async (q: string) => {
+    if (!q.trim()) {
+      setAnilistResults([])
+      return
+    }
+    setSearchingAniList(true)
+    setHasSearchedAniList(true)
+    try {
+      const data = await apiFetch<AniListSearchResult[]>(`/anilist/search?query=${encodeURIComponent(q.trim())}`)
+      setAnilistResults(data)
+    } catch {
+      setAnilistResults([])
+    } finally {
+      setSearchingAniList(false)
+    }
+  }
+
+  const handleSelectAniListResult = async (res: AniListSearchResult) => {
+    if (seasonID == null) return
+    setSaving(true)
+    try {
+      await apiFetch(`/titles/${title.id}/seasons/${seasonID}/anilist`, {
+        method: 'POST',
+        body: JSON.stringify({ anilist_id: String(res.id) }),
+      })
+      onDone()
+      onClose()
+    } catch (err) {
+      console.error('Failed to link AniList anime:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const doSearch = async (q: string, type: 'movie' | 'tv') => {
     if (!q.trim()) {
       setResults([])
@@ -201,42 +246,136 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
       <div className={s.content}>
         {seasonID != null ? (
           <>
-            <div className={s.status}>AniList parts for S{season?.season_number ?? '?'}</div>
-            <div className={s.manualSection}>
-              {(season?.anilist_parts ?? []).map((p, i) => {
-                const parts = season?.anilist_parts ?? []
-                return (
-                  <div key={p.external_id} className={s.partManageRow}>
-                    <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
-                    <span className={s.partManageActions}>
-                      {parts.length > 1 && (
-                        <span className={s.reorderControls}>
-                          <button onClick={() => handleReorder(i, -1)} disabled={saving || i === 0} aria-label={`Move part ${i + 1} up`}>▲</button>
-                          <button onClick={() => handleReorder(i, 1)} disabled={saving || i === parts.length - 1} aria-label={`Move part ${i + 1} down`}>▼</button>
-                        </span>
-                      )}
-                      <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
-                        Remove
-                      </button>
-                    </span>
-                  </div>
-                )
-              })}
-              <label className={s.fieldLabel}>
-                Add AniList ID
-                <input type="text" value={seasonAniListID}
-                  onInput={(e) => setSeasonAniListID((e.target as HTMLInputElement).value)}
-                  className={s.fieldInput} placeholder="e.g. 26 or https://anilist.co/anime/26" autoFocus />
-              </label>
-              <div className={s.manualActions}>
-                <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
-                  <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
-                </button>
-                <button onClick={onClose} className={s.cancelButton}>
-                  <span className={s.cancelButtonLabel}>Done</span>
-                </button>
-              </div>
+            <div className={s.status}>AniList for S{season?.season_number ?? '?'}</div>
+
+            {/* Search row */}
+            <div className={s.searchRow}>
+              <input
+                type="text"
+                value={anilistQuery}
+                onInput={(e) => setAnilistQuery((e.target as HTMLInputElement).value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    doAniListSearch(anilistQuery)
+                  }
+                }}
+                placeholder="Search AniList..."
+                className={s.searchInput}
+                autoFocus
+              />
+              <button
+                onClick={() => doAniListSearch(anilistQuery)}
+                disabled={searchingAniList}
+                className={s.searchBtn}
+                aria-label="Search AniList"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
             </div>
+
+            {/* Browser search shortcut */}
+            <div className={s.externalSearchRow}>
+              <span className={s.externalSearchPrompt}>Or search directly on AniList:</span>
+              <a
+                href={`https://anilist.co/search/anime?search=${encodeURIComponent(anilistQuery.trim() || getName(title))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={s.externalSearchLink}
+              >
+                Search on AniList.co ↗
+              </a>
+            </div>
+
+            {/* Results */}
+            <div className={s.results}>
+              {searchingAniList && <div className={s.status}>Searching AniList...</div>}
+              {!searchingAniList && anilistResults.length === 0 && hasSearchedAniList && (
+                <div className={s.status}>No AniList results</div>
+              )}
+              {anilistResults.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => handleSelectAniListResult(r)}
+                  disabled={saving}
+                  className={s.resultCard}
+                >
+                  <div className={s.poster}>
+                    {r.poster_url ? (
+                      <img src={r.poster_url} alt={r.title} loading="lazy" />
+                    ) : (
+                      <div className={s.noPoster}>?</div>
+                    )}
+                  </div>
+                  <div className={s.resultInfo}>
+                    <div className={s.resultTitle}>{r.title}</div>
+                    {r.romaji_title && r.romaji_title !== r.title && (
+                      <div className={s.resultRomaji}>{r.romaji_title}</div>
+                    )}
+                    <div className={s.resultMeta}>
+                      {r.format && <span className={s.formatBadge}>{r.format}</span>}
+                      {r.year != null && <span>{r.year}</span>}
+                      {r.episodes != null && <span>{r.episodes} eps</span>}
+                      <span className={s.resultID}>#{r.id}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Current mapped parts section if any exist */}
+            {(season?.anilist_parts ?? []).length > 0 && (
+              <div className={s.currentPartsSection}>
+                <div className={s.sectionHeader}>Current parts ({season?.anilist_parts?.length})</div>
+                {(season?.anilist_parts ?? []).map((p, i) => {
+                  const parts = season?.anilist_parts ?? []
+                  return (
+                    <div key={p.external_id} className={s.partManageRow}>
+                      <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
+                      <span className={s.partManageActions}>
+                        {parts.length > 1 && (
+                          <span className={s.reorderControls}>
+                            <button onClick={() => handleReorder(i, -1)} disabled={saving || i === 0} aria-label={`Move part ${i + 1} up`}>▲</button>
+                            <button onClick={() => handleReorder(i, 1)} disabled={saving || i === parts.length - 1} aria-label={`Move part ${i + 1} down`}>▼</button>
+                          </span>
+                        )}
+                        <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Manual ID toggle */}
+            <button onClick={() => setShowManualSeason(!showManualSeason)} className={s.manualToggle}>
+              {showManualSeason ? '▾' : '▸'} Manual AniList ID
+            </button>
+
+            {showManualSeason && (
+              <div className={s.manualSection}>
+                <label className={s.fieldLabel}>
+                  Add AniList ID or URL
+                  <input
+                    type="text"
+                    value={seasonAniListID}
+                    onInput={(e) => setSeasonAniListID((e.target as HTMLInputElement).value)}
+                    className={s.fieldInput}
+                    placeholder="e.g. 26 or https://anilist.co/anime/26"
+                  />
+                </label>
+                <div className={s.manualActions}>
+                  <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
+                    <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         ) : ( /* title-mode unchanged */
           /* Title-mode: existing TMDB search + manual IDs UI */

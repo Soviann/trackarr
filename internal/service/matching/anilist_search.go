@@ -16,6 +16,7 @@ type AniListSearchResult struct {
 	Format       string `json:"format"` // TV, MOVIE, OVA, ONA, SPECIAL, MUSIC
 	SeasonYear   *int   `json:"seasonYear"`
 	MALID        *int64 `json:"idMal"`
+	CoverURL     string `json:"coverURL,omitempty"`
 }
 
 func (r *AniListSearchResult) DisplayTitle() string {
@@ -49,7 +50,7 @@ type AniListNames struct {
 
 const searchAnimeQuery = `
 query ($search: String) {
-  Page(perPage: 5) {
+  Page(perPage: 10) {
     media(search: $search, type: ANIME) {
       id
       idMal
@@ -57,6 +58,7 @@ query ($search: String) {
       episodes
       format
       seasonYear
+      coverImage { extraLarge large }
     }
   }
 }
@@ -115,6 +117,10 @@ func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniLis
 				Episodes   *int   `json:"episodes"`
 				Format     string `json:"format"`
 				SeasonYear *int   `json:"seasonYear"`
+				CoverImage struct {
+					ExtraLarge string `json:"extraLarge"`
+					Large      string `json:"large"`
+				} `json:"coverImage"`
 			} `json:"media"`
 		} `json:"Page"`
 	}
@@ -126,6 +132,10 @@ func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniLis
 
 	results := make([]AniListSearchResult, len(resp.Page.Media))
 	for i, m := range resp.Page.Media {
+		cover := m.CoverImage.ExtraLarge
+		if cover == "" {
+			cover = m.CoverImage.Large
+		}
 		results[i] = AniListSearchResult{
 			ID:           m.ID,
 			MALID:        m.MALID,
@@ -134,6 +144,7 @@ func (c *AniListClient) SearchAnime(ctx context.Context, title string) ([]AniLis
 			Episodes:     m.Episodes,
 			Format:       m.Format,
 			SeasonYear:   m.SeasonYear,
+			CoverURL:     cover,
 		}
 	}
 	return results, nil

@@ -78,6 +78,14 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// TMDB search handler (optional — requires TMDB key)
 	tmdbSearch := handler.NewTMDBHandler(tmdbClient)
+	var anilistClient *matching.AniListClient
+	if pipeline != nil {
+		anilistClient = pipeline.AniList()
+	}
+	if anilistClient == nil {
+		anilistClient = matching.NewAniListClient()
+	}
+	anilistSearch := handler.NewAniListSearchHandler(anilistClient)
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc, titleReadRepo)
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc)
 	admin.SetShutdownWG(shutdownWG)
@@ -170,6 +178,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
 			r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
 			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
+			r.Get("/anilist/search", httputil.WrapHandler(anilistSearch.Search))
 			r.Get("/releases", httputil.WrapHandler(releasesHandler.List))
 			r.Post("/releases/add", httputil.WrapHandler(releasesHandler.Add))
 

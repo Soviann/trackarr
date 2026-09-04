@@ -138,6 +138,17 @@ export interface AniListPart {
   sort_order: number | null
 }
 
+export interface AniListSearchResult {
+  id: number
+  romaji_title: string
+  english_title: string
+  title: string
+  year: number | null
+  format: string
+  episodes: number | null
+  poster_url: string | null
+}
+
 export interface Season {
   id: number
   title_id: number

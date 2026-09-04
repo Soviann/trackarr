@@ -58,6 +58,8 @@
 - `POST /api/titles/{id}/rematch` : Rematch title with new query or URL.
 - `POST /api/titles/{id}/merge` : Merge source title into target title with optional season offset.
 - `POST /api/titles/{id}/refresh` : Trigger metadata re-fetch for a single title.
+- `GET /api/tmdb/search` : Search TMDB for movie or TV titles.
+- `GET /api/anilist/search` : Search AniList for anime titles with posters and metadata.
 - `GET /api/titles/resolve` : Resolve external metadata from direct URL (IMDb, TMDB, TVDB, AniList).
 - `GET /api/titles/continue-watching` : List in-progress titles with progress ratios.
 - `GET /api/titles/upcoming` : List series with upcoming air dates.
