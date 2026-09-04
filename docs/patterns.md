@@ -140,6 +140,7 @@
 | POST | `/api/titles/{id}/refresh` | `titles.RefreshOne` | Force immediate metadata refresh |
 | GET | `/api/titles/{id}/history` | `history.Get` | Detailed watch event history for title |
 | GET | `/api/tmdb/search` | `tmdbSearch.Search` | Search TMDB for movie or TV titles |
+| GET | `/api/anilist/search` | `anilistSearch.Search` | Search AniList for anime titles |
 | GET | `/api/releases` | `releasesHandler.List` | Latest Prowlarr releases with posters & local match |
 | POST | `/api/releases/add` | `releasesHandler.Add` | Direct 1-click title creation from release |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |

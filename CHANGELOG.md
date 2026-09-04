@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Recherche AniList intégrée et raccourcis de recherche pour les saisons d'anime** :
+  - Endpoint API `GET /api/anilist/search?query=...` interrogeant l'API GraphQL publique d'AniList pour renvoyer les correspondances d'animes avec jaquettes, titres (anglais et romaji), formats (TV, ONA, Movie, OVA...), années et nombre d'épisodes.
+  - Recherche AniList interactive dans la feuille de liaison de saison (`RematchSheet`) : pré-remplissage et recherche instantanée dès l'ouverture, sélection en 1 clic pour lier une saison, et lien rapide *« Search on AniList.co ↗ »* ouvrant la recherche dans un nouvel onglet de navigateur.
+  - Conservation de la gestion des parties multiples (ordre et suppression) et de la saisie manuelle d'ID ou d'URL.
+
+
 
 ## [v1.12.1] — 2026-09-03
 
