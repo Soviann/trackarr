@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+
+## [v1.13.0] — 2026-09-04
+
 ### Ajouté
 - **Recherche AniList intégrée et raccourcis de recherche pour les saisons d'anime** :
   - Endpoint API `GET /api/anilist/search?query=...` interrogeant l'API GraphQL publique d'AniList pour renvoyer les correspondances d'animes avec jaquettes, titres (anglais et romaji), formats (TV, ONA, Movie, OVA...), années et nombre d'épisodes.
