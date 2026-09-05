@@ -27,7 +27,11 @@ func setupAdminHandler(t *testing.T) *handler.AdminHandler {
 	taskRepo := repository.NewTaskRepository(db)
 	titleRepo := repository.NewTitleRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	return handler.NewAdminHandler(context.Background(), db, taskRepo, titleRepo, settingRepo, nil) // bgSvc=nil
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+	eventRepo := repository.NewWatchEventRepository(db)
+	backupSvc := service.NewBackupService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+	return handler.NewAdminHandler(context.Background(), db, taskRepo, titleRepo, settingRepo, nil, backupSvc) // bgSvc=nil
 }
 
 func TestAdminHandler_Counts(t *testing.T) {
@@ -194,3 +198,40 @@ func TestAdminHandler_RefreshAll_NilBgSvc(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, http.StatusInternalServerError, apiErr.Status)
 }
+
+func TestAdminHandler_ExportJSON(t *testing.T) {
+	h := setupAdminHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/export/json", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.ExportJSON(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "application/json; charset=utf-8", rr.Header().Get("Content-Type"))
+	assert.Contains(t, rr.Header().Get("Content-Disposition"), "attachment; filename=\"trackarr-backup-")
+}
+
+func TestAdminHandler_ExportCSV(t *testing.T) {
+	h := setupAdminHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/export/csv", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.ExportCSV(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "text/csv; charset=utf-8", rr.Header().Get("Content-Type"))
+	assert.Contains(t, rr.Header().Get("Content-Disposition"), "attachment; filename=\"trackarr-library-")
+}
+
+func TestAdminHandler_ExportTrakt(t *testing.T) {
+	h := setupAdminHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/export/trakt", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.ExportTrakt(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "application/json; charset=utf-8", rr.Header().Get("Content-Type"))
+	assert.Contains(t, rr.Header().Get("Content-Disposition"), "attachment; filename=\"trackarr-trakt-sync-")
+}
+
