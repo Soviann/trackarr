@@ -430,3 +430,90 @@ func TestStatsRepository_GetWrappedData_ManualVsAutomatedScrobbles(t *testing.T)
 	assert.Equal(t, "Plex Movie", resp.RewatchChampion.Title.Title)
 	assert.Equal(t, 3, resp.RewatchChampion.TotalPlays)
 }
+
+func TestStatsRepository_GetFiltered_MediaType(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	createTitle(t, db, "Movie 1", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(8))
+	createTitle(t, db, "Series 1", model.TitleTypeSeries, false, model.TitleStatusCompleted, ptr(9))
+	createTitle(t, db, "Anime 1", model.TitleTypeSeries, true, model.TitleStatusCompleted, ptr(10))
+
+	// All
+	respAll, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "all", MediaType: "all"})
+	require.NoError(t, err)
+	assert.Equal(t, 3, respAll.Overview.TotalTitles)
+
+	// Movies
+	respMovie, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "all", MediaType: "movie"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, respMovie.Overview.TotalTitles)
+	assert.Equal(t, 1, respMovie.Overview.TotalMovies)
+	assert.Equal(t, 0, respMovie.Overview.TotalSeries)
+
+	// Series
+	respSeries, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "all", MediaType: "series"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, respSeries.Overview.TotalTitles)
+	assert.Equal(t, 1, respSeries.Overview.TotalSeries)
+	assert.Equal(t, 0, respSeries.Overview.TotalAnime)
+
+	// Anime
+	respAnime, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "all", MediaType: "anime"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, respAnime.Overview.TotalTitles)
+	assert.Equal(t, 1, respAnime.Overview.TotalAnime)
+}
+
+func TestStatsRepository_GetFiltered_Timeframe(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	mID := createTitle(t, db, "Dune", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(8))
+	sID := createTitle(t, db, "Dark", model.TitleTypeSeries, false, model.TitleStatusCompleted, ptr(9))
+
+	// Add 2024 watch event for Dune
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   mID,
+		Source:    model.WatchEventSourcePlex,
+		CreatedAt: time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC),
+	})
+
+	// Add recent watch event for Dark (today)
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   sID,
+		Source:    model.WatchEventSourcePlex,
+		CreatedAt: time.Now(),
+	})
+
+	// Filter by 2024
+	resp2024, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "year", Year: 2024, MediaType: "all"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, resp2024.Overview.TotalTitles)
+	assert.Equal(t, 1, resp2024.Overview.TotalMovies)
+	assert.Equal(t, 0, resp2024.Overview.TotalSeries)
+
+	// Filter by 30d
+	resp30d, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "30d", MediaType: "all"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, resp30d.Overview.TotalTitles)
+	assert.Equal(t, 1, resp30d.Overview.TotalSeries)
+}
+
+func TestStatsRepository_AvailableYears(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 1982,
+		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Blade Runner", Language: "en", IsPrimary: true}})
+
+	years, err := repo.AvailableYears(context.Background())
+	require.NoError(t, err)
+	currentYear := time.Now().Year()
+
+	assert.Equal(t, currentYear, years[0])
+	assert.Equal(t, 1982, years[len(years)-1])
+	assert.Equal(t, currentYear-1982+1, len(years))
+}
