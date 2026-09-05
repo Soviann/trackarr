@@ -28,7 +28,31 @@ func NewStatsHandler(stats *repository.StatsRepository, wrapped *repository.Wrap
 }
 
 func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	resp, err := h.stats.GetAll(r.Context())
+	timeframe := r.URL.Query().Get("timeframe")
+	if timeframe == "" {
+		timeframe = "all"
+	}
+	var year int
+	if yearStr := r.URL.Query().Get("year"); yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil && y > 0 {
+			year = y
+		}
+	}
+	mediaType := r.URL.Query().Get("media_type")
+	if mediaType == "" {
+		mediaType = r.URL.Query().Get("type")
+	}
+	if mediaType == "" {
+		mediaType = "all"
+	}
+
+	filter := model.StatsFilter{
+		Timeframe: timeframe,
+		Year:      year,
+		MediaType: mediaType,
+	}
+
+	resp, err := h.stats.GetFiltered(r.Context(), filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}

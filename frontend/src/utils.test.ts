@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, unwatchedEpisodesCount, formatBingeTime, getCoverUrl } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, unwatchedEpisodesCount, formatBingeTime, formatHumanWatchtime, getCoverUrl } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -336,4 +336,41 @@ describe('unwatchedEpisodesCount', () => {
     expect(unwatchedEpisodesCount(makeTitle({ seasons: [] }))).toBe(0)
   })
 })
+
+describe('formatHumanWatchtime', () => {
+  it('handles null, undefined, 0 or negative minutes', () => {
+    expect(formatHumanWatchtime(null, 'fr')).toBe('0 h')
+    expect(formatHumanWatchtime(undefined, 'fr')).toBe('0 h')
+    expect(formatHumanWatchtime(0, 'fr')).toBe('0 h')
+    expect(formatHumanWatchtime(-50, 'fr')).toBe('0 h')
+  })
+
+  it('formats minutes only under 1 hour', () => {
+    expect(formatHumanWatchtime(45, 'fr')).toBe('45 m')
+    expect(formatHumanWatchtime(1, 'fr')).toBe('1 m')
+  })
+
+  it('formats hours and minutes', () => {
+    expect(formatHumanWatchtime(60, 'fr')).toBe('1 h')
+    expect(formatHumanWatchtime(135, 'fr')).toBe('2 h 15 m')
+  })
+
+  it('formats days and hours', () => {
+    expect(formatHumanWatchtime(1440, 'fr')).toBe('1 j 0 h')
+    expect(formatHumanWatchtime(1440 + 120, 'fr')).toBe('1 j 2 h')
+    expect(formatHumanWatchtime(1440 + 120 + 30, 'fr')).toBe('1 j 2 h 30 m')
+  })
+
+  it('formats years, days, hours correctly in French and English', () => {
+    // 3 years (3 * 365 * 24 * 60 = 1576800), 87 days (87 * 24 * 60 = 125280), 16 hours (16 * 60 = 960) -> 1703040 mins
+    const mins = 3 * 365 * 24 * 60 + 87 * 24 * 60 + 16 * 60
+    expect(formatHumanWatchtime(mins, 'fr')).toBe('3 ans 87 j 16 h')
+    expect(formatHumanWatchtime(mins, 'en')).toBe('3 yrs 87 d 16 h')
+
+    const oneYear = 1 * 365 * 24 * 60 + 10 * 24 * 60 + 5 * 60
+    expect(formatHumanWatchtime(oneYear, 'fr')).toBe('1 an 10 j 5 h')
+    expect(formatHumanWatchtime(oneYear, 'en')).toBe('1 yr 10 d 5 h')
+  })
+})
+
 

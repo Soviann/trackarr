@@ -8,6 +8,13 @@ type PersonStat struct {
 	Count int    `json:"count"`
 }
 
+// StatsFilter defines optional filters for stats aggregation.
+type StatsFilter struct {
+	Timeframe string `json:"timeframe"`  // "all", "year", "30d"
+	Year      int    `json:"year"`       // e.g. 2026 when Timeframe is "year"
+	MediaType string `json:"media_type"` // "all", "movie", "series", "anime"
+}
+
 // StatsResponse is the full response for GET /api/stats.
 type StatsResponse struct {
 	Overview          StatsOverview  `json:"overview"`
@@ -24,6 +31,7 @@ type StatsResponse struct {
 	WatchedThisYear   int     `json:"watched_this_year"`
 	AvgRatingThisYear float64 `json:"avg_rating_this_year"`
 	MinutesThisWeek   int     `json:"minutes_this_week"`
+	AvailableYears    []int   `json:"available_years,omitempty"`
 }
 
 // StatsStreaks holds current and best consecutive watch day streaks.

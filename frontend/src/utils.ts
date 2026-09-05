@@ -224,6 +224,44 @@ export function totalEpisodes(title: Title): number {
   )
 }
 
+/**
+ * Natural decomposition of watch time into years, days, hours, minutes.
+ * E.g. "3 ans 87 j 16 h" (FR) / "3 yrs 87 d 16 h" (EN).
+ */
+export function formatHumanWatchtime(minutes: number | null | undefined, locale = 'fr'): string {
+  if (!minutes || minutes <= 0) return '0 h'
+  const totalMins = Math.round(minutes)
+  const years = Math.floor(totalMins / (365 * 24 * 60))
+  const remAfterYears = totalMins % (365 * 24 * 60)
+  const days = Math.floor(remAfterYears / (24 * 60))
+  const remAfterDays = remAfterYears % (24 * 60)
+  const hours = Math.floor(remAfterDays / 60)
+  const mins = remAfterDays % 60
+
+  const isFr = locale === 'fr'
+  const yearUnit = isFr ? (years > 1 ? 'ans' : 'an') : (years > 1 ? 'yrs' : 'yr')
+  const dayUnit = isFr ? 'j' : 'd'
+  const hourUnit = 'h'
+  const minUnit = 'm'
+
+  if (years > 0) {
+    return `${years} ${yearUnit} ${days} ${dayUnit} ${hours} ${hourUnit}`
+  }
+  if (days > 0) {
+    if (mins > 0) {
+      return `${days} ${dayUnit} ${hours} ${hourUnit} ${mins} ${minUnit}`
+    }
+    return `${days} ${dayUnit} ${hours} ${hourUnit}`
+  }
+  if (hours > 0) {
+    if (mins > 0) {
+      return `${hours} ${hourUnit} ${mins} ${minUnit}`
+    }
+    return `${hours} ${hourUnit}`
+  }
+  return `${mins} ${minUnit}`
+}
+
 /** Formats a watchtime in minutes to a human-readable string (e.g. "2h 30m"). Returns null if absent or <= 0. */
 export function formatWatchtime(minutes: number | null | undefined): string | null {
   if (!minutes || minutes <= 0) return null

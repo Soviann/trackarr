@@ -228,6 +228,7 @@ export interface StatsResponse {
   watched_this_year: number
   avg_rating_this_year: number
   minutes_this_week: number
+  available_years?: number[]
 }
 
 export interface ActivityEvent {
