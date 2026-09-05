@@ -201,9 +201,10 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 
 	// 3. Bulk load next unwatched episode using window function (SQLite 3.25+)
 	nextEpRows, err := r.db.Query(`
-		SELECT title_id, ep_id, season_id, episode_number, season_number
+		SELECT title_id, ep_id, season_id, episode_number, season_number, ep_name, ep_air_date
 		FROM (
 			SELECT s.title_id, e.id AS ep_id, e.season_id, e.episode AS episode_number, s.season_number,
+			       e.name AS ep_name, e.air_date AS ep_air_date,
 				   ROW_NUMBER() OVER (PARTITION BY s.title_id ORDER BY s.season_number, e.episode) as rn
 			FROM episodes e
 			JOIN seasons s ON s.id = e.season_id
@@ -214,7 +215,10 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 		for nextEpRows.Next() {
 			var titleID int64
 			var ne model.NextEpisode
-			if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber); err == nil {
+			if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate); err == nil {
+				if ne.Name != nil && (strings.EqualFold(strings.TrimSpace(*ne.Name), "TBA") || strings.EqualFold(strings.TrimSpace(*ne.Name), "TBD")) {
+					ne.IsTBA = true
+				}
 				if t, ok := titleMap[titleID]; ok {
 					t.NextEpisode = &ne
 				}

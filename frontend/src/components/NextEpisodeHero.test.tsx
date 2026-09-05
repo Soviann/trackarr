@@ -109,4 +109,43 @@ describe('NextEpisodeHero', () => {
     fireEvent.click(btn!)
     expect(onStatusChange).toHaveBeenCalledWith('completed')
   })
+
+  it('renders nothing when title status is completed or dropped', () => {
+    const completedTitle: Title = { ...baseTitle, status: 'completed' }
+    const { container: c1 } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
+    expect(c1.firstChild).toBeNull()
+
+    const droppedTitle: Title = { ...baseTitle, status: 'dropped' }
+    const { container: c2 } = render(<NextEpisodeHero title={droppedTitle} onEpisodeToggle={vi.fn()} />)
+    expect(c2.firstChild).toBeNull()
+  })
+
+  it('renders nothing when the only unwatched episode is TBA', () => {
+    const tbaTitle: Title = {
+      ...baseTitle,
+      seasons: [
+        {
+          id: 10,
+          title_id: 1,
+          season_number: 1,
+          total_episodes: 1,
+          episodes: [
+            { id: 101, season_id: 10, episode: 1, name: 'Pilot', air_date: '2024-01-01', watched: true, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+        {
+          id: 11,
+          title_id: 1,
+          season_number: 2,
+          total_episodes: 1,
+          episodes: [
+            { id: 102, season_id: 11, episode: 1, name: 'TBA', air_date: null, watched: false, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<NextEpisodeHero title={tbaTitle} onEpisodeToggle={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
+  })
 })

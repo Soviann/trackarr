@@ -54,6 +54,7 @@
 | `MatchEvent`| `internal/model/match_event.go` | Match audit trail (`ID`, `TitleID`, `Kind`, `Detail`, `CreatedAt`). |
 | `Setting` | `internal/model/setting.go` | Key-value string pair (`Key`, `Value`). |
 | `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
+| `NextEpisode` | `internal/model/title.go` | First unwatched episode projection (`ID`, `SeasonID`, `Episode`, `SeasonNumber`, `Name`, `AirDate`, `IsTBA`). |
 | `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, actor/director rankings, and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
 
 ### Repositories (`internal/repository/`)

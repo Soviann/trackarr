@@ -80,6 +80,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   // user doesn't see the "Save image" native callout during the hold.
   const cardClass = `${s.card}${onLongPress ? ' no-touch-callout' : ''}`
   const hasArr = title.sonarr_id != null || title.radarr_id != null
+  const isTBA = Boolean(ne?.is_tba || (ne?.name && (ne.name.trim().toUpperCase() === 'TBA' || ne.name.trim().toUpperCase() === 'TBD')))
 
   return (
     <a
@@ -103,7 +104,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         </div>
 
         {/* Arr availability badge (top-right) */}
-        {hasArr && ne && !selecting && (
+        {hasArr && ne && !selecting && title.status !== 'dropped' && !isTBA && (
           <span className={s.arrAvailableBadge}>
             {`S${ne.season_number.toString().padStart(2, '0')}E${ne.episode.toString().padStart(2, '0')} ${t('common.dispoBadge')}`}
           </span>

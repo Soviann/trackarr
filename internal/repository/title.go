@@ -139,11 +139,20 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr *string
 	var createdAtStr, updatedAtStr string
 	var watchProvidersRaw *string
-	err := r.db.QueryRow(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, watch_providers, anilist_rating, release_date, next_air_date, next_air_episode, first_watched_at, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, personal_notes, created_at, updated_at FROM titles WHERE id = ?`, id).
+	query := `
+		SELECT t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.external_source_id,
+		       t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime,
+		       t.total_watch_minutes, t.tmdb_rating, t.credits, t.watch_providers, t.anilist_rating, t.release_date, t.next_air_date,
+		       t.next_air_episode, t.first_watched_at, t.last_watched_at, t.last_refreshed_at, t.accent_hex, t.simkl_id, t.simkl_slug,
+		       t.radarr_id, t.sonarr_id, t.arr_ignored, t.personal_notes, t.created_at, t.updated_at,
+		       (CASE WHEN ` + caughtUpCond + ` THEN 1 ELSE 0 END) AS caught_up
+		FROM titles t
+		WHERE t.id = ?`
+	err := r.db.QueryRow(query, id).
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.ExternalSourceID, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &title.PersonalNotes, &createdAtStr, &updatedAtStr)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &title.PersonalNotes, &createdAtStr, &updatedAtStr, &title.CaughtUp)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
@@ -533,13 +542,15 @@ func parseSQLiteTime(s *string) *time.Time {
 	return &t
 }
 
-// HasUnwatchedEpisodes returns true if the title has at least one unwatched episode.
+// HasUnwatchedEpisodes returns true if the title has at least one unwatched, non-TBA episode.
 func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
 	query := `
 		SELECT EXISTS(
 			SELECT 1 FROM episodes e
 			JOIN seasons s ON e.season_id = s.id
-			WHERE s.title_id = ? AND e.watched = 0
+			WHERE s.title_id = ?
+			  AND e.watched = 0
+			  AND UPPER(TRIM(COALESCE(e.name, ''))) NOT IN ('TBA', 'TBD')
 		)`
 	var exists bool
 	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
@@ -647,9 +658,10 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 		}
 		inClause := strings.Join(placeholders, ",")
 		nextEpRows, err := r.db.Query(`
-			SELECT title_id, ep_id, season_id, episode_number, season_number
+			SELECT title_id, ep_id, season_id, episode_number, season_number, ep_name, ep_air_date
 			FROM (
 				SELECT s.title_id, e.id AS ep_id, e.season_id, e.episode AS episode_number, s.season_number,
+				       e.name AS ep_name, e.air_date AS ep_air_date,
 					   ROW_NUMBER() OVER (PARTITION BY s.title_id ORDER BY s.season_number, e.episode) as rn
 				FROM episodes e
 				JOIN seasons s ON s.id = e.season_id
@@ -665,7 +677,10 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 			for nextEpRows.Next() {
 				var titleID int64
 				var ne model.NextEpisode
-				if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber); err == nil {
+				if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate); err == nil {
+					if ne.Name != nil && (strings.EqualFold(strings.TrimSpace(*ne.Name), "TBA") || strings.EqualFold(strings.TrimSpace(*ne.Name), "TBD")) {
+						ne.IsTBA = true
+					}
 					if it, ok := itemMap[titleID]; ok {
 						it.NextEpisode = &ne
 					}
