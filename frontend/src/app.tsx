@@ -3,7 +3,7 @@ import { route } from 'preact-router'
 import Router from 'preact-router'
 import clsx from 'clsx'
 import { Navbar } from './components/Navbar'
-import { FilterDrawer } from './components/FilterDrawer'
+import { FilterDrawer, type FilterState, type FilterActions } from './components/FilterDrawer'
 import { SearchBar } from './components/SearchBar'
 import { Library } from './pages/Library'
 import { ComingUp } from './pages/ComingUp'
@@ -190,16 +190,42 @@ export function App() {
     activeFilterCount++
   }
 
+  const drawerFilter: FilterState = {
+    status: statusFilter,
+    type: typeFilter,
+    isAnime: filter.is_anime === 'true',
+    seriesStatus: seriesStatusFilter,
+    decade: filter.decade ?? null,
+    releaseFrom: filter.release_from ?? '',
+    releaseTo: filter.release_to ?? '',
+    includeNoRelease: filter.include_no_release !== 'false',
+    selectedGenres: filter.genres ?? [],
+    genreOp: filter.genre_op ?? 'OR',
+    selectedCountries: filter.origin_country ?? [],
+    myRatingMin: filter.my_rating_min ?? '',
+    tmdbRatingMin: filter.tmdb_rating_min ?? '',
+  }
+
+  const drawerActions: FilterActions = {
+    onStatusChange: handleStatusChange,
+    onTypeChange: handleTypeChange,
+    onIsAnimeChange: handleIsAnimeChange,
+    onSeriesStatusChange: handleSeriesStatusChange,
+    onDecadeChange: handleDecadeChange,
+    onReleaseFromChange: handleReleaseFromChange,
+    onReleaseToChange: handleReleaseToChange,
+    onIncludeNoReleaseChange: handleIncludeNoReleaseChange,
+    onGenreToggle: handleGenreToggle,
+    onGenreOpChange: handleGenreOpChange,
+    onCountryToggle: handleCountryToggle,
+    onMyRatingMinChange: handleMyRatingMinChange,
+    onTmdbRatingMinChange: handleTmdbRatingMinChange,
+  }
+
   const filterDrawer = showDrawer ? (
     <FilterDrawer
-      status={statusFilter}
-      type={typeFilter}
-      isAnime={filter.is_anime === 'true'}
-      seriesStatus={seriesStatusFilter}
-      onStatusChange={handleStatusChange}
-      onTypeChange={handleTypeChange}
-      onIsAnimeChange={handleIsAnimeChange}
-      onSeriesStatusChange={handleSeriesStatusChange}
+      filter={drawerFilter}
+      actions={drawerActions}
       sort={sort}
       onSortChange={setSort}
       isSearchActive={isSearch}
@@ -208,24 +234,6 @@ export function App() {
       onReset={handleResetFilters}
       activeCount={activeFilterCount}
       defaultOpen={false}
-      decade={filter.decade ?? null}
-      releaseFrom={filter.release_from ?? ''}
-      releaseTo={filter.release_to ?? ''}
-      includeNoRelease={filter.include_no_release !== 'false'}
-      onDecadeChange={handleDecadeChange}
-      onReleaseFromChange={handleReleaseFromChange}
-      onReleaseToChange={handleReleaseToChange}
-      onIncludeNoReleaseChange={handleIncludeNoReleaseChange}
-      selectedGenres={filter.genres ?? []}
-      genreOp={filter.genre_op ?? 'OR'}
-      onGenreToggle={handleGenreToggle}
-      onGenreOpChange={handleGenreOpChange}
-      selectedCountries={filter.origin_country ?? []}
-      onCountryToggle={handleCountryToggle}
-      myRatingMin={filter.my_rating_min ?? ''}
-      tmdbRatingMin={filter.tmdb_rating_min ?? ''}
-      onMyRatingMinChange={handleMyRatingMinChange}
-      onTmdbRatingMinChange={handleTmdbRatingMinChange}
     />
   ) : null
 

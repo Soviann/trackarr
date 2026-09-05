@@ -119,7 +119,7 @@ func Serve(distFS embed.FS) error {
 
 	coverSvc := service.NewCoverService(writeDB, titleRepo, tmdbClient, anilistClient, cfg.DataDir)
 	coverSvc.SetAPILimiter(externalAPILimiter)
-	bgSvc := service.NewBackgroundService(writeDB, titleRepo, settingRepo, tmdbClient, coverSvc, pushSvc)
+	bgSvc := service.NewMetadataSyncService(writeDB, titleRepo, settingRepo, tmdbClient, coverSvc, pushSvc)
 	bgSvc.SetShutdownWG(&shutdownWG)
 	bgSvc.SetAPILimiter(externalAPILimiter)
 	if tvdbClient != nil {
@@ -128,8 +128,11 @@ func Serve(distFS embed.FS) error {
 	if anilistClient != nil {
 		bgSvc.SetAniList(anilistClient)
 	}
+
+	scheduler := service.NewScheduler(writeDB, bgSvc, coverSvc, nil, nil)
+	scheduler.SetShutdownWG(&shutdownWG)
 	if !cfg.DisableBackgroundTasks {
-		bgSvc.StartTicker(ctx, 24*time.Hour)
+		scheduler.Start(ctx, 24*time.Hour)
 	}
 
 	r := router.New(ctx, cfg, writeDB, readDB, distFS, bgSvc, pipeline, &shutdownWG)

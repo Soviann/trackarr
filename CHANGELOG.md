@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Modularisation des services d'arrière-plan (`Scheduler` & `MetadataSyncService`)** :
+  - Décomposition de l'orchestration des crons récurrents (`internal/service/scheduler.go`) et de la synchronisation de métadonnées (`internal/service/background.go`).
+  - Migration de base de données 045 ajoutant `generate_wrapped` à la contrainte CHECK de `task_queue.task_type`.
+  - Nettoyage des dépendances non utilisées injectées dans `CalendarHandler` (`writeDB`, `settingRepo`).
+- **Refactorisation frontend & Gestion des gestes tactiles** :
+  - Extraction du hook partagé `useSwipeDownToClose` (`frontend/src/hooks/useSwipeDownToClose.ts`) avec écouteurs non-passifs `{ passive: false }` prévenant le défilement parasite lors du glisser vers le bas dans `FilterDrawer` et `ActionDrawer`.
+  - Décomposition modulaire de `FilterDrawer` en sous-composants par onglet (`FilterBasicsTab`, `FilterGenresTab`, `FilterDatesTab`).
+  - Consolidation de la signature des 32 props individuelles de `FilterDrawer` en structures typées `FilterState` et `FilterActions`.
+
 ## [v1.18.1] — 2026-09-05
 
 ### Sécurité & Infrastructure

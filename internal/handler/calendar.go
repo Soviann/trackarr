@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,19 +12,11 @@ import (
 
 type CalendarHandler struct {
 	calendarSvc *service.CalendarService
-	writeDB     *sql.DB
-	settingRepo *repository.SettingRepository
 }
 
-func NewCalendarHandler(
-	calendarSvc *service.CalendarService,
-	writeDB *sql.DB,
-	settingRepo *repository.SettingRepository,
-) *CalendarHandler {
+func NewCalendarHandler(calendarSvc *service.CalendarService) *CalendarHandler {
 	return &CalendarHandler{
 		calendarSvc: calendarSvc,
-		writeDB:     writeDB,
-		settingRepo: settingRepo,
 	}
 }
 

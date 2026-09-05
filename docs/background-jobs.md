@@ -53,9 +53,9 @@ graph TD
 
 ---
 
-## ⏰ 1. Scheduled Background Service (`BackgroundService`)
+## ⏰ 1. Scheduled Background Service (`Scheduler` & `MetadataSyncService`)
 
-The `BackgroundService` (`internal/service/background.go`) runs continuously via an internal Go ticker (`StartTicker`).
+The `Scheduler` (`internal/service/scheduler.go`) orchestrates recurring background cron jobs, while `MetadataSyncService` (`internal/service/background.go`) handles title metadata enrichment and provider synchronization.
 
 ### Execution Schedule & Lifecycle
 - **Initial Delay**: Waits 30 seconds after server launch before triggering an initial refresh pass (to avoid startup CPU/I/O congestion).
