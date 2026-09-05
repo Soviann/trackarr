@@ -192,14 +192,23 @@ export function AdminSettings({ path }: { path?: string }) {
 
   return (
     <div className={s.page}>
-      <form onSubmit={handleSave}>
-        {/* TOP BAR */}
-        <div className={s.topBar}>
-          <div>
-            <a href={routeTo.admin()} className={s.backLink}>
-              ← Administration
-            </a>
-            <h1 className={s.pageTitle}>System Settings & API Keys</h1>
+      <form onSubmit={handleSave} className={s.sectionsList}>
+        {/* UNIFIED HEADER */}
+        <div className={s.header}>
+          <div className={s.headerLeft}>
+            <button
+              type="button"
+              onClick={() => history.back()}
+              className={s.backBtn}
+              aria-label="Back"
+              title="Back"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+            </button>
+            <h1 className={s.title}>System Settings & API Keys</h1>
           </div>
           <button type="submit" disabled={saving} className={s.saveBtn}>
             {saving ? 'Saving...' : 'Save Settings'}
