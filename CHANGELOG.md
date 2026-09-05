@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.3] — 2026-09-05
+
 ### Modifié
 - **Statut « À jour » (Caught Up) pour les séries en cours sans épisode restant (ex. Dan Da Dan)** :
   - `TitleRepository.GetByID` calcule et hydrate désormais le champ dérivé `caught_up` (via la condition SQL unifiée `caughtUpCond`).
