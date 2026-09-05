@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/preact'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, fireEvent, cleanup } from '@testing-library/preact'
 import { PosterTile, type PosterTileItem } from './PosterTile'
 
 describe('PosterTile', () => {
+  afterEach(() => {
+    cleanup()
+  })
   it('renders type badge with Sonarr indicator for series', () => {
     const item: PosterTileItem = {
       id: 1,
@@ -52,5 +55,59 @@ describe('PosterTile', () => {
     const { getByText } = render(<PosterTile item={item} />)
     expect(getByText('netflix')).not.toBeNull()
     expect(getByText('crunchyroll')).not.toBeNull()
+  })
+
+  it('renders quick mark button when next_episode and onQuickMark are provided', () => {
+    const onQuickMark = vi.fn()
+    const item: PosterTileItem = {
+      id: 4,
+      type: 'series',
+      cover_url: null,
+      name: 'Severance',
+      sublabel: 'S02E01',
+      progressRatio: 0.5,
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 2,
+      },
+      onQuickMark,
+    }
+
+    const { getByLabelText, getByText } = render(<PosterTile item={item} />)
+    const btn = getByLabelText('Mark S2 E1 as watched')
+    expect(btn).not.toBeNull()
+    expect(getByText('+1')).not.toBeNull()
+
+    fireEvent.click(btn)
+    expect(onQuickMark).toHaveBeenCalledOnce()
+  })
+
+  it('shows loading state when isMarking is true', () => {
+    const onQuickMark = vi.fn()
+    const item: PosterTileItem = {
+      id: 5,
+      type: 'series',
+      cover_url: null,
+      name: 'Severance',
+      sublabel: 'S02E01',
+      progressRatio: 0.5,
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 2,
+      },
+      onQuickMark,
+      isMarking: true,
+    }
+
+    const { getByLabelText } = render(<PosterTile item={item} />)
+    const btn = getByLabelText('Mark S2 E1 as watched') as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+
+    fireEvent.click(btn)
+    expect(onQuickMark).not.toHaveBeenCalled()
   })
 })

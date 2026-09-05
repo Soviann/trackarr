@@ -27,6 +27,7 @@ type ContinueWatchingItem struct {
 	WatchProviders  []model.WatchProvider `json:"watch_providers,omitempty"`
 	SonarrID        *int64                `json:"sonarr_id,omitempty"`
 	RadarrID        *int64                `json:"radarr_id,omitempty"`
+	NextEpisode     *model.NextEpisode    `json:"next_episode,omitempty"`
 }
 
 type UpcomingItem struct {
@@ -636,6 +637,43 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate continue watching: %w", err)
 	}
+
+	if len(items) > 0 {
+		args := make([]any, len(items))
+		placeholders := make([]string, len(items))
+		for i, it := range items {
+			args[i] = it.ID
+			placeholders[i] = "?"
+		}
+		inClause := strings.Join(placeholders, ",")
+		nextEpRows, err := r.db.Query(`
+			SELECT title_id, ep_id, season_id, episode_number, season_number
+			FROM (
+				SELECT s.title_id, e.id AS ep_id, e.season_id, e.episode AS episode_number, s.season_number,
+					   ROW_NUMBER() OVER (PARTITION BY s.title_id ORDER BY s.season_number, e.episode) as rn
+				FROM episodes e
+				JOIN seasons s ON s.id = e.season_id
+				WHERE s.title_id IN (`+inClause+`) AND e.watched = 0
+			)
+			WHERE rn = 1`, args...)
+		if err == nil {
+			defer nextEpRows.Close()
+			itemMap := make(map[int64]*ContinueWatchingItem, len(items))
+			for i := range items {
+				itemMap[items[i].ID] = &items[i]
+			}
+			for nextEpRows.Next() {
+				var titleID int64
+				var ne model.NextEpisode
+				if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber); err == nil {
+					if it, ok := itemMap[titleID]; ok {
+						it.NextEpisode = &ne
+					}
+				}
+			}
+		}
+	}
+
 	return items, nil
 }
 

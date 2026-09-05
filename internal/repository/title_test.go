@@ -1617,6 +1617,36 @@ func TestTitleRepo_ContinueWatching_IncludesProviders(t *testing.T) {
 	assert.True(t, items[0].IsAnime)
 	require.NotNil(t, items[0].SonarrID)
 	assert.Equal(t, int64(42), *items[0].SonarrID)
+	require.NotNil(t, items[0].NextEpisode)
+	assert.Equal(t, 1, items[0].NextEpisode.SeasonNumber)
+	assert.Equal(t, 1, items[0].NextEpisode.Episode)
+}
+
+func TestTitleRepo_ContinueWatching_NextEpisodeMultipleSeasons(t *testing.T) {
+	db := setupTestDB(t)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2022,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Multi Season Show", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, id, 1)
+	testutil.SeedEpisode(t, db, s1.ID, 1, "2022-01-01", true)
+	testutil.SeedEpisode(t, db, s1.ID, 2, "2022-01-08", true)
+
+	s2 := testutil.GetOrCreateSeason(t, db, id, 2)
+	testutil.SeedEpisode(t, db, s2.ID, 1, "2023-01-01", false)
+	testutil.SeedEpisode(t, db, s2.ID, 2, "2023-01-08", false)
+
+	items, err := repository.NewTitleRepository(db).ListContinueWatching()
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, 2, items[0].WatchedEpisodes)
+	assert.Equal(t, 4, items[0].TotalEpisodes)
+	require.NotNil(t, items[0].NextEpisode)
+	assert.Equal(t, 2, items[0].NextEpisode.SeasonNumber)
+	assert.Equal(t, 1, items[0].NextEpisode.Episode)
 }
 
 func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
