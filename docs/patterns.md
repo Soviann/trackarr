@@ -219,7 +219,7 @@
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |
 | `EpisodeRow` | `components/EpisodeRow.tsx` | Episode listing row with title, air date, and interactive toggle checkmark |
-| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Sagas & Franchise relations card with category filters, timeline/release sort toggle, and collapse/expand |
+| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Sagas & Franchise tracking card with progress bar, next chronological title chip, horizontal titles strip with hidden scrollbar, category filters, timeline/release sort toggle, and collapse/expand |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |
 | `AniListSheet`| `components/AniListSheet.tsx` | Slide-up modal sheet for editing AniList multi-part season associations |
 | `MatchReviewCard` | `components/MatchReviewCard.tsx` | Review card with external ID chips, confirm, and fix actions |

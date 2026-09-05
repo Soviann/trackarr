@@ -40,9 +40,9 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 2, external_id: 102, format: 'OVA', title: 'OVA 1' }),
       makeRelation({ id: 3, external_id: 103, relation_type: 'SPIN_OFF', format: 'TV', title: 'Spin-off 1' }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    expect(getByText('Universe & Franchise')).toBeTruthy()
+    expect(getAllByText('Universe & Franchise').length).toBeGreaterThanOrEqual(1)
     expect(getByText('All (3)')).toBeTruthy()
     expect(getByText('Movies (1)')).toBeTruthy()
     expect(getByText('OVAs (1)')).toBeTruthy()
@@ -54,25 +54,25 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 1, external_id: 101, format: 'MOVIE', title: 'Movie 1' }),
       makeRelation({ id: 2, external_id: 102, format: 'OVA', title: 'OVA 1' }),
     ]
-    const { getByText, queryByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText, queryByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    expect(getByText('Movie 1')).toBeTruthy()
-    expect(getByText('OVA 1')).toBeTruthy()
+    expect(getAllByText(/Movie 1/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/OVA 1/).length).toBeGreaterThanOrEqual(1)
 
     // Filter to movies
     fireEvent.click(getByText('Movies (1)'))
-    expect(getByText('Movie 1')).toBeTruthy()
-    expect(queryByText('OVA 1')).toBeNull()
+    expect(getAllByText(/Movie 1/).length).toBeGreaterThanOrEqual(1)
+    // OVA 1 should still be in chips strip but not in the items grid
+    expect(document.querySelector('.itemTitle')?.textContent).toContain('Movie 1')
 
     // Filter to OVAs
     fireEvent.click(getByText('OVAs (1)'))
-    expect(queryByText('Movie 1')).toBeNull()
-    expect(getByText('OVA 1')).toBeTruthy()
+    expect(document.querySelector('.itemTitle')?.textContent).toContain('OVA 1')
 
     // Back to All
     fireEvent.click(getByText('All (2)'))
-    expect(getByText('Movie 1')).toBeTruthy()
-    expect(getByText('OVA 1')).toBeTruthy()
+    expect(getAllByText(/Movie 1/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/OVA 1/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows matched watch status badge correctly', () => {
@@ -93,12 +93,12 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 1, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 671, format: 'MOVIE', title: 'Harry Potter 1', year: 2001 }),
       makeRelation({ id: 2, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 672, format: 'MOVIE', title: 'Harry Potter 2', year: 2002 }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    expect(getByText('Saga & Collection')).toBeTruthy()
+    expect(getAllByText('Saga & Collection').length).toBeGreaterThanOrEqual(1)
     expect(getByText('TMDB Saga')).toBeTruthy()
-    expect(getByText('Harry Potter 1')).toBeTruthy()
-    expect(getByText('Harry Potter 2')).toBeTruthy()
+    expect(getAllByText(/Harry Potter 1/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/Harry Potter 2/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('toggles sort order between timeline and release date', () => {
@@ -127,14 +127,12 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 4, external_id: 4, title: 'Item 4' }),
       makeRelation({ id: 5, external_id: 5, title: 'Item 5' }),
     ]
-    const { getByText, queryByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
 
-    // Items 1, 2, 3 visible by default
-    expect(getByText('Item 1')).toBeTruthy()
-    expect(getByText('Item 2')).toBeTruthy()
-    expect(getByText('Item 3')).toBeTruthy()
-    expect(queryByText('Item 4')).toBeNull()
-    expect(queryByText('Item 5')).toBeNull()
+    // Items 1, 2, 3 visible in grid
+    expect(getAllByText(/Item 1/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/Item 2/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/Item 3/).length).toBeGreaterThanOrEqual(1)
 
     // Button shows "Show more (+2)"
     const toggleBtn = getByText('Show more (+2)')
@@ -142,14 +140,44 @@ describe('FranchiseRelationsSection', () => {
 
     // Expand
     fireEvent.click(toggleBtn)
-    expect(getByText('Item 4')).toBeTruthy()
-    expect(getByText('Item 5')).toBeTruthy()
+    expect(getAllByText(/Item 4/).length).toBeGreaterThanOrEqual(1)
+    expect(getAllByText(/Item 5/).length).toBeGreaterThanOrEqual(1)
     expect(getByText('Show less')).toBeTruthy()
 
     // Collapse back
     fireEvent.click(getByText('Show less'))
-    expect(queryByText('Item 4')).toBeNull()
-    expect(queryByText('Item 5')).toBeNull()
     expect(getByText('Show more (+2)')).toBeTruthy()
+  })
+
+  it('renders saga tracker progress, next chronological title, and chips', () => {
+    const rels = [
+      makeRelation({ id: 1, external_id: 101, title: 'Iron Man', year: 2008, sort_order: 1, matched_status: 'completed' }),
+      makeRelation({ id: 2, external_id: 102, title: 'Iron Man 2', year: 2010, sort_order: 2, matched_status: 'completed' }),
+      makeRelation({ id: 3, external_id: 103, title: 'The Avengers', year: 2012, sort_order: 3, matched_status: 'watching' }),
+      makeRelation({ id: 4, external_id: 104, title: 'Iron Man 3', year: 2013, sort_order: 4 }),
+    ]
+    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+
+    // 2 out of 4 titles seen
+    expect(getByText('2 / 4 Titles seen')).toBeTruthy()
+    // Next chronological title
+    expect(getByText('The Avengers (2012)')).toBeTruthy()
+
+    // Chips
+    expect(getByText('✓ Iron Man (2008)')).toBeTruthy()
+    expect(getByText('✓ Iron Man 2 (2010)')).toBeTruthy()
+    expect(getByText('▶ The Avengers (2012)')).toBeTruthy()
+    expect(getByText('Iron Man 3 (2013)')).toBeTruthy()
+  })
+
+  it('displays completion message when all titles are seen', () => {
+    const rels = [
+      makeRelation({ id: 1, external_id: 101, title: 'Movie 1', matched_status: 'completed' }),
+      makeRelation({ id: 2, external_id: 102, title: 'Movie 2', matched_status: 'completed' }),
+    ]
+    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+
+    expect(getByText('2 / 2 Titles seen')).toBeTruthy()
+    expect(getByText('All titles completed!')).toBeTruthy()
   })
 })

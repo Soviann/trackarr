@@ -76,6 +76,10 @@ export const fr: TranslationSchema = {
     addToLibrary: 'Ajouter à la bibliothèque',
     openInArr: 'Ouvrir dans {app}',
     manageInArr: 'Gérer dans {app}',
+    rateThisTitle: 'NOTER CE TITRE :',
+    notRated: 'Non noté',
+    myRating: 'MA NOTE :',
+    editRating: 'Modifier',
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',
@@ -195,6 +199,9 @@ export const fr: TranslationSchema = {
     markWatched: 'Marquer comme vu',
     addMissing: '+ Ajouter',
     seeOnProvider: 'Voir sur {provider}',
+    titlesSeen: '{seen} / {total} Titres vus',
+    nextChronological: 'PROCHAIN TITRE CHRONOLOGIQUE :',
+    allTitlesSeen: 'Tous les titres sont vus !',
   },
   sideStories: {
     recommendedAfterSeason: 'Side Story recommandée après la Saison {season}',
