@@ -110,15 +110,17 @@ func (d *DynamicConfigReloader) Get(key string) string {
 
 // Reload re-instantiates and injects updated external clients into all services at runtime.
 func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
+	d.mu.RLock()
 	tmdbKey := d.getUnsafe("tmdb_api_key")
 	tvdbKey := d.getUnsafe("tvdb_api_key")
 	geminiKeysRaw := d.getUnsafe("gemini_api_keys")
 	jellyfinSecret := d.getUnsafe("jellyfin_webhook_secret")
 	plexSecret := d.getUnsafe("plex_webhook_secret")
 	fallbackSecret := d.getUnsafe("webhook_secret")
+	vapidPub := d.getUnsafe("vapid_public_key")
+	vapidPriv := d.getUnsafe("vapid_private_key")
+	vapidSub := d.getUnsafe("vapid_subject")
+	d.mu.RUnlock()
 
 	// 1. TMDB Client
 	var tmdbClient *matching.TMDBClient
@@ -126,7 +128,7 @@ func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
 		tmdbClient = matching.NewTMDBClient(tmdbKey)
 	}
 
-	// 2. TVDB Client
+	// 2. TVDB Client (login performed outside mutex to prevent blocking lookups)
 	var tvdbClient *matching.TVDBClient
 	if tvdbKey != "" {
 		tvdbClient = matching.NewTVDBClient(tvdbKey)
@@ -150,6 +152,9 @@ func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
 			geminiClient = matching.NewGeminiClient(cleanKeys)
 		}
 	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	// 4. Update Pipeline
 	if d.pipeline != nil {
@@ -181,9 +186,6 @@ func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
 
 	// 9. Update PushService Keys
 	if d.pushSvc != nil {
-		vapidPub := d.getUnsafe("vapid_public_key")
-		vapidPriv := d.getUnsafe("vapid_private_key")
-		vapidSub := d.getUnsafe("vapid_subject")
 		d.pushSvc.SetKeys(vapidPub, vapidPriv, vapidSub)
 	}
 

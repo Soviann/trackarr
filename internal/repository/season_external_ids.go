@@ -48,43 +48,6 @@ func (r *SeasonExternalIDRepository) Get(ctx context.Context, seasonID int64, pr
 	return id, nil
 }
 
-// Add inserts a (season, provider, externalID) mapping. Silently deduplicates
-// if the same triple already exists; a different externalID for the same
-// (season, provider) is added as a new part (split-cour support).
-func (r *SeasonExternalIDRepository) Add(ctx context.Context, seasonID int64, provider, externalID string) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO season_external_ids (season_id, provider, external_id)
-		VALUES (?, ?, ?)
-		ON CONFLICT(season_id, provider, external_id) DO NOTHING`, seasonID, provider, externalID)
-	if err != nil {
-		return fmt.Errorf("season_external_ids add: %w", err)
-	}
-	return nil
-}
-
-// DeletePart removes a single (season, provider, externalID) part.
-func (r *SeasonExternalIDRepository) DeletePart(ctx context.Context, seasonID int64, provider, externalID string) error {
-	_, err := r.db.ExecContext(ctx,
-		`DELETE FROM season_external_ids WHERE season_id = ? AND provider = ? AND external_id = ?`,
-		seasonID, provider, externalID)
-	if err != nil {
-		return fmt.Errorf("season_external_ids delete part: %w", err)
-	}
-	return nil
-}
-
-// Delete removes all parts for (seasonID, provider).
-func (r *SeasonExternalIDRepository) Delete(ctx context.Context, seasonID int64, provider string) error {
-	_, err := r.db.ExecContext(ctx,
-		`DELETE FROM season_external_ids WHERE season_id = ? AND provider = ?`,
-		seasonID, provider,
-	)
-	if err != nil {
-		return fmt.Errorf("season_external_ids delete: %w", err)
-	}
-	return nil
-}
-
 // ListParts returns all parts for (seasonID, provider) in display order.
 func (r *SeasonExternalIDRepository) ListParts(ctx context.Context, seasonID int64, provider string) ([]model.AniListPart, error) {
 	rows, err := r.db.QueryContext(ctx, `

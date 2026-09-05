@@ -147,18 +147,10 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 
 	for rows.Next() {
 		var t model.Title
-		var lastWatchedAtStr *string
-		var watchProvidersRaw *string
 		var matchedName, matchedLang string
-		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
-			&t.ExternalSourceID, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &watchProvidersRaw, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp,
-			&matchedName, &matchedLang); err != nil {
+		if err := scanTitleRow(rows, &t, &matchedName, &matchedLang); err != nil {
 			return nil, fmt.Errorf("scan search title: %w", err)
 		}
-		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
-		t.WatchProviders = parseWatchProviders(watchProvidersRaw)
 
 		rel := scoreRelevance(matchedName, searchLower)
 		t.MatchedName = &matchedName
@@ -445,17 +437,10 @@ func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter
 	var titles []model.Title
 	for tRows.Next() {
 		var t model.Title
-		var lastWatchedAtStr *string
-		var watchProvidersRaw *string
-		if err := tRows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
-			&t.ExternalSourceID, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &watchProvidersRaw, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
+		if err := scanTitleRow(tRows, &t); err != nil {
 			tRows.Close()
 			return nil, fmt.Errorf("scan fuzzy title: %w", err)
 		}
-		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
-		t.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		if c, ok := matchInfo[t.ID]; ok {
 			t.MatchedName = &c.name
 			t.MatchedLanguage = &c.language

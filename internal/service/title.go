@@ -447,3 +447,131 @@ func (s *TitleService) Merge(ctx context.Context, db *sql.DB, destID, sourceID i
 		return repository.NewTitleWriter(tx).Merge(ctx, destID, sourceID, seasonOffset, destAniListID, sourceAniListID)
 	})
 }
+
+// Create constructs a title and its associated names in a managed transaction.
+func (s *TitleService) Create(ctx context.Context, title *model.Title, names []model.TitleName) (int64, error) {
+	var id int64
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		newID, err := repository.NewTitleWriter(tx).Create(ctx, title, names)
+		if err != nil {
+			return err
+		}
+		id = newID
+		return nil
+	})
+	return id, err
+}
+
+// CreateAndEnrich constructs a title, its names, and optionally enqueues an enrichment task.
+func (s *TitleService) CreateAndEnrich(ctx context.Context, title *model.Title, names []model.TitleName, enqueueEnrichment bool) (int64, error) {
+	var newID int64
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		id, err := repository.NewTitleWriter(tx).Create(ctx, title, names)
+		if err != nil {
+			return err
+		}
+		newID = id
+
+		if enqueueEnrichment && s.tasks != nil {
+			payloadJSON, _ := json.Marshal(map[string]any{"title_id": newID})
+			dedupKey := fmt.Sprintf("enrich_%d", newID)
+			_, _ = repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey)
+		}
+		return nil
+	})
+	return newID, err
+}
+
+// Update modifies a title and enqueues any resulting AniList pushes inside a managed transaction.
+func (s *TitleService) Update(ctx context.Context, id int64, update repository.TitleUpdate, before *model.Title, newStatus *model.TitleStatus, newRating *int) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		if err := repository.NewTitleWriter(tx).Update(ctx, id, update); err != nil {
+			return err
+		}
+		if before != nil {
+			enqueueAniListPushesOnTitleUpdate(ctx, tx, before, newStatus, newRating)
+		}
+		return nil
+	})
+}
+
+// Delete removes a title by ID inside a managed transaction.
+func (s *TitleService) Delete(ctx context.Context, id int64) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Delete(ctx, id)
+	})
+}
+
+// BatchDelete removes multiple titles by ID inside a managed transaction.
+func (s *TitleService) BatchDelete(ctx context.Context, ids []int64) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchDelete(ctx, ids)
+	})
+}
+
+// BatchUpdateStatus updates the status of multiple titles inside a managed transaction.
+func (s *TitleService) BatchUpdateStatus(ctx context.Context, ids []int64, status string) error {
+	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).BatchUpdateStatus(ctx, ids, status)
+	})
+}
+
+func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {
+	statusChanged := newStatus != nil && *newStatus != before.Status
+	ratingChanged := newRating != nil && !intPtrEq(newRating, before.MyRating)
+	if !statusChanged && !ratingChanged {
+		return
+	}
+
+	if before.Type == model.TitleTypeMovie {
+		if before.IsAnime && before.AniListID != nil && *before.AniListID != 0 {
+			EnqueueAniListMoviePush(ctx, tx, before.ID)
+		}
+		return
+	}
+
+	effectiveStatus := before.Status
+	if newStatus != nil {
+		effectiveStatus = *newStatus
+	}
+	ratingOnly := !statusChanged && ratingChanged
+
+	seen := map[int64]bool{}
+	for _, season := range before.Seasons {
+		if seen[season.ID] {
+			continue
+		}
+		if ratingOnly {
+			total, watched := seasonWatchCounts(season)
+			derived, _ := DeriveSeasonState(string(effectiveStatus), total, watched)
+			if !ShouldPushRating(derived) {
+				continue
+			}
+		}
+		EnqueueAniListSeasonPush(ctx, tx, season.ID)
+		seen[season.ID] = true
+	}
+}
+
+func seasonWatchCounts(s model.Season) (total, watched int) {
+	if s.TotalEpisodes != nil {
+		total = *s.TotalEpisodes
+	}
+	if total == 0 {
+		total = len(s.Episodes)
+	}
+	for _, ep := range s.Episodes {
+		if ep.Watched {
+			watched++
+		}
+	}
+	return total, watched
+}
+
+func intPtrEq(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+

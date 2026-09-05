@@ -118,12 +118,3 @@ func (repo *TitleRelationRepository) GetBySeasonID(ctx context.Context, seasonID
 	}
 	return out, rows.Err()
 }
-
-// DeleteForTitle removes all relations for a title.
-func (repo *TitleRelationRepository) DeleteForTitle(ctx context.Context, titleID int64) error {
-	_, err := repo.db.ExecContext(ctx, `DELETE FROM title_relations WHERE title_id = ?`, titleID)
-	if err != nil {
-		return fmt.Errorf("title_relations delete for title: %w", err)
-	}
-	return nil
-}

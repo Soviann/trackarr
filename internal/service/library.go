@@ -148,6 +148,21 @@ func (s *LibraryService) ToggleEpisodeWatched(ctx context.Context, tx *sql.Tx, t
 	return title, ep, prompt, nil
 }
 
+// ToggleEpisodeWatchedTx wraps ToggleEpisodeWatched in a managed database transaction.
+func (s *LibraryService) ToggleEpisodeWatchedTx(ctx context.Context, titleID, episodeID int64) (*model.Title, *model.Episode, *RatingPrompt, error) {
+	var (
+		title  *model.Title
+		ep     *model.Episode
+		prompt *RatingPrompt
+	)
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		var err error
+		title, ep, prompt, err = s.ToggleEpisodeWatched(ctx, tx, titleID, episodeID)
+		return err
+	})
+	return title, ep, prompt, err
+}
+
 // TriggerBackfillForEpisode is the post-commit half of ToggleEpisodeWatched:
 // fires previous-episode backfill only when watching forward (never on
 // unwatch). Safe to call with nil ep.
@@ -243,6 +258,20 @@ func (s *LibraryService) MarkEpisodesWatched(ctx context.Context, tx *sql.Tx, ti
 	}
 
 	return title, prompt, nil
+}
+
+// MarkEpisodesWatchedTx wraps MarkEpisodesWatched in a managed database transaction.
+func (s *LibraryService) MarkEpisodesWatchedTx(ctx context.Context, titleID int64, episodeIDs []int64, seasonIDs []int64, source model.WatchEventSource, rawPayload *string) (*model.Title, *RatingPrompt, error) {
+	var (
+		title  *model.Title
+		prompt *RatingPrompt
+	)
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		var err error
+		title, prompt, err = s.MarkEpisodesWatched(ctx, tx, titleID, episodeIDs, seasonIDs, source, rawPayload)
+		return err
+	})
+	return title, prompt, err
 }
 
 // MarkMovieWatched marks a movie title as completed and logs a watch event.

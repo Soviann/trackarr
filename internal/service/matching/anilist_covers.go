@@ -48,7 +48,7 @@ func (c *AniListClient) DownloadCover(ctx context.Context, imageURL string, dest
 	}
 	defer f.Close()
 
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	if _, err := io.Copy(f, io.LimitReader(resp.Body, 15<<20)); err != nil {
 		_ = os.Remove(destPath)
 		return "", fmt.Errorf("write cover: %w", err)
 	}

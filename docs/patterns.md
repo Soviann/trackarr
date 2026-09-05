@@ -61,7 +61,7 @@
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
 | `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
-| `TitleRelation` | `GetByTitleID`, `GetBySeasonID`, `DeleteForTitle` | `UpsertBatch`, `DeleteForTitle` |
+| `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | `Episode` | `GetBySeasonID`, `GetByID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched` |
 | `WatchEvent` | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |

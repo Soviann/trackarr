@@ -43,37 +43,6 @@ func (r *WrappedRepository) GetSnapshot(ctx context.Context, year int) (*model.W
 	return &resp, &createdAt, nil
 }
 
-// SaveSnapshot saves or replaces an immutable Wrapped snapshot.
-func (r *WrappedRepository) SaveSnapshot(ctx context.Context, year int, resp *model.WrappedResponse) error {
-	dataJSON, err := json.Marshal(resp)
-	if err != nil {
-		return fmt.Errorf("marshal wrapped snapshot %d: %w", year, err)
-	}
-
-	query := `
-		INSERT INTO wrapped_snapshots (year, data_json, created_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP)
-		ON CONFLICT(year) DO UPDATE SET
-			data_json = excluded.data_json,
-			created_at = excluded.created_at
-	`
-	_, err = r.db.ExecContext(ctx, query, year, string(dataJSON))
-	if err != nil {
-		return fmt.Errorf("save wrapped snapshot %d: %w", year, err)
-	}
-	return nil
-}
-
-// DeleteSnapshot removes a snapshot for a given year.
-func (r *WrappedRepository) DeleteSnapshot(ctx context.Context, year int) error {
-	query := `DELETE FROM wrapped_snapshots WHERE year = ?`
-	_, err := r.db.ExecContext(ctx, query, year)
-	if err != nil {
-		return fmt.Errorf("delete wrapped snapshot %d: %w", year, err)
-	}
-	return nil
-}
-
 // HasSnapshot checks if a snapshot already exists for a year.
 func (r *WrappedRepository) HasSnapshot(ctx context.Context, year int) (bool, error) {
 	query := `SELECT 1 FROM wrapped_snapshots WHERE year = ? LIMIT 1`

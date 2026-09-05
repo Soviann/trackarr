@@ -6,6 +6,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Sécurité
+- **Protection contre le listage de répertoires et traversal** : Sécurisation du endpoint de covers (`/api/covers/`) empêchant le parcours de répertoires et l'accès arbitraire aux dossiers parents ou dotfiles.
+- **Protection DoS sur les requêtes entrantes** : Limitation de la taille des réponses distantes à 15 Mo pour les posters AniList et limitation stricte à 50 Mo pour les archives ZIP de sauvegarde décompressées.
+- **Limitation de débit sur le flux calendrier** : Application du middleware de rate limiting (60 requêtes/minute) sur `/api/calendar.ics`.
+
+### Amélioré
+- **Architecture de persistance & Modèle Writer** :
+  - Isolation compile-time stricte des mutations SQL via `WrappedWriter`, `SeasonExternalIDsWriter` et `TitleRelationWriter` exigeant une transaction `*sql.Tx`.
+  - Migration de l'orchestration des transactions SQL depuis les handlers HTTP (`internal/handler/`) vers les services métier (`TitleService`, `LibraryService`).
+  - Découplage de la file de tâches asynchrones (`TaskQueueWorker`) avec dispatch de handlers enregistrables (`TaskHandlerFunc`).
+  - Déduplication de l'extraction et du scan de lignes de titres SQLite via `scanTitleRow`.
+  - Amélioration de la concurrence : suppression des verrous prolongés lors de l'authentification externe TVDB dans `DynamicConfigService`.
+- **Qualité de code & Linters** :
+  - Mise à niveau de `golangci-lint` en version `v2.13.2` compatible Go 1.24+ avec 0 erreur.
+
 ## [v1.18.0] — 2026-09-05
 
 ### Ajouté

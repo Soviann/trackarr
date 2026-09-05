@@ -141,8 +141,10 @@ func TestTitleRelations_DeleteForTitle(t *testing.T) {
 		return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, titleID, initial)
 	})
 	require.NoError(t, err)
-
-	require.NoError(t, repo.DeleteForTitle(ctx, titleID))
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleRelationWriter(tx).DeleteForTitle(ctx, titleID)
+	})
+	require.NoError(t, err)
 	got, err := repo.GetByTitleID(ctx, titleID)
 	require.NoError(t, err)
 	assert.Empty(t, got)

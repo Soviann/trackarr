@@ -2,8 +2,10 @@ package repository_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +53,9 @@ func TestWrappedRepository_SaveAndGetSnapshot(t *testing.T) {
 		},
 	}
 
-	err = repo.SaveSnapshot(ctx, 2025, sampleResp)
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewWrappedWriter(tx).SaveSnapshot(ctx, 2025, sampleResp)
+	})
 	require.NoError(t, err)
 
 	has, err = repo.HasSnapshot(ctx, 2025)
@@ -78,7 +82,9 @@ func TestWrappedRepository_SaveAndGetSnapshot(t *testing.T) {
 	assert.Equal(t, 15, archives[0].TotalTitles)
 
 	// Delete snapshot
-	err = repo.DeleteSnapshot(ctx, 2025)
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewWrappedWriter(tx).DeleteSnapshot(ctx, 2025)
+	})
 	require.NoError(t, err)
 
 	has, err = repo.HasSnapshot(ctx, 2025)

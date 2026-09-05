@@ -84,6 +84,9 @@ type AniListPusher interface {
 	PushMovieState(ctx context.Context, titleID int64) error
 }
 
+// TaskHandlerFunc processes a specific task type.
+type TaskHandlerFunc func(ctx context.Context, task model.Task, logger *slog.Logger) error
+
 // TaskQueueWorker processes retryable tasks from the queue.
 type TaskQueueWorker struct {
 	log         *slog.Logger
@@ -105,6 +108,7 @@ type TaskQueueWorker struct {
 	covers      *CoverService   // optional — configured via SetCovers; drives accent extraction after every cover save
 	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so the worker loop can finish its poll
 	arrSvc      *ArrService     // optional — configured via SetArrService
+	handlers    map[model.TaskType]TaskHandlerFunc
 }
 
 func NewTaskQueueWorker(
@@ -119,7 +123,7 @@ func NewTaskQueueWorker(
 	titleSvc *TitleService,
 	writeDB *sql.DB,
 ) *TaskQueueWorker {
-	return &TaskQueueWorker{
+	w := &TaskQueueWorker{
 		log:         slog.With("worker", "taskqueue"),
 		tasks:       tasks,
 		titles:      titles,
@@ -134,7 +138,33 @@ func NewTaskQueueWorker(
 		limiter:     NewAPILimiter(2, 1),
 		titleSvc:    titleSvc,
 		writeDB:     writeDB,
+		handlers:    make(map[model.TaskType]TaskHandlerFunc),
 	}
+	w.registerBuiltinHandlers()
+	return w
+}
+
+func (w *TaskQueueWorker) registerBuiltinHandlers() {
+	w.handlers[model.TaskTypeEnrichment] = w.handleEnrichment
+	w.handlers[model.TaskTypeRefresh] = w.handleRefresh
+	w.handlers[model.TaskTypeCoverFetch] = w.handleCoverFetch
+	w.handlers[model.TaskTypeAniListPushSeason] = w.handleAniListPushSeason
+	w.handlers[model.TaskTypeAniListPushMovie] = w.handleAniListPushMovie
+	w.handlers[model.TaskTypeRadarrPush] = func(ctx context.Context, task model.Task, logger *slog.Logger) error {
+		return w.handleArrPush(ctx, task, logger, "radarr")
+	}
+	w.handlers[model.TaskTypeSonarrPush] = func(ctx context.Context, task model.Task, logger *slog.Logger) error {
+		return w.handleArrPush(ctx, task, logger, "sonarr")
+	}
+	w.handlers[model.TaskTypeGenerateWrapped] = w.handleGenerateWrapped
+}
+
+// RegisterHandler registers or overrides a handler for a task type.
+func (w *TaskQueueWorker) RegisterHandler(taskType model.TaskType, handler TaskHandlerFunc) {
+	if w == nil {
+		return
+	}
+	w.handlers[taskType] = handler
 }
 
 // SetShutdownWG registers a WaitGroup the worker loop increments on start and
@@ -315,26 +345,8 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		}
 	}()
 
-	var err error
-
-	switch task.TaskType {
-	case model.TaskTypeEnrichment:
-		err = w.handleEnrichment(ctx, task, logger)
-	case model.TaskTypeRefresh:
-		err = w.handleRefresh(ctx, task, logger)
-	case model.TaskTypeCoverFetch:
-		err = w.handleCoverFetch(ctx, task, logger)
-	case model.TaskTypeAniListPushSeason:
-		err = w.handleAniListPushSeason(ctx, task, logger)
-	case model.TaskTypeAniListPushMovie:
-		err = w.handleAniListPushMovie(ctx, task, logger)
-	case model.TaskTypeRadarrPush:
-		err = w.handleArrPush(ctx, task, logger, "radarr")
-	case model.TaskTypeSonarrPush:
-		err = w.handleArrPush(ctx, task, logger, "sonarr")
-	case model.TaskTypeGenerateWrapped:
-		err = w.handleGenerateWrapped(ctx, task, logger)
-	default:
+	handler, ok := w.handlers[task.TaskType]
+	if !ok {
 		logger.Warn("unknown task type", "taskType", task.TaskType)
 		bookkeepCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_ = database.WithTxContext(bookkeepCtx, w.writeDB, func(tx *sql.Tx) error {
@@ -343,6 +355,8 @@ func (w *TaskQueueWorker) ProcessTask(ctx context.Context, task model.Task) {
 		cancel()
 		return
 	}
+
+	err := handler(ctx, task, logger)
 
 	if err != nil {
 		retryAfter := matching.ExtractRetryAfter(err)

@@ -22,7 +22,7 @@ func setupStatsHandler(t *testing.T) *handler.StatsHandler {
 	t.Cleanup(func() { db.Close() })
 	statsRepo := repository.NewStatsRepository(db)
 	wrappedRepo := repository.NewWrappedRepository(db)
-	return handler.NewStatsHandler(statsRepo, wrappedRepo, nil)
+	return handler.NewStatsHandler(db, statsRepo, wrappedRepo, nil)
 }
 
 func TestStatsHandler_Get_EmptyDB(t *testing.T) {

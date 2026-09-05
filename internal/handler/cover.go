@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,11 +27,14 @@ func NewCoverHandler(dataDir string) *CoverHandler {
 func (h *CoverHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
 
-	// Resolve against coversDir then verify containment. Cleaner than greping
-	// for ".." / "/" / "\" — handles unicode normalization tricks, encoded
-	// separators, and OS-specific path quirks the substring check missed.
+	// Resolve against coversDir then verify containment.
 	resolved, err := filepath.Abs(filepath.Join(h.coversDir, filename))
-	if err != nil || (resolved != h.coversDir && !strings.HasPrefix(resolved, h.coversDir+string(filepath.Separator))) {
+	if err != nil || !strings.HasPrefix(resolved, h.coversDir+string(filepath.Separator)) {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	if info, err := os.Stat(resolved); err == nil && info.IsDir() {
 		http.Error(w, "Invalid filename", http.StatusBadRequest)
 		return
 	}

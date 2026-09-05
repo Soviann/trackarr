@@ -243,17 +243,10 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
-		var lastWatchedAtStr *string
-		var watchProvidersRaw *string
-		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
-			&t.ExternalSourceID, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
-			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &watchProvidersRaw, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &t.CreatedAt, &t.UpdatedAt, &t.CaughtUp); err != nil {
+		if err := scanTitleRow(rows, &t); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
-		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
-		t.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		titles = append(titles, t)
 	}
 	if err := rows.Err(); err != nil {

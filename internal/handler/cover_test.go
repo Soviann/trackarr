@@ -51,4 +51,23 @@ func TestCoverHandler_Serve(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
+
+	t.Run("rejects root directory / dot path", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/covers/.", nil)
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("rejects directory instead of file", func(t *testing.T) {
+		subDir := filepath.Join(coversDir, "subdir")
+		require.NoError(t, os.MkdirAll(subDir, 0755))
+
+		req := httptest.NewRequest(http.MethodGet, "/covers/subdir", nil)
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
 }

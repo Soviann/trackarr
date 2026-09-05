@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -307,15 +306,8 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		ArrIgnored:  true,
 	}
 
-	var id int64
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		newID, createErr := repository.NewTitleWriter(tx).Create(r.Context(), title, body.Names)
-		if createErr != nil {
-			return createErr
-		}
-		id = newID
-		return nil
-	}); err != nil {
+	id, err := h.service.Create(r.Context(), title, body.Names)
+	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
@@ -368,15 +360,7 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		update.ClearCoverURL = true
 	}
 
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		if err := repository.NewTitleWriter(tx).Update(r.Context(), id, update); err != nil {
-			return err
-		}
-		if before != nil {
-			enqueueAniListPushesOnTitleUpdate(r.Context(), tx, before, body.Status, body.MyRating)
-		}
-		return nil
-	}); err != nil {
+	if err := h.service.Update(r.Context(), id, update, before, body.Status, body.MyRating); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 
@@ -387,76 +371,6 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	title, _ := h.titles.GetByID(id)
 	httputil.WriteJSON(w, http.StatusOK, title)
 	return nil
-}
-
-// enqueueAniListPushesOnTitleUpdate fans out push tasks for a title whose
-// status and/or rating just changed. Contract:
-//   - movies: one movie push (anime + AniList-mapped only).
-//   - series, status changed: one season push per season (regardless of rating).
-//   - series, rating changed only: one push per season whose derived state is
-//     COMPLETED or DROPPED (ShouldPushRating) — AniList rejects scores on
-//     CURRENT/PLANNING entries.
-//
-// De-dupes by season ID so a combined status+rating PATCH doesn't double-push.
-func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {
-	statusChanged := newStatus != nil && *newStatus != before.Status
-	ratingChanged := newRating != nil && !intPtrEq(newRating, before.MyRating)
-	if !statusChanged && !ratingChanged {
-		return
-	}
-
-	if before.Type == model.TitleTypeMovie {
-		if before.IsAnime && before.AniListID != nil && *before.AniListID != 0 {
-			service.EnqueueAniListMoviePush(ctx, tx, before.ID)
-		}
-		return
-	}
-
-	effectiveStatus := before.Status
-	if newStatus != nil {
-		effectiveStatus = *newStatus
-	}
-	ratingOnly := !statusChanged && ratingChanged
-
-	seen := map[int64]bool{}
-	for _, season := range before.Seasons {
-		if seen[season.ID] {
-			continue
-		}
-		if ratingOnly {
-			total, watched := seasonWatchCounts(season)
-			derived, _ := service.DeriveSeasonState(string(effectiveStatus), total, watched)
-			if !service.ShouldPushRating(derived) {
-				continue
-			}
-		}
-		service.EnqueueAniListSeasonPush(ctx, tx, season.ID)
-		seen[season.ID] = true
-	}
-}
-
-// seasonWatchCounts returns (total, watched) for a season, falling back to
-// len(Episodes) when total_episodes is unset — matches GetWithProgress.
-func seasonWatchCounts(s model.Season) (total, watched int) {
-	if s.TotalEpisodes != nil {
-		total = *s.TotalEpisodes
-	}
-	if total == 0 {
-		total = len(s.Episodes)
-	}
-	for _, ep := range s.Episodes {
-		if ep.Watched {
-			watched++
-		}
-	}
-	return total, watched
-}
-
-func intPtrEq(a, b *int) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	return *a == *b
 }
 
 func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
@@ -635,9 +549,7 @@ func (h *TitleHandler) Delete(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return httputil.BadRequest("Invalid ID")
 	}
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).Delete(r.Context(), id)
-	}); err != nil {
+	if err := h.service.Delete(r.Context(), id); err != nil {
 		return fmt.Errorf("title: delete: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -655,9 +567,7 @@ func (h *TitleHandler) BatchDelete(w http.ResponseWriter, r *http.Request) error
 	if len(body.IDs) == 0 {
 		return httputil.BadRequest("ids is required")
 	}
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).BatchDelete(r.Context(), body.IDs)
-	}); err != nil {
+	if err := h.service.BatchDelete(r.Context(), body.IDs); err != nil {
 		return fmt.Errorf("title: batch delete: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -680,9 +590,7 @@ func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error
 	if !validStatuses[body.Status] {
 		return httputil.BadRequest("Invalid status")
 	}
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		return repository.NewTitleWriter(tx).BatchUpdateStatus(r.Context(), body.IDs, body.Status)
-	}); err != nil {
+	if err := h.service.BatchUpdateStatus(r.Context(), body.IDs, body.Status); err != nil {
 		return fmt.Errorf("title: batch status: %w", err)
 	}
 	w.WriteHeader(http.StatusNoContent)

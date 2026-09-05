@@ -2,11 +2,8 @@ package handler
 
 import (
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	"net/http"
 
-	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -18,14 +15,22 @@ type ReleasesHandler struct {
 	prowlarrSvc *service.ProwlarrService
 	titles      *repository.TitleRepository
 	tasks       *repository.TaskRepository
+	titleSvc    *service.TitleService
 }
 
-func NewReleasesHandler(db *sql.DB, prowlarrSvc *service.ProwlarrService, titles *repository.TitleRepository, tasks *repository.TaskRepository) *ReleasesHandler {
+func NewReleasesHandler(db *sql.DB, prowlarrSvc *service.ProwlarrService, titles *repository.TitleRepository, tasks *repository.TaskRepository, titleSvc ...*service.TitleService) *ReleasesHandler {
+	var svc *service.TitleService
+	if len(titleSvc) > 0 && titleSvc[0] != nil {
+		svc = titleSvc[0]
+	} else if db != nil {
+		svc = service.NewTitleService(db, titles, tasks, nil)
+	}
 	return &ReleasesHandler{
 		db:          db,
 		prowlarrSvc: prowlarrSvc,
 		titles:      titles,
 		tasks:       tasks,
+		titleSvc:    svc,
 	}
 }
 
@@ -110,22 +115,8 @@ func (h *ReleasesHandler) Add(w http.ResponseWriter, r *http.Request) error {
 		},
 	}
 
-	var newID int64
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		id, err := repository.NewTitleWriter(tx).Create(r.Context(), title, names)
-		if err != nil {
-			return err
-		}
-		newID = id
-
-		// Enqueue enrichment task if TMDB ID is present
-		if tmdbIDPtr != nil && h.tasks != nil {
-			payloadJSON, _ := json.Marshal(map[string]any{"title_id": newID})
-			dedupKey := fmt.Sprintf("enrich_%d", newID)
-			_, _ = repository.NewTaskWriter(tx).Enqueue(r.Context(), model.TaskTypeEnrichment, string(payloadJSON), &dedupKey)
-		}
-		return nil
-	}); err != nil {
+	newID, err := h.titleSvc.CreateAndEnrich(r.Context(), title, names, tmdbIDPtr != nil)
+	if err != nil {
 		return httputil.InternalError("Failed to add title", err)
 	}
 

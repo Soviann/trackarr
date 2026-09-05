@@ -163,7 +163,9 @@ func (s *BackgroundService) backfillAniListID(ctx context.Context, title *reposi
 		var seasonID int64
 		err := s.writeDB.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = 1`, title.ID).Scan(&seasonID)
 		if err == nil {
-			_ = s.seasonExtIDs.Add(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(anilistID, 10))
+			_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+				return repository.NewSeasonExternalIDWriter(tx).Add(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(anilistID, 10))
+			})
 		}
 	}
 }
