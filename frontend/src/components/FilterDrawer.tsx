@@ -13,6 +13,8 @@ type TypeFilter = TitleType | null
 type SeriesStatusFilter = SeriesStatus | null
 type DrawerTab = 'basics' | 'genres' | 'dates'
 
+import { useTranslation } from '../i18n'
+
 interface FilterDrawerProps {
   status: StatusFilter
   type: TypeFilter
@@ -25,6 +27,10 @@ interface FilterDrawerProps {
   sort: SortState
   onSortChange: (sort: SortState) => void
   isSearchActive: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  onReset?: () => void
+  activeCount?: number
   defaultOpen?: boolean
   decade: string | null
   releaseFrom: string
@@ -112,6 +118,7 @@ export function FilterDrawer({
   status, type, isAnime, seriesStatus,
   onStatusChange, onTypeChange, onIsAnimeChange, onSeriesStatusChange,
   sort, onSortChange, isSearchActive,
+  open: openProp, onOpenChange, onReset, activeCount,
   defaultOpen = false,
   decade, releaseFrom, releaseTo, includeNoRelease,
   onDecadeChange, onReleaseFromChange, onReleaseToChange, onIncludeNoReleaseChange,
@@ -119,10 +126,22 @@ export function FilterDrawer({
   selectedCountries, onCountryToggle, myRatingMin, tmdbRatingMin,
   onMyRatingMinChange, onTmdbRatingMinChange,
 }: FilterDrawerProps) {
-  const [open, setOpen] = useState(() => {
+  const { t } = useTranslation()
+  const [internalOpen, setInternalOpen] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY_HOME)
     return stored !== null ? stored === 'true' : defaultOpen
   })
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpen = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof next === 'function' ? next(open) : next
+    if (!isControlled) {
+      setInternalOpen(nextVal)
+    }
+    onOpenChange?.(nextVal)
+    localStorage.setItem(STORAGE_KEY_HOME, String(nextVal))
+  }, [isControlled, open, onOpenChange])
+
   const [activeTab, setActiveTab] = useState<DrawerTab>('basics')
   const [dragY, setDragY] = useState(0)
   const touchStartY = useRef<number | null>(null)
@@ -263,6 +282,8 @@ export function FilterDrawer({
     tmdbRatingMin
   )
 
+  const activeFilterCount = activeCount ?? activeTags.length
+
   return (
     <div
       ref={containerRef}
@@ -270,23 +291,48 @@ export function FilterDrawer({
       className={s.container}
     >
       {/* Handle */}
-      <div className={s.handle} onClick={() => setOpen(!open)}>
-        <div className={s.handleTop}>
-          <div className={s.handleBar} />
-          <span className={s.handleText}>Filters</span>
-          <div className={s.handleBar} />
-        </div>
-        {!open && activeTags.length > 0 && (
-          <div className={s.activeTags}>
-            {activeTags.map((tag) => (
-              <span key={tag} className={s.activeTag}>{tag}</span>
-            ))}
+      {(!isSearchActive || open) && (
+        <div className={s.handle} onClick={() => setOpen(!open)}>
+          <div className={s.handleTop}>
+            <div className={s.handleBar} />
+            <span className={s.handleText}>{t('search.filters')}</span>
+            <div className={s.handleBar} />
           </div>
-        )}
-      </div>
+          {!open && activeTags.length > 0 && (
+            <div className={s.activeTags}>
+              {activeTags.map((tag) => (
+                <span key={tag} className={s.activeTag}>{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Drawer content */}
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
+        {/* Drawer Header */}
+        <div className={s.drawerHeader}>
+          <span className={s.drawerHeaderTitle}>
+            {activeFilterCount > 0
+              ? t('search.filtersActive', { count: activeFilterCount })
+              : t('search.filtersTitle')}
+          </span>
+          {activeFilterCount > 0 && onReset && (
+            <button
+              type="button"
+              className={s.resetFiltersBtn}
+              onClick={onReset}
+              title={t('search.resetFilters')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span>{t('search.resetFilters')}</span>
+            </button>
+          )}
+        </div>
+
         {/* Sub-tab Navigation */}
         <div className={s.tabBar} role="tablist">
           <button

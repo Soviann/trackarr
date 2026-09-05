@@ -109,4 +109,24 @@ describe('FilterDrawer', () => {
     const dots = container.querySelectorAll('.tabDot')
     expect(dots.length).toBe(2) // basics and dates
   })
+
+  it('renders header with active count and triggers onReset when clicked', () => {
+    const onReset = vi.fn()
+    const { getByText, getByTitle } = renderFilterDrawer({
+      defaultOpen: true,
+      status: 'watching',
+      type: 'series',
+      sort: { field: 'release_date', order: 'desc' },
+      onReset,
+    })
+
+    // Header should indicate active count
+    expect(getByText('FILTERS (2 ACTIVE)')).toBeDefined()
+
+    // Reset button should trigger onReset callback
+    const resetBtn = getByTitle('Reset')
+    fireEvent.click(resetBtn)
+    expect(onReset).toHaveBeenCalledTimes(1)
+  })
 })
+
