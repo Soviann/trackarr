@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, fireEvent } from '@testing-library/preact'
+import { render, fireEvent, cleanup } from '@testing-library/preact'
 import { PosterCard } from './PosterCard'
 import type { Title } from '../types'
 
@@ -52,6 +52,7 @@ describe('PosterCard', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.useRealTimers()
   })
 
@@ -103,6 +104,43 @@ describe('PosterCard', () => {
     expect(getByText('+1')).not.toBeNull()
     expect(getByText('S02E07 DISPO')).not.toBeNull()
     expect(getByLabelText('Mark S2 E7 as watched')).not.toBeNull()
+  })
+
+  it('does not render +1 button or arr availability badge for dropped series', () => {
+    const droppedSeries: Title = {
+      ...baseTitle,
+      type: 'series',
+      status: 'dropped',
+      sonarr_id: 42,
+      next_episode: {
+        id: 99,
+        season_id: 5,
+        episode: 7,
+        season_number: 2,
+      },
+    }
+    const { queryByText, queryByLabelText } = render(<PosterCard title={droppedSeries} />)
+    expect(queryByText('+1')).toBeNull()
+    expect(queryByText('S02E07 DISPO')).toBeNull()
+    expect(queryByLabelText('Mark S2 E7 as watched')).toBeNull()
+  })
+
+  it('does not render arr availability badge for TBA next episode', () => {
+    const seriesWithTBA: Title = {
+      ...baseTitle,
+      type: 'series',
+      status: 'watching',
+      sonarr_id: 42,
+      next_episode: {
+        id: 99,
+        season_id: 5,
+        episode: 1,
+        season_number: 3,
+        name: 'TBA',
+      },
+    }
+    const { queryByText } = render(<PosterCard title={seriesWithTBA} />)
+    expect(queryByText(/DISPO/)).toBeNull()
   })
 
   it('calls onClick when clicked in selection mode (no long-press)', () => {
