@@ -73,6 +73,38 @@ describe('PosterCard', () => {
     expect(container.textContent).not.toContain('CAUGHT UP')
   })
 
+  it('renders watch provider badges when title has watch_providers', () => {
+    const titleWithProviders: Title = {
+      ...baseTitle,
+      watch_providers: [
+        { id: 8, name: 'Netflix' },
+        { id: 119, name: 'Amazon Prime Video' },
+      ],
+    }
+    const { getByText } = render(<PosterCard title={titleWithProviders} />)
+    expect(getByText('netflix')).not.toBeNull()
+    expect(getByText('prime')).not.toBeNull()
+  })
+
+  it('renders +1 button and arr availability badge for watching series with next episode and sonarr_id', () => {
+    const watchingSeries: Title = {
+      ...baseTitle,
+      type: 'series',
+      status: 'watching',
+      sonarr_id: 42,
+      next_episode: {
+        id: 99,
+        season_id: 5,
+        episode: 7,
+        season_number: 2,
+      },
+    }
+    const { getByText, getByLabelText } = render(<PosterCard title={watchingSeries} />)
+    expect(getByText('+1')).not.toBeNull()
+    expect(getByText('S02E07 DISPO')).not.toBeNull()
+    expect(getByLabelText('Mark S2 E7 as watched')).not.toBeNull()
+  })
+
   it('calls onClick when clicked in selection mode (no long-press)', () => {
     const onClick = vi.fn()
     const { container } = render(<PosterCard title={baseTitle} onClick={onClick} />)

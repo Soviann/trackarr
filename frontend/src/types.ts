@@ -301,6 +301,7 @@ export interface ContinueWatchingTitle {
   watch_providers?: WatchProvider[]
   sonarr_id?: number | null
   radarr_id?: number | null
+  next_episode?: NextEpisode | null
 }
 
 export type MatchEventKind = 'auto_confirmed' | 'season_attached'
