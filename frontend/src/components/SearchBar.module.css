@@ -5,20 +5,23 @@
 }
 
 .searchInner {
-  background: var(--bg-elev2);
-  border-radius: 12px;
-  padding: 10px 14px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-pill);
+  padding: 4px 6px 4px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.15s;
 }
 
 .searchInnerFocused {
-  border: none;
+  border-color: var(--accent);
 }
 
 .searchInnerIdle {
-  border: 1.5px solid rgba(56, 189, 176, 0.3);
+  border-color: var(--border-strong);
 }
 
 .searchInput {
@@ -29,36 +32,101 @@
   border: none;
   outline: none;
   font-family: inherit;
+  min-width: 0;
 }
 
 .clearBtn {
   cursor: pointer;
   flex-shrink: 0;
-  background: none;
+  background: transparent;
   border: none;
-  padding: 0;
+  color: var(--ink-mute);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clearBtn:hover {
+  color: var(--ink);
 }
 
 .tmdbToggle {
   flex-shrink: 0;
   padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
   color: var(--ink-dim);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  font-family: inherit;
+  font-family: var(--font-mono);
   letter-spacing: 0.5px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.tmdbToggleOn {
-  background: rgba(0, 188, 212, 0.15);
-  color: var(--accent);
-  border-color: var(--accent);
+.tmdbToggle:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
 }
+
+.tmdbToggleOn {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.filterTriggerBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+}
+
+.filterTriggerBtn:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.filterTriggerBtnActive,
+.filterTriggerBtnOpen {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  font-weight: 600;
+}
+
+.filterCountBadge {
+  background: var(--accent);
+  color: #05080e;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+}
+
