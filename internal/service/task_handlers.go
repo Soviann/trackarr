@@ -228,8 +228,12 @@ func (w *TaskQueueWorker) handleGenerateWrapped(ctx context.Context, task model.
 	data.Persona = *persona
 
 	// 3. Save snapshot in database
-	if err := w.wrappedRepo.SaveSnapshot(ctx, payload.Year, data); err != nil {
-		return fmt.Errorf("save wrapped snapshot for %d: %w", payload.Year, err)
+	if w.writeDB != nil {
+		if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
+			return repository.NewWrappedWriter(tx).SaveSnapshot(ctx, payload.Year, data)
+		}); err != nil {
+			return fmt.Errorf("save wrapped snapshot for %d: %w", payload.Year, err)
+		}
 	}
 	logger.Info("wrapped retrospective snapshot saved successfully", "year", payload.Year)
 

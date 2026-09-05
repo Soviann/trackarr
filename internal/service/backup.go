@@ -386,6 +386,8 @@ func extractFromZipBytes(data []byte) ([]byte, string, error) {
 	return nil, "", fmt.Errorf("no valid .json or .csv backup file found inside zip archive")
 }
 
+const maxBackupEntrySize = 50 << 20 // 50 MB
+
 func readZipFile(f *zip.File) ([]byte, string, error) {
 	rc, err := f.Open()
 	if err != nil {
@@ -393,9 +395,12 @@ func readZipFile(f *zip.File) ([]byte, string, error) {
 	}
 	defer rc.Close()
 
-	content, err := io.ReadAll(rc)
+	content, err := io.ReadAll(io.LimitReader(rc, maxBackupEntrySize+1))
 	if err != nil {
 		return nil, "", fmt.Errorf("read file %s in zip: %w", f.Name, err)
+	}
+	if len(content) > maxBackupEntrySize {
+		return nil, "", fmt.Errorf("file %s in zip exceeds maximum allowed size (%d MB)", f.Name, maxBackupEntrySize>>20)
 	}
 	return content, f.Name, nil
 }

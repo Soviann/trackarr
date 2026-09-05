@@ -71,3 +71,18 @@ func (w *SeasonExternalIDWriter) Reorder(ctx context.Context, seasonID int64, pr
 	}
 	return nil
 }
+
+// UpdatePartMeta updates enrichment fields for a specific part inside the caller's transaction.
+func (w *SeasonExternalIDWriter) UpdatePartMeta(ctx context.Context, seasonID int64, provider, externalID string, score, episodeCount *int, startDate *string) error {
+	_, err := w.tx.ExecContext(ctx, `
+		UPDATE season_external_ids
+		SET anilist_average_score = ?, anilist_episode_count = ?, anilist_start_date = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE season_id = ? AND provider = ? AND external_id = ?`,
+		score, episodeCount, startDate, seasonID, provider, externalID)
+	if err != nil {
+		return fmt.Errorf("season_external_ids update meta: %w", err)
+	}
+	return nil
+}
+

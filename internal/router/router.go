@@ -101,7 +101,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
 	settings := handler.NewSettingsHandler(settingRepo, eventRepo, tvdbReady, cfg.JellyfinWebhookSecret != "" || cfg.PlexWebhookSecret != "" || cfg.WebhookSecret != "", prowlarrSvc)
 	wrappedRepo := repository.NewWrappedRepository(writeDB)
-	stats := handler.NewStatsHandler(statsRepo, wrappedRepo, pipeline)
+	stats := handler.NewStatsHandler(writeDB, statsRepo, wrappedRepo, pipeline)
 	genres := handler.NewGenreHandler(genreReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)
 	history := handler.NewHistoryHandler(historyRepo)
@@ -142,8 +142,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		r.With(webhookRateLimit).Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(webhooks.HandleJellyfin))
 		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
 
-		// Calendar iCal feed (unauthenticated, secured by secret token query parameter)
-		r.Get("/calendar.ics", httputil.WrapHandler(calendarHandler.ServeICS))
+		// Calendar iCal feed (unauthenticated, secured by secret token query parameter, rate-limited)
+		calendarRateLimit := mw.RateLimit(ctx, 60, time.Minute)
+		r.With(calendarRateLimit).Get("/calendar.ics", httputil.WrapHandler(calendarHandler.ServeICS))
 
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)

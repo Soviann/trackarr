@@ -2,11 +2,13 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -14,13 +16,15 @@ import (
 )
 
 type StatsHandler struct {
+	writeDB  *sql.DB
 	stats    *repository.StatsRepository
 	wrapped  *repository.WrappedRepository
 	pipeline *matching.Pipeline
 }
 
-func NewStatsHandler(stats *repository.StatsRepository, wrapped *repository.WrappedRepository, pipeline *matching.Pipeline) *StatsHandler {
+func NewStatsHandler(writeDB *sql.DB, stats *repository.StatsRepository, wrapped *repository.WrappedRepository, pipeline *matching.Pipeline) *StatsHandler {
 	return &StatsHandler{
+		writeDB:  writeDB,
 		stats:    stats,
 		wrapped:  wrapped,
 		pipeline: pipeline,
@@ -110,8 +114,10 @@ func (h *StatsHandler) GetWrapped(w http.ResponseWriter, r *http.Request) error 
 	// If it's a past year, freeze and save the snapshot only if AI succeeded or AI is not configured.
 	// This prevents permanently freezing an offline fallback if Gemini was temporarily down.
 	aiConfigured := h.pipeline != nil && h.pipeline.AI() != nil
-	if h.wrapped != nil && targetYear < time.Now().Year() && resp.Overview.TotalTitles > 0 && (!aiConfigured || !isFallback) {
-		_ = h.wrapped.SaveSnapshot(r.Context(), targetYear, resp)
+	if h.writeDB != nil && targetYear < time.Now().Year() && resp.Overview.TotalTitles > 0 && (!aiConfigured || !isFallback) {
+		_ = database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+			return repository.NewWrappedWriter(tx).SaveSnapshot(r.Context(), targetYear, resp)
+		})
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
@@ -166,8 +172,10 @@ func (h *StatsHandler) RegenerateWrapped(w http.ResponseWriter, r *http.Request)
 	}
 	resp.Persona = *regenPersona
 
-	if h.wrapped != nil && resp.Overview.TotalTitles > 0 {
-		if err := h.wrapped.SaveSnapshot(r.Context(), targetYear, resp); err != nil {
+	if h.writeDB != nil && resp.Overview.TotalTitles > 0 {
+		if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+			return repository.NewWrappedWriter(tx).SaveSnapshot(r.Context(), targetYear, resp)
+		}); err != nil {
 			return httputil.InternalError(fmt.Sprintf("Failed to save snapshot for %d", targetYear), err)
 		}
 	}

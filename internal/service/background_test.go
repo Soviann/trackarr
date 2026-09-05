@@ -877,8 +877,7 @@ func TestBackgroundService_RefreshAniListRelations(t *testing.T) {
 	seasonID := testutil.InsertSeason(t, db, titleID, 2)
 
 	// Attach AniList ID 21856 to Season 2
-	seasonExtRepo := repository.NewSeasonExternalIDRepository(db)
-	require.NoError(t, seasonExtRepo.Add(context.Background(), seasonID, repository.ProviderAniList, "21856"))
+	testutil.InsertSeasonExternalID(t, db, seasonID, repository.ProviderAniList, "21856")
 
 	year := 2018
 	score := 82

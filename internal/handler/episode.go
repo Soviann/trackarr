@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -36,19 +35,8 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 		return httputil.BadRequest("Invalid episode ID")
 	}
 
-	var (
-		title  *model.Title
-		ep     *model.Episode
-		prompt *service.RatingPrompt
-	)
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		t, e, p, err := h.service.ToggleEpisodeWatched(r.Context(), tx, titleID, episodeID)
-		if err != nil {
-			return err
-		}
-		title, ep, prompt = t, e, p
-		return nil
-	}); err != nil {
+	title, ep, prompt, err := h.service.ToggleEpisodeWatchedTx(r.Context(), titleID, episodeID)
+	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 	// Fire post-commit side effects sequentially AFTER the write tx releases
@@ -85,18 +73,8 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 		return httputil.BadRequest("Invalid request")
 	}
 
-	var (
-		title  *model.Title
-		prompt *service.RatingPrompt
-	)
-	if err := database.WithTxContext(r.Context(), h.db, func(tx *sql.Tx) error {
-		t, p, e := h.service.MarkEpisodesWatched(r.Context(), tx, titleID, body.EpisodeIDs, nil, model.WatchEventSourceManual, nil)
-		if e != nil {
-			return e
-		}
-		title, prompt = t, p
-		return nil
-	}); err != nil {
+	title, prompt, err := h.service.MarkEpisodesWatchedTx(r.Context(), titleID, body.EpisodeIDs, nil, model.WatchEventSourceManual, nil)
+	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 	h.service.SendRatingPrompt(r.Context(), prompt)

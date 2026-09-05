@@ -252,3 +252,26 @@ func TestBackupService_Import_ZIP(t *testing.T) {
 	require.Len(t, titles, 1)
 	assert.Equal(t, "Interstellar", titles[0].PrimaryName())
 }
+
+func TestBackupService_Import_ZIP_Oversized(t *testing.T) {
+	deps := setupBackupService(t)
+
+	var zipBuf bytes.Buffer
+	zw := zip.NewWriter(&zipBuf)
+
+	w, err := zw.Create("oversized.json")
+	require.NoError(t, err)
+
+	// Write 51MB of spaces (highly compressible)
+	chunk := bytes.Repeat([]byte(" "), 1024*1024)
+	for i := 0; i < 51; i++ {
+		_, err = w.Write(chunk)
+		require.NoError(t, err)
+	}
+	require.NoError(t, zw.Close())
+
+	_, err = deps.svc.Import(bytes.NewReader(zipBuf.Bytes()), "archive.zip", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds maximum allowed size")
+}
+
