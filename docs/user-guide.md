@@ -107,11 +107,17 @@ Opening a title displays its rich details:
 - **Next Episode Action & Binge Estimator**: A prominent call-to-action hero card right under the title identity allowing 1-click progression (`▶ Marquer S02E06 comme vu`) without unfolding season lists. Includes real-time binge estimation (*« ⏱️ Reste ~3h 15m (4 épisodes) »* or total duration for Plan to Watch titles).
 - **Personal Notes (Notes personnelles)**: A private notes card on every title with debounced auto-save (500ms) to jot down reminders, personal reviews, quotes, or recommendations.
 - **Streaming Badges**: Displays multi-provider streaming badges (Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) when the title is available on active subscription platforms configured in *Admin ➔ System Settings*.
-- **Scores**: Personal score (1–10) on the left, external community scores (TMDB, AniList) on the right.
+- **Conditional Direct Rating Card**:
+  - **Unrated Title**: A responsive 1-tap touch strip of buttons (`1` to `10`) is displayed directly on the rating card for instant scoring without opening a drawer, automatically syncing with AniList in the background.
+  - **Rated Title**: Displays a clean, prominent rating (`MY RATING: 8/10`) alongside community ratings (TMDB, AniList) and an *« Edit »* button to open the rating bottom sheet for modifications or IMDb sync.
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
 - **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
-- **Sagas, Universes & Franchise Relations**: Dedicated card surfacing related works for movies (TMDB collections like *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies). Features a sorting toggle (⏱️ Chronologie vs 📅 Sortie), category filters (*Films*, *Séries*, *OAVs*, *Spin-offs*), default collapse above 3 items with *Voir plus*, local library status badges (`✓ Vu`, `À voir`), and a 1-click `[+ Ajouter]` button for missing titles.
+- **Sagas, Universes & Franchise Tracker**: Dedicated module surfacing related works for movies (TMDB collections like *Marvel Cinematic Universe*, *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies):
+  - **Saga Progress**: Global completion gauge based on titles (*« 24 / 34 Titles seen »*) with a linear progress bar.
+  - **Next Chronological Title**: Highlighted indicator identifying the next unwatched chronological title to watch in the franchise (or completion message when 100% watched).
+  - **Horizontal Titles Strip**: Scrollable timeline chip strip with hidden scrollbar (`scrollbar-width: none`), seen checkmarks (`✓`), next highlight (`▶`), and 1-tap navigation.
+  - **Detailed Relations Grid**: Sorting toggle (⏱️ Timeline vs 📅 Release), category filters (*Movies*, *Series*, *OVAs*, *Spin-offs*), collapse/expand toggle, local library status badges (`✓ Watched`, `Plan to Watch`), and a 1-click `[+ Add]` button for missing titles.
 - **AniList Season Strip**: Per-season community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries). Clicking **Link entry** or ✎ opens the season linker with instant in-app AniList search (with posters, media format, episode count, and 1-click linking) plus a direct *Search on AniList.co ↗* browser shortcut.
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.

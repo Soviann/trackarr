@@ -60,6 +60,30 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
     })
   }, [relations, sortOrder])
 
+  const timelineRelations = useMemo(() => {
+    const list = [...relations]
+    return list.sort((a, b) => {
+      if (a.season_number != null && b.season_number != null) {
+        if (a.season_number !== b.season_number) return a.season_number - b.season_number
+      }
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      const yearA = a.year ?? 9999
+      const yearB = b.year ?? 9999
+      return yearA - yearB
+    })
+  }, [relations])
+
+  const seenCount = useMemo(
+    () => relations.filter((r) => r.matched_status === 'completed').length,
+    [relations]
+  )
+  const totalCount = relations.length
+  const progressPct = totalCount > 0 ? Math.round((seenCount / totalCount) * 100) : 0
+  const nextChronologicalTitle = useMemo(
+    () => timelineRelations.find((r) => r.matched_status !== 'completed'),
+    [timelineRelations]
+  )
+
   const filteredRelations = useMemo(() => {
     switch (filter) {
       case 'movies':
@@ -119,6 +143,66 @@ export function FranchiseRelationsSection({ relations }: FranchiseRelationsSecti
 
   return (
     <div className={s.card}>
+      {/* 4.1 SAGA / FRANCHISE TRACKER SECTION BY TITLES */}
+      <div className={s.sagaTrackerCard}>
+        <div className={s.sagaHeader}>
+          <span className={s.sagaTitle}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className={s.sagaIcon}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+              <path d="M2 12h20" />
+            </svg>
+            {isMainlyCollection ? t('franchise.sagaCollection') : t('franchise.universeFranchise')}
+          </span>
+          <span className={s.sagaProgressCount}>
+            {t('franchise.titlesSeen', { seen: seenCount, total: totalCount })}
+          </span>
+        </div>
+
+        <div className={s.sagaProgressBar}>
+          <div className={s.sagaProgressFill} style={{ width: `${progressPct}%` }} />
+        </div>
+
+        <div className={s.sagaNextBox}>
+          <span className={s.sagaNextLabel}>{t('franchise.nextChronological')}</span>
+          <span className={s.sagaNextTitle}>
+            {nextChronologicalTitle
+              ? `${nextChronologicalTitle.title}${nextChronologicalTitle.year ? ` (${nextChronologicalTitle.year})` : ''}`
+              : t('franchise.allTitlesSeen')}
+          </span>
+        </div>
+
+        <div className={s.sagaTitlesStrip}>
+          {timelineRelations.map((rel) => {
+            const isSeen = rel.matched_status === 'completed'
+            const isNext = !isSeen && rel.id === nextChronologicalTitle?.id
+            return (
+              <button
+                key={rel.id || `${rel.provider}-${rel.external_id}`}
+                type="button"
+                className={`${s.sagaTitleChip} ${isSeen ? s.seen : ''} ${isNext ? s.next : ''}`}
+                onClick={() => handleCardClick(rel)}
+                title={rel.title}
+              >
+                {isSeen ? '✓ ' : isNext ? '▶ ' : ''}
+                {rel.title}
+                {rel.year ? ` (${rel.year})` : ''}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div className={s.cardHeader}>
         <div className={s.cardLabelWrap}>
           <span className={s.cardLabel}>
