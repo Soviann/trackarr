@@ -6,7 +6,14 @@ import type { ContinueWatchingTitle } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './PresetLibrary.module.css'
 
-function toTile(t: ContinueWatchingTitle): PosterTileItem {
+function toTile(
+  t: ContinueWatchingTitle,
+  onQuickMark?: (item: PosterTileItem, e: MouseEvent) => void,
+  isMarking?: boolean
+): PosterTileItem {
+  const sublabel = t.next_episode
+    ? `S${t.next_episode.season_number} E${t.next_episode.episode}`
+    : (t.next_air_episode ?? '')
   return {
     id: t.id,
     type: t.type,
@@ -15,9 +22,12 @@ function toTile(t: ContinueWatchingTitle): PosterTileItem {
     radarr_id: t.radarr_id,
     cover_url: t.cover_url,
     name: t.name,
-    sublabel: t.next_air_episode ?? '',
+    sublabel,
     progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
     watch_providers: t.watch_providers,
+    next_episode: t.next_episode,
+    onQuickMark,
+    isMarking,
   }
 }
 
@@ -25,9 +35,10 @@ export function ContinueWatching(_props: { path?: string }) {
   const [items, setItems] = useState<ContinueWatchingTitle[] | null>(null)
   useScrollRestoration('continueWatching', items !== null)
   const [error, setError] = useState<string | null>(null)
+  const [markingIds, setMarkingIds] = useState<Set<number>>(new Set())
   const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
+  const loadTitles = () => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -37,8 +48,50 @@ export function ContinueWatching(_props: { path?: string }) {
         if (ctrl.signal.aborted) return
         setError(err instanceof Error ? err.message : 'Failed to load')
       })
-    return () => ctrl.abort()
+  }
+
+  useEffect(() => {
+    loadTitles()
+    return () => abortRef.current?.abort()
   }, [])
+
+  const handleQuickMark = async (item: PosterTileItem) => {
+    if (!item.next_episode || markingIds.has(item.id)) return
+    const currentEp = item.next_episode
+
+    // Optimistic in-place update for immediate UI feedback
+    setItems(prev => {
+      if (!prev) return prev
+      return prev.map(t => {
+        if (t.id !== item.id) return t
+        const newWatched = Math.min(t.total_episodes, t.watched_episodes + 1)
+        const nextEp = t.next_episode
+          ? { ...t.next_episode, episode: t.next_episode.episode + 1 }
+          : null
+        return {
+          ...t,
+          watched_episodes: newWatched,
+          next_episode: nextEp,
+        }
+      })
+    })
+
+    setMarkingIds(prev => new Set(prev).add(item.id))
+    try {
+      await apiFetch(`/titles/${item.id}/episodes/${currentEp.id}`, { method: 'PATCH' })
+      const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching')
+      setItems(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mark episode')
+      loadTitles()
+    } finally {
+      setMarkingIds(prev => {
+        const next = new Set(prev)
+        next.delete(item.id)
+        return next
+      })
+    }
+  }
 
   return (
     <div className={s.page}>
@@ -75,7 +128,12 @@ export function ContinueWatching(_props: { path?: string }) {
 
       {items && items.length > 0 && (
         <div className={s.grid}>
-          {items.map(t => <PosterTile key={t.id} item={toTile(t)} />)}
+          {items.map(t => (
+            <PosterTile
+              key={t.id}
+              item={toTile(t, handleQuickMark, markingIds.has(t.id))}
+            />
+          ))}
         </div>
       )}
     </div>
