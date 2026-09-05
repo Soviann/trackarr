@@ -32,14 +32,14 @@ jobs:
           echo "$RECENT_COMMITS"
 
           # 2. Check if an open audit issue already exists to avoid duplicates
-          EXISTING_ISSUE=$(gh issue list --repo "${{ github.repository }}" --state open --search "Audit hebdomadaire de la documentation in:title" --json number --jq '.[0].number')
+          EXISTING_ISSUE=$(gh issue list --repo "${{ github.repository }}" --state open --search "Audit hebdomadaire in:title" --json number --jq '.[0].number')
           if [ -n "$EXISTING_ISSUE" ] && [ "$EXISTING_ISSUE" != "null" ]; then
             echo "An open audit issue (#$EXISTING_ISSUE) already exists. Skipping creation to avoid duplicates."
             exit 0
           fi
 
           # 3. Compose Issue body
-          ISSUE_TITLE="[Audit]: Audit hebdomadaire de la documentation et des règles LLM"
+          ISSUE_TITLE="[Audit]: Audit hebdomadaire de la documentation, de l'i18n et des règles LLM"
 
           cat << 'BODY_EOF' > issue_body.md
           🔔 cc @${{ github.repository_owner }}
@@ -58,11 +58,12 @@ jobs:
           1. **Cohérence API & Patterns (`docs/patterns.md`)** : Vérifier si des routes, handlers, composants, modèles ou migrations ont été ajoutés ou modifiés sans être répertoriés.
           2. **Guides Thématiques & Sommaire (`docs/` & `docs/INDEX.md`)** : Vérifier si les nouvelles fonctionnalités ou intégrations sont documentées dans le guide approprié et indexées.
           3. **Spécifications Techniques (`docs/dev/*`)** : S'assurer que le modèle de BDD, le pipeline de matching, la synchronisation AniList et l'intégration Arr restent conformes au code source.
-          4. **Changelog (`CHANGELOG.md`)** : S'assurer que tous les ajouts, corrections et améliorations notables sont listés dans la section `[Unreleased]`.
-          5. **Règles & Agents (`AGENTS.md`, `.cursorrules`, `docs/llm.md`)** : Vérifier qu'aucune contradiction ou règle obsolète ne persiste.
+          4. **Internationalisation & Textes en dur (`frontend/src/i18n/`, `locales/en.ts`, `locales/fr.ts`)** : Vérifier qu'aucun texte non internationalisé (chaînes ou commentaires en français en dur dans les composants TSX/JSX, clés de traduction manquantes, disparités de clés ou paramètres entre anglais et français) n'a été introduit dans le frontend (`make lint-front` / `npm run lint:i18n` / `i18n-audit.test.ts`).
+          5. **Changelog (`CHANGELOG.md`)** : S'assurer que tous les ajouts, corrections et améliorations notables sont listés dans la section `[Unreleased]`.
+          6. **Règles & Agents (`AGENTS.md`, `.cursorrules`, `docs/llm.md`)** : Vérifier qu'aucune contradiction ou règle obsolète ne persiste.
 
           ---
-          /antigravity analyse les commits récents et propose un plan d'audit et de mise à jour de la documentation.
+          /antigravity analyse les commits récents et propose un plan d'audit et de mise à jour de la documentation et de l'internationalisation.
           BODY_EOF
 
           # 5. Create GitHub Issue with label 'antigravity' and assign repository owner

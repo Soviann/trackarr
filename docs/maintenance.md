@@ -21,6 +21,9 @@ Trackarr uses GitHub Dependabot to keep Go modules, npm packages, Docker bases, 
   - Backend linting (`golangci-lint`).
   - Frontend unit tests and production Vite compilation (`make test-front`).
   - Frontend type checks (`tsc`).
+- **Weekly Documentation & i18n Audit (`.github/workflows/weekly-docs-audit.yml`)**:
+  - Scheduled weekly workflow (or manually triggered) checking recent commits on `main`.
+  - Automatically dispatches an audit task to Antigravity to verify documentation consistency, changelog updates, and detection of non-internationalized texts (hardcoded strings/comments or translation discrepancies).
 - **Multi-Arch GHCR Release (`.github/workflows/release.yml`)**:
   - Builds and publishes `linux/amd64` and `linux/arm64` Docker images to GitHub Container Registry on every Git tag push (`v*`).
 - **Dependabot Auto-Merge (`.github/workflows/dependabot-auto-merge.yml`)**:
