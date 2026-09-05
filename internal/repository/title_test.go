@@ -172,6 +172,16 @@ func TestTitleRepository_HasWatchedAndUnwatchedEpisodes(t *testing.T) {
 	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
 	require.NoError(t, err)
 	assert.True(t, hasUnwatched, "future episode is unwatched")
+
+	// Mark ep2 watched, add TBA episode — HasUnwatchedEpisodes should be false
+	_, err = db.Exec(`UPDATE episodes SET watched = 1 WHERE season_id = ? AND episode = 2`, season.ID)
+	require.NoError(t, err)
+	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 3, Name: "TBA", AirDate: ""},
+	})
+	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.False(t, hasUnwatched, "TBA episode should not count as unwatched")
 }
 
 func TestTitleRepository_List(t *testing.T) {
@@ -1647,6 +1657,40 @@ func TestTitleRepo_ContinueWatching_NextEpisodeMultipleSeasons(t *testing.T) {
 	require.NotNil(t, items[0].NextEpisode)
 	assert.Equal(t, 2, items[0].NextEpisode.SeasonNumber)
 	assert.Equal(t, 1, items[0].NextEpisode.Episode)
+}
+
+func TestTitleRepo_NextEpisode_IsTBA(t *testing.T) {
+	db := setupTestDB(t)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dan Da Dan Test", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, id, 1)
+	testutil.SeedEpisode(t, db, s1.ID, 1, "2024-10-04", true)
+
+	s2 := testutil.GetOrCreateSeason(t, db, id, 2)
+	testutil.UpsertEpisodesBatch(t, db, s2.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 1, Name: "TBA", AirDate: "2024-01-01"},
+	})
+
+	// 1. In List (via populateRelationsBulkLight)
+	res, err := repository.NewTitleRepository(db).List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+	require.NotNil(t, res.Titles[0].NextEpisode)
+	assert.True(t, res.Titles[0].NextEpisode.IsTBA, "NextEpisode should have IsTBA=true for TBA episode")
+	require.NotNil(t, res.Titles[0].NextEpisode.Name)
+	assert.Equal(t, "TBA", *res.Titles[0].NextEpisode.Name)
+
+	// 2. In ListContinueWatching
+	cwItems, err := repository.NewTitleRepository(db).ListContinueWatching()
+	require.NoError(t, err)
+	require.Len(t, cwItems, 1)
+	require.NotNil(t, cwItems[0].NextEpisode)
+	assert.True(t, cwItems[0].NextEpisode.IsTBA, "ContinueWatching NextEpisode should have IsTBA=true")
 }
 
 func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {

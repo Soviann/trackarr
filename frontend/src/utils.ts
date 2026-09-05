@@ -289,10 +289,17 @@ export function formatBingeTime(minutes: number | null | undefined): string {
   return `${mins}m`
 }
 
-/** Returns the total unwatched episodes across all seasons. */
+/** Returns true if an episode title is a placeholder ("TBA", "TBD"). */
+export function isTBAEpisodeName(name: string | null | undefined): boolean {
+  if (!name) return false
+  const upper = name.trim().toUpperCase()
+  return upper === 'TBA' || upper === 'TBD'
+}
+
+/** Returns the total unwatched episodes across all seasons, excluding TBA placeholder episodes. */
 export function unwatchedEpisodesCount(title: Title): number {
   return (title.seasons ?? []).reduce(
-    (sum, s) => sum + (s.episodes ?? []).filter((e) => !e.watched).length,
+    (sum, s) => sum + (s.episodes ?? []).filter((e) => !e.watched && !isTBAEpisodeName(e.name)).length,
     0
   )
 }

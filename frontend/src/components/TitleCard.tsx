@@ -97,7 +97,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
             <>{typeLabel} · {title.year}</>
           )}
           <span className={s.statusBadge}>
-            <StatusBadge status={title.status} />
+            <StatusBadge status={title.status} caughtUp={title.caught_up} />
             <ArrBadge type={title.type} radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
             <WatchProviderBadges providers={title.watch_providers} />
           </span>
@@ -115,7 +115,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
       </div>
 
       {/* Quick mark badge */}
-      {ne && (
+      {title.status === 'watching' && ne && (
         <button
           type="button"
           onClick={handleQuickMark}

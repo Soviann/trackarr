@@ -335,6 +335,13 @@ describe('unwatchedEpisodesCount', () => {
     expect(unwatchedEpisodesCount(t)).toBe(0)
     expect(unwatchedEpisodesCount(makeTitle({ seasons: [] }))).toBe(0)
   })
+
+  it('ignores TBA placeholder episodes when counting unwatched', () => {
+    const epTBA: Episode = { id: 2, season_id: 1, episode: 2, name: 'TBA', air_date: null, watched: false, first_watched_at: null, last_watched_at: null }
+    const s1 = makeSeason([makeEpisode(true), epTBA])
+    const t = makeTitle({ seasons: [s1] })
+    expect(unwatchedEpisodesCount(t)).toBe(0)
+  })
 })
 
 describe('formatHumanWatchtime', () => {

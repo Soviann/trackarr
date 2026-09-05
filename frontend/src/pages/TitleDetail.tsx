@@ -253,7 +253,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           </div>
         )}
         <div style={{ marginTop: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <StatusBadge status={title.status} />
+          <StatusBadge status={title.status} caughtUp={title.caught_up} />
           <WatchProviderBadges providers={title.watch_providers} />
         </div>
       </div>

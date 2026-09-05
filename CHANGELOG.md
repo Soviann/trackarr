@@ -6,6 +6,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Statut « À jour » (Caught Up) pour les séries en cours sans épisode restant (ex. Dan Da Dan)** :
+  - `TitleRepository.GetByID` calcule et hydrate désormais le champ dérivé `caught_up` (via la condition SQL unifiée `caughtUpCond`).
+  - Les pages `TitleDetail`, `Search`, et les composants `TitleCard` et `PosterCard` transmettent désormais systématiquement `caughtUp` à `StatusBadge`, affichant le badge cyan `CAUGHT UP` lorsque tous les épisodes diffusés ont été visionnés.
+  - Le bandeau héros de prochain épisode (`NextEpisodeHero`) est masqué lorsque la série est à jour (`caught_up`) ou lorsque l'épisode suivant est un placeholder "TBA" / "TBD".
+  - `HasUnwatchedEpisodes` et `MarkAllWatchedForTitle` ignorent les épisodes indicatifs non diffusés "TBA" / "TBD".
+  - Suppression du forçage inconditionnel du statut `watching` dans la synchronisation TMDB pour les séries `returning`.
+- **Affichage et actions sur les cartes et listes de titres** :
+  - Masquage du bouton d'action rapide `+1` épisode et du badge de disponibilité Arr (`SxxExx DISPO`) pour les titres abandonnés (`dropped`).
+  - Masquage du badge de disponibilité Arr pour les épisodes déclarés "TBA" / "TBD".
+  - Exclusion des épisodes "TBA" du décompte d'épisodes restants et du temps d'estimation de binge (`unwatchedEpisodesCount`).
+
 ## [v1.18.2] — 2026-09-05
 
 ### Modifié
