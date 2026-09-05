@@ -120,6 +120,9 @@ export interface NextEpisode {
   season_id: number
   episode: number
   season_number: number
+  name?: string | null
+  air_date?: string | null
+  is_tba?: boolean
 }
 
 export interface TitleName {

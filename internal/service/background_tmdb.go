@@ -143,12 +143,6 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 		metaUpdate.TMDBRating = rating
 	}
 
-	if title.Status == model.TitleStatusCompleted && (details.NextEpisodeToAir != nil || (newStatus != nil && *newStatus == model.SeriesStatusReturning)) {
-		watching := model.TitleStatusWatching
-		metaUpdate.Status = &watching
-		title.Status = model.TitleStatusWatching
-	}
-
 	if details.NextEpisodeToAir != nil && details.NextEpisodeToAir.AirDate != "" {
 		airDate := details.NextEpisodeToAir.AirDate
 		airEp := fmt.Sprintf("S%d E%d", details.NextEpisodeToAir.SeasonNumber, details.NextEpisodeToAir.EpisodeNumber)

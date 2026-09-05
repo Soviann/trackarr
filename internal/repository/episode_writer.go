@@ -167,6 +167,7 @@ func (w *EpisodeWriter) MarkAllWatchedForTitle(ctx context.Context, titleID int6
 		     first_watched_at = CASE WHEN first_watched_at IS NULL THEN ? ELSE first_watched_at END,
 		     last_watched_at  = CASE WHEN last_watched_at  IS NULL THEN ? ELSE last_watched_at  END
 		 WHERE watched = 0
+		   AND UPPER(TRIM(COALESCE(name, ''))) NOT IN ('TBA', 'TBD')
 		   AND season_id IN (SELECT id FROM seasons WHERE title_id = ?)`,
 		at.UTC(), at.UTC(), titleID,
 	)

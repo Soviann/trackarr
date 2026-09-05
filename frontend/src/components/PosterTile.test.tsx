@@ -110,4 +110,49 @@ describe('PosterTile', () => {
     fireEvent.click(btn)
     expect(onQuickMark).not.toHaveBeenCalled()
   })
+
+  it('does not render +1 button or availability badge when status is dropped', () => {
+    const item: PosterTileItem = {
+      id: 5,
+      type: 'series',
+      status: 'dropped',
+      sonarr_id: 12,
+      cover_url: null,
+      name: 'Severance',
+      sublabel: 'S02E01',
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 2,
+      },
+      onQuickMark: vi.fn(),
+    }
+
+    const { queryByText, queryByLabelText } = render(<PosterTile item={item} />)
+    expect(queryByText('+1')).toBeNull()
+    expect(queryByText(/DISPO/)).toBeNull()
+    expect(queryByLabelText('Mark S2 E1 as watched')).toBeNull()
+  })
+
+  it('does not render availability badge when next episode is TBA', () => {
+    const item: PosterTileItem = {
+      id: 5,
+      type: 'series',
+      sonarr_id: 12,
+      cover_url: null,
+      name: 'Dan Da Dan',
+      sublabel: 'S03E01',
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 3,
+        name: 'TBA',
+      },
+    }
+
+    const { queryByText } = render(<PosterTile item={item} />)
+    expect(queryByText(/DISPO/)).toBeNull()
+  })
 })

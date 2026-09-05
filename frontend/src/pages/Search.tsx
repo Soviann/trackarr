@@ -190,7 +190,7 @@ export function Search({ path: _ }: { path?: string }) {
                   <div className={s.cardBody}>
                     <div className={s.cardHeader}>
                       <span className={s.cardTitle}>{getName(t)}</span>
-                      <StatusBadge status={t.status} />
+                      <StatusBadge status={t.status} caughtUp={t.caught_up} />
                       <ArrBadge type={t.type} radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
                     </div>
                     {hasMatchedAlt(t) && (
