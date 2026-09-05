@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.2] — 2026-09-05
+
 ### Modifié
 - **Modularisation des services d'arrière-plan (`Scheduler` & `MetadataSyncService`)** :
   - Décomposition de l'orchestration des crons récurrents (`internal/service/scheduler.go`) et de la synchronisation de métadonnées (`internal/service/background.go`).
