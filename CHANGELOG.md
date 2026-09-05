@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.17.0] — 2026-09-05
+
 ### Ajouté
 - **Décomposition naturelle du temps de visionnage et filtres avancés sur la page Stats ([#57](https://github.com/Soviann/trackarr/issues/57))** :
   - Décomposition humaine du watch time cumulé en années, jours, heures et minutes (ex: `3 ans 87 j 16 h` en FR / `3 yrs 87 d 16 h` en EN) dans une carte Hero dédiée, avec sous-titre détaillé (`Équivalent à 28 392 heures • 50 251 épisodes`).
