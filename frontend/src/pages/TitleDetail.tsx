@@ -28,6 +28,7 @@ import { PersonalNotesCard } from '../components/PersonalNotesCard'
 import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useTranslation } from '../i18n'
 import s from './TitleDetail.module.css'
 
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
@@ -87,6 +88,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     )
   }
 
+  const { t } = useTranslation()
   const name = getName(title)
   const altNames = getAlternativeNames(title)
   const typeLabel = getTypeLabel(title.type)
@@ -265,31 +267,76 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Ratings card */}
       <div className={s.card} style={{ marginTop: '12px' }}>
-        <div className={s.ratingsRow}>
+        {title.my_rating != null && title.my_rating > 0 ? (
+          /* State B: Already Rated (Clean display + Edit action) */
+          <div className={s.ratingHeaderRow}>
+            <div className={s.ratedScoreGroup}>
+              <span className={s.statLabelTerminal}>{t('details.myRating')}</span>
+              <span className={s.myRating}>{title.my_rating}</span>
+              <span className={s.myRatingSuffix}>/10</span>
+            </div>
+            <div className={s.ratedActionsGroup}>
+              <div className={s.extRatings}>
+                {title.tmdb_rating != null && (
+                  <div className={s.extItem}>
+                    <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
+                    <div className={s.extSource}>TMDB</div>
+                  </div>
+                )}
+                {title.anilist_rating != null && (
+                  <div className={s.extItem}>
+                    <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
+                    <div className={s.extSource}>AniList</div>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                className={s.btnEditRating}
+                onClick={() => setShowRating(true)}
+              >
+                {t('details.editRating')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* State A: Unrated (Direct 1-to-10 1-tap strip) */
           <div>
-            <div className={s.cardLabel}>My rating</div>
-            {title.my_rating != null ? (
-              <div className={s.myRating}>{title.my_rating}<span className={s.myRatingSuffix}>/10</span></div>
-            ) : (
-              <div className={s.noRating}>Not rated</div>
-            )}
-          </div>
-          <div className={s.extRatings}>
-            {title.tmdb_rating != null && (
-              <div className={s.extItem}>
-                <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
-                <div className={s.extSource}>TMDB</div>
+            <div className={s.ratingHeaderRow} style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={s.statLabelTerminal}>{t('details.rateThisTitle')}</span>
+                <span className={s.noRating}>{t('details.notRated')}</span>
               </div>
-            )}
-            {title.anilist_rating != null && (
-              <div className={s.extItem}>
-                <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
-                <div className={s.extSource}>AniList</div>
+              <div className={s.extRatings}>
+                {title.tmdb_rating != null && (
+                  <div className={s.extItem}>
+                    <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
+                    <div className={s.extSource}>TMDB</div>
+                  </div>
+                )}
+                {title.anilist_rating != null && (
+                  <div className={s.extItem}>
+                    <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
+                    <div className={s.extSource}>AniList</div>
+                  </div>
+                )}
               </div>
-            )}
-
+            </div>
+            <div className={s.rateStrip}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  className={s.rateBtn}
+                  onClick={() => handleSaveRating(val)}
+                  aria-label={`Rate ${val}/10`}
+                >
+                  {val}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Synopsis card */}

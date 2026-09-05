@@ -74,6 +74,10 @@ export const en = {
     addToLibrary: 'Add to Library',
     openInArr: 'Open in {app}',
     manageInArr: 'Manage in {app}',
+    rateThisTitle: 'RATE THIS TITLE:',
+    notRated: 'Not rated',
+    myRating: 'MY RATING:',
+    editRating: 'Edit',
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',
@@ -193,6 +197,9 @@ export const en = {
     markWatched: 'Mark as watched',
     addMissing: '+ Add',
     seeOnProvider: 'See on {provider}',
+    titlesSeen: '{seen} / {total} Titles seen',
+    nextChronological: 'NEXT CHRONOLOGICAL TITLE:',
+    allTitlesSeen: 'All titles completed!',
   },
   sideStories: {
     recommendedAfterSeason: 'Recommended Side Story after Season {season}',

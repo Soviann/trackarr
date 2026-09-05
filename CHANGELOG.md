@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Notation directe conditionnelle sur la fiche titre (`TitleDetail`)** :
+  - Affichage d'une bande tactile de notation 1-tap directe (`1` à `10`) sur la carte de note lorsque le titre n'est pas encore noté, avec enregistrement instantané et synchronisation AniList/IMDb.
+  - Affichage épuré de la note (`8/10`) avec bouton d'action *« Modifier »* ouvrant le tiroir de modification/suppression de note lorsque le titre est déjà noté.
+- **Module de suivi de Sagas / Univers par titres (`FranchiseRelationsSection`)** :
+  - Carte de suivi de franchise enrichie affichant la progression globale basée sur les titres (*« X / Y Titres vus »*) avec barre de progression graduée.
+  - Puce encadrée indiquant le prochain titre chronologique à visionner (*« Suivant : ... »*) ou message de complétion intégrale.
+  - Bandeau horizontal fluide des opus de la saga avec scrollbar masquée (`scrollbar-width: none`), puces stylisées (vu `✓`, prochain `▶`, à venir) et navigation directe au clic.
 
 ## [v1.14.0] — 2026-09-05
 

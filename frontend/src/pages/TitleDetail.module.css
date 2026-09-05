@@ -124,27 +124,109 @@
   align-items: center;
 }
 
+.statLabelTerminal {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-dim);
+}
+
+.ratingHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ratedScoreGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ratedActionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btnEditRating {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btnEditRating:hover {
+  background: var(--bg-elev2);
+  color: var(--ink);
+  border-color: var(--border-strong, #334155);
+}
+
+.rateStrip {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.rateBtn {
+  flex: 1;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  min-width: 0;
+}
+
+.rateBtn:hover {
+  border-color: var(--cover-accent, var(--accent));
+  color: #fff;
+  background: var(--cover-accent-wash, rgba(6, 182, 212, 0.12));
+  transform: translateY(-2px);
+}
+
 .myRating {
   font-size: 28px;
   font-weight: 700;
   color: var(--cover-accent, var(--accent));
   line-height: 1;
+  font-family: var(--font-mono);
 }
 
 .myRatingSuffix {
   font-size: 16px;
   color: var(--ink-dim);
+  font-family: var(--font-mono);
 }
 
 .noRating {
-  font-size: 14px;
+  font-size: 11px;
   color: var(--ink-mute);
+  font-family: var(--font-mono);
 }
 
 .extRatings {
   display: flex;
   gap: 14px;
-  margin-left: auto;
+  align-items: center;
 }
 
 .extItem {
@@ -154,6 +236,7 @@
 .extScore {
   font-size: var(--font-size-md);
   font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 .extSource {
