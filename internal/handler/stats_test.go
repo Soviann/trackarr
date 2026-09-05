@@ -50,6 +50,20 @@ func TestStatsHandler_Get_CacheControl(t *testing.T) {
 	assert.Contains(t, rr.Header().Get("Cache-Control"), "private, max-age=300")
 }
 
+func TestStatsHandler_Get_WithQueryParams(t *testing.T) {
+	h := setupStatsHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/stats?timeframe=year&year=2024&media_type=movie", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var result model.StatsResponse
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.NotEmpty(t, result.AvailableYears)
+}
+
 func TestStatsHandler_GetWrapped_EmptyDB(t *testing.T) {
 	h := setupStatsHandler(t)
 

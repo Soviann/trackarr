@@ -7,14 +7,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Ajouté
-- **Barre de recherche et tiroir de filtres fusionnés en bas de page (`SearchBar` / `FilterDrawer`)** :
-  - Champ de recherche docké en bas de l'écran (au-dessus de la barre de navigation) avec bouton d'accès aux filtres et badge de compteur actif (`[ N ]`) directement intégré dans la barre.
-  - Tiroir de filtres flottant s'ouvrant au-dessus de la barre de recherche lors de l'activation des filtres.
-  - Séparation claire des réinitialisations : bouton `✕` pour effacer uniquement la saisie de texte dans le champ de recherche, et bouton dédié `✕ Réinitialiser` dans l'en-tête du tiroir avec libellé `FILTRES (N ACTIFS)` pour remettre à zéro les critères de tri, de statut et de filtrage.
-  - Clamping fluide des titres longs sur 2 lignes propres (`-webkit-line-clamp: 2`) sur les cartes de résultats et de la bibliothèque pour éviter les troncatures abruptes.
+- **Décomposition naturelle du temps de visionnage et filtres avancés sur la page Stats ([#57](https://github.com/Soviann/trackarr/issues/57))** :
+  - Décomposition humaine du watch time cumulé en années, jours, heures et minutes (ex: `3 ans 87 j 16 h` en FR / `3 yrs 87 d 16 h` en EN) dans une carte Hero dédiée, avec sous-titre détaillé (`Équivalent à 28 392 heures • 50 251 épisodes`).
+  - Ligne de filtres temporels avec bouton `Tout l'historique`, sélecteur compact en pilule `<select>` pour filtrer par année spécifique (généré dynamiquement de la première année en base à l'année courante), et bouton `30 derniers jours`.
+  - Ligne de filtres par type de média : `Tous Médias`, `🎬 Films`, `📺 Séries`, `⛩️ Anime`.
+  - Filtrage complet backend (`GET /api/stats?timeframe=...&year=...&media_type=...`) sur l'ensemble des métriques, genres, acteurs, réalisateurs, notes et rétrospectives.
 
-### Modifié
-- **Audit hebdomadaire de documentation (`weekly-docs-audit.yml`)** : Intégration de la détection systématique des textes non internationalisés, des chaînes/commentaires en français en dur et des disparités de dictionnaires de traduction EN/FR dans les objectifs d'audit assignés à Antigravity.
 
 ## [v1.16.0] — 2026-09-05
 

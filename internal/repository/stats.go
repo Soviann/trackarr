@@ -21,17 +21,68 @@ func NewStatsRepository(db database.DBTX) *StatsRepository {
 }
 
 func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, error) {
-	overview, err := r.overview(ctx)
+	return r.GetFiltered(ctx, model.StatsFilter{Timeframe: "all", MediaType: "all"})
+}
+
+func mediaTypeCondition(mediaType string, tableAlias string) (string, []any) {
+	alias := ""
+	if tableAlias != "" {
+		alias = tableAlias + "."
+	}
+	switch mediaType {
+	case "movie":
+		return alias + "type = 'movie'", nil
+	case "series":
+		return alias + "type = 'series' AND " + alias + "is_anime = 0", nil
+	case "anime":
+		return alias + "is_anime = 1", nil
+	default:
+		return "1=1", nil
+	}
+}
+
+func timeframeCondition(filter model.StatsFilter, tableAlias string) (string, []any) {
+	alias := ""
+	if tableAlias != "" {
+		alias = tableAlias + "."
+	}
+	switch filter.Timeframe {
+	case "year":
+		if filter.Year > 0 {
+			start := fmt.Sprintf("%04d-01-01 00:00:00", filter.Year)
+			end := fmt.Sprintf("%04d-01-01 00:00:00", filter.Year+1)
+			return alias + "created_at >= ? AND " + alias + "created_at < ?", []any{start, end}
+		}
+		return "1=1", nil
+	case "30d", "30days":
+		start := time.Now().AddDate(0, 0, -30).UTC().Format("2006-01-02 15:04:05")
+		return alias + "created_at >= ?", []any{start}
+	default:
+		return "1=1", nil
+	}
+}
+
+// GetFiltered returns stats matching the specified filter (timeframe & media type).
+func (r *StatsRepository) GetFiltered(ctx context.Context, filter model.StatsFilter) (*model.StatsResponse, error) {
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+
+	var overview *model.StatsOverview
+	var err error
+	if isTimeFiltered {
+		overview, err = r.overviewTimeFiltered(ctx, filter)
+	} else {
+		overview, err = r.overviewFiltered(ctx, filter)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("stats overview: %w", err)
 	}
 
-	ratings, err := r.ratings(ctx)
+	ratings, err := r.ratingsFiltered(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats ratings: %w", err)
 	}
 
-	breakdown, err := r.breakdown(ctx)
+	breakdown, err := r.breakdownFiltered(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats breakdown: %w", err)
 	}
@@ -41,22 +92,26 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 		return nil, fmt.Errorf("stats fun: %w", err)
 	}
 
-	yearSummary, err := r.yearSummary(ctx, time.Now().Year())
+	targetYear := time.Now().Year()
+	if filter.Timeframe == "year" && filter.Year > 0 {
+		targetYear = filter.Year
+	}
+	yearSummary, err := r.yearSummary(ctx, targetYear)
 	if err != nil {
 		return nil, fmt.Errorf("stats year: %w", err)
 	}
 
-	genres, err := r.TopGenres(ctx, 10)
+	genres, err := r.topGenresFiltered(ctx, 10, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats genres: %w", err)
 	}
 
-	topActors, err := r.TopActors(ctx, 10)
+	topActors, err := r.topActorsFiltered(ctx, 10, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats top actors: %w", err)
 	}
 
-	topDirectors, err := r.TopDirectors(ctx, 10)
+	topDirectors, err := r.topDirectorsFiltered(ctx, 10, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats top directors: %w", err)
 	}
@@ -71,7 +126,7 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 		return nil, fmt.Errorf("stats best streak: %w", err)
 	}
 
-	totalWatchMinutes, err := r.TotalWatchMinutes(ctx)
+	totalWatchMinutes, err := r.totalWatchMinutesFiltered(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats total watch minutes: %w", err)
 	}
@@ -85,6 +140,11 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 	minutesThisWeek, err := r.MinutesSince(ctx, now.AddDate(0, 0, -7))
 	if err != nil {
 		return nil, fmt.Errorf("stats minutes this week: %w", err)
+	}
+
+	availableYears, err := r.AvailableYears(ctx)
+	if err != nil {
+		availableYears = []int{time.Now().Year()}
 	}
 
 	return &model.StatsResponse{
@@ -104,7 +164,498 @@ func (r *StatsRepository) GetAll(ctx context.Context) (*model.StatsResponse, err
 		WatchedThisYear:   watchedThisYear,
 		AvgRatingThisYear: avgRatingThisYear,
 		MinutesThisWeek:   minutesThisWeek,
+		AvailableYears:    availableYears,
 	}, nil
+}
+
+func (r *StatsRepository) overviewFiltered(ctx context.Context, filter model.StatsFilter) (*model.StatsOverview, error) {
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "")
+	o := &model.StatsOverview{}
+
+	var completed int
+	var avgRating sql.NullFloat64
+
+	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT
+			COUNT(*),
+			COALESCE(SUM(CASE WHEN type = 'movie' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'series' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN is_anime = 1 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0),
+			AVG(my_rating)
+		FROM titles
+		WHERE %s
+	`, typeCond)).Scan(&o.TotalTitles, &o.TotalMovies, &o.TotalSeries, &o.TotalAnime, &completed, &avgRating)
+	if err != nil {
+		return nil, fmt.Errorf("count titles: %w", err)
+	}
+
+	if filter.MediaType == "movie" {
+		o.EpisodesWatched = 0
+	} else {
+		epTypeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+		err = r.db.QueryRowContext(ctx, fmt.Sprintf(`
+			SELECT COUNT(*)
+			FROM episodes e
+			JOIN seasons s ON e.season_id = s.id
+			JOIN titles t ON s.title_id = t.id
+			WHERE e.watched = 1 AND %s
+		`, epTypeCond)).Scan(&o.EpisodesWatched)
+		if err != nil {
+			return nil, fmt.Errorf("count episodes: %w", err)
+		}
+	}
+
+	if o.TotalTitles > 0 {
+		o.CompletionRate = math.Round(float64(completed)/float64(o.TotalTitles)*100) / 100
+	}
+
+	if avgRating.Valid {
+		o.AverageRating = math.Round(avgRating.Float64*10) / 10
+	}
+
+	return o, nil
+}
+
+func (r *StatsRepository) overviewTimeFiltered(ctx context.Context, filter model.StatsFilter) (*model.StatsOverview, error) {
+	timeCond, timeArgs := timeframeCondition(filter, "we")
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+	where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+
+	o := &model.StatsOverview{}
+	var completed int
+	var avgRating sql.NullFloat64
+
+	q := fmt.Sprintf(`
+		SELECT
+			COUNT(DISTINCT t.id),
+			COUNT(DISTINCT CASE WHEN t.type = 'movie' THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.type = 'series' THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.is_anime = 1 THEN t.id END),
+			COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END)
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE %s
+	`, where)
+	err := r.db.QueryRowContext(ctx, q, timeArgs...).Scan(&o.TotalTitles, &o.TotalMovies, &o.TotalSeries, &o.TotalAnime, &completed)
+	if err != nil {
+		return nil, fmt.Errorf("count titles (time filtered): %w", err)
+	}
+
+	if filter.MediaType == "movie" {
+		o.EpisodesWatched = 0
+	} else {
+		err = r.db.QueryRowContext(ctx, fmt.Sprintf(`
+			SELECT COUNT(*)
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id
+			WHERE we.episode_id IS NOT NULL AND %s
+		`, where), timeArgs...).Scan(&o.EpisodesWatched)
+		if err != nil {
+			return nil, fmt.Errorf("count episodes (time filtered): %w", err)
+		}
+	}
+
+	err = r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT AVG(t.my_rating)
+		FROM (
+			SELECT DISTINCT t.id, t.my_rating
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id
+			WHERE t.my_rating IS NOT NULL AND %s
+		) t
+	`, where), timeArgs...).Scan(&avgRating)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("avg rating (time filtered): %w", err)
+	}
+
+	if o.TotalTitles > 0 {
+		o.CompletionRate = math.Round(float64(completed)/float64(o.TotalTitles)*100) / 100
+	}
+
+	if avgRating.Valid {
+		o.AverageRating = math.Round(avgRating.Float64*10) / 10
+	}
+
+	return o, nil
+}
+
+func (r *StatsRepository) ratingsFiltered(ctx context.Context, filter model.StatsFilter) (*model.StatsRatings, error) {
+	s := &model.StatsRatings{
+		AverageByType: make(map[string]float64),
+	}
+
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var distQuery, avgQuery string
+	var queryArgs []any
+
+	if !isTimeFiltered {
+		distQuery = fmt.Sprintf(`SELECT t.my_rating, COUNT(*) FROM titles t WHERE t.my_rating IS NOT NULL AND %s GROUP BY t.my_rating ORDER BY t.my_rating`, typeCond)
+		avgQuery = fmt.Sprintf(`SELECT t.type, AVG(t.my_rating) FROM titles t WHERE t.my_rating IS NOT NULL AND %s GROUP BY t.type`, typeCond)
+	} else {
+		timeCond, timeArgs := timeframeCondition(filter, "we")
+		queryArgs = timeArgs
+		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+		distQuery = fmt.Sprintf(`
+			SELECT t.my_rating, COUNT(DISTINCT t.id)
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id
+			WHERE t.my_rating IS NOT NULL AND %s
+			GROUP BY t.my_rating
+			ORDER BY t.my_rating
+		`, where)
+		avgQuery = fmt.Sprintf(`
+			SELECT t.type, AVG(t.my_rating)
+			FROM (
+				SELECT DISTINCT t.id, t.type, t.my_rating
+				FROM watch_events we
+				JOIN titles t ON we.title_id = t.id
+				WHERE t.my_rating IS NOT NULL AND %s
+			) t
+			GROUP BY t.type
+		`, where)
+	}
+
+	rows, err := r.db.QueryContext(ctx, distQuery, queryArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("rating distribution: %w", err)
+	}
+	var totalRated, highRated int
+	for rows.Next() {
+		var rating, count int
+		if err := rows.Scan(&rating, &count); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan rating: %w", err)
+		}
+		if rating >= 1 && rating <= 10 {
+			s.Distribution[rating-1] = count
+			totalRated += count
+			if rating >= 7 {
+				highRated += count
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate rating distribution: %w", err)
+	}
+	rows.Close()
+
+	if totalRated > 0 {
+		pct := int(math.Round(float64(highRated) / float64(totalRated) * 100))
+		switch {
+		case pct >= 60:
+			s.Insight = fmt.Sprintf("You rate pretty generously — %d%% of your ratings are 7 or above.", pct)
+		case pct <= 30:
+			s.Insight = fmt.Sprintf("You're pretty demanding — only %d%% of your ratings are 7 or above.", pct)
+		default:
+			s.Insight = fmt.Sprintf("%d%% of your ratings are 7 or above.", pct)
+		}
+	}
+
+	typeRows, err := r.db.QueryContext(ctx, avgQuery, queryArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("avg by type: %w", err)
+	}
+	for typeRows.Next() {
+		var t string
+		var avg float64
+		if err := typeRows.Scan(&t, &avg); err != nil {
+			typeRows.Close()
+			return nil, fmt.Errorf("scan avg type: %w", err)
+		}
+		s.AverageByType[t] = math.Round(avg*10) / 10
+	}
+	if err := typeRows.Err(); err != nil {
+		typeRows.Close()
+		return nil, fmt.Errorf("iterate avg by type: %w", err)
+	}
+	typeRows.Close()
+
+	return s, nil
+}
+
+func (r *StatsRepository) breakdownFiltered(ctx context.Context, filter model.StatsFilter) (*model.StatsBreakdown, error) {
+	b := &model.StatsBreakdown{
+		ByStatus: make(map[string]int),
+		ByType:   make(map[string]int),
+	}
+
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var query string
+	var args []any
+
+	if !isTimeFiltered {
+		query = fmt.Sprintf(`
+			SELECT 'status' AS dim, t.status AS k, COUNT(*) FROM titles t WHERE %s GROUP BY t.status
+			UNION ALL
+			SELECT 'type', t.type, COUNT(*) FROM titles t WHERE %s GROUP BY t.type`, typeCond, typeCond)
+	} else {
+		timeCond, timeArgs := timeframeCondition(filter, "we")
+		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+		query = fmt.Sprintf(`
+			SELECT 'status' AS dim, t.status AS k, COUNT(DISTINCT t.id)
+			FROM watch_events we JOIN titles t ON we.title_id = t.id
+			WHERE %s GROUP BY t.status
+			UNION ALL
+			SELECT 'type', t.type, COUNT(DISTINCT t.id)
+			FROM watch_events we JOIN titles t ON we.title_id = t.id
+			WHERE %s GROUP BY t.type`, where, where)
+		args = append(timeArgs, timeArgs...)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("breakdown: %w", err)
+	}
+	for rows.Next() {
+		var dim, k string
+		var count int
+		if err := rows.Scan(&dim, &k, &count); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan breakdown: %w", err)
+		}
+		switch dim {
+		case "status":
+			b.ByStatus[k] = count
+		case "type":
+			b.ByType[k] = count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterate breakdown: %w", err)
+	}
+	rows.Close()
+
+	return b, nil
+}
+
+func (r *StatsRepository) totalWatchMinutesFiltered(ctx context.Context, filter model.StatsFilter) (int, error) {
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var total int
+	if !isTimeFiltered {
+		err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
+			SELECT COALESCE(SUM(t.total_watch_minutes), 0)
+			FROM titles t
+			WHERE %s
+		`, typeCond)).Scan(&total)
+		if err != nil {
+			if strings.Contains(err.Error(), "no such column") {
+				return 0, nil
+			}
+			return 0, fmt.Errorf("stats: total watch minutes: %w", err)
+		}
+		return total, nil
+	}
+
+	timeCond, timeArgs := timeframeCondition(filter, "we")
+	where := fmt.Sprintf("%s AND %s AND t.runtime IS NOT NULL", timeCond, typeCond)
+	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT COALESCE(SUM(t.runtime), 0)
+		FROM watch_events we
+		JOIN titles t ON we.title_id = t.id
+		WHERE %s
+	`, where), timeArgs...).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("stats: total watch minutes (time filtered): %w", err)
+	}
+	return total, nil
+}
+
+func (r *StatsRepository) topGenresFiltered(ctx context.Context, limit int, filter model.StatsFilter) ([]model.GenreStat, error) {
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var query string
+	var args []any
+
+	if !isTimeFiltered {
+		query = fmt.Sprintf(`
+			SELECT tg.genre, COUNT(*) AS count
+			FROM title_genres tg
+			JOIN titles t ON tg.title_id = t.id
+			WHERE %s
+			GROUP BY tg.genre
+			ORDER BY count DESC
+			LIMIT ?
+		`, typeCond)
+		args = []any{limit}
+	} else {
+		timeCond, timeArgs := timeframeCondition(filter, "we")
+		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+		query = fmt.Sprintf(`
+			SELECT tg.genre, COUNT(DISTINCT t.id) AS count
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id
+			JOIN title_genres tg ON tg.title_id = t.id
+			WHERE %s
+			GROUP BY tg.genre
+			ORDER BY count DESC
+			LIMIT ?
+		`, where)
+		args = append(timeArgs, limit)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top genres: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.GenreStat
+	for rows.Next() {
+		var g model.GenreStat
+		if err := rows.Scan(&g.Genre, &g.Count); err != nil {
+			return nil, fmt.Errorf("stats: genre scan: %w", err)
+		}
+		results = append(results, g)
+	}
+	return results, rows.Err()
+}
+
+func (r *StatsRepository) topActorsFiltered(ctx context.Context, limit int, filter model.StatsFilter) ([]model.PersonStat, error) {
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var query string
+	var args []any
+
+	if !isTimeFiltered {
+		query = fmt.Sprintf(`
+			SELECT
+				json_extract(je.value, '$.name') AS name,
+				COUNT(DISTINCT t.id) AS count
+			FROM titles t, json_each(t.credits) je
+			WHERE t.credits IS NOT NULL
+			  AND t.credits != ''
+			  AND t.credits != '[]'
+			  AND json_valid(t.credits) = 1
+			  AND json_extract(je.value, '$.role') != 'Director'
+			  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
+			  AND json_extract(je.value, '$.name') IS NOT NULL
+			  AND trim(json_extract(je.value, '$.name')) != ''
+			  AND %s
+			GROUP BY name
+			ORDER BY count DESC, name ASC
+			LIMIT ?
+		`, typeCond)
+		args = []any{limit}
+	} else {
+		timeCond, timeArgs := timeframeCondition(filter, "we")
+		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+		query = fmt.Sprintf(`
+			SELECT
+				json_extract(je.value, '$.name') AS name,
+				COUNT(DISTINCT t.id) AS count
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id,
+			json_each(t.credits) je
+			WHERE t.credits IS NOT NULL
+			  AND t.credits != ''
+			  AND t.credits != '[]'
+			  AND json_valid(t.credits) = 1
+			  AND json_extract(je.value, '$.role') != 'Director'
+			  AND json_extract(je.value, '$.name') IS NOT NULL
+			  AND trim(json_extract(je.value, '$.name')) != ''
+			  AND %s
+			GROUP BY name
+			ORDER BY count DESC, name ASC
+			LIMIT ?
+		`, where)
+		args = append(timeArgs, limit)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top actors: %w", err)
+	}
+	defer rows.Close()
+
+	results := []model.PersonStat{}
+	for rows.Next() {
+		var p model.PersonStat
+		if err := rows.Scan(&p.Name, &p.Count); err != nil {
+			return nil, fmt.Errorf("stats: actor scan: %w", err)
+		}
+		results = append(results, p)
+	}
+	return results, rows.Err()
+}
+
+func (r *StatsRepository) topDirectorsFiltered(ctx context.Context, limit int, filter model.StatsFilter) ([]model.PersonStat, error) {
+	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
+	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	var query string
+	var args []any
+
+	if !isTimeFiltered {
+		query = fmt.Sprintf(`
+			SELECT
+				json_extract(je.value, '$.name') AS name,
+				COUNT(DISTINCT t.id) AS count
+			FROM titles t, json_each(t.credits) je
+			WHERE t.credits IS NOT NULL
+			  AND t.credits != ''
+			  AND t.credits != '[]'
+			  AND json_valid(t.credits) = 1
+			  AND json_extract(je.value, '$.role') = 'Director'
+			  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
+			  AND json_extract(je.value, '$.name') IS NOT NULL
+			  AND trim(json_extract(je.value, '$.name')) != ''
+			  AND %s
+			GROUP BY name
+			ORDER BY count DESC, name ASC
+			LIMIT ?
+		`, typeCond)
+		args = []any{limit}
+	} else {
+		timeCond, timeArgs := timeframeCondition(filter, "we")
+		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
+		query = fmt.Sprintf(`
+			SELECT
+				json_extract(je.value, '$.name') AS name,
+				COUNT(DISTINCT t.id) AS count
+			FROM watch_events we
+			JOIN titles t ON we.title_id = t.id,
+			json_each(t.credits) je
+			WHERE t.credits IS NOT NULL
+			  AND t.credits != ''
+			  AND t.credits != '[]'
+			  AND json_valid(t.credits) = 1
+			  AND json_extract(je.value, '$.role') = 'Director'
+			  AND json_extract(je.value, '$.name') IS NOT NULL
+			  AND trim(json_extract(je.value, '$.name')) != ''
+			  AND %s
+			GROUP BY name
+			ORDER BY count DESC, name ASC
+			LIMIT ?
+		`, where)
+		args = append(timeArgs, limit)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("stats: top directors: %w", err)
+	}
+	defer rows.Close()
+
+	results := []model.PersonStat{}
+	for rows.Next() {
+		var p model.PersonStat
+		if err := rows.Scan(&p.Name, &p.Count); err != nil {
+			return nil, fmt.Errorf("stats: director scan: %w", err)
+		}
+		results = append(results, p)
+	}
+	return results, rows.Err()
 }
 
 // libraryStripYear returns (count of titles last-watched in the given year, avg my_rating among them).
@@ -798,28 +1349,28 @@ func (r *StatsRepository) TopDirectors(ctx context.Context, limit int) ([]model.
 	return results, rows.Err()
 }
 
-// AvailableYears returns all calendar years containing watch events, sorted descending.
+// AvailableYears returns all calendar years from the earliest release or watch year down to the current year, descending.
 func (r *StatsRepository) AvailableYears(ctx context.Context) ([]int, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT DISTINCT CAST(strftime('%Y', created_at) AS INTEGER) AS y
-		FROM watch_events
-		WHERE created_at IS NOT NULL
-		ORDER BY y DESC
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("stats: available years: %w", err)
+	currentYear := time.Now().Year()
+	var minYear int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COALESCE(MIN(y), ?)
+		FROM (
+			SELECT MIN(year) AS y FROM titles WHERE year IS NOT NULL AND year > 1900
+			UNION ALL
+			SELECT MIN(CAST(strftime('%Y', created_at) AS INTEGER)) AS y FROM watch_events WHERE created_at IS NOT NULL AND CAST(strftime('%Y', created_at) AS INTEGER) > 1900
+		)
+	`, currentYear).Scan(&minYear)
+	if err != nil || minYear <= 1900 || minYear > currentYear {
+		minYear = currentYear
 	}
-	defer rows.Close()
 
 	var years []int
-	for rows.Next() {
-		var y int
-		if err := rows.Scan(&y); err == nil && y > 1900 {
-			years = append(years, y)
-		}
+	for y := currentYear; y >= minYear; y-- {
+		years = append(years, y)
 	}
 	if len(years) == 0 {
-		years = []int{time.Now().Year()}
+		years = []int{currentYear}
 	}
 	return years, nil
 }
