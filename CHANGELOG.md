@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+
+## [v1.15.0] — 2026-09-05
+
 ### Ajouté
 - **Notation directe conditionnelle sur la fiche titre (`TitleDetail`)** :
   - Affichage d'une bande tactile de notation 1-tap directe (`1` à `10`) sur la carte de note lorsque le titre n'est pas encore noté, avec enregistrement instantané et synchronisation AniList/IMDb.
