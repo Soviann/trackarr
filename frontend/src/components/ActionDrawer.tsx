@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import clsx from 'clsx'
+import { useSwipeDownToClose } from '../hooks/useSwipeDownToClose'
 import type { Title } from '../types'
 import s from './ActionDrawer.module.css'
 
@@ -20,11 +21,19 @@ export function ActionDrawer({
 }: ActionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
-  const [dragY, setDragY] = useState(0)
-  const touchStartY = useRef<number | null>(null)
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const mounted = useRef(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+    setMoreOpen(false)
+  }, [])
+
+  const { ref: containerRef, style: swipeStyle } = useSwipeDownToClose({
+    open,
+    onClose: handleClose,
+  })
 
   useEffect(() => {
     return () => {
@@ -55,29 +64,6 @@ export function ActionDrawer({
     }
   }
 
-  const handleTouchStart = (e: TouchEvent) => {
-    if (!open) return
-    touchStartY.current = e.touches[0].clientY
-  }
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!open || touchStartY.current === null) return
-    const deltaY = e.touches[0].clientY - touchStartY.current
-    if (deltaY > 0) {
-      setDragY(deltaY)
-    }
-  }
-
-  const handleTouchEnd = () => {
-    if (!open || touchStartY.current === null) return
-    if (dragY > 100) {
-      setOpen(false)
-      setMoreOpen(false)
-    }
-    setDragY(0)
-    touchStartY.current = null
-  }
-
   const toggleOpen = () => {
     const next = !open
     setOpen(next)
@@ -86,11 +72,9 @@ export function ActionDrawer({
 
   return (
     <div
+      ref={containerRef}
       className={s.container}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
+      style={swipeStyle}
     >
       <button
         type="button"

@@ -111,7 +111,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	clientErrors := &handler.ClientErrorHandler{}
 
 	calendarSvc := service.NewCalendarService(writeDB, titleReadRepo, settingRepo)
-	calendarHandler := handler.NewCalendarHandler(calendarSvc, writeDB, settingRepo)
+	calendarHandler := handler.NewCalendarHandler(calendarSvc)
 
 	reloader := service.NewDynamicConfigReloader(
 		cfg, writeDB, settingRepo, pipeline, bgSvc, nil, nil, realPushSvc,

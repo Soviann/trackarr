@@ -91,7 +91,8 @@
 | `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
 | `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation, token rotation & range queries | `docs/user-guide.md` |
-| `BackgroundService` | `internal/service/background.go` | Daily metadata refresh crons and name sync | `docs/background-jobs.md` |
+| `BackgroundService` / `MetadataSyncService` | `internal/service/background.go` | Title metadata enrichment and synchronization (TMDB, AniList, TVDB) | `docs/background-jobs.md` |
+| `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (daily refresh, cover maintenance, wrapped checks) | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
 | `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine (`enrichment`, `push`, `arr`) | `docs/background-jobs.md` |
@@ -241,6 +242,8 @@
 | `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
+| `FilterDrawer` | `components/FilterDrawer.tsx` | Decomposed multi-tab filter drawer (Basics, Genres, Dates) with swipe-down-to-close gesture |
+| `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, `{ passive: false }` scroll blocking, and threshold close |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |

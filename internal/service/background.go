@@ -62,6 +62,22 @@ func NewBackgroundService(
 	}
 }
 
+// MetadataSyncService handles enriching titles and synchronizing metadata from
+// external providers (TMDB, TVDB, AniList).
+type MetadataSyncService = BackgroundService
+
+// NewMetadataSyncService creates a new metadata synchronization service.
+func NewMetadataSyncService(
+	writeDB *sql.DB,
+	titles *repository.TitleRepository,
+	settings *repository.SettingRepository,
+	tmdb *matching.TMDBClient,
+	covers *CoverService,
+	push PushNotifier,
+) *MetadataSyncService {
+	return NewBackgroundService(writeDB, titles, settings, tmdb, covers, push)
+}
+
 // SetShutdownWG registers a WaitGroup the ticker goroutine increments on start
 // and decrements on exit, so Serve() can wait for the current iteration to
 // finish before closing the database.
@@ -521,114 +537,16 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 	return &status
 }
 
-// StartTicker launches the background refresh on a daily interval.
+// StartTicker launches the background refresh on a daily interval by delegating to Scheduler.
 func (s *BackgroundService) StartTicker(ctx context.Context, interval time.Duration) {
 	if s == nil {
 		return
 	}
-
+	sched := NewScheduler(s.writeDB, s, s.covers, s.statsRepo, s.wrappedRepo)
 	if s.shutdownWG != nil {
-		s.shutdownWG.Add(1)
+		sched.SetShutdownWG(s.shutdownWG)
 	}
-	go func() {
-		if s.shutdownWG != nil {
-			defer s.shutdownWG.Done()
-		}
-		// Outer loop restarts the ticker after a panic so a single bad refresh
-		// iteration cannot silently kill the daily schedule. Mirrors the
-		// panic-recovery pattern used by TaskQueueWorker.Start.
-		for {
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						log.Printf("background: panic in ticker loop: %v", r)
-						time.Sleep(30 * time.Second)
-					}
-				}()
-
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(30 * time.Second):
-				}
-
-				log.Println("background: fetching missing covers")
-				if n := s.covers.FetchMissingCovers(ctx); n > 0 {
-					log.Printf("background: fetched %d missing covers", n)
-				}
-				log.Println("background: starting initial refresh")
-				s.RefreshTitles(ctx)
-				s.checkAnnualWrapped(ctx)
-
-				ticker := time.NewTicker(interval)
-				defer ticker.Stop()
-
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case <-ticker.C:
-						log.Println("background: starting scheduled refresh")
-						s.RefreshTitles(ctx)
-						s.checkAnnualWrapped(ctx)
-
-						day := time.Now().Weekday()
-						log.Printf("background: starting unused covers cleanup for %s", day.String())
-						s.covers.CleanupUnusedCovers(ctx, day)
-					}
-				}
-			}()
-
-			if ctx.Err() != nil {
-				return
-			}
-		}
-	}()
-}
-
-// checkAnnualWrapped scans all calendar years with watch activity and enqueues
-// background generation tasks for any year lacking a stored snapshot.
-func (s *BackgroundService) checkAnnualWrapped(ctx context.Context) {
-	if s == nil || s.wrappedRepo == nil || s.statsRepo == nil {
-		return
-	}
-
-	years, err := s.statsRepo.AvailableYears(ctx)
-	if err != nil {
-		log.Printf("background: check available years: %v", err)
-		return
-	}
-
-	for _, y := range years {
-		if y < 2000 {
-			continue
-		}
-
-		has, err := s.wrappedRepo.HasSnapshot(ctx, y)
-		if err != nil {
-			log.Printf("background: check wrapped snapshot for %d: %v", y, err)
-			continue
-		}
-		if has {
-			continue
-		}
-
-		payload, err := json.Marshal(GenerateWrappedPayload{Year: y})
-		if err != nil {
-			log.Printf("background: marshal generate_wrapped payload for %d: %v", y, err)
-			continue
-		}
-
-		dedupKey := fmt.Sprintf("generate_wrapped:%d", y)
-		if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeGenerateWrapped, string(payload), &dedupKey)
-			return e
-		}); enqErr != nil {
-			log.Printf("background: enqueue generate_wrapped for %d: %v", y, enqErr)
-		} else {
-			log.Printf("background: enqueued generate_wrapped for year %d", y)
-		}
-	}
+	sched.Start(ctx, interval)
 }
 
 func (s *BackgroundService) enqueueRefreshOnRetryable(ctx context.Context, titleID int64, err error) {

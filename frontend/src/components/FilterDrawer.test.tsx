@@ -128,5 +128,50 @@ describe('FilterDrawer', () => {
     fireEvent.click(resetBtn)
     expect(onReset).toHaveBeenCalledTimes(1)
   })
+
+  it('accepts consolidated filter and actions props', () => {
+    const onStatusChange = vi.fn()
+    const { getByText } = render(
+      <FilterDrawer
+        defaultOpen={true}
+        sort={{ field: 'updated_at', order: 'desc' }}
+        onSortChange={vi.fn()}
+        isSearchActive={false}
+        filter={{
+          status: 'plan_to_watch',
+          type: 'movie',
+          isAnime: false,
+          seriesStatus: null,
+          decade: null,
+          releaseFrom: '',
+          releaseTo: '',
+          includeNoRelease: true,
+          selectedGenres: [],
+          genreOp: 'OR',
+          selectedCountries: [],
+          myRatingMin: '',
+          tmdbRatingMin: '',
+        }}
+        actions={{
+          onStatusChange,
+          onTypeChange: vi.fn(),
+          onIsAnimeChange: vi.fn(),
+          onSeriesStatusChange: vi.fn(),
+          onDecadeChange: vi.fn(),
+          onReleaseFromChange: vi.fn(),
+          onReleaseToChange: vi.fn(),
+          onIncludeNoReleaseChange: vi.fn(),
+          onGenreToggle: vi.fn(),
+          onGenreOpChange: vi.fn(),
+          onCountryToggle: vi.fn(),
+          onMyRatingMinChange: vi.fn(),
+          onTmdbRatingMinChange: vi.fn(),
+        }}
+      />
+    )
+    const watchingBtn = getByText('Watching')
+    fireEvent.click(watchingBtn)
+    expect(onStatusChange).toHaveBeenCalledWith('watching')
+  })
 })
 

@@ -29,7 +29,7 @@ func setupCalendarHandler(t *testing.T) (*handler.CalendarHandler, *service.Cale
 	titleRepo := repository.NewTitleRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
 	calSvc := service.NewCalendarService(db, titleRepo, settingRepo)
-	h := handler.NewCalendarHandler(calSvc, db, settingRepo)
+	h := handler.NewCalendarHandler(calSvc)
 
 	return h, calSvc, db, titleRepo, settingRepo
 }
