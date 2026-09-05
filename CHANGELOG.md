@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+
+## [v1.14.0] — 2026-09-05
+
 ### Ajouté
 - **Bouton rapide +1 épisode sur Continue Watching & Bibliothèque (`PosterCard` / `PosterTile`)** :
   - Ajout du chargement groupé de l'épisode suivant (`NextEpisode`) dans la requête `ListContinueWatching` du backend Go (`GET /api/titles/continue-watching`).
