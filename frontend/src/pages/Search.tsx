@@ -3,6 +3,7 @@ import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { colors } from '../theme'
+import { useTranslation } from '../i18n'
 import { useTitleStore, useSearchStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
@@ -13,6 +14,7 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverImage } from '../components/CoverImage'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import s from './Search.module.css'
 
 interface TMDBResult {
@@ -35,9 +37,8 @@ function getMetadata(t: Title) {
   return parts.join(' \u00b7 ')
 }
 
-import { useScrollRestoration } from '../hooks/useScrollRestoration'
-
 export function Search({ path: _ }: { path?: string }) {
+  const { t } = useTranslation()
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
   const results = useSearchStore(s => s.results)
@@ -74,6 +75,11 @@ export function Search({ path: _ }: { path?: string }) {
     filter.release_from,
     filter.release_to,
     filter.include_no_release,
+    filter.genres,
+    filter.genre_op,
+    filter.origin_country,
+    filter.my_rating_min,
+    filter.tmdb_rating_min,
   ])
 
   // Load TMDB results when toggle is on. Debounced so each keystroke
@@ -131,10 +137,12 @@ export function Search({ path: _ }: { path?: string }) {
                 </svg>
               </div>
               <div className={s.emptyText}>
-                {mergeSourceId ? 'Search for a title to merge into' : 'Search across your entire library'}
+                {mergeSourceId ? t('search.emptyMerge') : t('search.emptyState')}
               </div>
               <div className={s.emptySubtext}>
-                {mergeSourceId ? `Merging "${mergeSourceName}"` : 'All statuses, all types'}
+                {mergeSourceId
+                  ? t('search.emptyMergeSub', { name: mergeSourceName ?? '' })
+                  : t('search.emptyStateSub')}
               </div>
             </div>
           </div>
@@ -146,7 +154,9 @@ export function Search({ path: _ }: { path?: string }) {
           <>
             <div className={s.resultCount}>
               <span className={s.resultCountText}>
-                {results.length} / {total} result{total !== 1 ? 's' : ''} for "{query.trim()}"
+                {total === 1
+                  ? t('search.resultCountSingle', { query: query.trim() })
+                  : t('search.resultCount', { count: results.length, total, query: query.trim() })}
               </span>
             </div>
 
@@ -207,7 +217,7 @@ export function Search({ path: _ }: { path?: string }) {
             {hasMore && (
               <div className={s.loadMoreWrap}>
                 <button onClick={() => loadMore(filter)} disabled={loadingMore} className={s.loadMoreBtn}>
-                  {loadingMore ? 'Loading...' : 'Load more'}
+                  {loadingMore ? t('search.loadingMore') : t('search.loadMore')}
                 </button>
               </div>
             )}
@@ -215,7 +225,7 @@ export function Search({ path: _ }: { path?: string }) {
             {/* TMDB results — only when toggle is on */}
             {searchOnTMDB && tmdbResults.length > 0 && (
               <>
-                <div className={s.sectionDivider}>TMDB Results</div>
+                <div className={s.sectionDivider}>{t('search.tmdbResults')}</div>
                 {tmdbResults
                   .filter(r => !results.some(l => l.tmdb_id === r.id))
                   .map(r => (
@@ -244,28 +254,30 @@ export function Search({ path: _ }: { path?: string }) {
 
         {query.trim() && !loading && results.length === 0 && !error && (
           <div className={s.statusMessage}>
-            No results for "{query.trim()}"
+            {t('search.noResults', { query: query.trim() })}
           </div>
         )}
 
         {query.trim() && loading && results.length === 0 && (
           <div className={s.statusMessage}>
-            Searching...
+            {t('search.searching')}
           </div>
         )}
       </div>
 
       <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)} ariaLabel="Merge titles">
         <div className={s.mergeDrawer}>
-          <div className={s.mergeTitle}>Merge titles?</div>
+          <div className={s.mergeTitle}>{t('search.mergeTitle')}</div>
           <div className={s.mergeDesc}>
-            This will merge "{mergeSourceName}" into "{mergeTarget ? getName(mergeTarget) : ''}".
-            Seasons, watch events and names will be moved. This action cannot be undone.
+            {t('search.mergeDesc', {
+              source: mergeSourceName ?? '',
+              target: mergeTarget ? getName(mergeTarget) : '',
+            })}
           </div>
 
           {mergeTarget?.type === 'series' && (
             <div className={s.seasonInputGroup}>
-              <label htmlFor="target-season" className={s.seasonLabel}>Integrate as season number:</label>
+              <label htmlFor="target-season" className={s.seasonLabel}>{t('search.integrateAsSeason')}</label>
               <input
                 id="target-season"
                 type="number"
@@ -277,16 +289,16 @@ export function Search({ path: _ }: { path?: string }) {
             </div>
           )}
 
-          {mergeError && <div className={s.mergeError}>{mergeError}</div>}
+          {mergeError && <div className={s.mergeError}>{t('search.mergeError')}</div>}
 
           <div className={s.mergeActions}>
-            <button className={s.cancelBtn} onClick={() => setMergeTarget(null)}>Cancel</button>
+            <button className={s.cancelBtn} onClick={() => setMergeTarget(null)}>{t('common.cancel')}</button>
             <button
               className={s.confirmBtn}
               onClick={handleMerge}
               disabled={merging}
             >
-              {merging ? 'Merging...' : 'Merge now'}
+              {merging ? t('search.merging') : t('search.mergeNow')}
             </button>
           </div>
         </div>

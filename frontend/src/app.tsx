@@ -155,6 +155,19 @@ export function App() {
   const handleTmdbRatingMinChange = useCallback((v: string) => {
     setFilter({ tmdb_rating_min: v || undefined })
   }, [setFilter])
+
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+
+  const handleResetFilters = useCallback(() => {
+    useTitleStore.setState({
+      filter: {},
+      titles: [],
+      _fetchGen: useTitleStore.getState()._fetchGen + 1,
+    })
+    setSort({ field: 'updated_at', order: 'desc' })
+    useTitleStore.getState().fetchTitles()
+  }, [setSort])
+
   const hideNavbar = currentPath.startsWith('/login') || currentPath.startsWith('/wrapped')
   const pathname = currentPath.split('?')[0]
   const isSearch = pathname === '/search'
@@ -162,6 +175,20 @@ export function App() {
   const mergeSourceId = isSearch
     ? new URLSearchParams(currentPath.split('?')[1] ?? '').get('mergeSourceId')
     : null
+
+  let activeFilterCount = 0
+  if (statusFilter !== null) activeFilterCount++
+  if (typeFilter !== null) activeFilterCount++
+  if (filter.is_anime === 'true') activeFilterCount++
+  if (typeFilter === 'series' && seriesStatusFilter !== null) activeFilterCount++
+  if (filter.decade || filter.release_from || filter.release_to) activeFilterCount++
+  if (filter.genres && filter.genres.length > 0) activeFilterCount++
+  if (filter.origin_country && filter.origin_country.length > 0) activeFilterCount++
+  if (filter.my_rating_min) activeFilterCount++
+  if (filter.tmdb_rating_min) activeFilterCount++
+  if (!isSearch && (sort.field !== 'updated_at' || sort.order !== 'desc') && sort.field !== 'release_date') {
+    activeFilterCount++
+  }
 
   const filterDrawer = showDrawer ? (
     <FilterDrawer
@@ -176,6 +203,10 @@ export function App() {
       sort={sort}
       onSortChange={setSort}
       isSearchActive={isSearch}
+      open={filterDrawerOpen}
+      onOpenChange={setFilterDrawerOpen}
+      onReset={handleResetFilters}
+      activeCount={activeFilterCount}
       defaultOpen={false}
       decade={filter.decade ?? null}
       releaseFrom={filter.release_from ?? ''}
@@ -200,8 +231,13 @@ export function App() {
 
   const above = isSearch ? (
     <>
-      <SearchBar showTMDBToggle={!mergeSourceId} />
       {filterDrawer}
+      <SearchBar
+        showTMDBToggle={!mergeSourceId}
+        isFiltersOpen={filterDrawerOpen}
+        onToggleFilters={() => setFilterDrawerOpen(!filterDrawerOpen)}
+        activeFilterCount={activeFilterCount}
+      />
     </>
   ) : filterDrawer
 
