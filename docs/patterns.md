@@ -172,6 +172,10 @@
 | GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
 | PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
 | POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh |
+| GET | `/api/admin/export/json` | `admin.ExportJSON` | 1-Click full JSON library backup download |
+| GET | `/api/admin/export/csv` | `admin.ExportCSV` | 1-Click spreadsheet CSV library export download |
+| GET | `/api/admin/export/trakt` | `admin.ExportTrakt` | 1-Click Trakt.tv sync JSON export download |
+| POST | `/api/admin/import` | `admin.ImportBackup` | Upload and import backup (.zip, .json, .csv) with dry-run support |
 | GET | `/api/admin/season-audit` | `seasonAudit.List` | Suggested multi-season merges |
 | POST | `/api/admin/season-audit/accept` | `seasonAudit.Accept` | Execute suggested merge |
 | POST | `/api/admin/season-audit/dismiss` | `seasonAudit.Dismiss` | Dismiss suggested merge |

@@ -26,10 +26,16 @@ export async function apiFetch<T = unknown>(path: string, options?: RequestInit)
     }
   }
 
+  const isFormData = typeof FormData !== 'undefined' && options?.body instanceof FormData
+  const headers = new Headers(options?.headers)
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
+    headers,
   })
 
   if (res.status === 401) {

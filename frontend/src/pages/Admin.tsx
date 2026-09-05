@@ -1,10 +1,12 @@
-import { useState } from 'preact/hooks'
+import { useState, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { colors } from '../theme'
 import { routeTo } from '../routes'
+import { useTranslation } from '../i18n'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
+import { BottomSheet } from '../components/BottomSheet'
 import s from './Admin.module.css'
 
 interface AdminCounts {
@@ -29,7 +31,17 @@ interface SystemSettings {
   vapid_configured: boolean
 }
 
+interface BackupSummaryResult {
+  dry_run: boolean
+  created: number
+  skipped: number
+  errors: number
+  total: number
+  message?: string
+}
+
 export function Admin({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const { data: counts } = useApi<AdminCounts>('/admin/counts')
   const { data: authSettings } = useApi<AuthSettings>('/admin/auth-settings')
   const { data: sysSettings } = useApi<SystemSettings>('/admin/system-settings')
@@ -37,6 +49,16 @@ export function Admin({ path }: { path?: string }) {
   const [refreshing, setRefreshing] = useState(false)
   const [showRefreshModal, setShowRefreshModal] = useState(false)
   const [refreshSuccess, setRefreshSuccess] = useState(false)
+
+  // Backup & Import states
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewResult, setPreviewResult] = useState<BackupSummaryResult | null>(null)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null)
+  const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null)
 
   const handleRefreshAll = async () => {
     setRefreshing(true)
@@ -46,6 +68,80 @@ export function Admin({ path }: { path?: string }) {
       setTimeout(() => setRefreshSuccess(false), 4000)
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  const runPreview = async (file: File) => {
+    setSelectedFile(file)
+    setImporting(true)
+    setImportErrorMsg(null)
+    setImportSuccessMsg(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await apiFetch<BackupSummaryResult>('/admin/import?dry_run=true', {
+        method: 'POST',
+        body: formData,
+      })
+      setPreviewResult(res)
+      setShowPreviewModal(true)
+    } catch (err: unknown) {
+      setImportErrorMsg(err instanceof Error ? err.message : String(err))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleExecuteImport = async () => {
+    if (!selectedFile) return
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      const res = await apiFetch<BackupSummaryResult>('/admin/import?dry_run=false', {
+        method: 'POST',
+        body: formData,
+      })
+      setShowPreviewModal(false)
+      setSelectedFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setImportSuccessMsg(
+        t('admin.importSuccessMsg', {
+          created: String(res.created),
+          skipped: String(res.skipped),
+        })
+      )
+      setTimeout(() => setImportSuccessMsg(null), 6000)
+    } catch (err: unknown) {
+      setImportErrorMsg(err instanceof Error ? err.message : String(err))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0]
+      runPreview(file)
+    }
+  }
+
+  const handleFileSelect = (e: Event) => {
+    const input = e.target as HTMLInputElement
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0]
+      runPreview(file)
     }
   }
 
@@ -362,7 +458,7 @@ export function Admin({ path }: { path?: string }) {
         {/* REFRESH ACTION BOX */}
         <div className={s.refreshBox}>
           <div className={s.refreshInfo}>
-            <div className={s.refreshTitle}>Refresh All Metadata</div>
+            <div className={s.refreshTitle}>{t('admin.refreshAll')}</div>
             <div className={s.refreshDesc}>
               {refreshSuccess
                 ? '✅ Background metadata refresh started successfully!'
@@ -385,6 +481,105 @@ export function Admin({ path }: { path?: string }) {
         </div>
       </div>
 
+      {/* SECTION 4: DATA MANAGEMENT & BACKUPS */}
+      <div className={s.section}>
+        <div className={s.sectionHeader}>
+          <span className={s.sectionIcon}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </span>
+          <span className={s.sectionTitle}>{t('admin.dataManagement')}</span>
+        </div>
+
+        {importSuccessMsg && (
+          <div className={`${s.alertBanner} ${s.alertSuccess}`}>
+            <span>✅ {importSuccessMsg}</span>
+          </div>
+        )}
+
+        {importErrorMsg && (
+          <div className={`${s.alertBanner} ${s.alertError}`}>
+            <span>⚠️ {importErrorMsg}</span>
+          </div>
+        )}
+
+        <div className={s.backupBox}>
+          {/* 1-Click Export */}
+          <div className={s.backupHeader}>
+            <span className={s.backupSubTitle}>{t('admin.exportTitle')}</span>
+            <span className={s.backupSubDesc}>{t('admin.exportDesc')}</span>
+          </div>
+
+          <div className={s.exportButtonsRow}>
+            <a href="/api/admin/export/json" download className={s.exportBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              <span>{t('admin.exportJson')}</span>
+            </a>
+
+            <a href="/api/admin/export/csv" download className={s.exportBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <rect x="8" y="12" width="8" height="6" />
+              </svg>
+              <span>{t('admin.exportCsv')}</span>
+            </a>
+
+            <a href="/api/admin/export/trakt" download className={s.exportBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              <span>{t('admin.exportTrakt')}</span>
+            </a>
+          </div>
+
+          <div className={s.importDivider} />
+
+          {/* Import Dropzone */}
+          <div className={s.backupHeader}>
+            <span className={s.backupSubTitle}>{t('admin.importTitle')}</span>
+            <span className={s.backupSubDesc}>{t('admin.importDesc')}</span>
+          </div>
+
+          <div
+            className={`${s.dropzone} ${isDragging ? s.dropzoneActive : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip,.json,.csv"
+              style={{ display: 'none' }}
+              onChange={handleFileSelect}
+            />
+            <div className={s.dropzoneIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <div className={s.dropzoneText}>
+              <span className={s.dropzonePrimary}>{t('admin.importDropzone')}</span>
+              <span className={s.dropzoneSecondary}>{t('admin.importFormats')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* REFRESH CONFIRMATION */}
       <ConfirmationDrawer
         open={showRefreshModal}
         onClose={() => setShowRefreshModal(false)}
@@ -394,6 +589,86 @@ export function Admin({ path }: { path?: string }) {
         confirmText="Refresh"
         cancelText="Cancel"
       />
+
+      {/* DRY-RUN PREVIEW BOTTOM SHEET */}
+      <BottomSheet
+        open={showPreviewModal}
+        onClose={() => {
+          if (!importing) {
+            setShowPreviewModal(false)
+            setSelectedFile(null)
+          }
+        }}
+        ariaLabel={t('admin.importPreviewTitle')}
+      >
+        <div className={s.previewSheet}>
+          <div className={s.previewTitle}>{t('admin.importPreviewTitle')}</div>
+          <div className={s.previewDesc}>{t('admin.importPreviewDesc')}</div>
+
+          {selectedFile && (
+            <div className={s.previewFileBadge}>
+              📁 <span>{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(1)} KB)
+            </div>
+          )}
+
+          {previewResult && (
+            <div className={s.previewGrid}>
+              <div className={s.previewStatCard}>
+                <span className={s.previewStatNum}>{previewResult.total}</span>
+                <span className={s.previewStatLabel}>{t('admin.importTotal')}</span>
+              </div>
+              <div className={s.previewStatCard}>
+                <span className={`${s.previewStatNum} ${s.previewStatNumCreated}`}>
+                  +{previewResult.created}
+                </span>
+                <span className={s.previewStatLabel}>{t('admin.importToCreate')}</span>
+              </div>
+              <div className={s.previewStatCard}>
+                <span className={`${s.previewStatNum} ${s.previewStatNumSkipped}`}>
+                  {previewResult.skipped}
+                </span>
+                <span className={s.previewStatLabel}>{t('admin.importToSkip')}</span>
+              </div>
+            </div>
+          )}
+
+          <div className={s.previewActions}>
+            <button
+              type="button"
+              className={s.previewCancelBtn}
+              onClick={() => {
+                setShowPreviewModal(false)
+                setSelectedFile(null)
+              }}
+              disabled={importing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={s.previewConfirmBtn}
+              onClick={handleExecuteImport}
+              disabled={importing || previewResult?.created === 0}
+            >
+              {importing ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                    <line x1="12" y1="2" x2="12" y2="6" />
+                    <line x1="12" y1="18" x2="12" y2="22" />
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+                    <line x1="2" y1="12" x2="6" y2="12" />
+                    <line x1="18" y1="12" x2="22" y2="12" />
+                  </svg>
+                  <span>{t('admin.importRunning')}</span>
+                </>
+              ) : (
+                <span>{t('admin.importConfirmBtn')}</span>
+              )}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }
