@@ -29,7 +29,8 @@ const baseStats: StatsResponse = {
   top_actors: [{ name: 'Timothée Chalamet', count: 3 }], // i18n-ignore
   top_directors: [{ name: 'Denis Villeneuve', count: 2 }],
   streaks: { current: 0, best: 0 },
-  total_watch_minutes: 60,
+  total_watch_minutes: 1703040, // 3 yrs 87 d 16 h (3*525600 + 87*1440 + 16*60)
+  available_years: [2026, 2025, 2024],
   watched_this_year: 0,
   avg_rating_this_year: 0,
   minutes_this_week: 0,
@@ -40,6 +41,9 @@ describe('Stats', () => {
     apiFetchMock.mockReset()
     useApiMock.mockReset()
     useApiMock.mockImplementation((path: string | null) => {
+      if (path?.startsWith('/stats?')) {
+        return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
       if (path === '/stats') {
         return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
       }
@@ -52,6 +56,49 @@ describe('Stats', () => {
 
   afterEach(() => {
     cleanup()
+  })
+
+  it('renders humanized watch time hero card and subtitle', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    expect(screen.getByText('// CUMULATIVE WATCH TIME')).toBeTruthy()
+    expect(screen.getByText(/3 yrs 87 d 16 h|3 ans 87 j 16 h/)).toBeTruthy()
+  })
+
+  it('renders filter bar pills and updates query params on click', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    expect(screen.getByText('All history')).toBeTruthy()
+    expect(screen.getByText('Last 30 days')).toBeTruthy()
+    expect(screen.getByText('🎬 Movies')).toBeTruthy()
+    expect(screen.getByText('📺 Series')).toBeTruthy()
+    expect(screen.getByText('⛩️ Anime')).toBeTruthy()
+
+    // Click on movies filter
+    const moviesPill = screen.getByText('🎬 Movies')
+    fireEvent.click(moviesPill)
+
+    await waitFor(() => {
+      expect(useApiMock).toHaveBeenCalledWith(expect.stringContaining('media_type=movie'))
+    })
+  })
+
+  it('changing year select switches timeframe to year', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    const select = screen.getByLabelText('Filter by year')
+    fireEvent.input(select, { target: { value: '2025' } })
+
+    await waitFor(() => {
+      expect(useApiMock).toHaveBeenCalledWith(expect.stringContaining('timeframe=year'))
+      expect(useApiMock).toHaveBeenCalledWith(expect.stringContaining('year=2025'))
+    })
   })
 
   it('renders top actors and top directors sections', async () => {

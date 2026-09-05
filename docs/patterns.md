@@ -150,7 +150,7 @@
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
 | DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |
-| GET | `/api/stats` | `stats.Get` | Library metrics & insight cards |
+| GET | `/api/stats` | `stats.Get` | Library metrics, genre/people distributions & insight cards with timeframe, year and media type filters |
 | GET | `/api/stats/wrapped` | `stats.GetWrapped` | Annual retrospective metrics, top favorites/releases & Gemini AI persona |
 | GET | `/api/stats/wrapped/archives` | `stats.GetWrappedArchives` | List all archived Wrapped snapshots for gallery display |
 | POST | `/api/stats/wrapped/generate` | `stats.RegenerateWrapped` | Force generation & SQLite persistence of Wrapped snapshot |

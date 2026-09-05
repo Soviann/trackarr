@@ -87,7 +87,7 @@
 - `GET /api/arr/title/{id}` & `PUT /api/arr/title/{id}` : Check Arr library status and edit quality profile / root folder.
 - `POST /api/arr/push/{id}` : Push title to Radarr/Sonarr download queue.
 - `GET /api/releases` & `POST /api/releases/add` : Browse Prowlarr releases feed and 1-click import.
-- `GET /api/stats` : Return global statistics, genre distribution, top actors & top directors, streaks, and fun stats.
+- `GET /api/stats` : Return library metrics, genre distribution, top actors & top directors, streaks, and fun stats with filters (`timeframe=all|year|30d`, `year=YYYY`, `media_type=all|movie|series|anime`).
 - `GET /api/stats/wrapped` : Annual retrospective stats (overview, category tops, release tops, rewatch champion, top cast/genres, and Gemini AI persona).
 - `GET /api/stats/wrapped/archives` : List all archived Wrapped snapshots.
 - `POST /api/stats/wrapped/generate` : Force generation and persistence of Wrapped snapshot for a given year.

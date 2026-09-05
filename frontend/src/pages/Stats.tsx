@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { formatWatchtime, getCoverUrl } from '../utils'
+import { formatHumanWatchtime, formatWatchtime, getCoverUrl } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
 import type { StatsResponse, FunStat, ActivityEvent, PersonStat, WrappedArchiveItem } from '../types'
 import { routeTo } from '../routes'
@@ -27,7 +27,21 @@ const funStatIcons: Record<string, string> = {
 
 export function Stats({ path: _path }: { path?: string }) {
   const { t, locale } = useTranslation()
-  const { data, loading } = useApi<StatsResponse>('/stats')
+  const [timeframe, setTimeframe] = useState<'all' | 'year' | '30d'>('all')
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [mediaType, setMediaType] = useState<'all' | 'movie' | 'series' | 'anime'>('all')
+
+  const queryParams = new URLSearchParams()
+  queryParams.set('timeframe', timeframe)
+  if (timeframe === 'year') {
+    queryParams.set('year', String(selectedYear))
+  }
+  if (mediaType !== 'all') {
+    queryParams.set('media_type', mediaType)
+  }
+  const statsUrl = `/stats?${queryParams.toString()}`
+
+  const { data, loading } = useApi<StatsResponse>(statsUrl)
   const { data: archives } = useApi<WrappedArchiveItem[]>('/stats/wrapped/archives')
   const [selectedPerson, setSelectedPerson] = useState<{ name: string; role: 'actor' | 'director' } | null>(null)
 
@@ -38,6 +52,10 @@ export function Stats({ path: _path }: { path?: string }) {
       </div>
     )
   }
+
+  const availableYears = data.available_years && data.available_years.length > 0
+    ? data.available_years
+    : [new Date().getFullYear()]
 
   return (
     <div className={s.page}>
@@ -70,7 +88,85 @@ export function Stats({ path: _path }: { path?: string }) {
         <WrappedArchivesSection archives={archives} t={t} />
       )}
 
-      <OverviewSection overview={data.overview} watchtimeMinutes={data.total_watch_minutes} t={t} />
+      <div className={s.statsFiltersBar}>
+        <div className={s.filterPillsRow}>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${timeframe === 'all' ? s.pillOptSelected : ''}`}
+            onClick={() => setTimeframe('all')}
+          >
+            {t('stats.allHistory')}
+          </button>
+          <select
+            id="stats-year-filter"
+            name="year"
+            aria-label={t('releases.filterByYear')}
+            className={`${s.yearSelectPill} ${timeframe === 'year' ? s.yearSelectPillSelected : ''}`}
+            value={selectedYear}
+            onChange={(e) => {
+              const yr = Number((e.currentTarget as HTMLSelectElement).value)
+              setSelectedYear(yr)
+              setTimeframe('year')
+            }}
+            onInput={(e) => {
+              const yr = Number((e.currentTarget as HTMLSelectElement).value)
+              setSelectedYear(yr)
+              setTimeframe('year')
+            }}
+          >
+            {availableYears.map((yr) => (
+              <option key={yr} value={yr}>
+                {yr}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${timeframe === '30d' ? s.pillOptSelected : ''}`}
+            onClick={() => setTimeframe('30d')}
+          >
+            {t('stats.last30Days')}
+          </button>
+        </div>
+
+        <div className={s.filterPillsRow}>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${mediaType === 'all' ? s.pillOptSelected : ''}`}
+            onClick={() => setMediaType('all')}
+          >
+            {t('stats.allMedia')}
+          </button>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${mediaType === 'movie' ? s.pillOptSelected : ''}`}
+            onClick={() => setMediaType('movie')}
+          >
+            {t('stats.movies')}
+          </button>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${mediaType === 'series' ? s.pillOptSelected : ''}`}
+            onClick={() => setMediaType('series')}
+          >
+            {t('stats.series')}
+          </button>
+          <button
+            type="button"
+            className={`${s.pillOpt} ${mediaType === 'anime' ? s.pillOptSelected : ''}`}
+            onClick={() => setMediaType('anime')}
+          >
+            {t('stats.anime')}
+          </button>
+        </div>
+      </div>
+
+      <OverviewSection
+        overview={data.overview}
+        watchtimeMinutes={data.total_watch_minutes}
+        locale={locale}
+        t={t}
+      />
       <GenreSection genres={data.genres ?? []} t={t} />
       <TopActorsSection
         actors={data.top_actors ?? []}
@@ -101,20 +197,36 @@ export function Stats({ path: _path }: { path?: string }) {
 function OverviewSection({
   overview,
   watchtimeMinutes,
+  locale,
   t,
 }: {
   overview: StatsResponse['overview']
   watchtimeMinutes?: number
+  locale: string
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }) {
+  const totalHours = Math.floor((watchtimeMinutes ?? 0) / 60).toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-US')
+  const totalEpisodes = overview.episodes_watched.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-US')
+  const humanWatchtime = formatHumanWatchtime(watchtimeMinutes, locale)
+
   return (
     <section className={s.section}>
       <div className={s.statGrid}>
-        <StatCard label={t('stats.titlesTracked')} value={overview.total_titles.toLocaleString('en-US')} />
-        <StatCard label={t('stats.episodesWatched')} value={overview.episodes_watched.toLocaleString('en-US')} />
+        <div className={s.statHeroCard}>
+          <div className={s.statLabel}>{t('stats.watchTimeCumulative')}</div>
+          <div className={s.statHumanTime}>{humanWatchtime}</div>
+          <div className={s.statRawSub}>
+            {t('stats.watchTimeSubtitle', {
+              hours: totalHours,
+              episodes: totalEpisodes,
+            })}
+          </div>
+        </div>
+
+        <StatCard label={t('stats.titlesTracked')} value={overview.total_titles.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-US')} />
+        <StatCard label={t('stats.episodesWatched')} value={totalEpisodes} />
         <StatCard label={t('stats.completed')} value={`${Math.round(overview.completion_rate * 100)}%`} />
         <StatCard label={t('stats.avgRating')} value={overview.average_rating > 0 ? overview.average_rating.toFixed(1) : '—'} />
-        <StatCard label={t('stats.watchTime')} value={formatWatchtime(watchtimeMinutes) ?? '—'} wide />
       </div>
     </section>
   )
