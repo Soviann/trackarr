@@ -76,5 +76,14 @@ describe('Admin Dashboard Page', () => {
     expect(screen.getByText('Hybrid Mode')).not.toBeNull()
     expect(screen.getByText('Documentation & Help')).not.toBeNull()
     expect(screen.getByText('Refresh All Metadata')).not.toBeNull()
+
+    // Section 4: Data Management & Backups
+    expect(screen.getByText('Backup & Data Management')).not.toBeNull()
+    expect(screen.getByText('1-Click Library Export')).not.toBeNull()
+    expect(screen.getByText('Full JSON')).not.toBeNull()
+    expect(screen.getByText('Spreadsheet CSV')).not.toBeNull()
+    expect(screen.getByText('Trakt.tv Sync')).not.toBeNull()
+    expect(screen.getByText('Import Backup Archive')).not.toBeNull()
+    expect(screen.getByText('Drag & drop backup file or click to browse')).not.toBeNull()
   })
 })

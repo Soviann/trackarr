@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Module Sauvegarde & Exportation 1-Clic et Restauration d'Archive ([#58](https://github.com/Soviann/trackarr/issues/58))** :
+  - Boutons d'exportation directe 1-clic : `JSON Complet` (`/api/admin/export/json`), `CSV Tableur` (`/api/admin/export/csv`), et `Trakt.tv Sync` (`/api/admin/export/trakt`).
+  - Zone de glisser-déposer pour importer des archives et fichiers de sauvegarde (.zip, .json, .csv).
+  - Mode prévisualisation sécurisé (*dry-run*) affichant les statistiques de sauvegarde (titres détectés, nouveaux titres à importer, doublons déjà présents ignorés, erreurs) avant confirmation des écritures.
+  - Exécution transactionnelle de l'import avec mise en file d'attente automatique des tâches d'enrichissement asynchrones.
+- **Harmonisation UI de System Settings & API Keys ([#58](https://github.com/Soviann/trackarr/issues/58))** :
+  - En-tête standardisé avec bouton circulaire `←` (retour arrière) et alignement visuel identique aux pages Tâches et Audit.
+  - Aération des cartes de sections avec un espacement uniforme de 20px (`gap: 20px`).
+
 ## [v1.17.0] — 2026-09-05
 
 ### Ajouté

@@ -25,11 +25,12 @@ type AdminHandler struct {
 	titles     *repository.TitleRepository
 	settings   *repository.SettingRepository
 	bgSvc      *service.BackgroundService
+	backupSvc  *service.BackupService
 	shutdownWG *sync.WaitGroup // optional — joined on shutdown so RefreshAll goroutine can finish
 }
 
-func NewAdminHandler(serverCtx context.Context, writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService) *AdminHandler {
-	return &AdminHandler{serverCtx: serverCtx, writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc}
+func NewAdminHandler(serverCtx context.Context, writeDB *sql.DB, tasks *repository.TaskRepository, titles *repository.TitleRepository, settings *repository.SettingRepository, bgSvc *service.BackgroundService, backupSvc *service.BackupService) *AdminHandler {
+	return &AdminHandler{serverCtx: serverCtx, writeDB: writeDB, tasks: tasks, titles: titles, settings: settings, bgSvc: bgSvc, backupSvc: backupSvc}
 }
 
 // SetShutdownWG registers a WaitGroup that RefreshAll goroutines increment on
@@ -269,5 +270,87 @@ func (h *AdminHandler) UpdateArrSettings(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// ExportJSON streams a full Trackarr JSON library backup as attachment download.
+func (h *AdminHandler) ExportJSON(w http.ResponseWriter, r *http.Request) error {
+	if h.backupSvc == nil {
+		return httputil.InternalError("export json", fmt.Errorf("backup service not configured"))
+	}
+	data, err := h.backupSvc.ExportJSON(r.Context())
+	if err != nil {
+		return httputil.InternalError("export json", err)
+	}
+
+	filename := fmt.Sprintf("trackarr-backup-%s.json", time.Now().UTC().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+	return nil
+}
+
+// ExportCSV streams a CSV spreadsheet library export as attachment download.
+func (h *AdminHandler) ExportCSV(w http.ResponseWriter, r *http.Request) error {
+	if h.backupSvc == nil {
+		return httputil.InternalError("export csv", fmt.Errorf("backup service not configured"))
+	}
+	data, err := h.backupSvc.ExportCSV(r.Context())
+	if err != nil {
+		return httputil.InternalError("export csv", err)
+	}
+
+	filename := fmt.Sprintf("trackarr-library-%s.csv", time.Now().UTC().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+	return nil
+}
+
+// ExportTrakt streams a Trakt.tv-compatible sync JSON as attachment download.
+func (h *AdminHandler) ExportTrakt(w http.ResponseWriter, r *http.Request) error {
+	if h.backupSvc == nil {
+		return httputil.InternalError("export trakt", fmt.Errorf("backup service not configured"))
+	}
+	data, err := h.backupSvc.ExportTrakt(r.Context())
+	if err != nil {
+		return httputil.InternalError("export trakt", err)
+	}
+
+	filename := fmt.Sprintf("trackarr-trakt-sync-%s.json", time.Now().UTC().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+	return nil
+}
+
+// ImportBackup parses and imports a library backup file (.zip, .json, or .csv) with dry-run support.
+func (h *AdminHandler) ImportBackup(w http.ResponseWriter, r *http.Request) error {
+	if h.backupSvc == nil {
+		return httputil.InternalError("import backup", fmt.Errorf("backup service not configured"))
+	}
+
+	// 50MB max upload size
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		return httputil.BadRequest("Failed to parse file upload: " + err.Error())
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return httputil.BadRequest("Missing file in form data: " + err.Error())
+	}
+	defer file.Close()
+
+	dryRun := r.URL.Query().Get("dry_run") == "true" || r.FormValue("dry_run") == "true"
+
+	res, err := h.backupSvc.Import(file, header.Filename, dryRun)
+	if err != nil {
+		return httputil.BadRequest("Import failed: " + err.Error())
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, res)
 	return nil
 }

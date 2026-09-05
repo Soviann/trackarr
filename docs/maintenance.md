@@ -33,7 +33,17 @@ Trackarr uses GitHub Dependabot to keep Go modules, npm packages, Docker bases, 
 
 ## 3. Database Backup & Safe Restore
 
-### Online SQLite WAL Backup:
+### 1-Click Web UI Export & Import (Recommended):
+From the **Admin Dashboard** (`/admin` → *Backup & Data Management*):
+- **Direct 1-Click Exports**:
+  - `JSON Complet` (`/api/admin/export/json`): Complete library archive with titles, seasons, episodes, ratings, and watch dates.
+  - `CSV Tableur` (`/api/admin/export/csv`): Spreadsheet export compatible with Excel, Google Sheets, and Numbers.
+  - `Trakt.tv Sync` (`/api/admin/export/trakt`): Structured JSON sync format compatible with Trakt.tv and Simkl.
+- **Universal Drag & Drop Import**:
+  - Supports `.zip`, `.json`, and `.csv` backup files.
+  - Features an instant safe **Dry-Run Preview** before committing writes, detailing total items found, new titles to create, existing items to skip, and errors.
+
+### Online SQLite WAL Backup (CLI):
 SQLite in WAL mode supports online backups without shutting down Trackarr:
 ```bash
 # Inside container or host with sqlite3 CLI

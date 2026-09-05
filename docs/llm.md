@@ -79,6 +79,10 @@
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
 - `POST /api/admin/refresh-all` : Queue background task to refresh metadata across all titles.
+- `GET /api/admin/export/json` : 1-Click full JSON library backup download.
+- `GET /api/admin/export/csv` : 1-Click spreadsheet CSV library export download.
+- `GET /api/admin/export/trakt` : 1-Click Trakt.tv sync JSON export download.
+- `POST /api/admin/import` : Upload and import backup archive (.zip, .json, .csv) with dry-run support (`?dry_run=true|false`).
 - `GET /api/admin/tasks` : List background queue tasks and dead tasks.
 - `POST /api/admin/tasks/{id}/retry` : Retry a dead task.
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
