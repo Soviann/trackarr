@@ -127,7 +127,7 @@
 | POST | `/api/titles` | `titles.Create` | Manually create a new title |
 | GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed titles |
 | GET | `/api/titles/resolve` | `titles.Resolve` | Preview external metadata before creating a title |
-| GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list |
+| GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list with progress, providers & next episode |
 | GET | `/api/titles/upcoming` | `library.Upcoming` | Upcoming titles grid list |
 | POST | `/api/titles/batch-delete` | `titles.BatchDelete` | Delete multiple titles |
 | POST | `/api/titles/batch-status` | `titles.BatchStatus` | Bulk update title statuses |

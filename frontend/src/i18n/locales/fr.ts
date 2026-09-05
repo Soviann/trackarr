@@ -43,6 +43,8 @@ export const fr: TranslationSchema = {
     done: 'Terminé',
     optional: 'Optionnel',
     required: 'Requis',
+    dispoBadge: 'DISPO',
+    markNextWatched: 'Marquer épisode suivant vu',
   },
   library: {
     title: 'Bibliothèque',

@@ -41,6 +41,8 @@ export const en = {
     done: 'Done',
     optional: 'Optional',
     required: 'Required',
+    dispoBadge: 'DISPO',
+    markNextWatched: 'Mark next episode as watched',
   },
   library: {
     title: 'Library',

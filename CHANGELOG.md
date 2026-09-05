@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Bouton rapide +1 épisode sur Continue Watching & Bibliothèque (`PosterCard` / `PosterTile`)** :
+  - Ajout du chargement groupé de l'épisode suivant (`NextEpisode`) dans la requête `ListContinueWatching` du backend Go (`GET /api/titles/continue-watching`).
+  - Bouton circulaire d'action rapide `+1` superposé avec espacement symétrique (`bottom: 10px; right: 10px;`) sur les affiches de reprise de lecture et de la grille bibliothèque, conforme à la maquette (`v1.9-ux-ui-improvements.html`).
+  - Mise à jour immédiate et optimiste de la barre de progression et du compteur d'épisodes en place avec appel API asynchrone (`PATCH /titles/{id}/episodes/{epId}`).
+  - Affichage sous le titre du code de l'épisode à regarder (`S{saison} E{épisode}`).
+- **Badge de disponibilité Arr Stack (`DISPO`) & Streaming** :
+  - Badge discret `S{saison}E{épisode} DISPO` en haut à droite des affiches si le titre est suivi dans Sonarr/Radarr et possède un épisode disponible.
+  - Intégration du composant `WatchProviderBadges` sur les affiches de la bibliothèque en vue grille (`PosterCard`) et en vue liste (`TitleCard`) pour visualiser instantanément la disponibilité des plateformes de streaming configurées (Netflix, Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN).
 
 ## [v1.13.0] — 2026-09-04
 

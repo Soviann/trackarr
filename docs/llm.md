@@ -61,7 +61,7 @@
 - `GET /api/tmdb/search` : Search TMDB for movie or TV titles.
 - `GET /api/anilist/search` : Search AniList for anime titles with posters and metadata.
 - `GET /api/titles/resolve` : Resolve external metadata from direct URL (IMDb, TMDB, TVDB, AniList).
-- `GET /api/titles/continue-watching` : List in-progress titles with progress ratios.
+- `GET /api/titles/continue-watching` : List in-progress titles with progress ratios, streaming providers, and next unwatched episode.
 - `GET /api/titles/upcoming` : List series with upcoming air dates.
 - `GET /api/calendar.ics` : Public token-secured RFC 5545 iCalendar feed (`?token=...`).
 - `GET /api/calendar/events` : List calendar events for in-app month/week/list views.

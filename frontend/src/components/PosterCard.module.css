@@ -31,15 +31,18 @@
   z-index: 2;
 }
 
-.typeBadge {
+.badges {
   position: absolute;
   top: 8px;
   left: 8px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   transition: top 0.15s ease;
 }
 
-.typeBadgeShifted {
+.badgesShifted {
   top: 34px;
 }
 
@@ -63,4 +66,74 @@
   font-size: 8px;
   color: var(--accent);
   margin-top: 1px;
+}
+
+/* Arr availability badge (top-right) */
+.arrAvailableBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(16, 185, 129, 0.9);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 5px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+  letter-spacing: 0.02em;
+}
+
+/* Symmetrical +1 Action Button: equal bottom & right offset (10px) */
+.quickPlusBtn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: var(--accent);
+  color: #05080e;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 10px var(--accent-glow, rgba(56, 189, 248, 0.3));
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, background 0.15s ease;
+  touch-action: manipulation;
+}
+
+.quickPlusBtn:hover {
+  transform: scale(1.15);
+  background: #38bdf8;
+}
+
+.quickPlusBtn:active {
+  transform: scale(0.95);
+}
+
+.quickPlusBtnLoading {
+  background: var(--bg-elev);
+  color: var(--ink-dim);
+  cursor: default;
+  opacity: 0.85;
+}
+
+.quickMarkSpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #05080e;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
