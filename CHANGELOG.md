@@ -7,6 +7,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 
+## [v1.16.0] — 2026-09-05
+
+### Ajouté
+- **Barre de recherche et tiroir de filtres fusionnés en bas de page (`SearchBar` / `FilterDrawer`)** :
+  - Champ de recherche docké en bas de l'écran (au-dessus de la barre de navigation) avec bouton d'accès aux filtres et badge de compteur actif (`[ N ]`) directement intégré dans la barre.
+  - Tiroir de filtres flottant s'ouvrant au-dessus de la barre de recherche lors de l'activation des filtres.
+  - Séparation claire des réinitialisations : bouton `✕` pour effacer uniquement la saisie de texte dans le champ de recherche, et bouton dédié `✕ Réinitialiser` dans l'en-tête du tiroir avec libellé `FILTRES (N ACTIFS)` pour remettre à zéro les critères de tri, de statut et de filtrage sans toucher au texte saisi.
+  - Clamping fluide des titres longs sur 2 lignes propres (`-webkit-line-clamp: 2`) sur les cartes de résultats et de la bibliothèque pour éviter les troncatures abruptes.
+
 ## [v1.15.0] — 2026-09-05
 
 ### Ajouté
