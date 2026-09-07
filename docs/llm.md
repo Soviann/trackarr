@@ -11,7 +11,7 @@
 - **Dependency Injection**:
   - `internal/database`: `DBTX` interface (`*sql.DB` or `*sql.Tx`), helper `WithTx` / `WithTxContext`.
   - `internal/repository`: Owns 100% of SQL. Read queries via structs, write queries via dedicated `*_writer.go` (requiring `*sql.Tx`).
-  - `internal/service`: Business logic, AniList GraphQL client, *arr API clients, Matching pipeline, Task queue.
+  - `internal/service`: Business logic, AniList GraphQL client, *arr API clients, Matching pipeline, Task queue, Backup & export.
   - `internal/handler`: HTTP request decoding, DTO parsing, `httputil.WriteJSON`.
 
 ---
@@ -23,10 +23,14 @@
    - `confirmed`: Fully identified, safe for auto-sync and Arr queueing.
    - `unconfirmed`: Low/medium confidence match or AI failure; shown in `/match-review`.
    - `pending_review`: Unconfirmed match queued when Gemini AI verifier was unavailable.
-3. **AniList Synchronization Constraints**:
+3. **Quick Mark & Arr Availability Rules**:
+   - Quick +1 episode mark and Arr availability badge (`SxxExx DISPO`) are strictly hidden on titles with `status = 'dropped'`.
+   - Arr availability badge and Next Episode hero banner are hidden for indicative placeholder episodes marked as "TBA" or "TBD" (`IsTBA = true`).
+   - "Caught up" status is derived and propagated dynamically when all currently aired episodes have been watched while future episodes remain scheduled.
+4. **AniList Synchronization Constraints**:
    - Scores (1–10) are only pushed when anime status is `Completed` or `Dropped` (AniList API restriction).
    - Multi-part seasons map to separate AniList IDs in `season_external_ids` (`provider = 'anilist'`); episode counts are distributed sequentially across parts.
-4. **Duplicate Detection & Union-Find**:
+5. **Duplicate Detection & Union-Find**:
    - `DuplicateSeriesGroups` queries series sharing `imdb_id`, `tmdb_id` (>0), or `tvdb_id` (>0). Empty strings (`""`) and `0` values are strictly excluded.
    - Results are unified using Disjoint-Set Union (Union-Find) and sorted deterministically.
 
