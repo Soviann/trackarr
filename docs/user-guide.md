@@ -32,10 +32,15 @@ The **Library** screen is your media command center:
 
 ### Status Categories & Filters:
 - **Watching**: Series with at least one aired, unwatched episode.
-- **Caught Up**: A special green sub-status badge on watching cards when you have watched every currently aired episode, but future episodes or seasons are scheduled. It automatically flips back to Watching when a new episode airs.
+- **Caught Up**: A special cyan sub-status badge on watching cards when you have watched every currently aired episode, but future episodes or seasons are scheduled. It automatically flips back to Watching when a new episode airs.
 - **Plan to Watch**: Titles you intend to start later.
 - **Completed**: Finished movies, or series where every episode has been watched and the series has ended or was cancelled.
-- **Dropped**: Abandoned titles.
+- **Dropped**: Abandoned titles (quick mark `+1` and Arr availability badges are automatically suppressed on dropped titles).
+
+### Unified Bottom Search & Expandable Filter Drawer:
+- **Docked Search Bar**: Docked cleanly at the bottom of the screen with an integrated text clear button (`✕`) and filter launcher badge (`[ N ]`).
+- **Expandable Filter Drawer**: Slide-up filter panel featuring 3 segmented tabs (*Status & Type*, *Genres & Origin*, *Dates & Ratings*) with smooth swipe-down-to-close touch gesture.
+- **Dedicated Reset Button**: Dedicated `✕ Reset` button in the drawer header (`FILTERS (N ACTIVE)`) to clear filter criteria independently without erasing typed search text.
 
 ### Dynamic Views & Stats:
 - **Year-to-Date Stats Pill**: Displays your viewing summary under the *Library* header (e.g. `2026 · 47 watched · ★ 7.8 avg · 3h this week`).
@@ -47,7 +52,7 @@ The **Library** screen is your media command center:
 - **Sorting Options**: 6 sort criteria (Last updated, Title, Release date, Rating, Date added, Last watched). Tap to activate; tap again to invert ascending/descending.
 
 ### Gestures & Shortcuts:
-- **One-Tap Quick Progress**: In the *Watching* list view, tap the circular episode pill on a series card to immediately mark the next episode as watched without opening the title.
+- **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular `+1` episode button to immediately mark the next episode as watched without opening the title.
 - **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards to select them, then use the bottom action bar for bulk status changes or deletion.
 - **Swipe Actions (Match Review)**: Swipe a card left to quickly confirm or fix matches. A full left swipe triggers immediate confirmation.
 - **Pull to Refresh**: Pull down at the top of the Library to refresh data and re-evaluate air dates.
@@ -77,8 +82,9 @@ The **Calendar** page (`/coming-up`) provides a complete schedule of upcoming ep
 
 The **Stats** section offers rich analytics and automated annual retrospectives:
 
-### Global Analytics & Filmographies (`/stats`)
-- **Key Metrics**: Total watch duration (in hours, days, and real-life comparisons), completed title breakdown, current vs best watch streaks, and genre distribution.
+### Global Analytics & Filterable Insights (`/stats`)
+- **Natural Watch Time Decomposition**: Total watch time is decomposed into human-readable units (*e.g. 3 yrs 87 d 16 h / 3 ans 87 j 16 h*) in a dedicated hero card with precise episode and hour subtitles.
+- **Timeframe & Media Filtering**: Dynamically filter all statistics by timeframe (*All time*, *Year selector dropdown*, *Last 30 days*) and media type (*All*, *🎬 Movies*, *📺 TV Series*, *⛩️ Anime*).
 - **Top Actors & Directors**: Dynamic ranking of the top 10 most-watched actors and top 10 directors based on titles in your library and actual watch state.
 - **Interactive Filmography Drawer (`PersonFilmographyDrawer`)**: Tapping any actor or director in the stats view opens a slide-up drawer listing all associated titles in your collection, with watch status badges and 1-tap navigation to full filmographies (`/person/:name`).
 
@@ -104,7 +110,7 @@ The **Stats** section offers rich analytics and automated annual retrospectives:
 
 Opening a title displays its rich details:
 - **Hero & Accent Color**: High-resolution cover art with dynamic backdrop gradient extracted from poster colors.
-- **Next Episode Action & Binge Estimator**: A prominent call-to-action hero card right under the title identity allowing 1-click progression (`▶ Marquer S02E06 comme vu`) without unfolding season lists. Includes real-time binge estimation (*« ⏱️ Reste ~3h 15m (4 épisodes) »* or total duration for Plan to Watch titles).
+- **Next Episode Action & Binge Estimator**: A prominent call-to-action hero card right under the title identity allowing 1-click progression (`▶ Marquer S02E06 comme vu`) without unfolding season lists. Includes real-time binge estimation (*« ⏱️ Reste ~3h 15m (4 épisodes) »* or total duration for Plan to Watch titles). Hidden when series is caught up or episode is TBA.
 - **Personal Notes (Notes personnelles)**: A private notes card on every title with debounced auto-save (500ms) to jot down reminders, personal reviews, quotes, or recommendations.
 - **Streaming Badges**: Displays multi-provider streaming badges (Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) when the title is available on active subscription platforms configured in *Admin ➔ System Settings*.
 - **Conditional Direct Rating Card**:
@@ -207,12 +213,14 @@ When AniList OAuth is connected:
 
 ### How do I reset my password if I lose access?
 > **Answer**: Trackarr provides two recovery methods:
-> 1. **From the Browser (Emergency Recovery Key)**: On the login screen (`/login`), click **"Forgot password?"**, enter the `TRCK-XXXX-XXXX-XXXX` emergency recovery key saved during initial setup, and set a new password. Trackarr will issue a new recovery key.
-> 2. **From the Terminal (CLI)**: Run the built-in command in your container or host:
->    ```bash
->    docker exec -t trackarr trackarr reset-password --password="MyNewSecurePassword"
->    ```
->    *(Omit `--password` to enter it interactively. A new emergency recovery key is displayed upon completion).*
+> 1. **From the Browser (Emergency Recovery Key)**:
+      On the login screen (`/login`), click **"Forgot password?"**, enter the `TRCK-XXXX-XXXX-XXXX` emergency recovery key saved during initial setup, and set a new password. Trackarr will issue a new recovery key.
+> 2. **From the Terminal (CLI)**:
+      Run the built-in command in your container or host:
+      ```bash
+      docker exec -t trackarr trackarr reset-password --password="MyNewSecurePassword"
+      ```
+      *(Omit `--password` to enter it interactively. A new emergency recovery key is displayed upon completion).* 
 
 ### Why is the PWA showing older assets after an update?
 > **Answer**: Service Workers aggressively cache web app bundles for instant offline access. Hard-refresh the page (or append `?t=1234` to the URL) to let the service worker install the new version.
