@@ -88,6 +88,7 @@
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy and push enqueuing | `docs/dev/arr-integration.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
+| `BackupService` | `internal/service/backup.go` | 1-Click JSON/CSV/Trakt exports and transactional archive import with dry-run | `docs/maintenance.md` |
 | `CoverService` | `internal/service/cover.go` | Cover downloading and accent color extraction (`colorextract/`) | `docs/patterns.md` |
 | `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
@@ -173,6 +174,13 @@
 | PUT | `/api/admin/notifications` | `admin.UpdateNotificationPrefs` | Update Web Push notification preferences |
 | GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
 | PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
+| GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration and webhook URLs |
+| PUT | `/api/admin/system-settings` | `adminSettings.UpdateSystemSettings` | Update configuration in SQLite & trigger client hot-reload |
+| POST | `/api/admin/system-settings/test/tmdb` | `adminSettings.TestTMDB` | Test TMDB connection |
+| POST | `/api/admin/system-settings/test/tvdb` | `adminSettings.TestTVDB` | Test TVDB connection |
+| POST | `/api/admin/system-settings/test/gemini` | `adminSettings.TestGemini` | Test Gemini AI connection |
+| POST | `/api/admin/system-settings/test/{app}` | `adminSettings.TestArr` | Test Radarr, Sonarr, Prowlarr connection |
+| POST | `/api/admin/system-settings/vapid/generate` | `adminSettings.GenerateVAPIDKeys` | Generate NIST P-256 VAPID keypair |
 | POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh |
 | GET | `/api/admin/export/json` | `admin.ExportJSON` | 1-Click full JSON library backup download |
 | GET | `/api/admin/export/csv` | `admin.ExportCSV` | 1-Click spreadsheet CSV library export download |
@@ -210,8 +218,8 @@
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
-| `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar and quick mark action |
-| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge |
+| `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
+| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1, and Arr availability badge |
 | `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids |
 | `PosterStrip` | `components/PosterStrip.tsx` | Horizontal scrolling strip of poster thumbnails |
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
@@ -243,7 +251,6 @@
 | `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
-| `FilterDrawer` | `components/FilterDrawer.tsx` | Decomposed multi-tab filter drawer (Basics, Genres, Dates) with swipe-down-to-close gesture |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, `{ passive: false }` scroll blocking, and threshold close |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
