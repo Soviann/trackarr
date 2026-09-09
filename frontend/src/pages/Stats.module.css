@@ -72,6 +72,115 @@
   transform: scale(1.02);
 }
 
+.wrappedBannerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.wrappedBannerDismiss {
+  background: transparent;
+  border: none;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.6));
+  font-size: 1.1rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.wrappedBannerDismiss:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sectionCompact {
+  margin: 0 var(--space-lg) var(--space-lg);
+}
+
+.archivesCompactBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-elev1, #1e2029);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.archivesCompactLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.archivesCompactIcon {
+  font-size: 1.1rem;
+}
+
+.archivesCompactLabel {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.archivesYearPills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.archiveYearPill {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(139, 92, 246, 0.25));
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.archiveYearPill:hover {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-color: transparent;
+  transform: translateY(-1px);
+}
+
+.archivesHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.archiveToggleBtn {
+  background: var(--bg-elev2, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.1));
+  color: var(--ink-dim, rgba(255, 255, 255, 0.7));
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.archiveToggleBtn:hover {
+  background: var(--bg-elev3, rgba(255, 255, 255, 0.12));
+  color: #fff;
+}
+
 .archivesSubtitle {
   font-size: 0.85rem;
   color: var(--ink-dim, rgba(255, 255, 255, 0.6));

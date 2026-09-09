@@ -85,4 +85,3 @@ func (w *SeasonExternalIDWriter) UpdatePartMeta(ctx context.Context, seasonID in
 	}
 	return nil
 }
-

@@ -504,16 +504,28 @@ func TestStatsRepository_AvailableYears(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewStatsRepository(db)
 
-	testutil.CreateTitle(t, db, &model.Title{
+	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type: model.TitleTypeMovie, Year: 1982,
 		Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
 	}, []model.TitleName{{Name: "Blade Runner", Language: "en", IsPrimary: true}})
 
-	years, err := repo.AvailableYears(context.Background())
-	require.NoError(t, err)
 	currentYear := time.Now().Year()
 
-	assert.Equal(t, currentYear, years[0])
-	assert.Equal(t, 1982, years[len(years)-1])
-	assert.Equal(t, currentYear-1982+1, len(years))
+	// Without watch events, only current year is returned (not 1982)
+	years, err := repo.AvailableYears(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []int{currentYear}, years)
+
+	// Add watch event in 2024
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   titleID,
+		Source:    model.WatchEventSourcePlex,
+		CreatedAt: time.Date(2024, 6, 15, 20, 0, 0, 0, time.UTC),
+	})
+
+	yearsWithWatch, err := repo.AvailableYears(context.Background())
+	require.NoError(t, err)
+	assert.Contains(t, yearsWithWatch, currentYear)
+	assert.Contains(t, yearsWithWatch, 2024)
+	assert.NotContains(t, yearsWithWatch, 1982)
 }

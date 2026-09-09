@@ -166,4 +166,90 @@ describe('Stats', () => {
     expect(path.startsWith('/stats/activity')).toBe(true)
     expect(path.startsWith('/api/')).toBe(false)
   })
+
+  it('allows dismissing the wrapped banner and remembers in localStorage', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    const { container } = render(<Stats />)
+
+    const dismissBtn = screen.getByLabelText('Dismiss banner')
+    expect(dismissBtn).toBeTruthy()
+    fireEvent.click(dismissBtn)
+
+    // Banner should disappear
+    expect(container.querySelector('[class*="wrappedBanner"]')).toBeNull()
+    const currentYear = new Date().getFullYear()
+    expect(localStorage.getItem(`trackarr:wrapped_banner_dismissed_${currentYear}`)).toBe('1')
+  })
+
+  it('filters out 0-title archives and does not render them', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    useApiMock.mockImplementation((path: string | null) => {
+      if (path?.startsWith('/stats?')) {
+        return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      if (path === '/stats/wrapped/archives') {
+        return {
+          data: [
+            { year: 2024, persona_title: 'Ghost', total_titles: 0, total_watch_minutes: 0, created_at: '' },
+          ],
+          loading: false,
+          error: null,
+          mutate: vi.fn(),
+          setData: vi.fn(),
+        }
+      }
+      return { data: null, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+    })
+
+    const { Stats } = await import('./Stats')
+    const { container } = render(<Stats />)
+
+    // Since total_titles is 0, the section should not render
+    expect(screen.queryByText('// PAST WRAPPED ARCHIVES')).toBeNull()
+    expect(container.querySelector('[class*="archiveCard"]')).toBeNull()
+  })
+
+  it('collapses and expands valid archives', async () => {
+    localStorage.removeItem('trackarr:wrapped_archives_collapsed')
+    apiFetchMock.mockResolvedValueOnce([])
+    useApiMock.mockImplementation((path: string | null) => {
+      if (path?.startsWith('/stats?')) {
+        return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      if (path === '/stats/wrapped/archives') {
+        return {
+          data: [
+            { year: 2025, persona_title: 'Voyager', total_titles: 10, total_watch_minutes: 500, created_at: '' },
+          ],
+          loading: false,
+          error: null,
+          mutate: vi.fn(),
+          setData: vi.fn(),
+        }
+      }
+      return { data: null, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+    })
+
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    // Initially expanded
+    expect(screen.getByText('// PAST WRAPPED ARCHIVES')).toBeTruthy()
+    expect(screen.getByText('Voyager')).toBeTruthy()
+
+    // Click collapse
+    const collapseBtn = screen.getByText(/Collapse/)
+    fireEvent.click(collapseBtn)
+
+    // Now compact mode
+    expect(screen.queryByText('// PAST WRAPPED ARCHIVES')).toBeNull()
+    expect(screen.getByText(/Show cards \(1\)/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: '2025' })).toBeTruthy()
+
+    // Click expand
+    const expandBtn = screen.getByText(/Show cards \(1\)/)
+    fireEvent.click(expandBtn)
+    expect(screen.getByText('// PAST WRAPPED ARCHIVES')).toBeTruthy()
+  })
 })

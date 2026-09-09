@@ -6,6 +6,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.4] — 2026-09-09
+
+### Corrigé
+- **Génération et affichage des rétrospectives Wrapped** :
+  - Suppression de la rétroactivité sur Wrapped : le `Scheduler` ne balaie plus les années passées et n'enclenche la génération de snapshot qu'« à date » pour l'année écoulée (`time.Now().Year() - 1`), sous condition d'activité réelle (`total_titles > 0`).
+  - Correction de `StatsRepository.AvailableYears` pour renvoyer uniquement les années d'activité de visionnage (`watch_events`) plutôt que l'année de sortie minimale des médias en bibliothèque (`titles.year`).
+  - Suppression de la sauvegarde automatique de snapshots lors de la simple consultation `GET` d'une année passée.
+  - Le worker `generate_wrapped` ignore désormais les années à 0 titres (aucun appel IA Gemini inutile, aucun snapshot vide enregistré, aucune notification push).
+  - Migration de base de données 046 nettoyant automatiquement tous les instantanés vides (`total_titles = 0`) dans `wrapped_snapshots`.
+  - `WrappedRepository.ListArchives` et le frontend ignorent désormais tout snapshot vide éventuel.
+
+### Ajouté
+- **Contrôles d'affichage et réduction des Wrapped sur la page Stats** :
+  - Bouton de masquage (✕) sur la bannière Wrapped de l'année en cours, mémorisé dans `localStorage` pour l'année.
+  - Section des bilans passés réductible en une barre compacte à une seule ligne avec pastilles d'accès rapide par année (`[ 2025 ]`) et bouton Développer/Réduire, mémorisé dans `localStorage`.
+  - Masquage complet de la section des archives lorsqu'aucun bilan contenant des titres n'est disponible.
+
 ## [v1.18.3] — 2026-09-05
 
 ### Modifié
