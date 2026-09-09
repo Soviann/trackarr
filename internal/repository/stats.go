@@ -1206,29 +1206,40 @@ func (r *StatsRepository) TopDirectors(ctx context.Context, limit int) ([]model.
 	return results, rows.Err()
 }
 
-// AvailableYears returns all calendar years from the earliest release or watch year down to the current year, descending.
+// AvailableYears returns all calendar years containing watch events, sorted descending.
+// The current calendar year is always included first if not already present.
 func (r *StatsRepository) AvailableYears(ctx context.Context) ([]int, error) {
 	currentYear := time.Now().Year()
-	var minYear int
-	err := r.db.QueryRowContext(ctx, `
-		SELECT COALESCE(MIN(y), ?)
-		FROM (
-			SELECT MIN(year) AS y FROM titles WHERE year IS NOT NULL AND year > 1900
-			UNION ALL
-			SELECT MIN(CAST(strftime('%Y', created_at) AS INTEGER)) AS y FROM watch_events WHERE created_at IS NOT NULL AND CAST(strftime('%Y', created_at) AS INTEGER) > 1900
-		)
-	`, currentYear).Scan(&minYear)
-	if err != nil || minYear <= 1900 || minYear > currentYear {
-		minYear = currentYear
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT CAST(strftime('%Y', created_at) AS INTEGER) AS y
+		FROM watch_events
+		WHERE created_at IS NOT NULL AND CAST(strftime('%Y', created_at) AS INTEGER) > 1900
+		ORDER BY y DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("stats: available years: %w", err)
 	}
+	defer rows.Close()
 
 	var years []int
-	for y := currentYear; y >= minYear; y-- {
-		years = append(years, y)
+	hasCurrentYear := false
+	for rows.Next() {
+		var y int
+		if err := rows.Scan(&y); err == nil && y > 1900 {
+			if y == currentYear {
+				hasCurrentYear = true
+			}
+			years = append(years, y)
+		}
 	}
-	if len(years) == 0 {
-		years = []int{currentYear}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("stats: available years rows: %w", err)
 	}
+
+	if !hasCurrentYear {
+		years = append([]int{currentYear}, years...)
+	}
+
 	return years, nil
 }
 

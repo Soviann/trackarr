@@ -77,6 +77,9 @@ func (r *WrappedRepository) ListArchives(ctx context.Context) ([]model.WrappedAr
 
 		var resp model.WrappedResponse
 		if err := json.Unmarshal([]byte(dataJSON), &resp); err == nil {
+			if resp.Overview.TotalTitles <= 0 {
+				continue
+			}
 			var topCover *string
 			if len(resp.TopFavorites.Movies) > 0 && resp.TopFavorites.Movies[0].CoverURL != nil {
 				topCover = resp.TopFavorites.Movies[0].CoverURL

@@ -209,6 +209,11 @@ func (w *TaskQueueWorker) handleGenerateWrapped(ctx context.Context, task model.
 		return fmt.Errorf("get wrapped data for %d: %w", payload.Year, err)
 	}
 
+	if data.Overview.TotalTitles == 0 {
+		logger.Info("skipping wrapped snapshot generation: no titles watched in year", "year", payload.Year)
+		return nil
+	}
+
 	// 2. Generate persona (Gemini or Fallback)
 	var persona *model.WrappedAIPersona
 	if w.pipeline != nil && w.pipeline.AI() != nil {

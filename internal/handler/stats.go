@@ -94,7 +94,6 @@ func (h *StatsHandler) GetWrapped(w http.ResponseWriter, r *http.Request) error 
 		return httputil.InternalError("Internal error", err)
 	}
 
-	var isFallback bool
 	var persona *model.WrappedAIPersona
 	if h.pipeline != nil && h.pipeline.AI() != nil {
 		aiCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -103,22 +102,12 @@ func (h *StatsHandler) GetWrapped(w http.ResponseWriter, r *http.Request) error 
 		cancel()
 		if aiErr != nil {
 			persona = nil
-			isFallback = true
 		}
 	}
 	if persona == nil {
 		persona = matching.FallbackWrappedPersona(rawStats)
 	}
 	resp.Persona = *persona
-
-	// If it's a past year, freeze and save the snapshot only if AI succeeded or AI is not configured.
-	// This prevents permanently freezing an offline fallback if Gemini was temporarily down.
-	aiConfigured := h.pipeline != nil && h.pipeline.AI() != nil
-	if h.writeDB != nil && targetYear < time.Now().Year() && resp.Overview.TotalTitles > 0 && (!aiConfigured || !isFallback) {
-		_ = database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
-			return repository.NewWrappedWriter(tx).SaveSnapshot(r.Context(), targetYear, resp)
-		})
-	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
 	return nil

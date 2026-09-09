@@ -234,4 +234,3 @@ func TestAdminHandler_ExportTrakt(t *testing.T) {
 	assert.Equal(t, "application/json; charset=utf-8", rr.Header().Get("Content-Type"))
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), "attachment; filename=\"trackarr-trakt-sync-")
 }
-

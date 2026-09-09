@@ -1,0 +1,1 @@
+-- Pas de restauration possible pour les instantanés vides supprimés.

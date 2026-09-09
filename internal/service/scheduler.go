@@ -148,47 +148,51 @@ func (s *Scheduler) runScheduledPass(ctx context.Context) {
 	}
 }
 
-// CheckAnnualWrapped scans all calendar years with watch activity and enqueues
-// background generation tasks for any year lacking a stored snapshot.
+// CheckAnnualWrapped checks if the previous calendar year has concluded and needs
+// an annual Wrapped snapshot generated. Snapshots are only generated at date (for the
+// immediately elapsed year), never retroactively backfilled for older historical years.
 func (s *Scheduler) CheckAnnualWrapped(ctx context.Context) {
 	if s == nil || s.wrappedRepo == nil || s.statsRepo == nil || s.writeDB == nil {
 		return
 	}
 
-	years, err := s.statsRepo.AvailableYears(ctx)
-	if err != nil {
-		log.Printf("scheduler: check available years: %v", err)
+	previousYear := time.Now().Year() - 1
+	if previousYear < 2025 {
 		return
 	}
 
-	for _, y := range years {
-		if y < 2000 {
-			continue
-		}
+	has, err := s.wrappedRepo.HasSnapshot(ctx, previousYear)
+	if err != nil {
+		log.Printf("scheduler: check wrapped snapshot for %d: %v", previousYear, err)
+		return
+	}
+	if has {
+		return
+	}
 
-		has, err := s.wrappedRepo.HasSnapshot(ctx, y)
-		if err != nil {
-			log.Printf("scheduler: check wrapped snapshot for %d: %v", y, err)
-			continue
-		}
-		if has {
-			continue
-		}
+	// Only enqueue if the elapsed year actually has watch activity
+	rawStats, _, err := s.statsRepo.GetWrappedData(ctx, previousYear)
+	if err != nil {
+		log.Printf("scheduler: check wrapped data for %d: %v", previousYear, err)
+		return
+	}
+	if rawStats.TotalTitles == 0 {
+		return
+	}
 
-		payload, err := json.Marshal(GenerateWrappedPayload{Year: y})
-		if err != nil {
-			log.Printf("scheduler: marshal generate_wrapped payload for %d: %v", y, err)
-			continue
-		}
+	payload, err := json.Marshal(GenerateWrappedPayload{Year: previousYear})
+	if err != nil {
+		log.Printf("scheduler: marshal generate_wrapped payload for %d: %v", previousYear, err)
+		return
+	}
 
-		dedupKey := fmt.Sprintf("generate_wrapped:%d", y)
-		if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
-			_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeGenerateWrapped, string(payload), &dedupKey)
-			return e
-		}); enqErr != nil {
-			log.Printf("scheduler: enqueue generate_wrapped for %d: %v", y, enqErr)
-		} else {
-			log.Printf("scheduler: enqueued generate_wrapped for year %d", y)
-		}
+	dedupKey := fmt.Sprintf("generate_wrapped:%d", previousYear)
+	if enqErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		_, e := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeGenerateWrapped, string(payload), &dedupKey)
+		return e
+	}); enqErr != nil {
+		log.Printf("scheduler: enqueue generate_wrapped for %d: %v", previousYear, enqErr)
+	} else {
+		log.Printf("scheduler: enqueued generate_wrapped for year %d", previousYear)
 	}
 }

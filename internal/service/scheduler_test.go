@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -87,39 +88,44 @@ func TestScheduler_CheckAnnualWrapped(t *testing.T) {
 
 	sched := NewScheduler(db, syncer, covers, statsRepo, wrappedRepo)
 
-	// Insert watch events for 2024 to make it an available year
-	relDate := "2024-05-01"
+	previousYear := time.Now().Year() - 1
+
+	// When previous year has no watch activity, no tasks are enqueued
+	sched.CheckAnnualWrapped(context.Background())
+	taskRepo := repository.NewTaskRepository(db)
+	tasks, err := taskRepo.ListPending()
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+
+	// Insert watch events for previousYear to give it watch activity
+	relDate := fmt.Sprintf("%d-05-01", previousYear)
 	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
-		Year:        2024,
+		Year:        previousYear,
 		ReleaseDate: &relDate,
 	}, nil)
 
-	watchedAt := time.Date(2024, 6, 15, 20, 0, 0, 0, time.UTC)
+	watchedAt := time.Date(previousYear, 6, 15, 20, 0, 0, 0, time.UTC)
 	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
 		TitleID:   titleID,
 		Source:    model.WatchEventSourceManual,
 		CreatedAt: watchedAt,
 	})
 
-	// Run CheckAnnualWrapped
+	// Run CheckAnnualWrapped again
 	sched.CheckAnnualWrapped(context.Background())
 
-	// Verify tasks were enqueued for available years
-	taskRepo := repository.NewTaskRepository(db)
-	tasks, err := taskRepo.ListPending()
+	// Verify task was enqueued for previousYear
+	tasks, err = taskRepo.ListPending()
 	require.NoError(t, err)
-	assert.NotEmpty(t, tasks)
-	for _, task := range tasks {
-		assert.Equal(t, model.TaskTypeGenerateWrapped, task.TaskType)
-	}
-	initialCount := len(tasks)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeGenerateWrapped, tasks[0].TaskType)
 
 	// Running again should be a no-op due to deduplication or existing task
 	sched.CheckAnnualWrapped(context.Background())
 	tasks2, err := taskRepo.ListPending()
 	require.NoError(t, err)
-	assert.Len(t, tasks2, initialCount)
+	assert.Len(t, tasks2, 1)
 }

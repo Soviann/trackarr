@@ -72,7 +72,19 @@ func TestWrappedRepository_SaveAndGetSnapshot(t *testing.T) {
 	assert.Equal(t, "The Cinematic Voyager", snap.Persona.Title)
 	assert.Len(t, snap.TopFavorites.Movies, 1)
 
-	// List archives
+	// Save a bogus snapshot with 0 titles
+	emptyResp := &model.WrappedResponse{
+		Year: 2024,
+		Overview: model.StatsOverview{
+			TotalTitles: 0,
+		},
+	}
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewWrappedWriter(tx).SaveSnapshot(ctx, 2024, emptyResp)
+	})
+	require.NoError(t, err)
+
+	// List archives - should only contain 2025, not 2024 (which has 0 titles)
 	archives, err := repo.ListArchives(ctx)
 	require.NoError(t, err)
 	require.Len(t, archives, 1)

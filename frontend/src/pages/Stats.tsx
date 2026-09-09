@@ -57,32 +57,64 @@ export function Stats({ path: _path }: { path?: string }) {
     ? data.available_years
     : [new Date().getFullYear()]
 
+  const currentYear = new Date().getFullYear()
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(`trackarr:wrapped_banner_dismissed_${new Date().getFullYear()}`) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const handleDismissBanner = (e: MouseEvent) => {
+    e.stopPropagation()
+    setIsBannerDismissed(true)
+    try {
+      localStorage.setItem(`trackarr:wrapped_banner_dismissed_${currentYear}`, '1')
+    } catch {
+      // ignore
+    }
+  }
+
   return (
     <div className={s.page}>
       <h1 className={s.pageTitle}>{t('stats.title')}</h1>
 
-      <div className={s.wrappedBanner} onClick={() => route(routeTo.wrapped())}>
-        <div className={s.wrappedBannerContent}>
-          <div className={s.wrappedBannerIcon}>✨</div>
-          <div>
-            <div className={s.wrappedBannerTitle}>
-              {t('wrapped.bannerTitle', { year: new Date().getFullYear() })}
-            </div>
-            <div className={s.wrappedBannerSubtitle}>
-              {t('wrapped.bannerSubtitle')}
+      {!isBannerDismissed && (
+        <div className={s.wrappedBanner} onClick={() => route(routeTo.wrapped())}>
+          <div className={s.wrappedBannerContent}>
+            <div className={s.wrappedBannerIcon}>✨</div>
+            <div>
+              <div className={s.wrappedBannerTitle}>
+                {t('wrapped.bannerTitle', { year: currentYear })}
+              </div>
+              <div className={s.wrappedBannerSubtitle}>
+                {t('wrapped.bannerSubtitle')}
+              </div>
             </div>
           </div>
+          <div className={s.wrappedBannerActions}>
+            <button
+              className={s.wrappedBannerBtn}
+              onClick={(e) => {
+                e.stopPropagation()
+                route(routeTo.wrapped())
+              }}
+            >
+              {t('wrapped.bannerButton')} →
+            </button>
+            <button
+              type="button"
+              className={s.wrappedBannerDismiss}
+              onClick={handleDismissBanner}
+              aria-label={t('wrapped.bannerDismiss')}
+              title={t('wrapped.bannerDismiss')}
+            >
+              ✕
+            </button>
+          </div>
         </div>
-        <button
-          className={s.wrappedBannerBtn}
-          onClick={(e) => {
-            e.stopPropagation()
-            route(routeTo.wrapped())
-          }}
-        >
-          {t('wrapped.bannerButton')} →
-        </button>
-      </div>
+      )}
 
       {archives && archives.length > 0 && (
         <WrappedArchivesSection archives={archives} t={t} />
@@ -632,12 +664,80 @@ function WrappedArchivesSection({
   archives: WrappedArchiveItem[]
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }) {
+  const validArchives = archives.filter((a) => a.total_titles > 0)
+  if (validArchives.length === 0) {
+    return null
+  }
+
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('trackarr:wrapped_archives_collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleCollapsed = () => {
+    const next = !isCollapsed
+    setIsCollapsed(next)
+    try {
+      localStorage.setItem('trackarr:wrapped_archives_collapsed', next ? '1' : '0')
+    } catch {
+      // ignore
+    }
+  }
+
+  if (isCollapsed) {
+    return (
+      <section className={s.sectionCompact}>
+        <div className={s.archivesCompactBar}>
+          <div className={s.archivesCompactLeft}>
+            <span className={s.archivesCompactIcon}>✨</span>
+            <span className={s.archivesCompactLabel}>
+              {t('wrapped.archivesCollapsedLabel')} ({validArchives.length}) :
+            </span>
+            <div className={s.archivesYearPills}>
+              {validArchives.map((a) => (
+                <button
+                  key={a.year}
+                  type="button"
+                  className={s.archiveYearPill}
+                  onClick={() => route(routeTo.wrapped(a.year))}
+                >
+                  {a.year}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            className={s.archiveToggleBtn}
+            onClick={toggleCollapsed}
+          >
+            {t('wrapped.expandArchives', { count: validArchives.length })} ▾
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className={s.section}>
-      <SectionLabel>{t('wrapped.archivesSectionTitle')}</SectionLabel>
-      <p className={s.archivesSubtitle}>{t('wrapped.archivesSectionSubtitle')}</p>
+      <div className={s.archivesHeaderRow}>
+        <div>
+          <SectionLabel>{t('wrapped.archivesSectionTitle')}</SectionLabel>
+          <p className={s.archivesSubtitle}>{t('wrapped.archivesSectionSubtitle')}</p>
+        </div>
+        <button
+          type="button"
+          className={s.archiveToggleBtn}
+          onClick={toggleCollapsed}
+        >
+          {t('wrapped.collapseArchives')} ▴
+        </button>
+      </div>
       <div className={s.archivesGrid}>
-        {archives.map((a) => {
+        {validArchives.map((a) => {
           const cover = getCoverUrl(a.top_cover_url)
           const watchTimeStr = formatWatchtime(a.total_watch_minutes) || '—'
           return (
