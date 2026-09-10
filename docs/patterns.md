@@ -181,7 +181,9 @@
 | POST | `/api/admin/system-settings/test/gemini` | `adminSettings.TestGemini` | Test Gemini AI connection |
 | POST | `/api/admin/system-settings/test/{app}` | `adminSettings.TestArr` | Test Radarr, Sonarr, Prowlarr connection |
 | POST | `/api/admin/system-settings/vapid/generate` | `adminSettings.GenerateVAPIDKeys` | Generate NIST P-256 VAPID keypair |
-| POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh |
+| POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh (supports `?restart=true`) |
+| GET | `/api/admin/refresh-all/status` | `admin.GetRefreshAllStatus` | Query current library refresh progress and state |
+| POST | `/api/admin/refresh-all/cancel` | `admin.CancelRefreshAll` | Cancel or pause running library refresh job |
 | GET | `/api/admin/export/json` | `admin.ExportJSON` | 1-Click full JSON library backup download |
 | GET | `/api/admin/export/csv` | `admin.ExportCSV` | 1-Click spreadsheet CSV library export download |
 | GET | `/api/admin/export/trakt` | `admin.ExportTrakt` | 1-Click Trakt.tv sync JSON export download |

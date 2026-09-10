@@ -18,7 +18,7 @@ func (s *BackgroundService) refreshTVDBRelations(
 	title *repository.TitleLite,
 	result *RefreshResult,
 ) {
-	if s.tvdb == nil || title == nil || title.TVDBID == nil {
+	if s.tvdb == nil || title == nil || title.TVDBID == nil || *title.TVDBID <= 0 || title.Type == model.TitleTypeMovie {
 		return
 	}
 

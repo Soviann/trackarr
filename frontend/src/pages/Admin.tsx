@@ -1,4 +1,4 @@
-import { useState, useRef } from 'preact/hooks'
+import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
@@ -7,6 +7,7 @@ import { routeTo } from '../routes'
 import { useTranslation } from '../i18n'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { BottomSheet } from '../components/BottomSheet'
+import type { RefreshAllProgress } from '../types'
 import s from './Admin.module.css'
 
 interface AdminCounts {
@@ -46,9 +47,19 @@ export function Admin({ path }: { path?: string }) {
   const { data: authSettings } = useApi<AuthSettings>('/admin/auth-settings')
   const { data: sysSettings } = useApi<SystemSettings>('/admin/system-settings')
 
+  const { data: refreshProgress, mutate: mutateRefreshProgress } = useApi<RefreshAllProgress>('/admin/refresh-all/status')
   const [refreshing, setRefreshing] = useState(false)
   const [showRefreshModal, setShowRefreshModal] = useState(false)
+  const [showRestartModal, setShowRestartModal] = useState(false)
   const [refreshSuccess, setRefreshSuccess] = useState(false)
+
+  useEffect(() => {
+    if (refreshProgress?.status !== 'running') return
+    const timer = setInterval(() => {
+      mutateRefreshProgress()
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [refreshProgress?.status, mutateRefreshProgress])
 
   // Backup & Import states
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -60,12 +71,25 @@ export function Admin({ path }: { path?: string }) {
   const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null)
   const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null)
 
-  const handleRefreshAll = async () => {
+  const handleStartRefresh = async (restart = false) => {
     setRefreshing(true)
     try {
-      await apiFetch('/admin/refresh-all', { method: 'POST' })
+      await apiFetch(`/admin/refresh-all${restart ? '?restart=true' : ''}`, { method: 'POST' })
       setRefreshSuccess(true)
       setTimeout(() => setRefreshSuccess(false), 4000)
+      mutateRefreshProgress()
+    } finally {
+      setRefreshing(false)
+      setShowRefreshModal(false)
+      setShowRestartModal(false)
+    }
+  }
+
+  const handleCancelRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await apiFetch('/admin/refresh-all/cancel', { method: 'POST' })
+      mutateRefreshProgress()
     } finally {
       setRefreshing(false)
     }
@@ -457,27 +481,125 @@ export function Admin({ path }: { path?: string }) {
 
         {/* REFRESH ACTION BOX */}
         <div className={s.refreshBox}>
-          <div className={s.refreshInfo}>
-            <div className={s.refreshTitle}>{t('admin.refreshAll')}</div>
-            <div className={s.refreshDesc}>
-              {refreshSuccess
-                ? '✅ Background metadata refresh started successfully!'
-                : 'Updates synopsis, ratings, posters, and cast for all titles in the background.'}
+          <div className={s.refreshTopRow}>
+            <div className={s.refreshInfo}>
+              <div className={s.refreshTitle}>{t('admin.refreshAll')}</div>
+              <div className={s.refreshDesc}>
+                {refreshSuccess ? (
+                  t('admin.refreshSuccessStarted')
+                ) : refreshProgress?.status === 'running' ? (
+                  refreshProgress.current_title ? (
+                    t('admin.refreshRunning', {
+                      current: refreshProgress.current_title,
+                      processed: refreshProgress.processed_titles,
+                      total: refreshProgress.total_titles,
+                      pct:
+                        refreshProgress.total_titles > 0
+                          ? Math.min(100, Math.round((refreshProgress.processed_titles / refreshProgress.total_titles) * 100))
+                          : 0,
+                    })
+                  ) : (
+                    t('admin.refreshRunningNoTitle', {
+                      processed: refreshProgress.processed_titles,
+                      total: refreshProgress.total_titles,
+                      pct:
+                        refreshProgress.total_titles > 0
+                          ? Math.min(100, Math.round((refreshProgress.processed_titles / refreshProgress.total_titles) * 100))
+                          : 0,
+                    })
+                  )
+                ) : refreshProgress?.status === 'paused' ? (
+                  t('admin.refreshPaused', {
+                    processed: refreshProgress.processed_titles,
+                    total: refreshProgress.total_titles,
+                    pct:
+                      refreshProgress.total_titles > 0
+                        ? Math.min(100, Math.round((refreshProgress.processed_titles / refreshProgress.total_titles) * 100))
+                        : 0,
+                  })
+                ) : refreshProgress?.status === 'completed' ? (
+                  refreshProgress.completed_at ? (
+                    `${t('admin.refreshCompleted', { total: refreshProgress.total_titles })} — ${t('admin.refreshCompletedAt', {
+                      date: new Date(refreshProgress.completed_at).toLocaleDateString(),
+                    })}`
+                  ) : (
+                    t('admin.refreshCompleted', { total: refreshProgress.total_titles })
+                  )
+                ) : refreshProgress?.status === 'failed' ? (
+                  t('admin.refreshFailed', { error: refreshProgress.last_error || '' })
+                ) : (
+                  t('admin.refreshAllDesc')
+                )}
+              </div>
+            </div>
+
+            <div className={s.refreshActions}>
+              {refreshProgress?.status === 'running' ? (
+                <button
+                  type="button"
+                  className={s.refreshBtnDanger}
+                  onClick={handleCancelRefresh}
+                  disabled={refreshing}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                  <span>{t('admin.refreshBtnCancel')}</span>
+                </button>
+              ) : refreshProgress?.status === 'paused' || refreshProgress?.status === 'failed' ? (
+                <>
+                  <button
+                    type="button"
+                    className={s.refreshBtnSecondary}
+                    onClick={() => setShowRestartModal(true)}
+                    disabled={refreshing}
+                  >
+                    <span>{t('admin.refreshBtnRestart')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={s.refreshBtn}
+                    onClick={() => handleStartRefresh(false)}
+                    disabled={refreshing}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+                    </svg>
+                    <span>{t('admin.refreshBtnResume')}</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={s.refreshBtn}
+                  onClick={() => setShowRefreshModal(true)}
+                  disabled={refreshing}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                  <span>{t('admin.refreshBtnRefresh')}</span>
+                </button>
+              )}
             </div>
           </div>
-          <button
-            type="button"
-            className={s.refreshBtn}
-            onClick={() => setShowRefreshModal(true)}
-            disabled={refreshing}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="23 4 23 10 17 10" />
-              <polyline points="1 20 1 14 7 14" />
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-            </svg>
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
+
+          {(refreshProgress?.status === 'running' || refreshProgress?.status === 'paused') && (
+            <div className={s.progressBarTrack}>
+              <div
+                className={s.progressBarFill}
+                style={{
+                  width: `${
+                    refreshProgress.total_titles > 0
+                      ? Math.min(100, Math.round((refreshProgress.processed_titles / refreshProgress.total_titles) * 100))
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -583,11 +705,22 @@ export function Admin({ path }: { path?: string }) {
       <ConfirmationDrawer
         open={showRefreshModal}
         onClose={() => setShowRefreshModal(false)}
-        onConfirm={handleRefreshAll}
-        title="Refresh all metadata?"
-        description="This operation runs in the background and may take several minutes depending on your library size."
-        confirmText="Refresh"
-        cancelText="Cancel"
+        onConfirm={() => handleStartRefresh(false)}
+        title={t('admin.refreshModalTitle')}
+        description={t('admin.refreshModalDesc')}
+        confirmText={t('admin.refreshBtnRefresh')}
+        cancelText={t('common.cancel')}
+      />
+
+      {/* RESTART CONFIRMATION */}
+      <ConfirmationDrawer
+        open={showRestartModal}
+        onClose={() => setShowRestartModal(false)}
+        onConfirm={() => handleStartRefresh(true)}
+        title={t('admin.refreshRestartTitle')}
+        description={t('admin.refreshRestartDesc')}
+        confirmText={t('admin.refreshBtnRestart')}
+        cancelText={t('common.cancel')}
       />
 
       {/* DRY-RUN PREVIEW BOTTOM SHEET */}

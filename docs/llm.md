@@ -82,7 +82,9 @@
 - `GET /api/admin/season-audit` : Scan duplicate series groups and return consolidation proposals.
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
-- `POST /api/admin/refresh-all` : Queue background task to refresh metadata across all titles.
+- `POST /api/admin/refresh-all` : Start or resume full library metadata refresh in background (accepts `?restart=true`).
+- `GET /api/admin/refresh-all/status` : Get real-time library refresh progress (`status`, `processed_titles`, `total_titles`, `current_title`).
+- `POST /api/admin/refresh-all/cancel` : Cancel or pause running library refresh job.
 - `GET /api/admin/export/json` : 1-Click full JSON library backup download.
 - `GET /api/admin/export/csv` : 1-Click spreadsheet CSV library export download.
 - `GET /api/admin/export/trakt` : 1-Click Trakt.tv sync JSON export download.

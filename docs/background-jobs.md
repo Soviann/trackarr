@@ -136,7 +136,10 @@ To avoid SQLite corruption, `database is locked` panics, and orphaned `running` 
 ### Web UI Management
 - **Task Monitor (`/admin/tasks`)**: View real-time status of pending, sleeping, running, and dead tasks.
 - **Dead Task Retry**: Single-click retry button to reschedule dead tasks back to `pending`.
-- **Manual Full Refresh (`POST /api/admin/refresh-all`)**: Dispatches a background sweep across the entire media catalog.
+- **Manual Full Refresh (`POST /api/admin/refresh-all`)**: Runs a persistent background sweep across the entire media catalog.
+  - **Prioritization**: Scans titles sorted by `last_refreshed_at ASC NULLS FIRST, id ASC` so never-refreshed titles are prioritized before recently updated titles.
+  - **Cursor Persistence**: Job state and cursor (`cursor_id`, `processed_titles`, `total_titles`, `status`) are saved in the `settings` table (`refresh_job_progress`) after every batch, enabling graceful pause, cancel, and resumption across container restarts.
+  - **Real-Time Status & Controls**: `GET /api/admin/refresh-all/status` exposes current progress and active title name; `POST /api/admin/refresh-all/cancel` pauses or cancels the job. The UI provides a live progress bar, pause/resume, and full restart controls (`?restart=true`).
 
 ### Environment & CLI Flags
 - `DISABLE_BACKGROUND_TASKS=true`: Disables both the 24h ticker and the task queue worker loop. Recommended during bulk imports (`trackarr import`) and automated database migrations.

@@ -1837,3 +1837,49 @@ func TestTitleRepository_PersonalNotes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, got.PersonalNotes)
 }
+
+func TestTitleRepository_ListAllForRefresh_Order(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	ctx := context.Background()
+
+	// Title 1: refreshed 1 hour ago
+	t1 := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Title 1", Language: "en", IsPrimary: true}})
+	_ = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).MarkRefreshed(ctx, t1, time.Now().UTC().Add(-1*time.Hour))
+	})
+
+	// Title 2: never refreshed (last_refreshed_at is NULL)
+	t2 := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Title 2", Language: "en", IsPrimary: true}})
+
+	// Title 3: refreshed 5 hours ago (older than Title 1)
+	t3 := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2022,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Title 3", Language: "en", IsPrimary: true}})
+	_ = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).MarkRefreshed(ctx, t3, time.Now().UTC().Add(-5*time.Hour))
+	})
+
+	titles, err := repo.ListAllForRefresh(ctx)
+	require.NoError(t, err)
+	require.Len(t, titles, 3)
+
+	// Expect order: NULL first (Title 2), then oldest (Title 3), then newest (Title 1)
+	assert.Equal(t, t2, titles[0].ID)
+	assert.Equal(t, t3, titles[1].ID)
+	assert.Equal(t, t1, titles[2].ID)
+}

@@ -475,3 +475,18 @@ export interface WrappedArchiveItem {
   created_at: string
 }
 
+export type RefreshJobStatus = 'idle' | 'running' | 'paused' | 'completed' | 'failed'
+
+export interface RefreshAllProgress {
+  status: RefreshJobStatus
+  total_titles: number
+  processed_titles: number
+  current_title?: string
+  cursor_id?: number
+  started_at?: string
+  updated_at?: string
+  completed_at?: string
+  last_error?: string
+}
+
+
