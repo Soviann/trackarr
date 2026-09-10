@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.5] — 2026-09-10
+
 ### Ajouté
 - **Indicateur de progression et contrôle de l'actualisation complète de la bibliothèque (`/admin`)** :
   - Affichage d'une barre de progression en temps réel avec pourcentage, titre en cours de traitement et compteur (`X / Total`).
