@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Masquage du badge de disponibilité Arr et du bouton rapide +1 pour les épisodes non diffusés** :
+  - Harmonisation de la détection des épisodes non disponibles : un épisode est désormais considéré non disponible s'il possède une date de diffusion future (`air_date > aujourd'hui`), s'il est un placeholder indicatif (`TBA`, `TBD`) ou si la série est déjà à jour (`caught_up`).
+  - Résolution de l'anomalie sur *The Pitt* (et les séries avec saisons futures déjà référencées dans TMDB) où S03E01 s'affichait `DISPO` avec un bouton `+1` actif alors que sa diffusion n'intervient qu'en 2027.
+  - Masquage du bandeau `NextEpisodeHero` et du bouton d'incrémentation `TitleCard` lorsqu'aucun épisode diffusé n'est en attente de visionnage.
+  - Exclusion des épisodes futurs non diffusés du décompte d'épisodes restants et de l'estimation de binge (`unwatchedEpisodesCount`).
+
 ## [v1.18.5] — 2026-09-10
 
 ### Ajouté

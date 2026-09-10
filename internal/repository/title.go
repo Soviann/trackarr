@@ -542,6 +542,24 @@ func parseSQLiteTime(s *string) *time.Time {
 	return &t
 }
 
+// isUnairedOrTBA returns true if an episode has a placeholder title ("TBA", "TBD")
+// or if its air date is strictly in the future.
+func isUnairedOrTBA(name *string, airDate *string, today string) bool {
+	if name != nil {
+		trimmed := strings.TrimSpace(*name)
+		if strings.EqualFold(trimmed, "TBA") || strings.EqualFold(trimmed, "TBD") {
+			return true
+		}
+	}
+	if airDate != nil {
+		trimmedAirDate := strings.TrimSpace(*airDate)
+		if trimmedAirDate != "" && today != "" && trimmedAirDate > today {
+			return true
+		}
+	}
+	return false
+}
+
 // HasUnwatchedEpisodes returns true if the title has at least one unwatched, non-TBA episode.
 func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
 	query := `
@@ -674,11 +692,12 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 			for i := range items {
 				itemMap[items[i].ID] = &items[i]
 			}
+			today := time.Now().Format("2006-01-02")
 			for nextEpRows.Next() {
 				var titleID int64
 				var ne model.NextEpisode
 				if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate); err == nil {
-					if ne.Name != nil && (strings.EqualFold(strings.TrimSpace(*ne.Name), "TBA") || strings.EqualFold(strings.TrimSpace(*ne.Name), "TBD")) {
+					if isUnairedOrTBA(ne.Name, ne.AirDate, today) {
 						ne.IsTBA = true
 					}
 					if it, ok := itemMap[titleID]; ok {

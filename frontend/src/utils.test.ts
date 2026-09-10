@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, unwatchedEpisodesCount, formatBingeTime, formatHumanWatchtime, getCoverUrl } from './utils'
+import { aniListMediaUrl, computeAniListUrl, getName, getAlternativeNames, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime24h, hexToRgba, watchedCount, totalEpisodes, unwatchedEpisodesCount, formatBingeTime, formatHumanWatchtime, getCoverUrl, isEpisodeAired, isUnairedOrTBA } from './utils'
 import type { Title, TitleName, Season, Episode, TitleType } from './types'
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
@@ -341,6 +341,47 @@ describe('unwatchedEpisodesCount', () => {
     const s1 = makeSeason([makeEpisode(true), epTBA])
     const t = makeTitle({ seasons: [s1] })
     expect(unwatchedEpisodesCount(t)).toBe(0)
+  })
+
+  it('ignores future unaired episodes when counting unwatched', () => {
+    const epFuture: Episode = { id: 2, season_id: 1, episode: 2, name: '7:00 A.M.', air_date: '2099-01-01', watched: false, first_watched_at: null, last_watched_at: null }
+    const s1 = makeSeason([makeEpisode(true), epFuture])
+    const t = makeTitle({ seasons: [s1] })
+    expect(unwatchedEpisodesCount(t)).toBe(0)
+  })
+})
+
+describe('isEpisodeAired', () => {
+  it('returns true for past dates and today', () => {
+    expect(isEpisodeAired('2020-01-01')).toBe(true)
+    const today = new Date().toISOString().slice(0, 10)
+    expect(isEpisodeAired(today)).toBe(true)
+  })
+
+  it('returns false for future dates, null, undefined or empty', () => {
+    expect(isEpisodeAired('2099-01-01')).toBe(false)
+    expect(isEpisodeAired(null)).toBe(false)
+    expect(isEpisodeAired(undefined)).toBe(false)
+    expect(isEpisodeAired('')).toBe(false)
+  })
+})
+
+describe('isUnairedOrTBA', () => {
+  it('returns true for placeholder names TBA and TBD', () => {
+    expect(isUnairedOrTBA({ name: 'TBA' })).toBe(true)
+    expect(isUnairedOrTBA({ name: 'tbd' })).toBe(true)
+  })
+
+  it('returns true for future air dates even with real titles', () => {
+    expect(isUnairedOrTBA({ name: '7:00 A.M.', air_date: '2099-01-01' })).toBe(true)
+  })
+
+  it('returns true when is_tba is set', () => {
+    expect(isUnairedOrTBA({ is_tba: true })).toBe(true)
+  })
+
+  it('returns false for past air dates with real titles', () => {
+    expect(isUnairedOrTBA({ name: 'Pilot', air_date: '2024-01-01' })).toBe(false)
   })
 })
 

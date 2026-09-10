@@ -25,7 +25,7 @@
    - `pending_review`: Unconfirmed match queued when Gemini AI verifier was unavailable.
 3. **Quick Mark & Arr Availability Rules**:
    - Quick +1 episode mark and Arr availability badge (`SxxExx DISPO`) are strictly hidden on titles with `status = 'dropped'`.
-   - Arr availability badge and Next Episode hero banner are hidden for indicative placeholder episodes marked as "TBA" or "TBD" (`IsTBA = true`).
+   - Quick +1 episode mark, Arr availability badge (`SxxExx DISPO`), and Next Episode hero banner are strictly hidden for unaired episodes (future air date or missing air date) and placeholder episodes marked as "TBA" or "TBD" (`IsTBA = true`).
    - "Caught up" status is derived and propagated dynamically when all currently aired episodes have been watched while future episodes remain scheduled.
 4. **AniList Synchronization Constraints**:
    - Scores (1–10) are only pushed when anime status is `Completed` or `Dropped` (AniList API restriction).

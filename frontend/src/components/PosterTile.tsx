@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { TitleType, WatchProvider, NextEpisode } from '../types'
 import { useTranslation } from '../i18n'
+import { isUnairedOrTBA } from '../utils'
 import s from './PosterTile.module.css'
 import { CoverImage } from './CoverImage'
 import { WatchProviderBadges } from './WatchProviderBadges'
@@ -44,7 +45,7 @@ export function PosterTile({ item }: Props) {
   }
 
   const hasArr = item.sonarr_id != null || item.radarr_id != null
-  const isTBA = Boolean(item.next_episode?.is_tba || (item.next_episode?.name && (item.next_episode.name.trim().toUpperCase() === 'TBA' || item.next_episode.name.trim().toUpperCase() === 'TBD')))
+  const isUnaired = isUnairedOrTBA(item.next_episode)
 
   return (
     <div
@@ -62,14 +63,14 @@ export function PosterTile({ item }: Props) {
         </div>
 
         {/* Arr availability badge (top-right) */}
-        {hasArr && item.next_episode && item.status !== 'dropped' && !isTBA && (
+        {hasArr && item.next_episode && item.status !== 'dropped' && !isUnaired && (
           <span className={s.arrAvailableBadge}>
             {`S${item.next_episode.season_number.toString().padStart(2, '0')}E${item.next_episode.episode.toString().padStart(2, '0')} ${t('common.dispoBadge')}`}
           </span>
         )}
 
         {/* Symmetrical +1 Action Button: equal bottom & right offset (10px) */}
-        {item.onQuickMark && item.next_episode && item.status !== 'dropped' && (
+        {item.onQuickMark && item.next_episode && item.status !== 'dropped' && !isUnaired && (
           <button
             type="button"
             className={clsx(s.quickPlusBtn, item.isMarking && s.quickPlusBtnLoading)}

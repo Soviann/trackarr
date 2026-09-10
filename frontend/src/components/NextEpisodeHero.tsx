@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks'
 import type { Title, TitleStatus } from '../types'
-import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes, isTBAEpisodeName } from '../utils'
+import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes, isUnairedOrTBA } from '../utils'
 import { useTranslation } from '../i18n'
 import s from './NextEpisodeHero.module.css'
 
@@ -14,7 +14,7 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
 
-  if (title.status === 'completed' || title.status === 'dropped') {
+  if (title.status === 'completed' || title.status === 'dropped' || title.caught_up) {
     return null
   }
 
@@ -73,7 +73,7 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
 
   for (const season of sortedSeasons) {
     const sortedEps = [...(season.episodes ?? [])].sort((a, b) => a.episode - b.episode)
-    const found = sortedEps.find((e) => !e.watched && !isTBAEpisodeName(e.name))
+    const found = sortedEps.find((e) => !e.watched && !isUnairedOrTBA(e))
     if (found) {
       nextEp = found
       nextEpSeasonNumber = season.season_number
