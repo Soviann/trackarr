@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Indicateur de progression et contrôle de l'actualisation complète de la bibliothèque (`/admin`)** :
+  - Affichage d'une barre de progression en temps réel avec pourcentage, titre en cours de traitement et compteur (`X / Total`).
+  - Nouveaux contrôles permettant d'interrompre/suspendre (`Arrêter`), reprendre (`Reprendre`) ou réinitialiser (`Recommencer`) le balayage des métadonnées.
+  - Nouveaux endpoints d'API `GET /api/admin/refresh-all/status` et `POST /api/admin/refresh-all/cancel` (avec support de `?restart=true` sur `POST /api/admin/refresh-all`).
+- **Persistance du curseur d'actualisation de la médiathèque** :
+  - Sauvegarde automatique de l'état et du curseur dans la table `settings` (`refresh_job_progress`), permettant la reprise automatique ou manuelle sans perte de progression après un redémarrage du conteneur.
+
+### Modifié
+- **Priorisation des titres jamais actualisés** :
+  - `TitleRepository.ListAllForRefresh` ordonne désormais par `last_refreshed_at ASC NULLS FIRST, id ASC` au lieu de `updated_at DESC`. Les titres n'ayant jamais été enrichis sont traités en priorité absolue, empêchant les relances répétées de bloquer indéfiniment sur les mêmes titres récents.
+
+### Corrigé
+- **Relations TheTVDB pour les films** :
+  - `refreshTVDBRelations` filtre désormais les films (`TitleTypeMovie`) et les identifiants TheTVDB invalides avant d'appeler `/series/{id}/extended`, éliminant les requêtes en erreur HTTP 404 et 400 dans les journaux d'arrière-plan.
+
 ## [v1.18.4] — 2026-09-09
 
 ### Corrigé

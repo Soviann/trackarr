@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -180,39 +178,50 @@ func (h *AdminHandler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-// RefreshAll triggers a background refresh on all titles (including completed/dropped).
-//
-// Intentional fire-and-forget: 202 Accepted. Mirrors TitleHandler.RefreshOne —
-// parent ctx is the server lifecycle so SIGTERM cancels the goroutine, the
-// shutdown WG ensures Serve() waits for in-flight writes before closing the
-// database, and a recover() prevents a TMDB-side panic from killing the goroutine
-// silently. The 30-minute cap is generous for libraries up to a few thousand
-// titles given the shared 2 rps API limiter; overrunning means the admin can
-// re-trigger after investigation.
+// RefreshAll triggers or resumes a background refresh on all titles.
+// If query param ?restart=true is provided, it restarts from the beginning.
 func (h *AdminHandler) RefreshAll(w http.ResponseWriter, r *http.Request) error {
 	if h.bgSvc == nil {
 		return httputil.InternalError("refresh all", fmt.Errorf("background service not available"))
 	}
 
-	ctx, cancel := context.WithTimeout(h.serverCtx, 30*time.Minute)
-	if h.shutdownWG != nil {
-		h.shutdownWG.Add(1)
-	}
-	go func() {
-		if h.shutdownWG != nil {
-			defer h.shutdownWG.Done()
+	restart := r.URL.Query().Get("restart") == "true"
+	progress, err := h.bgSvc.StartRefreshAllJob(h.serverCtx, restart)
+	if err != nil {
+		if err.Error() == "refresh already in progress" {
+			httputil.WriteJSON(w, http.StatusConflict, progress)
+			return nil
 		}
-		defer cancel()
-		defer func() {
-			if rec := recover(); rec != nil {
-				stack := debug.Stack()
-				log.Printf("admin: refresh all panicked: %v\n%s", rec, stack)
-			}
-		}()
-		h.bgSvc.RefreshAllTitles(ctx)
-	}()
+		return httputil.InternalError("start refresh all", err)
+	}
 
-	w.WriteHeader(http.StatusAccepted)
+	httputil.WriteJSON(w, http.StatusAccepted, progress)
+	return nil
+}
+
+// GetRefreshAllStatus returns the current progress of the library-wide metadata refresh.
+func (h *AdminHandler) GetRefreshAllStatus(w http.ResponseWriter, r *http.Request) error {
+	if h.bgSvc == nil {
+		return httputil.InternalError("refresh all status", fmt.Errorf("background service not available"))
+	}
+
+	progress := h.bgSvc.GetRefreshAllProgress()
+	httputil.WriteJSON(w, http.StatusOK, progress)
+	return nil
+}
+
+// CancelRefreshAll cancels or pauses the ongoing library-wide metadata refresh.
+func (h *AdminHandler) CancelRefreshAll(w http.ResponseWriter, r *http.Request) error {
+	if h.bgSvc == nil {
+		return httputil.InternalError("cancel refresh all", fmt.Errorf("background service not available"))
+	}
+
+	progress, err := h.bgSvc.CancelRefreshAllJob()
+	if err != nil {
+		return httputil.InternalError("cancel refresh all", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, progress)
 	return nil
 }
 

@@ -362,7 +362,7 @@ func (r *TitleRepository) ListAllForRefresh(ctx context.Context) ([]TitleLite, e
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT `+titleLiteCols+`
 		FROM titles t
-		ORDER BY t.updated_at DESC`)
+		ORDER BY t.last_refreshed_at ASC NULLS FIRST, t.id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list titles for refresh: %w", err)
 	}

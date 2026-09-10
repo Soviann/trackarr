@@ -229,6 +229,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/admin/system-settings/test/{app}", httputil.WrapHandler(adminSettings.TestArr))
 			r.Post("/admin/system-settings/vapid/generate", httputil.WrapHandler(adminSettings.GenerateVAPIDKeys))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
+			r.Get("/admin/refresh-all/status", httputil.WrapHandler(admin.GetRefreshAllStatus))
+			r.Post("/admin/refresh-all/cancel", httputil.WrapHandler(admin.CancelRefreshAll))
 			r.Get("/admin/export/json", httputil.WrapHandler(admin.ExportJSON))
 			r.Get("/admin/export/csv", httputil.WrapHandler(admin.ExportCSV))
 			r.Get("/admin/export/trakt", httputil.WrapHandler(admin.ExportTrakt))

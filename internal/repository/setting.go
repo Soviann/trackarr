@@ -36,6 +36,7 @@ const (
 	SettingKeyMetadataLanguage      = "metadata_language"
 	SettingKeyEnabledWatchProviders = "enabled_watch_providers"
 	SettingKeyCalendarToken         = "calendar_token"
+	SettingKeyRefreshJobProgress    = "refresh_job_progress"
 )
 
 // SettingRepository reads the settings key-value store. Writes live on

@@ -199,6 +199,70 @@ func TestAdminHandler_RefreshAll_NilBgSvc(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, apiErr.Status)
 }
 
+func TestAdminHandler_GetRefreshAllStatus_NilBgSvc(t *testing.T) {
+	h := setupAdminHandler(t) // bgSvc=nil
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/refresh-all/status", nil)
+	rr := httptest.NewRecorder()
+	err := h.GetRefreshAllStatus(rr, req)
+
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusInternalServerError, apiErr.Status)
+}
+
+func TestAdminHandler_CancelRefreshAll_NilBgSvc(t *testing.T) {
+	h := setupAdminHandler(t) // bgSvc=nil
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh-all/cancel", nil)
+	rr := httptest.NewRecorder()
+	err := h.CancelRefreshAll(rr, req)
+
+	require.Error(t, err)
+	apiErr, ok := err.(*httputil.APIError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusInternalServerError, apiErr.Status)
+}
+
+func TestAdminHandler_RefreshAll_WithBgSvc(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	taskRepo := repository.NewTaskRepository(db)
+	titleRepo := repository.NewTitleRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	seasonRepo := repository.NewSeasonRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+	eventRepo := repository.NewWatchEventRepository(db)
+	backupSvc := service.NewBackupService(db, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
+	bgSvc := service.NewBackgroundService(db, titleRepo, settingRepo, nil, nil, nil)
+	h := handler.NewAdminHandler(context.Background(), db, taskRepo, titleRepo, settingRepo, bgSvc, backupSvc)
+
+	// 1. Initial status is idle
+	reqStatus := httptest.NewRequest(http.MethodGet, "/api/admin/refresh-all/status", nil)
+	rrStatus := httptest.NewRecorder()
+	require.NoError(t, h.GetRefreshAllStatus(rrStatus, reqStatus))
+	assert.Equal(t, http.StatusOK, rrStatus.Code)
+	var prog service.RefreshJobProgress
+	require.NoError(t, json.Unmarshal(rrStatus.Body.Bytes(), &prog))
+	assert.Equal(t, service.RefreshStatusIdle, prog.Status)
+
+	// 2. Start refresh
+	reqStart := httptest.NewRequest(http.MethodPost, "/api/admin/refresh-all", nil)
+	rrStart := httptest.NewRecorder()
+	require.NoError(t, h.RefreshAll(rrStart, reqStart))
+	assert.Equal(t, http.StatusAccepted, rrStart.Code)
+
+	// 3. Cancel refresh
+	reqCancel := httptest.NewRequest(http.MethodPost, "/api/admin/refresh-all/cancel", nil)
+	rrCancel := httptest.NewRecorder()
+	require.NoError(t, h.CancelRefreshAll(rrCancel, reqCancel))
+	assert.Equal(t, http.StatusOK, rrCancel.Code)
+}
+
 func TestAdminHandler_ExportJSON(t *testing.T) {
 	h := setupAdminHandler(t)
 

@@ -35,9 +35,12 @@ type BackgroundService struct {
 	settings     *repository.SettingRepository
 	tmdb         *matching.TMDBClient
 	covers       *CoverService
-	push         PushNotifier
-	limiter      *APILimiter
-	shutdownWG   *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration
+	push            PushNotifier
+	limiter         *APILimiter
+	shutdownWG      *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration
+	refreshMu       sync.Mutex
+	refreshCancel   context.CancelFunc
+	refreshProgress RefreshJobProgress
 }
 
 func NewBackgroundService(
