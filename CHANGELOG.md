@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.6] — 2026-09-10
+
 ### Modifié
 - **Refonte UX/UI du bouton rapide « +1 » sur les cartes de la bibliothèque et des strips** :
   - Remplacement du disque cyan opaque par un bouton circulaire en verre sombre translucide (*dark glassmorphism* avec `backdrop-filter: blur(8px)` et fine bordure).
