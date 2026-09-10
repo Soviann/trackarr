@@ -11,7 +11,6 @@ import { routeTo } from '../routes'
 import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
-import { WatchProviderBadges } from './WatchProviderBadges'
 import { useLongPress } from '../hooks/useLongPress'
 import s from './PosterCard.module.css'
 
@@ -81,6 +80,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   const cardClass = `${s.card}${onLongPress ? ' no-touch-callout' : ''}`
   const hasArr = title.sonarr_id != null || title.radarr_id != null
   const isUnaired = isUnairedOrTBA(ne)
+  const hasQuickAction = title.status === 'watching' && ne != null && !selecting && !isUnaired
 
   return (
     <a
@@ -100,7 +100,6 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         />
         <div className={`${s.badges}${selecting ? ` ${s.badgesShifted}` : ''}`}>
           <TypeBadge type={title.type} radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
-          <WatchProviderBadges providers={title.watch_providers} />
         </div>
 
         {/* Arr availability badge (top-right) */}
@@ -114,8 +113,8 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
           <StatusBadge status={title.status} caughtUp={title.caught_up} />
         </div>
 
-        {/* Symmetrical +1 Action Button: equal bottom & right offset (10px) */}
-        {title.status === 'watching' && ne && !selecting && !isUnaired && (
+        {/* Quick +1 Action Button: equal bottom & right offset (8px) */}
+        {hasQuickAction && (
           <button
             type="button"
             className={clsx(s.quickPlusBtn, toggling && s.quickPlusBtnLoading)}
@@ -124,11 +123,18 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
             aria-label={`Mark S${ne.season_number} E${ne.episode} as watched`}
             title={t('common.markNextWatched')}
           >
-            {toggling ? <span className={s.quickMarkSpinner} aria-hidden="true" /> : '+1'}
+            {toggling ? (
+              <span className={s.quickMarkSpinner} aria-hidden="true" />
+            ) : (
+              <>
+                <span className={s.quickPlusSign}>+</span>
+                <span className={s.quickPlusNum}>1</span>
+              </>
+            )}
           </button>
         )}
 
-        <div className={s.labelOverlay}>
+        <div className={clsx(s.labelOverlay, hasQuickAction && s.labelOverlayWithAction)}>
           <div className={s.label}>{name}</div>
           {sortCaption && (
             <div className={s.sortCaption}>{sortCaption}</div>

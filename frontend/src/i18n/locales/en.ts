@@ -106,6 +106,7 @@ export const en = {
     notRated: 'Not rated',
     myRating: 'MY RATING:',
     editRating: 'Edit',
+    platforms: 'Platforms',
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',
