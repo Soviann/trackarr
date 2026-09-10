@@ -64,7 +64,7 @@
 | `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
-| `Episode` | `GetBySeasonID`, `GetByID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched` |
+| `Episode` | `GetBySeasonID`, `GetByID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `MarkAllWatchedForTitle` |
 | `WatchEvent` | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
 | `Task` | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch` |
 | `SeasonExternalID` | `Get`, `ListParts`, `ListPartsForTitle` | `Add`, `Delete`, `DeletePart`, `Reorder`, `UpdatePartMeta` (Multi-part season support) |

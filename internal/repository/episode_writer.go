@@ -160,6 +160,7 @@ func (w *EpisodeWriter) MarkWatched(ctx context.Context, id int64, watchedAt tim
 // watched keep their first_watched_at/last_watched_at untouched (so an in-flight
 // rewatch is preserved). Enforces the "completed series ⟹ every episode watched"
 // invariant during episode-list backfill — see BackgroundService.refreshTitle.
+// Unaired episodes (future air date) and placeholder episodes ("TBA", "TBD") are preserved as unwatched.
 func (w *EpisodeWriter) MarkAllWatchedForTitle(ctx context.Context, titleID int64, at time.Time) (int64, error) {
 	res, err := w.tx.ExecContext(ctx,
 		`UPDATE episodes
@@ -168,6 +169,7 @@ func (w *EpisodeWriter) MarkAllWatchedForTitle(ctx context.Context, titleID int6
 		     last_watched_at  = CASE WHEN last_watched_at  IS NULL THEN ? ELSE last_watched_at  END
 		 WHERE watched = 0
 		   AND UPPER(TRIM(COALESCE(name, ''))) NOT IN ('TBA', 'TBD')
+		   AND (air_date IS NULL OR air_date = '' OR air_date <= date('now'))
 		   AND season_id IN (SELECT id FROM seasons WHERE title_id = ?)`,
 		at.UTC(), at.UTC(), titleID,
 	)

@@ -12,6 +12,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Résolution de l'anomalie sur *The Pitt* (et les séries avec saisons futures déjà référencées dans TMDB) où S03E01 s'affichait `DISPO` avec un bouton `+1` actif alors que sa diffusion n'intervient qu'en 2027.
   - Masquage du bandeau `NextEpisodeHero` et du bouton d'incrémentation `TitleCard` lorsqu'aucun épisode diffusé n'est en attente de visionnage.
   - Exclusion des épisodes futurs non diffusés du décompte d'épisodes restants et de l'estimation de binge (`unwatchedEpisodesCount`).
+- **Exclusion des épisodes non diffusés lors du marquage complet et de l'évaluation de fin de série** :
+  - `MarkAllWatchedForTitle` ignore désormais strictement les épisodes dont la date de diffusion est dans le futur (`air_date > aujourd'hui`) ainsi que les placeholders `TBA`/`TBD`, évitant de marquer artificiellement comme vus des épisodes futurs lors de l'auto-complétion ou du backfill.
+  - `HasUnwatchedEpisodes` filtre les épisodes non diffusés dans le futur et les placeholders `TBA`/`TBD`, permettant aux séries terminées ou annulées de basculer correctement en statut `completed` dès lors que tous les épisodes diffusés ont été visionnés.
+  - Couverture complète par des tests unitaires dédiés validant la préservation des épisodes futurs et des placeholders lors d'un marquage global.
 
 ## [v1.18.5] — 2026-09-10
 

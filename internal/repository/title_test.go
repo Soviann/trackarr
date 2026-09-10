@@ -162,7 +162,7 @@ func TestTitleRepository_HasWatchedAndUnwatchedEpisodes(t *testing.T) {
 	// Add future unwatched episode
 	_ = testutil.SeedEpisode(t, db, season.ID, 2, "2099-01-01", false)
 
-	// Mark ep1 watched
+	// Mark ep1 watched — only future episode remains unwatched, so HasUnwatchedEpisodes is false
 	_, err = db.Exec(`UPDATE episodes SET watched = 1 WHERE id = ?`, ep1.ID)
 	require.NoError(t, err)
 
@@ -171,13 +171,21 @@ func TestTitleRepository_HasWatchedAndUnwatchedEpisodes(t *testing.T) {
 	assert.True(t, hasWatched)
 	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
 	require.NoError(t, err)
-	assert.True(t, hasUnwatched, "future episode is unwatched")
+	assert.False(t, hasUnwatched, "future unaired episode should not count as unwatched")
 
-	// Mark ep2 watched, add TBA episode — HasUnwatchedEpisodes should be false
-	_, err = db.Exec(`UPDATE episodes SET watched = 1 WHERE season_id = ? AND episode = 2`, season.ID)
+	// Add unwatched episode with unknown/empty air date (not TBA) — HasUnwatchedEpisodes should be true
+	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 3, Name: "Episode 3", AirDate: ""},
+	})
+	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
+	require.NoError(t, err)
+	assert.True(t, hasUnwatched, "episode with empty air date should count as unwatched")
+
+	// Mark ep3 watched, add TBA episode — HasUnwatchedEpisodes should be false
+	_, err = db.Exec(`UPDATE episodes SET watched = 1 WHERE season_id = ? AND episode = 3`, season.ID)
 	require.NoError(t, err)
 	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
-		{EpisodeNumber: 3, Name: "TBA", AirDate: ""},
+		{EpisodeNumber: 4, Name: "TBA", AirDate: "2020-01-01"},
 	})
 	hasUnwatched, err = repo.HasUnwatchedEpisodes(titleID)
 	require.NoError(t, err)
