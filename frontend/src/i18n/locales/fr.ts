@@ -108,6 +108,7 @@ export const fr: TranslationSchema = {
     notRated: 'Non noté',
     myRating: 'MA NOTE :',
     editRating: 'Modifier',
+    platforms: 'Plateformes',
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',

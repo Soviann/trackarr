@@ -74,7 +74,7 @@ describe('PosterCard', () => {
     expect(container.textContent).not.toContain('CAUGHT UP')
   })
 
-  it('renders watch provider badges when title has watch_providers', () => {
+  it('does not render watch provider badges on poster card', () => {
     const titleWithProviders: Title = {
       ...baseTitle,
       watch_providers: [
@@ -82,9 +82,9 @@ describe('PosterCard', () => {
         { id: 119, name: 'Amazon Prime Video' },
       ],
     }
-    const { getByText } = render(<PosterCard title={titleWithProviders} />)
-    expect(getByText('netflix')).not.toBeNull()
-    expect(getByText('prime')).not.toBeNull()
+    const { queryByText } = render(<PosterCard title={titleWithProviders} />)
+    expect(queryByText('netflix')).toBeNull()
+    expect(queryByText('prime')).toBeNull()
   })
 
   it('renders +1 button and arr availability badge for watching series with next episode and sonarr_id', () => {
@@ -101,9 +101,10 @@ describe('PosterCard', () => {
       },
     }
     const { getByText, getByLabelText } = render(<PosterCard title={watchingSeries} />)
-    expect(getByText('+1')).not.toBeNull()
+    const btn = getByLabelText('Mark S2 E7 as watched')
+    expect(btn).not.toBeNull()
+    expect(btn.textContent).toBe('+1')
     expect(getByText('S02E07 DISPO')).not.toBeNull()
-    expect(getByLabelText('Mark S2 E7 as watched')).not.toBeNull()
   })
 
   it('does not render +1 button or arr availability badge for dropped series', () => {

@@ -17,6 +17,7 @@ import { ArrPushSheet } from '../components/ArrPushSheet'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { StatusBadge } from '../components/StatusBadge'
 import { WatchProviderBadges } from '../components/WatchProviderBadges'
+import { getMatchingProviders } from '../utils/providers'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { TitleHistory } from '../components/TitleHistory'
@@ -252,9 +253,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
           </div>
         )}
-        <div style={{ marginTop: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <div style={{ marginTop: '12px' }}>
           <StatusBadge status={title.status} caughtUp={title.caught_up} />
-          <WatchProviderBadges providers={title.watch_providers} />
         </div>
       </div>
 
@@ -458,6 +458,14 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   AniList
                 </a>
               )}
+            </div>
+          </div>
+        )}
+        {getMatchingProviders(title.watch_providers).length > 0 && (
+          <div className={s.detailRow}>
+            <span className={s.detailKey}>{t('details.platforms')}</span>
+            <div className={s.externalLinksWrap}>
+              <WatchProviderBadges providers={title.watch_providers} />
             </div>
           </div>
         )}

@@ -75,10 +75,10 @@ describe('PosterTile', () => {
       onQuickMark,
     }
 
-    const { getByLabelText, getByText } = render(<PosterTile item={item} />)
+    const { getByLabelText } = render(<PosterTile item={item} />)
     const btn = getByLabelText('Mark S2 E1 as watched')
     expect(btn).not.toBeNull()
-    expect(getByText('+1')).not.toBeNull()
+    expect(btn.textContent).toBe('+1')
 
     fireEvent.click(btn)
     expect(onQuickMark).toHaveBeenCalledOnce()

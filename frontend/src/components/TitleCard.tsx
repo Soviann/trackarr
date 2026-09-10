@@ -11,7 +11,6 @@ import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { ArrBadge } from './ArrBadge'
 import { TypeBadge } from './TypeBadge'
-import { WatchProviderBadges } from './WatchProviderBadges'
 import s from './TitleCard.module.css'
 
 interface TitleCardProps {
@@ -99,7 +98,6 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
           <span className={s.statusBadge}>
             <StatusBadge status={title.status} caughtUp={title.caught_up} />
             <ArrBadge type={title.type} radarrId={title.radarr_id} sonarrId={title.sonarr_id} />
-            <WatchProviderBadges providers={title.watch_providers} />
           </span>
         </div>
         {season && (

@@ -6,7 +6,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Refonte UX/UI du bouton rapide « +1 » sur les cartes de la bibliothèque et des strips** :
+  - Remplacement du disque cyan opaque par un bouton circulaire en verre sombre translucide (*dark glassmorphism* avec `backdrop-filter: blur(8px)` et fine bordure).
+  - Typographie nette avec symbole `+` en couleur d'accent et chiffre `1` en blanc fixe (`#ffffff`) sur tous les thèmes.
+  - Troncature automatique du titre de la carte avec points de suspension (`...`) juste avant le badge (`padding-right: 38px`), évitant toute collision ou superposition de texte.
+- **Déplacement des badges de plateformes de streaming sur la fiche du titre** :
+  - Retrait des badges de la zone d'en-tête/identité du titre pour alléger la présentation.
+  - Intégration dans la carte *Détails* immédiatement sous la ligne « Sources », avec libellé i18n dédié (*Plateformes* / *Platforms*).
+
 ### Corrigé
+- **Élimination des superpositions de badges en haut des cartes de la liste** :
+  - Retrait de l'indicateur de plateforme de streaming sur `PosterCard` et `TitleCard`. La présence sur une plateforme restant consultable sur la page dédiée du titre, les badges de type (gauche) et de statut (droite) ne risquent plus de se chevaucher sur les affiches compactes.
 - **Masquage du badge de disponibilité Arr et du bouton rapide +1 pour les épisodes non diffusés** :
   - Harmonisation de la détection des épisodes non disponibles : un épisode est désormais considéré non disponible s'il possède une date de diffusion future (`air_date > aujourd'hui`), s'il est un placeholder indicatif (`TBA`, `TBD`) ou si la série est déjà à jour (`caught_up`).
   - Résolution de l'anomalie sur *The Pitt* (et les séries avec saisons futures déjà référencées dans TMDB) où S03E01 s'affichait `DISPO` avec un bouton `+1` actif alors que sa diffusion n'intervient qu'en 2027.

@@ -82,7 +82,10 @@ export function PosterTile({ item }: Props) {
             {item.isMarking ? (
               <span className={s.quickMarkSpinner} aria-hidden="true" />
             ) : (
-              '+1'
+              <>
+                <span className={s.quickPlusSign}>+</span>
+                <span className={s.quickPlusNum}>1</span>
+              </>
             )}
           </button>
         )}
