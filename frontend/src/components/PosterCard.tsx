@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
-import { getName, formatSortCaption } from '../utils'
+import { getName, formatSortCaption, isUnairedOrTBA } from '../utils'
 import { useTranslation } from '../i18n'
 import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
@@ -80,7 +80,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   // user doesn't see the "Save image" native callout during the hold.
   const cardClass = `${s.card}${onLongPress ? ' no-touch-callout' : ''}`
   const hasArr = title.sonarr_id != null || title.radarr_id != null
-  const isTBA = Boolean(ne?.is_tba || (ne?.name && (ne.name.trim().toUpperCase() === 'TBA' || ne.name.trim().toUpperCase() === 'TBD')))
+  const isUnaired = isUnairedOrTBA(ne)
 
   return (
     <a
@@ -104,7 +104,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         </div>
 
         {/* Arr availability badge (top-right) */}
-        {hasArr && ne && !selecting && title.status !== 'dropped' && !isTBA && (
+        {hasArr && ne && !selecting && title.status !== 'dropped' && !isUnaired && (
           <span className={s.arrAvailableBadge}>
             {`S${ne.season_number.toString().padStart(2, '0')}E${ne.episode.toString().padStart(2, '0')} ${t('common.dispoBadge')}`}
           </span>
@@ -115,7 +115,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         </div>
 
         {/* Symmetrical +1 Action Button: equal bottom & right offset (10px) */}
-        {title.status === 'watching' && ne && !selecting && (
+        {title.status === 'watching' && ne && !selecting && !isUnaired && (
           <button
             type="button"
             className={clsx(s.quickPlusBtn, toggling && s.quickPlusBtnLoading)}

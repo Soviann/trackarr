@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Soviann/trackarr/internal/model"
 )
@@ -212,14 +213,18 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 		)
 		WHERE rn = 1`, args...)
 	if err == nil {
+		today := time.Now().Format("2006-01-02")
 		for nextEpRows.Next() {
 			var titleID int64
 			var ne model.NextEpisode
 			if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate); err == nil {
-				if ne.Name != nil && (strings.EqualFold(strings.TrimSpace(*ne.Name), "TBA") || strings.EqualFold(strings.TrimSpace(*ne.Name), "TBD")) {
+				if isUnairedOrTBA(ne.Name, ne.AirDate, today) {
 					ne.IsTBA = true
 				}
 				if t, ok := titleMap[titleID]; ok {
+					if t.CaughtUp {
+						ne.IsTBA = true
+					}
 					t.NextEpisode = &ne
 				}
 			}

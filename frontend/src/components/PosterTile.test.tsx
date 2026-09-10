@@ -155,4 +155,29 @@ describe('PosterTile', () => {
     const { queryByText } = render(<PosterTile item={item} />)
     expect(queryByText(/DISPO/)).toBeNull()
   })
+
+  it('does not render availability badge or +1 button for future unaired episode', () => {
+    const item: PosterTileItem = {
+      id: 5,
+      type: 'series',
+      sonarr_id: 150,
+      cover_url: null,
+      name: 'The Pitt',
+      sublabel: 'S03E01',
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 3,
+        name: '7:00 A.M.',
+        air_date: '2099-01-01',
+      },
+      onQuickMark: vi.fn(),
+    }
+
+    const { queryByText, queryByLabelText } = render(<PosterTile item={item} />)
+    expect(queryByText(/DISPO/)).toBeNull()
+    expect(queryByText('+1')).toBeNull()
+    expect(queryByLabelText('Mark S3 E1 as watched')).toBeNull()
+  })
 })

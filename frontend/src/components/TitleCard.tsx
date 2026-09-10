@@ -4,7 +4,7 @@ import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
-import { getName, getTypeLabel, formatSortCaption } from '../utils'
+import { getName, getTypeLabel, formatSortCaption, isUnairedOrTBA } from '../utils'
 import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
 import { CoverImage } from './CoverImage'
@@ -115,7 +115,7 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
       </div>
 
       {/* Quick mark badge */}
-      {title.status === 'watching' && ne && (
+      {title.status === 'watching' && ne && !isUnairedOrTBA(ne) && (
         <button
           type="button"
           onClick={handleQuickMark}

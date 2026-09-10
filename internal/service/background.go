@@ -25,16 +25,16 @@ type aniListSeasonScoreClient interface {
 }
 
 type BackgroundService struct {
-	writeDB      *sql.DB
-	titles       *repository.TitleRepository
-	seasonExtIDs *repository.SeasonExternalIDRepository
-	wrappedRepo  *repository.WrappedRepository
-	statsRepo    *repository.StatsRepository
-	tvdb         *matching.TVDBClient     // optional — nil if TVDB_API_KEY not set
-	anilist      aniListSeasonScoreClient // optional — nil disables per-season AniList score refresh
-	settings     *repository.SettingRepository
-	tmdb         *matching.TMDBClient
-	covers       *CoverService
+	writeDB         *sql.DB
+	titles          *repository.TitleRepository
+	seasonExtIDs    *repository.SeasonExternalIDRepository
+	wrappedRepo     *repository.WrappedRepository
+	statsRepo       *repository.StatsRepository
+	tvdb            *matching.TVDBClient     // optional — nil if TVDB_API_KEY not set
+	anilist         aniListSeasonScoreClient // optional — nil disables per-season AniList score refresh
+	settings        *repository.SettingRepository
+	tmdb            *matching.TMDBClient
+	covers          *CoverService
 	push            PushNotifier
 	limiter         *APILimiter
 	shutdownWG      *sync.WaitGroup // optional — joined on shutdown so the ticker goroutine can finish its iteration

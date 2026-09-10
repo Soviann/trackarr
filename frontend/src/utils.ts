@@ -296,10 +296,29 @@ export function isTBAEpisodeName(name: string | null | undefined): boolean {
   return upper === 'TBA' || upper === 'TBD'
 }
 
-/** Returns the total unwatched episodes across all seasons, excluding TBA placeholder episodes. */
+/** Returns true if an episode air date is known and in the past or today (YYYY-MM-DD). */
+export function isEpisodeAired(airDate: string | null | undefined): boolean {
+  if (!airDate) return false
+  const today = new Date().toISOString().slice(0, 10)
+  return airDate <= today
+}
+
+/** Returns true if an episode is considered unaired / unreleased / TBA. */
+export function isUnairedOrTBA(ep: { name?: string | null; air_date?: string | null; is_tba?: boolean } | null | undefined): boolean {
+  if (!ep) return false
+  if (ep.is_tba) return true
+  if (isTBAEpisodeName(ep.name)) return true
+  if (ep.air_date) {
+    const today = new Date().toISOString().slice(0, 10)
+    if (ep.air_date > today) return true
+  }
+  return false
+}
+
+/** Returns the total unwatched episodes across all seasons, excluding unaired / TBA placeholder episodes. */
 export function unwatchedEpisodesCount(title: Title): number {
   return (title.seasons ?? []).reduce(
-    (sum, s) => sum + (s.episodes ?? []).filter((e) => !e.watched && !isTBAEpisodeName(e.name)).length,
+    (sum, s) => sum + (s.episodes ?? []).filter((e) => !e.watched && !isUnairedOrTBA(e)).length,
     0
   )
 }

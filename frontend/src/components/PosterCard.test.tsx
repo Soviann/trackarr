@@ -139,8 +139,31 @@ describe('PosterCard', () => {
         name: 'TBA',
       },
     }
-    const { queryByText } = render(<PosterCard title={seriesWithTBA} />)
+    const { queryByText, queryByLabelText } = render(<PosterCard title={seriesWithTBA} />)
     expect(queryByText(/DISPO/)).toBeNull()
+    expect(queryByText('+1')).toBeNull()
+  })
+
+  it('does not render arr availability badge or +1 button for future unaired next episode (e.g. The Pitt)', () => {
+    const thePitt: Title = {
+      ...baseTitle,
+      type: 'series',
+      status: 'watching',
+      sonarr_id: 150,
+      caught_up: true,
+      next_episode: {
+        id: 999,
+        season_id: 1189,
+        episode: 1,
+        season_number: 3,
+        name: '7:00 A.M.',
+        air_date: '2099-01-01',
+      },
+    }
+    const { queryByText, queryByLabelText } = render(<PosterCard title={thePitt} />)
+    expect(queryByText(/DISPO/)).toBeNull()
+    expect(queryByText('+1')).toBeNull()
+    expect(queryByLabelText(/Mark S3 E1 as watched/)).toBeNull()
   })
 
   it('calls onClick when clicked in selection mode (no long-press)', () => {

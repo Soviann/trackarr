@@ -1693,6 +1693,38 @@ func TestTitleRepo_NextEpisode_IsTBA(t *testing.T) {
 	assert.True(t, cwItems[0].NextEpisode.IsTBA, "ContinueWatching NextEpisode should have IsTBA=true")
 }
 
+func TestTitleRepo_NextEpisode_UnairedFutureAirDate(t *testing.T) {
+	db := setupTestDB(t)
+	// Simulate "The Pitt": Season 1 & 2 watched, Season 3 Episode 1 has future air date with a non-TBA name.
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2025,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "The Pitt Test", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, id, 1)
+	testutil.SeedEpisode(t, db, s1.ID, 1, "2025-01-01", true)
+
+	s2 := testutil.GetOrCreateSeason(t, db, id, 2)
+	testutil.SeedEpisode(t, db, s2.ID, 1, "2025-06-01", true)
+
+	s3 := testutil.GetOrCreateSeason(t, db, id, 3)
+	testutil.UpsertEpisodesBatch(t, db, s3.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 1, Name: "7:00 A.M.", AirDate: "2099-01-01"},
+	})
+
+	res, err := repository.NewTitleRepository(db).List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+	assert.True(t, res.Titles[0].CaughtUp, "Series should be caught up as all aired episodes are watched")
+	require.NotNil(t, res.Titles[0].NextEpisode)
+	assert.Equal(t, 3, res.Titles[0].NextEpisode.SeasonNumber)
+	assert.Equal(t, 1, res.Titles[0].NextEpisode.Episode)
+	assert.Equal(t, "7:00 A.M.", *res.Titles[0].NextEpisode.Name)
+	assert.True(t, res.Titles[0].NextEpisode.IsTBA, "Future unaired episode should have IsTBA=true")
+}
+
 func TestTitleRepo_Upcoming_IncludesProviders(t *testing.T) {
 	db := setupTestDB(t)
 	nextAirDate := "2099-01-01"

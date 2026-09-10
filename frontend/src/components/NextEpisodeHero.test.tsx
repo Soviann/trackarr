@@ -148,4 +148,33 @@ describe('NextEpisodeHero', () => {
     const { container } = render(<NextEpisodeHero title={tbaTitle} onEpisodeToggle={vi.fn()} />)
     expect(container.firstChild).toBeNull()
   })
+
+  it('does not render when remaining unwatched episode has a future air date (e.g. The Pitt)', () => {
+    const futureTitle: Title = {
+      ...baseTitle,
+      seasons: [
+        {
+          id: 10,
+          title_id: 1,
+          season_number: 1,
+          total_episodes: 1,
+          episodes: [
+            { id: 101, season_id: 10, episode: 1, name: 'Pilot', air_date: '2024-01-01', watched: true, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+        {
+          id: 11,
+          title_id: 1,
+          season_number: 2,
+          total_episodes: 1,
+          episodes: [
+            { id: 102, season_id: 11, episode: 1, name: '7:00 A.M.', air_date: '2099-01-01', watched: false, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<NextEpisodeHero title={futureTitle} onEpisodeToggle={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
+  })
 })

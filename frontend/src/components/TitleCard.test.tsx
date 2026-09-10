@@ -86,4 +86,22 @@ describe('TitleCard', () => {
     expect(queryByText('E3')).toBeNull()
     expect(queryByLabelText('Mark E3 as watched')).toBeNull()
   })
+
+  it('does not render quick mark button for unaired future next episode', () => {
+    const seriesWithFutureEp: Title = {
+      ...baseTitle,
+      status: 'watching',
+      next_episode: {
+        id: 10,
+        season_id: 5,
+        episode: 1,
+        season_number: 3,
+        name: '7:00 A.M.',
+        air_date: '2099-01-01',
+      },
+    }
+    const { queryByText, queryByLabelText } = render(<TitleCard title={seriesWithFutureEp} />)
+    expect(queryByText('E1')).toBeNull()
+    expect(queryByLabelText('Mark E1 as watched')).toBeNull()
+  })
 })
