@@ -560,7 +560,7 @@ func isUnairedOrTBA(name *string, airDate *string, today string) bool {
 	return false
 }
 
-// HasUnwatchedEpisodes returns true if the title has at least one unwatched, non-TBA episode.
+// HasUnwatchedEpisodes returns true if the title has at least one unwatched, aired, non-TBA episode.
 func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
 	query := `
 		SELECT EXISTS(
@@ -569,6 +569,7 @@ func (r *TitleRepository) HasUnwatchedEpisodes(titleID int64) (bool, error) {
 			WHERE s.title_id = ?
 			  AND e.watched = 0
 			  AND UPPER(TRIM(COALESCE(e.name, ''))) NOT IN ('TBA', 'TBD')
+			  AND (e.air_date IS NULL OR e.air_date = '' OR e.air_date <= date('now'))
 		)`
 	var exists bool
 	if err := r.db.QueryRow(query, titleID).Scan(&exists); err != nil {
