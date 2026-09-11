@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Tiroir de filtres (`FilterDrawer`) en bas de page** :
+  - Suppression de la première ligne de poignée redondante (`FILTERS (count)`) lorsque le tiroir est ouvert, l'en-tête du tiroir assurant le rôle d'en-tête unique avec chevron de fermeture et bouton Réinitialiser.
+  - Ajout d'un espacement vertical (`bottomPad`) entre la dernière rangée de contrôles de filtres et la barre de navigation (`Navbar`).
+  - Correction du rognage des filtres en bas de tiroir (notamment le champ de pays dans l'onglet Genres & Origine) grâce à l'augmentation de la hauteur maximale (`max-height: min(70vh, 460px)` pour le tiroir et `min(55vh, 380px)` pour le contenu).
+
 ## [v1.21.0] — 2026-09-11
 
 ### Modifié

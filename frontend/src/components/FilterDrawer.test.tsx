@@ -230,5 +230,32 @@ describe('FilterDrawer', () => {
     fireEvent.click(removeActionBtn)
     expect(onGenreToggle).toHaveBeenCalledWith('Action')
   })
+
+  it('hides handle when open and collapses when header title button is clicked', () => {
+    const { container, getByText, queryByText, getByLabelText } = renderFilterDrawer({
+      defaultOpen: false,
+    })
+
+    // Handle is visible when closed
+    expect(getByText('Filters')).toBeDefined()
+
+    // Click handle to open
+    fireEvent.click(getByText('Filters'))
+
+    // Handle should no longer be rendered when open (no duplicate first line)
+    expect(queryByText('Filters')).toBeNull()
+
+    // Header title is visible
+    expect(getByText('FILTERS (1 ACTIVE)')).toBeDefined()
+
+    // Click header close/title button to collapse
+    const closeBtn = getByLabelText('Close')
+    fireEvent.click(closeBtn)
+
+    // Handle is visible again
+    expect(getByText('Filters')).toBeDefined()
+    const drawerEl = container.querySelector('.drawer')
+    expect(drawerEl?.className).toContain('drawerCollapsed')
+  })
 })
 
