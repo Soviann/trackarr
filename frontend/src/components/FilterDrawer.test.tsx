@@ -84,18 +84,18 @@ describe('FilterDrawer', () => {
     expect(getByText('Status & Type')).toBeDefined()
     expect(getByText('Genres & Origin')).toBeDefined()
     expect(getByText('Dates & Ratings')).toBeDefined()
-    expect(getByText('Watching')).toBeDefined()
+    expect(getByText('Status: Watching')).toBeDefined()
     expect(queryByText('TMDB: any')).toBeNull()
 
     // Switch to Dates & Ratings tab
     fireEvent.click(getByText('Dates & Ratings'))
     expect(getByText('TMDB: any')).toBeDefined()
-    expect(queryByText('Watching')).toBeNull()
+    expect(queryByText('Status: Watching')).toBeNull()
 
     // Switch to Genres & Origin tab
     fireEvent.click(getByText('Genres & Origin'))
     expect(queryByText('TMDB: any')).toBeNull()
-    expect(queryByText('Watching')).toBeNull()
+    expect(queryByText('Status: Watching')).toBeNull()
   })
 
   it('displays tab dot indicator when a tab has active filters', () => {
@@ -129,13 +129,15 @@ describe('FilterDrawer', () => {
     expect(onReset).toHaveBeenCalledTimes(1)
   })
 
-  it('accepts consolidated filter and actions props', () => {
+  it('accepts consolidated filter and actions props and handles changes', () => {
     const onStatusChange = vi.fn()
-    const { getByText } = render(
+    const onTypeChange = vi.fn()
+    const onSortChange = vi.fn()
+    const { getByLabelText, getByText } = render(
       <FilterDrawer
         defaultOpen={true}
         sort={{ field: 'updated_at', order: 'desc' }}
-        onSortChange={vi.fn()}
+        onSortChange={onSortChange}
         isSearchActive={false}
         filter={{
           status: 'plan_to_watch',
@@ -154,7 +156,7 @@ describe('FilterDrawer', () => {
         }}
         actions={{
           onStatusChange,
-          onTypeChange: vi.fn(),
+          onTypeChange,
           onIsAnimeChange: vi.fn(),
           onSeriesStatusChange: vi.fn(),
           onDecadeChange: vi.fn(),
@@ -169,9 +171,21 @@ describe('FilterDrawer', () => {
         }}
       />
     )
-    const watchingBtn = getByText('Watching')
-    fireEvent.click(watchingBtn)
+    const statusSelect = getByLabelText('Filter status') as HTMLSelectElement
+    fireEvent.change(statusSelect, { target: { value: 'watching' } })
     expect(onStatusChange).toHaveBeenCalledWith('watching')
+
+    const seriesBtn = getByText('Series')
+    fireEvent.click(seriesBtn)
+    expect(onTypeChange).toHaveBeenCalledWith('series')
+
+    const sortSelect = getByLabelText('Sort by') as HTMLSelectElement
+    fireEvent.change(sortSelect, { target: { value: 'original_title' } })
+    expect(onSortChange).toHaveBeenCalledWith({ field: 'original_title', order: 'asc' })
+
+    const orderBtn = getByLabelText('Descending')
+    fireEvent.click(orderBtn)
+    expect(onSortChange).toHaveBeenCalledWith({ field: 'updated_at', order: 'asc' })
   })
 })
 

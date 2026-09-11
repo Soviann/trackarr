@@ -66,7 +66,7 @@
 }
 
 .drawerExpanded {
-  max-height: 480px;
+  max-height: 240px;
   opacity: 1;
 }
 
@@ -165,7 +165,7 @@
 }
 
 .tabContent {
-  max-height: 380px;
+  max-height: 190px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -173,14 +173,151 @@
 .tabPane {
   display: flex;
   flex-direction: column;
-  padding: 4px 0 8px;
+  padding: 6px 0 2px;
+  gap: 6px;
 }
 
 .filterRow {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  padding: 4px var(--space-lg);
+  padding: 0 var(--space-lg);
+}
+
+.twoColRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+}
+
+@media (max-width: 360px) {
+  .twoColRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sortCombo {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.sortSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderBtn {
+  width: 30px;
+  height: 30px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  color: var(--ink-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.orderBtn:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.orderBtnAsc {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.statusSelect {
+  width: 100%;
+  min-width: 0;
+}
+
+.typeGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.segmentedControl {
+  display: flex;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  padding: 2px;
+  height: 30px;
+  flex: 1;
+  min-width: 0;
+}
+
+.segmentBtn {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-button) - 2px);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmentBtn:hover {
+  color: var(--ink);
+}
+
+.segmentBtnActive {
+  background: var(--accent);
+  color: #1a1714;
+  font-weight: 600;
+}
+
+.animePill {
+  height: 30px;
+  padding: 0 8px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.animePill:hover {
+  color: var(--ink);
+}
+
+.animePillActive {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .filterLabel {
@@ -189,11 +326,11 @@
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--ink-dim);
-  padding: 8px var(--space-lg) 4px;
+  padding: 4px var(--space-lg) 2px;
 }
 
 .filterLabelFirst {
-  padding-top: 6px;
+  padding-top: 2px;
 }
 
 .chip {
@@ -230,29 +367,45 @@
   font-size: var(--font-size-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  text-align: center;
   height: 30px;
   padding: 0 var(--space-sm);
   border-radius: var(--radius-button);
   border: 1px solid var(--border);
-  background: var(--bg-elev2);
+  background-color: var(--bg-elev2);
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a09484' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+  padding-left: 8px;
+  text-align: left;
+}
+
+.selectActive {
+  background-color: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23d4ad7a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
 .dateInput {
   min-width: 0;
   flex: 1;
+  text-align: center;
 }
 
 .select:focus,
 .dateInput:focus {
   outline: none;
   border-color: var(--accent);
-  background: var(--accent-wash);
+  background-color: var(--accent-wash);
 }
 
 .dateInput::-webkit-calendar-picker-indicator {
@@ -279,7 +432,7 @@
 }
 
 .bottomPad {
-  height: 4px;
+  height: 2px;
 }
 
 /* Genre filter */

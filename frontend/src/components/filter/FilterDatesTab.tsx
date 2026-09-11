@@ -23,7 +23,7 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
       <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Rating</div>
       <div className={s.filterRow}>
         <select
-          className={s.select}
+          className={clsx(s.select, Boolean(myRatingMin) && s.selectActive)}
           value={myRatingMin}
           onChange={(e) => actions.onMyRatingMinChange((e.target as HTMLSelectElement).value)}
         >
@@ -33,7 +33,7 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
           ))}
         </select>
         <select
-          className={s.select}
+          className={clsx(s.select, Boolean(tmdbRatingMin) && s.selectActive)}
           value={tmdbRatingMin}
           onChange={(e) => actions.onTmdbRatingMinChange((e.target as HTMLSelectElement).value)}
         >
@@ -47,7 +47,7 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
       <div className={s.filterLabel}>Release date</div>
       <div className={s.filterRow}>
         <select
-          className={s.select}
+          className={clsx(s.select, Boolean(decade) && s.selectActive)}
           value={decade ?? ''}
           onChange={(e) => {
             const val = (e.target as HTMLSelectElement).value
