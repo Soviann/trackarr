@@ -21,6 +21,7 @@
   height: 32px;
   border-radius: 50%;
   background: var(--bg-elev);
+  color: var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;

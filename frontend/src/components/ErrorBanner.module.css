@@ -4,7 +4,7 @@
   justify-content: space-between;
   padding: 10px 14px;
   margin: 8px 12px;
-  background: var(--accent-wash);
+  background: color-mix(in srgb, var(--status-crit) 12%, var(--bg-elev));
   border: 1px solid color-mix(in srgb, var(--status-crit) 30%, transparent);
   border-radius: 8px;
   color: #fca5a5;

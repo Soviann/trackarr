@@ -2,13 +2,13 @@ import type { PaginatedResponse, MatchEvent } from '../types'
 import { useState, useCallback } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { colors } from '../theme'
 import { getName } from '../utils'
 import { updateBadge } from '../utils/badge'
 import { MatchReviewCard } from '../components/MatchReviewCard'
 import { SwipeActions } from '../components/SwipeActions'
 import type { SwipeAction } from '../components/SwipeActions'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { CoverImage } from '../components/CoverImage'
 import clsx from 'clsx'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -18,6 +18,7 @@ import s from './MatchReview.module.css'
 export function MatchReview({ path }: { path?: string }) {
   const [pendingLimit, setPendingLimit] = useState(50)
   const [unconfirmedLimit, setUnconfirmedLimit] = useState(50)
+  const [confirmAllOpen, setConfirmAllOpen] = useState(false)
 
   const { data: pendingData, loading: l1, error: e1, mutate: m1 } = useApi<PaginatedResponse>(`/titles?match_status=pending_review&limit=${pendingLimit}`)
   const { data: unconfirmedData, loading: l2, error: e2, mutate: m2 } = useApi<PaginatedResponse>(`/titles?match_status=unconfirmed&limit=${unconfirmedLimit}`)
@@ -90,7 +91,7 @@ export function MatchReview({ path }: { path?: string }) {
             aria-label="Back"
             className={s.backBtn}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
@@ -102,7 +103,7 @@ export function MatchReview({ path }: { path?: string }) {
           )}
         </div>
         {titles.length > 1 && (
-          <button onClick={handleBatchConfirm} className={s.confirmAllBtn}>
+          <button onClick={() => setConfirmAllOpen(true)} className={s.confirmAllBtn}>
             Confirm all
           </button>
         )}
@@ -197,6 +198,16 @@ export function MatchReview({ path }: { path?: string }) {
           </div>
         </>
       )}
+
+      <ConfirmationDrawer
+        open={confirmAllOpen}
+        onClose={() => setConfirmAllOpen(false)}
+        onConfirm={handleBatchConfirm}
+        title="Confirm all matches?"
+        description={`This will mark all ${titles.length} titles as confirmed.`}
+        confirmText="Confirm all"
+        cancelText="Cancel"
+      />
     </div>
     </PullToRefresh>
   )

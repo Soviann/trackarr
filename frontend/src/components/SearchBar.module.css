@@ -117,7 +117,7 @@
 
 .filterCountBadge {
   background: var(--accent);
-  color: #05080e;
+  color: var(--accent-fg);
   font-size: 10px;
   font-weight: 700;
   border-radius: var(--radius-pill);

@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { colors } from '../theme'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { CoverImage } from '../components/CoverImage'
 import { BottomSheet } from '../components/BottomSheet'
 import type { SeasonAuditProposal } from '../types'
@@ -22,6 +22,7 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
   const [busyDismissId, setBusyDismissId] = useState<number | null>(null)
   const [busyAll, setBusyAll] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [confirmMergeAllOpen, setConfirmMergeAllOpen] = useState(false)
 
   const proposals = data?.proposals ?? []
   const hasAmbiguous = proposals.some((p) => p.season_number <= 0)
@@ -105,7 +106,7 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
       <div className={s.header}>
         <div className={s.headerLeft}>
           <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
@@ -137,7 +138,7 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
               <div className={s.mergeAllContainer}>
                 <button
                   className={s.acceptAllBtn}
-                  onClick={acceptAll}
+                  onClick={() => setConfirmMergeAllOpen(true)}
                   disabled={busyAll || busyDismissId !== null || hasAmbiguous}
                   title={hasAmbiguous ? 'Disabled: some proposals require manual season assignment' : undefined}
                 >
@@ -279,6 +280,17 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
           </div>
         )}
       </BottomSheet>
+
+      <ConfirmationDrawer
+        open={confirmMergeAllOpen}
+        onClose={() => setConfirmMergeAllOpen(false)}
+        onConfirm={acceptAll}
+        title="Merge all season conflicts?"
+        description={`This will merge ${proposals.length} source series into target series and cannot be undone.`}
+        confirmText={`Merge all (${proposals.length})`}
+        cancelText="Cancel"
+        isDangerous
+      />
     </div>
   )
 }

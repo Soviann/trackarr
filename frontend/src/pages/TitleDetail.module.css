@@ -492,21 +492,21 @@
 }
 
 .radarrBtn {
-  background: rgba(255, 193, 7, 0.15);
-  color: #ffc107;
-  border: 1px solid rgba(255, 193, 7, 0.35);
+  background: color-mix(in srgb, var(--brand-radarr) 15%, transparent);
+  color: var(--brand-radarr);
+  border: 1px solid color-mix(in srgb, var(--brand-radarr) 35%, transparent);
 }
 
 .radarrBtn:hover {
-  background: rgba(255, 193, 7, 0.25);
+  background: color-mix(in srgb, var(--brand-radarr) 25%, transparent);
 }
 
 .sonarrBtn {
-  background: rgba(0, 180, 216, 0.15);
-  color: #00b4d8;
-  border: 1px solid rgba(0, 180, 216, 0.35);
+  background: color-mix(in srgb, var(--brand-sonarr) 15%, transparent);
+  color: var(--brand-sonarr);
+  border: 1px solid color-mix(in srgb, var(--brand-sonarr) 35%, transparent);
 }
 
 .sonarrBtn:hover {
-  background: rgba(0, 180, 216, 0.25);
+  background: color-mix(in srgb, var(--brand-sonarr) 25%, transparent);
 }

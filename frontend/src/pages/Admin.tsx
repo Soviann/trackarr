@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { colors } from '../theme'
 import { routeTo } from '../routes'
 import { useTranslation } from '../i18n'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { BottomSheet } from '../components/BottomSheet'
-import type { RefreshAllProgress } from '../types'
+import type { RefreshAllProgress, Settings } from '../types'
 import s from './Admin.module.css'
 
 interface AdminCounts {
@@ -46,6 +45,7 @@ export function Admin({ path }: { path?: string }) {
   const { data: counts } = useApi<AdminCounts>('/admin/counts')
   const { data: authSettings } = useApi<AuthSettings>('/admin/auth-settings')
   const { data: sysSettings } = useApi<SystemSettings>('/admin/system-settings')
+  const { data: appSettings } = useApi<Settings>('/settings')
 
   const { data: refreshProgress, mutate: mutateRefreshProgress } = useApi<RefreshAllProgress>('/admin/refresh-all/status')
   const [refreshing, setRefreshing] = useState(false)
@@ -220,7 +220,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminValidate())}
-            style={{ '--card-color': colors.accent, '--badge-bg': colors.accent, '--badge-color': '#000' } as Record<string, string>}
+            style={{ '--card-color': 'var(--accent)', '--badge-bg': 'var(--accent)', '--badge-color': 'var(--accent-fg)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -247,7 +247,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminTasks())}
-            style={{ '--card-color': colors.statusCrit, '--badge-bg': colors.statusCrit, '--badge-color': '#fff' } as Record<string, string>}
+            style={{ '--card-color': 'var(--status-crit)', '--badge-bg': 'var(--status-crit)', '--badge-color': '#fff' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -273,7 +273,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminSeasonAudit())}
-            style={{ '--card-color': colors.brandAnilist } as Record<string, string>}
+            style={{ '--card-color': 'var(--brand-anilist)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -314,7 +314,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminSettings())}
-            style={{ '--card-color': colors.accent } as Record<string, string>}
+            style={{ '--card-color': 'var(--accent)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -338,7 +338,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminArr())}
-            style={{ '--card-color': colors.statusWarn } as Record<string, string>}
+            style={{ '--card-color': 'var(--status-warn)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -364,7 +364,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminAniList())}
-            style={{ '--card-color': colors.brandAnilist } as Record<string, string>}
+            style={{ '--card-color': 'var(--brand-anilist)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -391,7 +391,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminNotifications())}
-            style={{ '--card-color': colors.accent } as Record<string, string>}
+            style={{ '--card-color': 'var(--accent)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -407,6 +407,34 @@ export function Admin({ path }: { path?: string }) {
                 </span>
               </div>
               <span className={s.cardDesc}>Scrobble alerts, rating prompts and library recaps</span>
+            </div>
+            <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          {/* Jellyfin */}
+          <button
+            type="button"
+            className={s.card}
+            onClick={() => route(routeTo.adminJellyfin())}
+            style={{ '--card-color': '#aa5cc3' } as Record<string, string>}
+          >
+            <div className={s.cardIconWrap}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <div className={s.cardContent}>
+              <div className={s.cardTop}>
+                <span className={s.cardLabel}>Jellyfin</span>
+                <span className={`${s.badgeStatus} ${appSettings?.jellyfin_configured ? s.active : ''}`}>
+                  {appSettings?.jellyfin_configured ? 'Configured' : 'Optional'}
+                </span>
+              </div>
+              <span className={s.cardDesc}>Webhook scrobbling and playback sync</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -433,7 +461,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminAuth())}
-            style={{ '--card-color': colors.accent } as Record<string, string>}
+            style={{ '--card-color': 'var(--accent)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -458,7 +486,7 @@ export function Admin({ path }: { path?: string }) {
             type="button"
             className={s.card}
             onClick={() => route(routeTo.adminHelp())}
-            style={{ '--card-color': colors.inkDim } as Record<string, string>}
+            style={{ '--card-color': 'var(--ink-dim)' } as Record<string, string>}
           >
             <div className={s.cardIconWrap}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

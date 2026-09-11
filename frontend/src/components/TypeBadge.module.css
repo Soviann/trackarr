@@ -12,13 +12,13 @@
 }
 
 .hasRadarr {
-  border-top: 3px solid #ffc230;
-  box-shadow: 0 0 8px rgba(255, 194, 48, 0.5);
+  border-top: 3px solid var(--brand-radarr);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-radarr) 50%, transparent);
 }
 
 .hasSonarr {
-  border-top: 3px solid #00c0ff;
-  box-shadow: 0 0 8px rgba(0, 192, 255, 0.5);
+  border-top: 3px solid var(--brand-sonarr);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-sonarr) 50%, transparent);
 }
 
 .sizeMd {

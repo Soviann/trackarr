@@ -251,7 +251,7 @@
 | `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
 | `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
 | `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
-| `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions |
+| `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, `{ passive: false }` scroll blocking, and threshold close |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
@@ -259,6 +259,12 @@
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |
 | `ErrorBanner` | `components/ErrorBanner.tsx` | Dismissible alert banner for API and network errors |
 | `ErrorBoundary` | `components/ErrorBoundary.tsx` | React error boundary with error recovery fallback |
+
+### Design Tokens & Theming (`frontend/src/tokens.css`)
+- **Theme Variables**: 4 distinct themes (`vault`, `cyber`, `sunset`, `emerald`).
+- **Contrast Token**: `--accent-fg` dynamically guarantees WCAG AAA compliant text contrast on top of `--accent` across all themes (dark background on Vault, Cyber, Emerald; white on Sunset).
+- **Brand Tokens**: Dedicated tokens `--brand-imdb`, `--brand-tmdb`, `--brand-tvdb`, `--brand-anilist`, `--brand-radarr` (`#ffc230`), and `--brand-sonarr` (`#00c0ff`).
+- **Dynamic SVG Theming**: SVGs use `currentColor` or CSS variables (`var(--accent)`, `var(--ink)`, `var(--ink-dim)`) instead of static JS imports from `theme.ts`.
 
 ### Pages Map (`frontend/src/pages/`)
 
