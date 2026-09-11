@@ -10,7 +10,7 @@ const mockEvents: CalendarEvent[] = [
     title_name: 'Solo Leveling',
     type: 'series',
     is_anime: true,
-    cover_url: '/covers/sololeveling.jpg',
+    cover_url: 'sololeveling.jpg',
     air_date: new Date().toISOString().slice(0, 10),
     season_number: 2,
     episode_number: 8,
@@ -21,9 +21,11 @@ const mockEvents: CalendarEvent[] = [
 describe('CalendarWeekTimeline', () => {
   afterEach(() => cleanup())
 
-  it('renders week navigation and days', () => {
-    const { getByText, getAllByText } = render(<CalendarWeekTimeline events={mockEvents} />)
+  it('renders week navigation and days with resolved cover url', () => {
+    const { getByText, getAllByText, container } = render(<CalendarWeekTimeline events={mockEvents} />)
     expect(getByText('This week')).toBeTruthy()
     expect(getAllByText('Solo Leveling').length).toBeGreaterThan(0)
+    const img = container.querySelector('img[src="/api/covers/sololeveling.jpg"]')
+    expect(img).toBeTruthy()
   })
 })

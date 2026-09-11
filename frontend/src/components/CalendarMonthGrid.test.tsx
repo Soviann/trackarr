@@ -14,7 +14,7 @@ const mockEvents: CalendarEvent[] = [
     title_name: 'Frieren',
     type: 'series',
     is_anime: true,
-    cover_url: '/covers/frieren.jpg',
+    cover_url: 'frieren.webp',
     air_date: `${yyyy}-${mm}-15`,
     season_number: 1,
     episode_number: 5,
@@ -42,9 +42,11 @@ describe('CalendarMonthGrid', () => {
     expect(getByText('Today')).toBeTruthy()
   })
 
-  it('renders event pills on matching dates', () => {
-    const { getByText } = render(<CalendarMonthGrid events={mockEvents} />)
+  it('renders event pills on matching dates with resolved cover url', () => {
+    const { getByText, container } = render(<CalendarMonthGrid events={mockEvents} />)
     expect(getByText('Frieren')).toBeTruthy()
     expect(getByText('Dune 3')).toBeTruthy()
+    const img = container.querySelector('img[src="/api/covers/frieren.webp"]')
+    expect(img).toBeTruthy()
   })
 })
