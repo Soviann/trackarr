@@ -266,17 +266,17 @@ export function FilterDrawer(props: FilterDrawerProps) {
       style={swipeStyle}
       className={s.container}
     >
-      {/* Handle */}
-      {(!isSearchActive || open) && (
-        <div className={s.handle} onClick={() => setOpen(!open)}>
+      {/* Closed Handle: only visible when drawer is closed in library view */}
+      {!isSearchActive && !open && (
+        <div className={s.handle} onClick={() => setOpen(true)}>
           <button
             type="button"
             className={clsx(s.handleBtn, activeFilterCount > 0 && s.handleBtnActive)}
             onClick={(e) => {
               e.stopPropagation()
-              setOpen(!open)
+              setOpen(true)
             }}
-            aria-expanded={open}
+            aria-expanded={false}
           >
             <span className={s.handleText}>{t('search.filters')}</span>
             {activeFilterCount > 0 && (
@@ -291,12 +291,12 @@ export function FilterDrawer(props: FilterDrawerProps) {
               stroke-width="2.5"
               stroke-linecap="round"
               stroke-linejoin="round"
-              className={clsx(s.chevron, open && s.chevronOpen)}
+              className={s.chevron}
             >
-              <polyline points="6 9 12 15 18 9" />
+              <polyline points="18 15 12 9 6 15" />
             </svg>
           </button>
-          {!open && activeChips.length > 0 && (
+          {activeChips.length > 0 && (
             <div
               className={s.chipsScroll}
               role="list"
@@ -349,16 +349,39 @@ export function FilterDrawer(props: FilterDrawerProps) {
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
         {/* Drawer Header */}
         <div className={s.drawerHeader}>
-          <span className={s.drawerHeaderTitle}>
-            {activeFilterCount > 0
-              ? t('search.filtersActive', { count: activeFilterCount })
-              : t('search.filtersTitle')}
-          </span>
+          <button
+            type="button"
+            className={s.drawerHeaderTitleBtn}
+            onClick={() => setOpen(false)}
+            aria-label={t('common.close')}
+          >
+            <span className={s.drawerHeaderTitle}>
+              {activeFilterCount > 0
+                ? t('search.filtersActive', { count: activeFilterCount })
+                : t('search.filtersTitle')}
+            </span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className={s.drawerCollapseIcon}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
           {activeFilterCount > 0 && onReset && (
             <button
               type="button"
               className={s.resetFiltersBtn}
-              onClick={onReset}
+              onClick={(e) => {
+                e.stopPropagation()
+                onReset()
+              }}
               title={t('search.resetFilters')}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
