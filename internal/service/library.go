@@ -274,6 +274,62 @@ func (s *LibraryService) MarkEpisodesWatchedTx(ctx context.Context, titleID int6
 	return title, prompt, err
 }
 
+// MarkEpisodesUnwatched marks multiple episodes as unwatched and resets their watched status.
+func (s *LibraryService) MarkEpisodesUnwatched(ctx context.Context, tx *sql.Tx, titleID int64, episodeIDs []int64, seasonIDs []int64) (*model.Title, error) {
+	titles := repository.NewTitleRepository(tx)
+	titlesW := repository.NewTitleWriter(tx)
+	episodes := repository.NewEpisodeWriter(tx)
+
+	if err := episodes.BatchMarkUnwatched(ctx, episodeIDs); err != nil {
+		return nil, err
+	}
+
+	title, err := titles.GetByID(titleID)
+	if err != nil {
+		return nil, err
+	}
+	if title != nil {
+		decrement := safeRuntime(title.Runtime) * len(episodeIDs)
+		newTotal := title.TotalWatchMinutes - decrement
+		if newTotal < 0 {
+			newTotal = 0
+		}
+		update := repository.TitleUpdate{TotalWatchMinutes: &newTotal}
+		if title.Status == model.TitleStatusCompleted {
+			watching := model.TitleStatusWatching
+			update.Status = &watching
+		}
+		if err := titlesW.Update(ctx, titleID, update); err != nil {
+			log.Printf("library: update title for %d: %v", titleID, err)
+		}
+		title.TotalWatchMinutes = newTotal
+		if update.Status != nil {
+			title.Status = *update.Status
+		}
+	}
+
+	pushSeasonIDs := seasonIDs
+	if pushSeasonIDs == nil {
+		pushSeasonIDs = distinctSeasonIDs(ctx, tx, episodeIDs)
+	}
+	for _, seasonID := range pushSeasonIDs {
+		EnqueueAniListSeasonPush(ctx, tx, seasonID)
+	}
+
+	return title, nil
+}
+
+// MarkEpisodesUnwatchedTx wraps MarkEpisodesUnwatched in a managed database transaction.
+func (s *LibraryService) MarkEpisodesUnwatchedTx(ctx context.Context, titleID int64, episodeIDs []int64, seasonIDs []int64) (*model.Title, error) {
+	var title *model.Title
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		var err error
+		title, err = s.MarkEpisodesUnwatched(ctx, tx, titleID, episodeIDs, seasonIDs)
+		return err
+	})
+	return title, err
+}
+
 // MarkMovieWatched marks a movie title as completed and logs a watch event.
 // Returns a *RatingPrompt (or nil) so the caller can fire the push AFTER commit.
 func (s *LibraryService) MarkMovieWatched(ctx context.Context, tx *sql.Tx, titleID int64, source model.WatchEventSource, rawPayload *string) (*RatingPrompt, error) {

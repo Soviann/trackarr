@@ -119,6 +119,8 @@ Opening a title displays its rich details:
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
 - **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
+  - **Season Batch Watched Toggle**: A dedicated batch checkbox header aligned with the episode checkbox column (`18px`) allows toggling an entire season as watched or unwatched in a single tap, supported by optimistic UI updates and universal undo notification.
+  - **Immediate Metadata Refresh**: Tapping **Actions ➔ More ➔ Refresh Metadata** performs a synchronous update (`?sync=true`), immediately refreshing the cover art, season trees, and air dates in place without needing a manual page reload.
 - **Sagas, Universes & Franchise Tracker**: Dedicated module surfacing related works for movies (TMDB collections like *Marvel Cinematic Universe*, *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies):
   - **Saga Progress**: Global completion gauge based on titles (*« 24 / 34 Titles seen »*) with a linear progress bar.
   - **Next Chronological Title**: Highlighted indicator identifying the next unwatched chronological title to watch in the franchise (or completion message when 100% watched).
@@ -134,16 +136,16 @@ Opening a title displays its rich details:
 
 ---
 
-## 3. Search, URL Paste & Android Sharing
-
-<div align="center">
-  <img src="screenshots/04-search.png" alt="Live Instant Search" width="300" />
-</div>
+## 3. Search, Live Add & Mobile Sharing
 
 Adding media to Trackarr is fast and versatile:
-1. **Search by Name**: Search instantly across your local library (with full-text search) or query TMDB for new titles to add.
-2. **Direct URL Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry.
-3. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
+1. **Live Discovery & 1-Tap Add (`/add`)**:
+   - Start typing in the search bar on `/add` to query TMDB and AniList concurrently with debounced live search.
+   - **Local Library Detection**: If a title already exists in your library, it displays an *« In Library ↗ »* badge that links directly to its detail page.
+   - **1-Tap Quick Tracking**: Direct `[+ Plan to Watch]` and `[+ Watching]` buttons add the title fully enriched with external metadata immediately, accompanied by a 5-second universal undo toast notification.
+2. **Search by Name (`/search`)**: Search across your local library with full-text search (FTS5) or toggle TMDB discovery.
+3. **Direct URL Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry via the validation flow.
+4. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
 
 > [!TIP]
 > **Fast-Track Mobile Addition Workflow**:

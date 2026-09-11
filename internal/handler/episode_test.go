@@ -232,6 +232,43 @@ func TestEpisodeHandler_BatchMarkWatched_PlanToWatchToCompleted(t *testing.T) {
 	assert.Equal(t, model.TitleStatusCompleted, got.Status)
 }
 
+func TestEpisodeHandler_BatchMarkWatched_Unwatch(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Completed Show", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", true)
+	ep2 := testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", true)
+
+	r := chi.NewRouter()
+	r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(h.BatchMarkWatched))
+
+	// Unwatch ep1 and ep2
+	body := strings.NewReader(fmt.Sprintf(`{"episode_ids": [%d, %d], "watched": false}`, ep1.ID, ep2.ID))
+	req := httptest.NewRequest(http.MethodPost, "/titles/"+strconv.FormatInt(titleID, 10)+"/episodes/batch-watch", body)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var got model.Title
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+	assert.Equal(t, model.TitleStatusWatching, got.Status)
+
+	// Verify episodes in db are indeed watched=0
+	epRepo := repository.NewEpisodeRepository(db)
+	eps, err := epRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+	assert.False(t, eps[0].Watched)
+	assert.False(t, eps[1].Watched)
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }

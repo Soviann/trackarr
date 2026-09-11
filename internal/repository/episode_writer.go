@@ -90,6 +90,30 @@ func (w *EpisodeWriter) BatchMarkWatched(ctx context.Context, ids []int64, watch
 	return nil
 }
 
+func (w *EpisodeWriter) BatchMarkUnwatched(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]any, 0, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+	query := fmt.Sprintf(
+		`UPDATE episodes
+		 SET watched = 0,
+		     first_watched_at = NULL,
+		     last_watched_at  = NULL
+		 WHERE id IN (%s)`,
+		strings.Join(placeholders, ","),
+	)
+	if _, err := w.tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("batch mark unwatched: %w", err)
+	}
+	return nil
+}
+
 // UpdateMetadata sets name and air_date on an episode, only if the new value is non-empty.
 func (w *EpisodeWriter) UpdateMetadata(ctx context.Context, id int64, name, airDate string) error {
 	var sets []string

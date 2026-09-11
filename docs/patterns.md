@@ -140,14 +140,14 @@
 | POST | `/api/titles/{id}/rematch` | `titles.Rematch` | Reset IDs and trigger re-enrichment |
 | PUT | `/api/titles/{id}/external-ids` | `titles.SetExternalIDs` | Explicitly overwrite external IDs |
 | POST | `/api/titles/{id}/merge` | `titles.Merge` | Merge source title into target |
-| POST | `/api/titles/{id}/refresh` | `titles.RefreshOne` | Force immediate metadata refresh |
+| POST | `/api/titles/{id}/refresh` | `titles.RefreshOne` | Force immediate metadata refresh (supports `?sync=true` for synchronous execution) |
 | GET | `/api/titles/{id}/history` | `history.Get` | Detailed watch event history for title |
-| GET | `/api/tmdb/search` | `tmdbSearch.Search` | Search TMDB for movie or TV titles |
+| GET | `/api/tmdb/search` | `tmdbSearch.Search` | Search TMDB for movie or TV titles (supports `type=all` / `type=multi`) |
 | GET | `/api/anilist/search` | `anilistSearch.Search` | Search AniList for anime titles |
 | GET | `/api/releases` | `releasesHandler.List` | Latest Prowlarr releases with posters & local match |
 | POST | `/api/releases/add` | `releasesHandler.Add` | Direct 1-click title creation from release |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
-| POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched |
+| POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched or unwatched (`watched: false`) |
 | POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season |
 | DELETE| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
@@ -277,7 +277,7 @@
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` |
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` |
 | `/search` | `Search` | `pages/Search.tsx` |
-| `/add` | `Add` | `pages/Add.tsx` |
+| `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` |
