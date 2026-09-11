@@ -121,11 +121,10 @@ Opening a title displays its rich details:
 - **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
   - **Season Batch Watched Toggle**: A dedicated batch checkbox header aligned with the episode checkbox column (`18px`) allows toggling an entire season as watched or unwatched in a single tap, supported by optimistic UI updates and universal undo notification.
   - **Immediate Metadata Refresh**: Tapping **Actions ➔ More ➔ Refresh Metadata** performs a synchronous update (`?sync=true`), immediately refreshing the cover art, season trees, and air dates in place without needing a manual page reload.
-- **Sagas, Universes & Franchise Tracker**: Dedicated module surfacing related works for movies (TMDB collections like *Marvel Cinematic Universe*, *Harry Potter*, *Star Wars*, *Dune*), TV series (TheTVDB franchises like *Breaking Bad* / *Better Call Saul*), and animes (AniList side stories & movies):
-  - **Saga Progress**: Global completion gauge based on titles (*« 24 / 34 Titles seen »*) with a linear progress bar.
-  - **Next Chronological Title**: Highlighted indicator identifying the next unwatched chronological title to watch in the franchise (or completion message when 100% watched).
-  - **Horizontal Titles Strip**: Scrollable timeline chip strip with hidden scrollbar (`scrollbar-width: none`), seen checkmarks (`✓`), next highlight (`▶`), and 1-tap navigation.
-  - **Detailed Relations Grid**: Sorting toggle (⏱️ Timeline vs 📅 Release), category filters (*Movies*, *Series*, *OVAs*, *Spin-offs*), collapse/expand toggle, local library status badges (`✓ Watched`, `Plan to Watch`), and a 1-click `[+ Add]` button for missing titles.
+- **Sagas, Universes & Franchise Hub**: Compact glance row within the unified Hub Bar (~100px) alongside Watch History, preserving vertical space for immediate season visibility:
+  - **Glance Row**: Displays total titles, seen progress gauge (*« 24 / 34 Titles seen (71%) »*), next chronological title, and 1-tap drawer trigger.
+  - **Slide-up BottomSheet Drawer**: Full interactive drawer with progress bar, highlighted *Next Chronological Title* priority card, sorting toggle (⏱️ Timeline vs 📅 Release), category filters (*Movies*, *Series*, *OVAs*, *Spin-offs*), local library status badges (`✓ Watched`, `Plan to Watch`), and 1-click `[+ Add]` for missing titles.
+- **Watch History Drawer**: Slide-up bottom sheet replacing static overlays, grouping episode ranges (e.g. `S1 E1–4 · Apr 12`), localized watch dates, and rewatch badges (`×2`).
 - **AniList Season Strip**: Per-season community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries). Clicking **Link entry** or ✎ opens the season linker with instant in-app AniList search (with posters, media format, episode count, and 1-click linking) plus a direct *Search on AniList.co ↗* browser shortcut.
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.

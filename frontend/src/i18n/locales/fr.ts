@@ -129,6 +129,8 @@ export const fr: TranslationSchema = {
     castCrew: 'Casting & Équipe',
     mediaDetails: 'Détails du média',
     watchHistory: 'Historique de visionnage',
+    watchHistorySubtitle: 'Afficher les visionnages et rewatchs',
+    noWatchesRecorded: 'Aucun visionnage enregistré.',
     viewInTrackarr: 'Voir dans Trackarr',
     addToLibrary: 'Ajouter à la bibliothèque',
     openInArr: 'Ouvrir dans {app}',
@@ -320,6 +322,8 @@ export const fr: TranslationSchema = {
     seeOnProvider: 'Voir sur {provider}',
     titlesSeen: '{seen} / {total} Titres vus',
     nextChronological: 'PROCHAIN TITRE CHRONOLOGIQUE :',
+    nextToWatch: 'Suivant :',
+    explore: 'Explorer',
     allTitlesSeen: 'Tous les titres sont vus !',
   },
   sideStories: {

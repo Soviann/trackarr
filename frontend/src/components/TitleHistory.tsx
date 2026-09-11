@@ -2,6 +2,7 @@ import { useMemo } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import type { EpisodeHistory } from '../types'
 import { groupIntoRanges, formatRangeLabel, type EpisodeRangeGroup } from '../utils/episodeRanges'
+import { useTranslation } from '../i18n'
 import s from './TitleHistory.module.css'
 
 interface Props {
@@ -41,6 +42,7 @@ function buildSeasonGroups(episodes: EpisodeHistory[]): SeasonGroup[] {
 }
 
 export function TitleHistory({ titleId, onClose }: Props) {
+  const { t } = useTranslation()
   const { data, loading } = useApi<EpisodeHistory[]>(`/titles/${titleId}/history`)
 
   const seasonGroups = useMemo(() => data ? buildSeasonGroups(data) : [], [data])
@@ -48,44 +50,65 @@ export function TitleHistory({ titleId, onClose }: Props) {
   return (
     <div className={s.container}>
       <div className={s.header}>
-        <button className={s.backBtn} onClick={onClose} aria-label="Back">←</button>
-        <span className={s.title}>History</span>
+        <span className={s.title}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={s.clockIcon}
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          {t('details.watchHistory')}
+        </span>
+        <button className={s.closeBtn} onClick={onClose} aria-label={t('common.close')}>
+          ✕
+        </button>
       </div>
-      {loading && <div className={s.loading}>Loading…</div>}
-      {seasonGroups.map((sg) => (
-        <div key={sg.seasonNumber ?? 'movie'}>
-          {sg.seasonNumber != null && (
-            <div className={s.seasonDivider}>Season {sg.seasonNumber}</div>
-          )}
-          {sg.ranges.map((range) => {
-            const label = formatRangeLabel(range)
-            const isSingle = range.items.length === 1
-            const displayLabel = isSingle && range.episodeName
-              ? `${label} — ${range.episodeName}`
-              : label
-            const maxDate = range.items.reduce((max, e) =>
-              e.last_watched_at > max ? e.last_watched_at : max, range.items[0].last_watched_at)
-            return (
-              <div key={`${range.startEp}-${range.endEp}`} className={s.row}>
-                <div className={s.info}>
-                  <span className={s.epLabel}>{displayLabel}</span>
-                  <span className={s.date}>
-                    {new Date(maxDate).toLocaleDateString('en-US', {
-                      day: 'numeric', month: 'short', year: 'numeric'
-                    })}
-                  </span>
+
+      <div className={s.content}>
+        {loading && <div className={s.loading}>{t('common.loading')}</div>}
+        {seasonGroups.map((sg) => (
+          <div key={sg.seasonNumber ?? 'movie'}>
+            {sg.seasonNumber != null && (
+              <div className={s.seasonDivider}>Season {sg.seasonNumber}</div>
+            )}
+            {sg.ranges.map((range) => {
+              const label = formatRangeLabel(range)
+              const isSingle = range.items.length === 1
+              const displayLabel = isSingle && range.episodeName
+                ? `${label} — ${range.episodeName}`
+                : label
+              const maxDate = range.items.reduce((max, e) =>
+                e.last_watched_at > max ? e.last_watched_at : max, range.items[0].last_watched_at)
+              return (
+                <div key={`${range.startEp}-${range.endEp}`} className={s.row}>
+                  <div className={s.info}>
+                    <span className={s.epLabel}>{displayLabel}</span>
+                    <span className={s.date}>
+                      {new Date(maxDate).toLocaleDateString(undefined, {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  {isSingle && range.items[0].watch_count > 1 && (
+                    <span className={s.rewatchBadge}>×{range.items[0].watch_count}</span>
+                  )}
                 </div>
-                {isSingle && range.items[0].watch_count > 1 && (
-                  <span className={s.rewatchBadge}>×{range.items[0].watch_count}</span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ))}
-      {!loading && data?.length === 0 && (
-        <div className={s.loading}>No watches recorded.</div>
-      )}
+              )
+            })}
+          </div>
+        ))}
+        {!loading && data?.length === 0 && (
+          <div className={s.loading}>{t('details.noWatchesRecorded')}</div>
+        )}
+      </div>
     </div>
   )
 }
