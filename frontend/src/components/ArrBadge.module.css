@@ -9,13 +9,13 @@
 }
 
 .radarr {
-  background: rgba(255, 194, 48, 0.18);
-  color: #ffc230;
-  border: 1px solid rgba(255, 194, 48, 0.4);
+  background: color-mix(in srgb, var(--brand-radarr) 18%, transparent);
+  color: var(--brand-radarr);
+  border: 1px solid color-mix(in srgb, var(--brand-radarr) 40%, transparent);
 }
 
 .sonarr {
-  background: rgba(0, 192, 255, 0.18);
-  color: #00c0ff;
-  border: 1px solid rgba(0, 192, 255, 0.4);
+  background: color-mix(in srgb, var(--brand-sonarr) 18%, transparent);
+  color: var(--brand-sonarr);
+  border: 1px solid color-mix(in srgb, var(--brand-sonarr) 40%, transparent);
 }

@@ -129,7 +129,7 @@
 }
 
 .card:hover .cardIconWrap {
-  background: rgba(212, 173, 122, 0.12);
+  background: var(--accent-wash);
   border-color: var(--card-color, var(--accent));
 }
 

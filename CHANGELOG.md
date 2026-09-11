@@ -6,6 +6,25 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.8] — 2026-09-11
+
+### Ajouté
+- **Système de tokens de contraste et d'accessibilité WCAG AAA (`--accent-fg`)** :
+  - Introduction du token dynamique `--accent-fg` calibré sur l'ensemble des 4 thèmes (Vault: 8.55:1 AAA, Cyber: 8.00:1 AAA, Sunset: 3.67:1 AA bold / contraste élevé, Emerald: 7.40:1 AAA).
+  - Élimination des tokens fantômes dans `tokens.css` (`--bg-surface`, `--surface`, `--surface-hover`, `--text-dim`, `--text-muted`, `--radius-xs`, `--radius-sm`, `--radius-lg`, `--shadow-modal`, `--wash-anilist`).
+  - Unification des tokens de marque Radarr (`--brand-radarr: #ffc230`) et Sonarr (`--brand-sonarr: #00c0ff`).
+  - Carte d'intégration Jellyfin dédiée dans le panneau d'administration (`Admin.tsx`) sous la section *Intégrations & Services Externes*.
+- **Tiroirs de confirmation pour les actions destructives et de masse (`ConfirmationDrawer`)** :
+  - Sécurisation de la validation en masse des correspondances dans `MatchReview` (« Tout confirmer »).
+  - Sécurisation de la fusion globale des saisons dans `AdminSeasonAudit` (« Tout fusionner »).
+  - Sécurisation de la déconnexion du compte OAuth dans `AdminAniList` (« Se déconnecter »).
+
+### Modifié
+- **Thématisation dynamique des icônes SVG** :
+  - Remplacement des imports de couleurs statiques `colors.*` par `stroke="currentColor"` et variables CSS dans `Navbar`, `EpisodeRow`, `SearchBar`, `typeIcons` et `Admin`, adaptant immédiatement les glyphes lors d'un changement de thème.
+  - Nettoyage des paramètres d'URL (`cleanPath.split('?')[0]`) pour l'activation des onglets de la barre de navigation.
+  - Remplacement du fond d'alerte `ErrorBanner` par un voile sémantique rouge `color-mix(in srgb, var(--status-crit) 12%, var(--bg-elev))` au lieu d'un voile de couleur d'accent.
+
 ## [v1.18.7] — 2026-09-11
 
 ### Modifié
