@@ -4,6 +4,8 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
 import type { ContinueWatchingTitle } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useTranslation } from '../i18n'
+import { useUndo } from '../context/UndoContext'
 import s from './PresetLibrary.module.css'
 
 function toTile(
@@ -32,6 +34,8 @@ function toTile(
 }
 
 export function ContinueWatching(_props: { path?: string }) {
+  const { t } = useTranslation()
+  const { showUndo } = useUndo()
   const [items, setItems] = useState<ContinueWatchingTitle[] | null>(null)
   useScrollRestoration('continueWatching', items !== null)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +85,16 @@ export function ContinueWatching(_props: { path?: string }) {
       await apiFetch(`/titles/${item.id}/episodes/${currentEp.id}`, { method: 'PATCH' })
       const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching')
       setItems(data)
+      showUndo({
+        message: t('undo.quickMarked', {
+          title: item.name,
+          ep: `S${currentEp.season_number}E${currentEp.episode}`,
+        }),
+        onUndo: async () => {
+          await apiFetch(`/titles/${item.id}/episodes/${currentEp.id}`, { method: 'PATCH' })
+          loadTitles()
+        },
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark episode')
       loadTitles()

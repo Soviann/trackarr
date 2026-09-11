@@ -127,11 +127,8 @@
   height: 11px;
   margin-top: 2px;
   border-radius: 3px;
-  background: var(--bg-elev2);
-  animation: skeletonPulse 1.4s ease-in-out infinite;
+  background: var(--skeleton-bg, var(--bg-elev2));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.85; }
-}

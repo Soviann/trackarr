@@ -431,4 +431,13 @@ export const fr: TranslationSchema = {
     loadingError: 'Impossible de charger la rétrospective Wrapped',
     retry: 'Réessayer',
   },
+  undo: {
+    undo: 'Annuler',
+    dismiss: 'Ignorer',
+    episodeMarked: 'Marqué {ep} comme vu',
+    quickMarked: 'Marqué {title} {ep} comme vu',
+    movieWatched: 'Marqué {title} comme vu',
+    titleDeleted: '{title} supprimé',
+    actionUndone: 'Action annulée',
+  },
 }

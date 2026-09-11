@@ -34,6 +34,10 @@
 5. **Duplicate Detection & Union-Find**:
    - `DuplicateSeriesGroups` queries series sharing `imdb_id`, `tmdb_id` (>0), or `tvdb_id` (>0). Empty strings (`""`) and `0` values are strictly excluded.
    - Results are unified using Disjoint-Set Union (Union-Find) and sorted deterministically.
+6. **Universal Undo Snackbar & Haptic Feedback**:
+   - State-changing actions (`+1` quick-mark, episode watch toggles, movie watch status, and title deletion) trigger a floating `UndoSnackbar` with a 5-second circular perimeter radial countdown.
+   - Quick-mark `+1` buttons trigger an overshoot spring animation (`springPop`) and haptic vibration (`haptic([15, 30, 15])`).
+   - Destructive title deletion employs delayed execution (`onExpire`) allowing full undo prior to permanent SQLite purge.
 
 ---
 

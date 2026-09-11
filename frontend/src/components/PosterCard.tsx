@@ -12,6 +12,8 @@ import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 import { useLongPress } from '../hooks/useLongPress'
+import { haptic } from '../utils/haptic'
+import { useUndo } from '../context/UndoContext'
 import s from './PosterCard.module.css'
 
 interface PosterCardProps {
@@ -25,20 +27,36 @@ interface PosterCardProps {
 
 export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress, onUpdate, overlay, selecting }: PosterCardProps) {
   const { t } = useTranslation()
+  const { showUndo } = useUndo()
   const sortField = useTitleStore(st => st.sort.field)
   const sortCaption = formatSortCaption(title, sortField)
   const name = getName(title)
   const [toggling, setToggling] = useState(false)
+  const [popping, setPopping] = useState(false)
   const ne = title.next_episode
 
   const handleQuickMark = async (e: MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
     if (!ne || toggling) return
+    haptic([15, 30, 15])
+    setPopping(true)
+    setTimeout(() => setPopping(false), 450)
     setToggling(true)
+    const targetEpisode = ne
     try {
-      await apiFetch(`/titles/${title.id}/episodes/${ne.id}`, { method: 'PATCH' })
+      await apiFetch(`/titles/${title.id}/episodes/${targetEpisode.id}`, { method: 'PATCH' })
       onUpdate?.()
+      showUndo({
+        message: t('undo.quickMarked', {
+          title: name,
+          ep: `S${targetEpisode.season_number}E${targetEpisode.episode}`,
+        }),
+        onUndo: async () => {
+          await apiFetch(`/titles/${title.id}/episodes/${targetEpisode.id}`, { method: 'PATCH' })
+          onUpdate?.()
+        },
+      })
     } catch (err) {
       console.error('Failed to mark episode:', err)
     } finally {
@@ -117,7 +135,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         {hasQuickAction && (
           <button
             type="button"
-            className={clsx(s.quickPlusBtn, toggling && s.quickPlusBtnLoading)}
+            className={clsx(s.quickPlusBtn, toggling && s.quickPlusBtnLoading, popping && s.quickPlusBtnPopping)}
             onClick={handleQuickMark}
             disabled={toggling}
             aria-label={`Mark S${ne.season_number} E${ne.episode} as watched`}

@@ -30,6 +30,7 @@ import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useTranslation } from '../i18n'
+import { useUndo } from '../context/UndoContext'
 import s from './TitleDetail.module.css'
 
 function toggleEpisodeWatched(title: Title, episodeId: number): Title {
@@ -74,6 +75,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [actionError, setActionError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const { showUndo } = useUndo()
   const invalidate = useTitleStore((st) => st.invalidate)
 
   const sortedSeasons = useMemo(
@@ -125,10 +127,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   }
 
   const handleEpisodeToggle = async (episodeId: number) => {
+    const foundEp = title?.seasons?.flatMap((s) => s.episodes ?? []).find((e) => e.id === episodeId)
+    const wasWatched = foundEp?.watched
     setData((prev) => prev ? toggleEpisodeWatched(prev, episodeId) : prev)
     try {
       const updated = await apiFetch<Title>(`/titles/${title.id}/episodes/${episodeId}`, { method: 'PATCH' })
       setData(updated)
+      if (!wasWatched) {
+        showUndo({
+          message: t('undo.episodeMarked', { ep: `E${foundEp?.episode ?? episodeId}` }),
+          onUndo: async () => {
+            await handleEpisodeToggle(episodeId)
+          },
+        })
+      }
     } catch (e) {
       setActionError('Failed to update episode')
       mutate()
@@ -201,14 +213,24 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   // on a page whose subject no longer exists, so route back to the library and
   // invalidate its cache so the deleted title drops out of the list.
   const handleDelete = async () => {
-    try {
-      await apiFetch(`/titles/${title.id}`, { method: 'DELETE' })
-      invalidate()
-      route(routeTo.home())
-    } catch (e) {
-      setActionError('Failed to delete title')
-      throw e // keep the confirmation drawer open so the user can retry
-    }
+    setShowDeleteConfirm(false)
+    const targetId = title.id
+    const targetName = getName(title)
+    route(routeTo.home())
+    showUndo({
+      message: t('undo.titleDeleted', { title: targetName }),
+      onUndo: () => {
+        route(routeTo.title(targetId))
+      },
+      onExpire: async () => {
+        try {
+          await apiFetch(`/titles/${targetId}`, { method: 'DELETE' })
+          invalidate()
+        } catch (e) {
+          console.error('Failed to delete title:', e)
+        }
+      },
+    })
   }
 
   // Build meta line

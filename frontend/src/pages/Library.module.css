@@ -147,13 +147,9 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   border-radius: 8px;
-  background: var(--bg-elev);
-  animation: skeletonPulse 1.4s ease-in-out infinite;
-}
-
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.85; }
+  background: var(--skeleton-bg, var(--bg-elev));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 /* MatchReviewBanner */

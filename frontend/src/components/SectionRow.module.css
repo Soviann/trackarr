@@ -59,16 +59,15 @@
   max-width: 180px;
   height: 1em;
   border-radius: 4px;
-  background: var(--bg-elev2);
-  animation: skeletonPulse 1.4s ease-in-out infinite;
+  background: var(--skeleton-bg, var(--bg-elev2));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .miniPosterSkeleton {
   background-image: none;
-  animation: skeletonPulse 1.4s ease-in-out infinite;
+  background: var(--skeleton-bg, var(--bg-elev2));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.85; }
-}
