@@ -127,6 +127,8 @@ export const en = {
     castCrew: 'Cast & Crew',
     mediaDetails: 'Media Details',
     watchHistory: 'Watch History',
+    watchHistorySubtitle: 'View watch logs & rewatches',
+    noWatchesRecorded: 'No watches recorded.',
     viewInTrackarr: 'View in Trackarr',
     addToLibrary: 'Add to Library',
     openInArr: 'Open in {app}',
@@ -318,6 +320,8 @@ export const en = {
     seeOnProvider: 'See on {provider}',
     titlesSeen: '{seen} / {total} Titles seen',
     nextChronological: 'NEXT CHRONOLOGICAL TITLE:',
+    nextToWatch: 'Next:',
+    explore: 'Explore',
     allTitlesSeen: 'All titles completed!',
   },
   sideStories: {

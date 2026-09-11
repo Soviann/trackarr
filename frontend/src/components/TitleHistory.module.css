@@ -1,11 +1,111 @@
-.container { background: var(--bg); min-height: 100vh; }
-.header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border-strong); }
-.backBtn { background: none; border: none; font-size: 18px; color: var(--ink-dim); cursor: pointer; padding: 0; }
-.title { font-size: 15px; font-weight: 700; }
-.loading { padding: 20px 16px; color: var(--ink-dim); }
-.seasonDivider { padding: 8px 16px; font-weight: 600; color: var(--ink-dim); font-size: 0.85rem; border-bottom: 1px solid var(--bg-elev2); }
-.row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg-elev2); }
-.info { flex: 1; min-width: 0; }
-.epLabel { display: block; font-size: 13px; font-weight: 600; color: var(--ink); }
-.date { display: block; font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
-.rewatchBadge { font-size: 10px; font-weight: 700; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-radius: 4px; padding: 2px 6px; }
+.container {
+  background: var(--bg-elev);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev);
+  z-index: 10;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.clockIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: var(--border-strong);
+  color: var(--ink);
+}
+
+.content {
+  overflow-y: auto;
+  padding-bottom: var(--space-xl);
+}
+
+.loading {
+  padding: 24px 16px;
+  color: var(--ink-dim);
+  text-align: center;
+  font-size: 13px;
+}
+
+.seasonDivider {
+  padding: 6px 16px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-elev2);
+  border-bottom: 1px solid var(--border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.epLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.date {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin-top: 2px;
+}
+
+.rewatchBadge {
+  font-size: 10px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+}

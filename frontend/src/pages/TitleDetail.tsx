@@ -24,6 +24,7 @@ import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholde
 import { TitleHistory } from '../components/TitleHistory'
 import { SeasonSideStories } from '../components/SeasonSideStories'
 import { FranchiseRelationsSection } from '../components/FranchiseRelationsSection'
+import { BottomSheet } from '../components/BottomSheet'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { NextEpisodeHero } from '../components/NextEpisodeHero'
 import { PersonalNotesCard } from '../components/PersonalNotesCard'
@@ -612,23 +613,21 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         )}
       </div>
 
-      {/* Franchise & Univers Relations */}
-      {title.relations && title.relations.length > 0 && (
-        <FranchiseRelationsSection relations={title.relations} />
-      )}
+      {/* Franchise & Watch History Hub Bar */}
+      <FranchiseRelationsSection
+        relations={title.relations}
+        onOpenHistory={() => setShowHistory(true)}
+      />
 
-      {/* Watch history button */}
-      <div className={s.historyBtnWrap}>
-        <button className={s.historyBtn} onClick={() => setShowHistory(true)}>
-          {t('details.watchHistory')}
-        </button>
-      </div>
-
-      {/* Watch history overlay */}
+      {/* Watch history bottom sheet drawer */}
       {showHistory && (
-        <div className={s.historyOverlay}>
+        <BottomSheet
+          open={showHistory}
+          onClose={() => setShowHistory(false)}
+          ariaLabel={t('details.watchHistory')}
+        >
           <TitleHistory titleId={title.id} onClose={() => setShowHistory(false)} />
-        </div>
+        </BottomSheet>
       )}
 
       {/* Progress bar (series/anime) */}

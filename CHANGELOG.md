@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.0] — 2026-09-11
+
+### Modifié
+- **Refonte des blocs Univers & Franchise et Historique de visionnage (`TitleDetail`)** :
+  - Remplacement de l'ancien bloc double empilé (~720px de hauteur) par une barre de raccourcis compacte unifiée (Hub Bar ~100px) regroupant Univers/Franchise et Historique de visionnage (Proposition 3C).
+  - Réduction de plus de 600px de défilement vertical, rendant la progression et la liste des saisons et épisodes immédiatement visibles sans défilement sur mobile.
+  - Affichage de l'aperçu synthétique dans chaque rangée (titre, nombre d'éléments, pourcentage de complétion, prochain titre chronologique ou dernier visionnage).
+  - Intégration de tiroirs coulissants modernes (`BottomSheet`) avec fermeture au glisser, support du bouton retour Android et a11y pour explorer l'univers étendu ou l'historique détaillé.
+
 ## [v1.20.1] — 2026-09-11
 
 ### Corrigé

@@ -1,51 +1,288 @@
-.card {
+/* ── Proposal 3C: Combined Hub Bar ──────────────────────────────────── */
+.hubBar {
   margin: 10px var(--space-lg);
   background: var(--bg-elev);
-  border-radius: var(--radius-card);
-  padding: var(--space-md) 14px;
   border: 1px solid var(--border);
-  position: relative;
-  z-index: 1;
-}
-
-.sagaTrackerCard {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(17, 24, 39, 0.9));
-  border: 1px solid rgba(6, 182, 212, 0.3);
   border-radius: var(--radius-card);
-  padding: 14px 16px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.sagaHeader {
+.hubRow {
+  width: 100%;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: inherit;
 }
 
-.sagaTitle {
-  font-size: 13px;
-  font-weight: 600;
+.hubRow:hover {
+  background: var(--bg-elev2);
+}
+
+.hubRow:active {
+  background: var(--surface-hover);
+}
+
+.hubRow + .hubRow {
+  border-top: 1px solid var(--border);
+}
+
+.hubRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hubRowRight {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--ink);
+  flex-shrink: 0;
+  padding-left: 8px;
 }
 
-.sagaIcon {
+.iconWrapperFranchise {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-wash);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconWrapperHistory {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: var(--status-ok, #22c55e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hubInfo {
+  min-width: 0;
+  flex: 1;
+}
+
+.hubTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hubTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countBadge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hubSubline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hubProgressText {
+  font-size: 11px;
+  color: var(--ink-dim);
+  flex-shrink: 0;
+}
+
+.hubNextText {
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hubHistorySubtext {
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+.hubDot {
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.hubProgressBarWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.hubProgressPct {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.hubProgressBar {
+  width: 44px;
+  height: 4px;
+  background: var(--bg-elev2);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.hubProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  border-radius: var(--radius-pill);
+}
+
+.chevron {
+  font-size: 16px;
+  color: var(--ink-dim);
+  margin-left: 2px;
+  line-height: 1;
+}
+
+/* ── Franchise Drawer (BottomSheet Content) ─────────────────────────── */
+.drawerContainer {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev);
+  z-index: 10;
+}
+
+.drawerTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.drawerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerIcon {
   color: var(--accent);
   flex-shrink: 0;
 }
 
-.sagaProgressCount {
-  font-size: 11px;
+.drawerCountBadge {
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.drawerCloseBtn {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.drawerCloseBtn:hover {
+  background: var(--border-strong);
+  color: var(--ink);
+}
+
+.drawerBody {
+  overflow-y: auto;
+  padding: 14px 16px var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Drawer Progress Box */
+.drawerProgressBox {
+  background: var(--bg-surface, #090d16);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.drawerProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.drawerProgressLabel {
+  color: var(--ink-dim);
   font-weight: 600;
-  white-space: nowrap;
+}
+
+.drawerProgressPct {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
 }
 
 .sagaProgressBar {
@@ -60,136 +297,52 @@
   height: 100%;
   background: linear-gradient(90deg, #06b6d4, #3b82f6);
   border-radius: var(--radius-pill);
-  transition: width 0.3s ease;
 }
 
-.sagaNextBox {
-  background: rgba(6, 182, 212, 0.1);
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  border-radius: 8px;
+/* Next Chronological Card */
+.nextCard {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(17, 24, 39, 0.8));
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  border-radius: 10px;
   padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-}
-
-.sagaNextLabel {
-  color: var(--ink-dim);
-  font-size: 10px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.sagaNextTitle {
-  font-weight: 700;
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.sagaTitlesStrip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 2px 0 6px 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.sagaTitlesStrip::-webkit-scrollbar {
-  display: none;
-}
-
-.sagaTitleChip {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-family: inherit;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
   cursor: pointer;
-  color: var(--ink-dim);
   transition: all 0.15s ease;
-  user-select: none;
 }
 
-.sagaTitleChip:hover {
-  background: var(--bg-elev2);
-  border-color: var(--border-strong, #334155);
-  color: var(--ink);
-}
-
-.sagaTitleChip.seen {
-  border-color: rgba(34, 197, 94, 0.4);
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.sagaTitleChip.next {
+.nextCard:hover {
   border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(17, 24, 39, 0.9));
+}
+
+.nextCardBadge {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
   color: var(--accent);
-  background: var(--accent-wash, rgba(6, 182, 212, 0.12));
-  font-weight: 600;
-}
-
-.cardHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-@media (min-width: 600px) {
-  .cardHeader {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.cardLabelWrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cardLabel {
-  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ink-dim);
+}
+
+.nextCardTitle {
+  font-size: 13px;
   font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
 }
 
-.providerBadge {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  padding: 1px 6px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.countBadge {
+.nextCardFormat {
   font-size: 10px;
-  color: var(--text-dim);
-  font-weight: 500;
+  color: var(--ink-dim);
+  margin-top: 2px;
 }
 
+/* Controls: Sort and Filter */
 .controlsArea {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  justify-content: space-between;
 }
 
 .sortToggle {
@@ -203,74 +356,53 @@
 }
 
 .sortBtn {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-dim);
   background: transparent;
   border: none;
-  padding: 3px 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  padding: 3px 8px;
   border-radius: 6px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.sortBtn:hover {
-  color: var(--ink);
+  transition: all 0.15s ease;
 }
 
 .sortBtnActive {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
-  color: var(--ink);
-  font-weight: 600;
-  border: 1px solid var(--border);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 700;
 }
 
 .filterTabs {
   display: flex;
-  align-items: center;
-  gap: 3px;
-  background: var(--surface);
-  padding: 2px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  gap: 6px;
   overflow-x: auto;
-  max-width: 100%;
+  padding-bottom: 2px;
 }
 
 .filterBtn {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
   font-size: 10px;
-  font-weight: 500;
-  color: var(--text-dim);
-  background: transparent;
-  border: none;
-  padding: 3px 8px;
-  border-radius: 6px;
+  color: var(--ink-dim);
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.filterBtn:hover {
-  color: var(--ink);
+  transition: all 0.15s ease;
 }
 
 .filterBtnActive {
   background: var(--accent);
-  color: #ffffff;
-  font-weight: 600;
+  color: var(--accent-fg);
+  font-weight: 700;
+  border-color: var(--accent);
 }
 
+/* Relations List */
 .grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-}
-
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .itemCard {

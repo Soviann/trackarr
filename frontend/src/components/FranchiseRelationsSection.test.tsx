@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, fireEvent, cleanup } from '@testing-library/preact'
 import { FranchiseRelationsSection } from './FranchiseRelationsSection'
 import type { TitleRelation } from '../types'
@@ -29,32 +29,63 @@ function makeRelation(overrides: Partial<TitleRelation> = {}): TitleRelation {
 }
 
 describe('FranchiseRelationsSection', () => {
-  it('renders nothing when relations list is empty', () => {
+  it('renders nothing when relations list is empty and no onOpenHistory', () => {
     const { container } = render(<FranchiseRelationsSection relations={[]} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders section title, count and filter tabs', () => {
+  it('renders combined hub bar with both franchise row and history row', () => {
+    const rels = [
+      makeRelation({ id: 1, external_id: 101, format: 'MOVIE', title: 'Movie 1', matched_status: 'completed' }),
+      makeRelation({ id: 2, external_id: 102, format: 'TV', title: 'Series 1' }),
+    ]
+    const onOpenHistory = vi.fn()
+    const { getByText } = render(
+      <FranchiseRelationsSection relations={rels} onOpenHistory={onOpenHistory} />
+    )
+
+    // Franchise glance row
+    expect(getByText('AniList Relations')).toBeTruthy()
+    expect(getByText('(2)')).toBeTruthy()
+    expect(getByText('1 / 2 Titles seen')).toBeTruthy()
+    expect(getByText(/Series 1/)).toBeTruthy()
+    expect(getByText('50%')).toBeTruthy()
+
+    // History glance row
+    const historyBtn = getByText('Watch History')
+    expect(historyBtn).toBeTruthy()
+    fireEvent.click(historyBtn)
+    expect(onOpenHistory).toHaveBeenCalledOnce()
+  })
+
+  it('opens drawer on franchise row click and renders filter tabs', () => {
     const rels = [
       makeRelation({ id: 1, external_id: 101, format: 'MOVIE', title: 'Movie 1' }),
       makeRelation({ id: 2, external_id: 102, format: 'OVA', title: 'OVA 1' }),
       makeRelation({ id: 3, external_id: 103, relation_type: 'SPIN_OFF', format: 'TV', title: 'Spin-off 1' }),
     ]
-    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getByText, getAllByText } = render(
+      <FranchiseRelationsSection relations={rels} />
+    )
 
-    expect(getAllByText('Universe & Franchise').length).toBeGreaterThanOrEqual(1)
+    // Initially drawer is closed; open it by clicking the hub row
+    fireEvent.click(getByText('AniList Relations'))
+
+    expect(getAllByText('AniList Relations').length).toBeGreaterThanOrEqual(1)
     expect(getByText('All (3)')).toBeTruthy()
     expect(getByText('Movies (1)')).toBeTruthy()
     expect(getByText('OVAs (1)')).toBeTruthy()
     expect(getByText('Spin-offs (1)')).toBeTruthy()
   })
 
-  it('filters relations when clicking category tabs', () => {
+  it('filters relations when clicking category tabs inside drawer', () => {
     const rels = [
       makeRelation({ id: 1, external_id: 101, format: 'MOVIE', title: 'Movie 1' }),
       makeRelation({ id: 2, external_id: 102, format: 'OVA', title: 'OVA 1' }),
     ]
-    const { getAllByText, getByText, queryByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
     expect(getAllByText(/Movie 1/).length).toBeGreaterThanOrEqual(1)
     expect(getAllByText(/OVA 1/).length).toBeGreaterThanOrEqual(1)
@@ -62,7 +93,6 @@ describe('FranchiseRelationsSection', () => {
     // Filter to movies
     fireEvent.click(getByText('Movies (1)'))
     expect(getAllByText(/Movie 1/).length).toBeGreaterThanOrEqual(1)
-    // OVA 1 should still be in chips strip but not in the items grid
     expect(document.querySelector('.itemTitle')?.textContent).toContain('Movie 1')
 
     // Filter to OVAs
@@ -75,13 +105,15 @@ describe('FranchiseRelationsSection', () => {
     expect(getAllByText(/OVA 1/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows matched watch status badge correctly', () => {
+  it('shows matched watch status badge correctly inside drawer', () => {
     const rels = [
       makeRelation({ id: 1, matched_title_id: 50, matched_status: 'completed', title: 'Movie Vu' }),
       makeRelation({ id: 2, matched_title_id: 51, matched_status: 'watching', title: 'Movie En cours' }),
       makeRelation({ id: 3, matched_title_id: null, title: 'Movie Absent' }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
     expect(getByText('✓ Watched (Trackarr)')).toBeTruthy()
     expect(getByText('Plan to Watch')).toBeTruthy()
@@ -93,10 +125,11 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 1, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 671, format: 'MOVIE', title: 'Harry Potter 1', year: 2001 }),
       makeRelation({ id: 2, provider: 'tmdb', relation_type: 'COLLECTION', external_id: 672, format: 'MOVIE', title: 'Harry Potter 2', year: 2002 }),
     ]
-    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
-    expect(getAllByText('Saga & Collection').length).toBeGreaterThanOrEqual(1)
-    expect(getByText('TMDB Saga')).toBeTruthy()
+    expect(getAllByText('TMDB Saga').length).toBeGreaterThanOrEqual(1)
     expect(getAllByText(/Harry Potter 1/).length).toBeGreaterThanOrEqual(1)
     expect(getAllByText(/Harry Potter 2/).length).toBeGreaterThanOrEqual(1)
   })
@@ -106,7 +139,9 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 1, sort_order: 2, year: 2010, title: 'B Movie' }),
       makeRelation({ id: 2, sort_order: 1, year: 2020, title: 'A Movie' }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
     // Toggle to Release Date
     const releaseBtn = getByText('📅 Release')
@@ -119,7 +154,7 @@ describe('FranchiseRelationsSection', () => {
     expect(timelineBtn.className).toContain('sortBtnActive')
   })
 
-  it('collapses by default above 3 items and expands when clicking Show more', () => {
+  it('collapses by default above 3 items and expands when clicking Show more in drawer', () => {
     const rels = [
       makeRelation({ id: 1, external_id: 1, title: 'Item 1' }),
       makeRelation({ id: 2, external_id: 2, title: 'Item 2' }),
@@ -127,7 +162,9 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 4, external_id: 4, title: 'Item 4' }),
       makeRelation({ id: 5, external_id: 5, title: 'Item 5' }),
     ]
-    const { getAllByText, getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
     // Items 1, 2, 3 visible in grid
     expect(getAllByText(/Item 1/).length).toBeGreaterThanOrEqual(1)
@@ -149,25 +186,21 @@ describe('FranchiseRelationsSection', () => {
     expect(getByText('Show more (+2)')).toBeTruthy()
   })
 
-  it('renders saga tracker progress, next chronological title, and chips', () => {
+  it('renders progress and next chronological title in hub bar and drawer', () => {
     const rels = [
       makeRelation({ id: 1, external_id: 101, title: 'Iron Man', year: 2008, sort_order: 1, matched_status: 'completed' }),
       makeRelation({ id: 2, external_id: 102, title: 'Iron Man 2', year: 2010, sort_order: 2, matched_status: 'completed' }),
       makeRelation({ id: 3, external_id: 103, title: 'The Avengers', year: 2012, sort_order: 3, matched_status: 'watching' }),
       makeRelation({ id: 4, external_id: 104, title: 'Iron Man 3', year: 2013, sort_order: 4 }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
     // 2 out of 4 titles seen
-    expect(getByText('2 / 4 Titles seen')).toBeTruthy()
+    expect(getAllByText('2 / 4 Titles seen').length).toBeGreaterThanOrEqual(1)
     // Next chronological title
-    expect(getByText('The Avengers (2012)')).toBeTruthy()
-
-    // Chips
-    expect(getByText('✓ Iron Man (2008)')).toBeTruthy()
-    expect(getByText('✓ Iron Man 2 (2010)')).toBeTruthy()
-    expect(getByText('▶ The Avengers (2012)')).toBeTruthy()
-    expect(getByText('Iron Man 3 (2013)')).toBeTruthy()
+    expect(getAllByText(/The Avengers/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('displays completion message when all titles are seen', () => {
@@ -175,9 +208,11 @@ describe('FranchiseRelationsSection', () => {
       makeRelation({ id: 1, external_id: 101, title: 'Movie 1', matched_status: 'completed' }),
       makeRelation({ id: 2, external_id: 102, title: 'Movie 2', matched_status: 'completed' }),
     ]
-    const { getByText } = render(<FranchiseRelationsSection relations={rels} />)
+    const { getAllByText, getByText } = render(
+      <FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />
+    )
 
-    expect(getByText('2 / 2 Titles seen')).toBeTruthy()
+    expect(getAllByText('2 / 2 Titles seen').length).toBeGreaterThanOrEqual(1)
     expect(getByText('All titles completed!')).toBeTruthy()
   })
 })
