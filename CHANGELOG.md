@@ -6,7 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
-## [v1.18.6] — 2026-09-10
+## [v1.18.7] — 2026-09-11
+
+### Modifié
+- **Refonte compacte UX/UI des filtres et du tri (`FilterDrawer`)** :
+  - Remplacement des 20+ boutons puces (chips) encombrants par des contrôles compacts : sélecteur de tri stylisé avec bouton toggle d'ordre rapide `[ ↑ / ↓ ]`, sélecteur de statut de visionnage et contrôle segmenté pour le type (`Tout`, `Film`, `Série`) avec pastille Anime.
+  - Réduction de plus de 60 % de la hauteur du tiroir déplié (passant de 480 px à ~170 px), laissant plus de 80 % de l'écran visible pour la grille de jaquettes.
+  - Élimination complète du vide sous le tiroir grâce à un ajustement automatique au contenu sans padding mort au-dessus de la barre de navigation.
+  - Ajout d'un sélecteur contextuel de statut de série s'affichant uniquement lorsque le type `Série` est actif.
+
+
 
 ### Modifié
 - **Refonte UX/UI du bouton rapide « +1 » sur les cartes de la bibliothèque et des strips** :
