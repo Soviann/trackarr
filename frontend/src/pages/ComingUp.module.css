@@ -162,15 +162,10 @@
 
 .skeletonTile {
   aspect-ratio: 2 / 3;
-  background: var(--bg-elev);
+  background: var(--skeleton-bg, var(--bg-elev));
+  background-size: 200% 100%;
   border-radius: var(--radius-poster);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 0.3; }
-  100% { opacity: 0.6; }
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .empty {

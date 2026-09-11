@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.19.0] — 2026-09-11
+
+### Ajouté
+- **Notification universelle d'annulation avec compte à rebours circulaire périmétrique (`UndoSnackbar`)** :
+  - Composant toast snackbar flottant centré au-dessus de la barre de navigation avec minuterie circulaire SVG radiale animée (compte à rebours de 5 secondes avec anneau périmétrique s'épuisant en sens horaire et affichage des secondes restantes).
+  - Déclenchement automatique sur les actions modifiant l'état : marquage rapide « +1 », marquage d'épisode vu, marquage de film vu, suppression de titre.
+  - Bouton d'annulation (« Annuler » / « Undo ») permettant d'inverser immédiatement l'action effectuée sans friction.
+  - Exécution différée sécurisée pour la suppression de titre (`onExpire`) garantissant un véritable retour en arrière en cas d'annulation.
+  - Nettoyage et vidage automatique des actions en attente lors du déchargement de la fenêtre (`beforeunload`).
+- **Retour haptique et animation de ressort sur les boutons « +1 »** :
+  - Animation physique de ressort (`@keyframes springPop`) avec rebond dynamique à l'appui sur le bouton `+1` des affiches (`PosterCard`, `PosterTile`).
+  - Déclenchement d'une vibration haptique courte (`haptic([15, 30, 15])`) via l'API Vibration des terminaux mobiles.
+- **Vagues de chargement shimmer sur les squelettes (`shimmerWave`)** :
+  - Remplacement des pulsations d'opacité statiques par une vague de brillance animée directionnelle (`background-position` sur dégradé linéaire multi-stops) pour l'ensemble des squelettes de l'application (`Library`, `Releases`, `ComingUp`, `PresetLibrary`, `SectionCards`, `SectionRow`).
+  - Intégration harmonieuse avec les 4 thèmes via le token dynamique `--skeleton-bg` et `@keyframes shimmerWave`.
+
 ## [v1.18.9] — 2026-09-11
 
 ### Ajouté

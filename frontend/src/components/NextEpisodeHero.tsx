@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks'
 import type { Title, TitleStatus } from '../types'
-import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes, isUnairedOrTBA } from '../utils'
+import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes, isUnairedOrTBA, getName } from '../utils'
 import { useTranslation } from '../i18n'
+import { useUndo } from '../context/UndoContext'
 import s from './NextEpisodeHero.module.css'
 
 interface NextEpisodeHeroProps {
@@ -12,6 +13,7 @@ interface NextEpisodeHeroProps {
 
 export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: NextEpisodeHeroProps) {
   const { t } = useTranslation()
+  const { showUndo } = useUndo()
   const [busy, setBusy] = useState(false)
 
   if (title.status === 'completed' || title.status === 'dropped' || title.caught_up) {
@@ -47,8 +49,17 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
             onClick={async () => {
               if (busy || !onStatusChange) return
               setBusy(true)
+              const prevStatus = title.status
               try {
                 await onStatusChange('completed')
+                showUndo({
+                  message: t('undo.movieWatched', { title: getName(title) }),
+                  onUndo: async () => {
+                    if (onStatusChange && prevStatus) {
+                      await onStatusChange(prevStatus)
+                    }
+                  },
+                })
               } finally {
                 setBusy(false)
               }
@@ -93,8 +104,18 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
     const handleMarkNext = async () => {
       if (busy || !nextEp) return
       setBusy(true)
+      const targetEp = nextEp
       try {
-        await onEpisodeToggle(nextEp.id)
+        await onEpisodeToggle(targetEp.id)
+        showUndo({
+          message: t('undo.quickMarked', {
+            title: getName(title),
+            ep: epCode,
+          }),
+          onUndo: async () => {
+            await onEpisodeToggle(targetEp.id)
+          },
+        })
       } finally {
         setBusy(false)
       }

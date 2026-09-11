@@ -318,8 +318,9 @@
 .skeletonCard {
   height: 72px;
   border-radius: var(--radius-card);
-  background: var(--bg-elev);
-  animation: skeletonPulse 1.4s ease-in-out infinite;
+  background: var(--skeleton-bg, var(--bg-elev));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .emptyState {
@@ -348,7 +349,4 @@
   border-color: var(--border-strong);
 }
 
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.85; }
-}
+

@@ -429,6 +429,15 @@ export const en = {
     loadingError: 'Unable to load Wrapped retrospective',
     retry: 'Try Again',
   },
+  undo: {
+    undo: 'Undo',
+    dismiss: 'Dismiss',
+    episodeMarked: 'Marked {ep} as watched',
+    quickMarked: 'Marked {title} {ep} as watched',
+    movieWatched: 'Marked {title} as watched',
+    titleDeleted: 'Deleted {title}',
+    actionUndone: 'Action undone',
+  },
 }
 
 type DeepStringify<T> = {

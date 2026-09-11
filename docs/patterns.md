@@ -252,6 +252,7 @@
 | `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
 | `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList) |
+| `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, `{ passive: false }` scroll blocking, and threshold close |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
@@ -265,6 +266,7 @@
 - **Contrast Token**: `--accent-fg` dynamically guarantees WCAG AAA compliant text contrast on top of `--accent` across all themes (dark background on Vault, Cyber, Emerald; white on Sunset).
 - **Brand Tokens**: Dedicated tokens `--brand-imdb`, `--brand-tmdb`, `--brand-tvdb`, `--brand-anilist`, `--brand-radarr` (`#ffc230`), and `--brand-sonarr` (`#00c0ff`).
 - **Dynamic SVG Theming**: SVGs use `currentColor` or CSS variables (`var(--accent)`, `var(--ink)`, `var(--ink-dim)`) instead of static JS imports from `theme.ts`.
+- **Skeleton Shimmer Waves**: `--skeleton-bg` token combined with `@keyframes shimmerWave` provides directional animated gradient waves across all loading skeletons.
 
 ### Pages Map (`frontend/src/pages/`)
 

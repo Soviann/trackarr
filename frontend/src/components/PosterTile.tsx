@@ -1,8 +1,10 @@
+import { useState } from 'preact/hooks'
 import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { TitleType, WatchProvider, NextEpisode } from '../types'
 import { useTranslation } from '../i18n'
 import { isUnairedOrTBA } from '../utils'
+import { haptic } from '../utils/haptic'
 import s from './PosterTile.module.css'
 import { CoverImage } from './CoverImage'
 import { WatchProviderBadges } from './WatchProviderBadges'
@@ -33,6 +35,7 @@ interface Props {
 
 export function PosterTile({ item }: Props) {
   const { t } = useTranslation()
+  const [popping, setPopping] = useState(false)
   const go = () => route(`/title/${item.id}`)
   const providers = item.watch_providers ?? (item.onPrime ? [{ id: 119, name: 'Amazon Prime Video' }] : undefined)
 
@@ -40,6 +43,9 @@ export function PosterTile({ item }: Props) {
     e.stopPropagation()
     e.preventDefault()
     if (!item.isMarking) {
+      haptic([15, 30, 15])
+      setPopping(true)
+      setTimeout(() => setPopping(false), 450)
       item.onQuickMark?.(item, e)
     }
   }
@@ -73,7 +79,7 @@ export function PosterTile({ item }: Props) {
         {item.onQuickMark && item.next_episode && item.status !== 'dropped' && !isUnaired && (
           <button
             type="button"
-            className={clsx(s.quickPlusBtn, item.isMarking && s.quickPlusBtnLoading)}
+            className={clsx(s.quickPlusBtn, item.isMarking && s.quickPlusBtnLoading, popping && s.quickPlusBtnPopping)}
             onClick={handleQuickMarkClick}
             disabled={item.isMarking}
             aria-label={`Mark S${item.next_episode.season_number} E${item.next_episode.episode} as watched`}

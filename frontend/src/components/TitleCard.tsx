@@ -7,6 +7,9 @@ import { apiFetch } from '../api'
 import { getName, getTypeLabel, formatSortCaption, isUnairedOrTBA } from '../utils'
 import { useTitleStore } from '../store'
 import { routeTo } from '../routes'
+import { useTranslation } from '../i18n'
+import { useUndo } from '../context/UndoContext'
+import { haptic } from '../utils/haptic'
 import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { ArrBadge } from './ArrBadge'
@@ -42,6 +45,8 @@ function getProgress(title: Title) {
 }
 
 export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCaption = true }: TitleCardProps) {
+  const { t } = useTranslation()
+  const { showUndo } = useUndo()
   const sortField = useTitleStore(s => s.sort.field)
   const sortCaption = showSortCaption ? formatSortCaption(title, sortField) : null
   const [toggling, setToggling] = useState(false)
@@ -58,10 +63,22 @@ export const TitleCard = memo(function TitleCard({ title, onUpdate, showSortCapt
   const handleQuickMark = async (e: Event) => {
     e.stopPropagation()
     if (!ne || toggling) return
+    haptic([15, 30, 15])
     setToggling(true)
+    const targetEpisode = ne
     try {
-      await apiFetch(`/titles/${title.id}/episodes/${ne.id}`, { method: 'PATCH' })
+      await apiFetch(`/titles/${title.id}/episodes/${targetEpisode.id}`, { method: 'PATCH' })
       onUpdate?.()
+      showUndo({
+        message: t('undo.quickMarked', {
+          title: name,
+          ep: `S${targetEpisode.season_number}E${targetEpisode.episode}`,
+        }),
+        onUndo: async () => {
+          await apiFetch(`/titles/${title.id}/episodes/${targetEpisode.id}`, { method: 'PATCH' })
+          onUpdate?.()
+        },
+      })
     } catch (err) {
       console.error('Failed to mark episode:', err)
     } finally {
