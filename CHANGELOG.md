@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.1] — 2026-09-11
+
 ### Corrigé
 - **Tiroir de filtres (`FilterDrawer`) en bas de page** :
   - Suppression de la première ligne de poignée redondante (`FILTERS (count)`) lorsque le tiroir est ouvert, l'en-tête du tiroir assurant le rôle d'en-tête unique avec chevron de fermeture et bouton Réinitialiser.
