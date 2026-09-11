@@ -4,6 +4,7 @@ import { routeTo } from '../routes'
 import type { CalendarEvent } from '../types'
 import { useTranslation } from '../i18n'
 import { WatchProviderBadges } from './WatchProviderBadges'
+import { CoverImage } from './CoverImage'
 import s from './CalendarWeekTimeline.module.css'
 
 interface Props {
@@ -137,16 +138,13 @@ export function CalendarWeekTimeline({ events }: Props) {
                         }}
                         className={s.eventCard}
                       >
-                        {ev.cover_url ? (
-                          <img
-                            src={ev.cover_url}
-                            alt={ev.title_name}
-                            className={s.poster}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className={s.poster} />
-                        )}
+                        <CoverImage
+                          coverUrl={ev.cover_url}
+                          type={ev.type}
+                          is_anime={ev.is_anime}
+                          alt={ev.title_name}
+                          className={s.poster}
+                        />
                         <div className={s.cardBody}>
                           <div className={s.titleName}>{ev.title_name}</div>
                           <div className={s.epBadgeRow}>

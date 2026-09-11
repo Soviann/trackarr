@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.20.1] — 2026-09-11
+
+### Corrigé
+- **Résolution et affichage des affiches sur la page « À venir » (`/coming-up`)** :
+  - Correction de l'affichage des jaquettes dans les vues mensuelle (`CalendarMonthGrid`) et hebdomadaire (`CalendarWeekTimeline`).
+  - Utilisation de `getCoverUrl()` pour les vignettes miniatures d'événements et intégration du composant `CoverImage` pour les cartes de sorties du jour sélectionné et la frise de la semaine, évitant la résolution erronée en chemin relatif par rapport à la route courante (`/coming-up/<cover>`).
+  - Ajout d'un repli propre avec icône de remplacement (`CoverPlaceholder`) en cas d'erreur de chargement ou d'absence d'affiche.
+  - Couverture de test unitaire enrichie avec des noms de fichiers de jaquettes relatifs pour prévenir toute régression.
+
 ## [v1.20.0] — 2026-09-11
 
 ### Ajouté

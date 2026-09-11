@@ -4,6 +4,8 @@ import { routeTo } from '../routes'
 import type { CalendarEvent } from '../types'
 import { useTranslation } from '../i18n'
 import { WatchProviderBadges } from './WatchProviderBadges'
+import { CoverImage } from './CoverImage'
+import { getCoverUrl } from '../utils'
 import s from './CalendarMonthGrid.module.css'
 
 interface Props {
@@ -195,12 +197,13 @@ export function CalendarMonthGrid({ events }: Props) {
                         }}
                         title={`${ev.title_name}${epTag ? ` (${epTag})` : ''}`}
                       >
-                        {ev.cover_url && (
+                        {getCoverUrl(ev.cover_url) && (
                           <img
-                            src={ev.cover_url}
+                            src={getCoverUrl(ev.cover_url)!}
                             alt=""
                             className={s.pillCover}
                             loading="lazy"
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }}
                           />
                         )}
                         <span className={s.pillTitle}>{ev.title_name}</span>
@@ -251,16 +254,13 @@ export function CalendarMonthGrid({ events }: Props) {
                   }}
                   className={s.releaseCard}
                 >
-                  {ev.cover_url ? (
-                    <img
-                      src={ev.cover_url}
-                      alt={ev.title_name}
-                      className={s.cardPoster}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className={s.cardPoster} />
-                  )}
+                  <CoverImage
+                    coverUrl={ev.cover_url}
+                    type={ev.type}
+                    is_anime={ev.is_anime}
+                    alt={ev.title_name}
+                    className={s.cardPoster}
+                  />
                   <div className={s.cardDetails}>
                     <div className={s.cardTitle}>{ev.title_name}</div>
                     {epTag && <div className={s.cardEp}>{epTag}</div>}
