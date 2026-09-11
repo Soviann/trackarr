@@ -209,7 +209,7 @@
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
 
 ### State Management (`frontend/src/store.ts`)
-- `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and filters (`origin_country`, `my_rating_min`, `tmdb_rating_min`, `series_status`).
+- `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and session-persistent filters (`status`, `type`, `is_anime`, `series_status`, `decade`, `release_from`, `release_to`, `genres`, `origin_country`, `my_rating_min`, `tmdb_rating_min`). Filters persist across title details and navigation, resetting only on explicit user action or reload.
 - `useSearchStore`: Search query state, debounce, and TMDB toggle.
 
 ### Components Map (`frontend/src/components/`)
@@ -229,7 +229,7 @@
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
 | `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Caught Up*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
-| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact low-profile filter panel (~170px) with 3 tabs (Status & Type, Genres & Origin, Dates & Ratings), styled selects for Sort and Status, Type segmented control + Anime toggle, and header with active counter `FILTERS (N ACTIVE)` |
+| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with single unified 42px closed handle row docked above navbar (`[ FILTERS (count) ⌄ ]` + scrolling dismissible chips), 3 sub-tabs (Status & Type, Genres & Origin, Dates & Ratings) with 320px anti-overflow protection, styled selects, and active counter `FILTERS (N ACTIVE)` |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with clear text `✕` button and integrated filter trigger button with active count badge |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |

@@ -8,51 +8,136 @@
 
 .handle {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-xs);
-  min-height: 48px;
-  padding: 5px 0;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  padding: 0 var(--space-md);
+  gap: var(--space-sm);
+  background: var(--bg);
+  box-sizing: border-box;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.handleTop {
-  display: flex;
+.handleBtn {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--ink-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.handleBar {
-  width: 32px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ink-mute);
+.handleBtn:hover {
+  background: var(--bg-elev2);
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+.handleBtnActive {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .handleText {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--ink-dim);
+  font: inherit;
+  color: inherit;
 }
 
-.activeTags {
+.handleCount {
+  font: inherit;
+  color: inherit;
+  font-size: 11px;
+}
+
+.chevron {
+  transition: transform 0.2s ease;
+  stroke: currentColor;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.chipsScroll {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
 }
 
-.activeTag {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 1px 6px;
+.chipsScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px 0 8px;
   border-radius: var(--radius-pill);
   background: var(--accent-wash);
+  border: 1px solid var(--accent);
   color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.chipLabel {
+  line-height: 1;
+}
+
+.chipDismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.chipDismiss:hover {
+  opacity: 0.8;
 }
 
 .drawer {
@@ -122,15 +207,22 @@
   border-bottom: 1px solid var(--border);
   padding: 4px var(--space-sm);
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabBar::-webkit-scrollbar {
+  display: none;
 }
 
 .tabBtn {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 6px 6px;
+  padding: 6px 8px;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
@@ -143,6 +235,20 @@
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .tabBar {
+    padding: 4px 4px;
+    gap: 2px;
+  }
+
+  .tabBtn {
+    padding: 5px 4px;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    gap: 3px;
+  }
 }
 
 .tabBtn:hover {
