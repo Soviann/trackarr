@@ -141,38 +141,105 @@ export function FilterDrawer(props: FilterDrawerProps) {
 
   const showSeriesStatus = filter.type === 'series'
 
-  // Build active tags for collapsed state
-  const activeTags: string[] = []
+  interface ActiveChip {
+    id: string
+    label: string
+    onDismiss: () => void
+  }
+
+  const activeChips: ActiveChip[] = []
   const activeSort = sortOptions.find((o) => o.field === sort.field)
-  if (!isSearchActive && activeSort && sort.field !== 'release_date') {
-    activeTags.push(`${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`)
+  if (!isSearchActive && activeSort && (sort.field !== 'release_date' || sort.order !== 'desc')) {
+    activeChips.push({
+      id: 'sort',
+      label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`,
+      onDismiss: () => onSortChange?.({ field: 'release_date', order: 'desc' }),
+    })
   }
   const activeStatus = statusFilters.find((f) => f.id === filter.status)
-  if (filter.status !== null && activeStatus) activeTags.push(activeStatus.label)
-  if (filter.isAnime) activeTags.push('Anime')
+  if (filter.status !== null && activeStatus) {
+    activeChips.push({
+      id: 'status',
+      label: activeStatus.label,
+      onDismiss: () => actions.onStatusChange(null),
+    })
+  }
+  if (filter.isAnime) {
+    activeChips.push({
+      id: 'anime',
+      label: 'Anime',
+      onDismiss: () => actions.onIsAnimeChange(false),
+    })
+  }
   const activeType = typeFilters.find((f) => f.id === filter.type)
-  if (filter.type !== null && activeType) activeTags.push(activeType.label)
+  if (filter.type !== null && activeType) {
+    activeChips.push({
+      id: 'type',
+      label: activeType.label,
+      onDismiss: () => actions.onTypeChange(null),
+    })
+  }
   if (showSeriesStatus && filter.seriesStatus !== null) {
     const activeSeries = seriesStatusFilters.find((f) => f.id === filter.seriesStatus)
-    if (activeSeries) activeTags.push(activeSeries.label)
+    if (activeSeries) {
+      activeChips.push({
+        id: 'series-status',
+        label: activeSeries.label,
+        onDismiss: () => actions.onSeriesStatusChange(null),
+      })
+    }
   }
   if (filter.decade) {
-    activeTags.push(decadeOptions.find((o) => o.value === filter.decade)?.label ?? filter.decade)
+    activeChips.push({
+      id: 'decade',
+      label: decadeOptions.find((o) => o.value === filter.decade)?.label ?? filter.decade,
+      onDismiss: () => actions.onDecadeChange(null),
+    })
   } else if (filter.releaseFrom || filter.releaseTo) {
-    activeTags.push(
-      filter.releaseFrom && filter.releaseTo
-        ? `${filter.releaseFrom.slice(0, 7)} → ${filter.releaseTo.slice(0, 7)}`
-        : filter.releaseFrom ? `≥ ${filter.releaseFrom}` : `≤ ${filter.releaseTo}`,
-    )
+    const label = filter.releaseFrom && filter.releaseTo
+      ? `${filter.releaseFrom.slice(0, 7)} → ${filter.releaseTo.slice(0, 7)}`
+      : filter.releaseFrom ? `≥ ${filter.releaseFrom}` : `≤ ${filter.releaseTo}`
+    activeChips.push({
+      id: 'release-range',
+      label,
+      onDismiss: () => {
+        actions.onReleaseFromChange('')
+        actions.onReleaseToChange('')
+      },
+    })
   }
   if (filter.selectedGenres.length > 0) {
-    activeTags.push(`${filter.selectedGenres.length} genre${filter.selectedGenres.length > 1 ? 's' : ''}`)
+    filter.selectedGenres.forEach((g) => {
+      activeChips.push({
+        id: `genre-${g}`,
+        label: g,
+        onDismiss: () => actions.onGenreToggle(g),
+      })
+    })
   }
   if (filter.selectedCountries.length > 0) {
-    activeTags.push(filter.selectedCountries.map(countryLabel).join(', '))
+    filter.selectedCountries.forEach((c) => {
+      activeChips.push({
+        id: `country-${c}`,
+        label: countryLabel(c),
+        onDismiss: () => actions.onCountryToggle(c),
+      })
+    })
   }
-  if (filter.myRatingMin) activeTags.push(`My ★≥${filter.myRatingMin}`)
-  if (filter.tmdbRatingMin) activeTags.push(`TMDB≥${filter.tmdbRatingMin}`)
+  if (filter.myRatingMin) {
+    activeChips.push({
+      id: 'my-rating',
+      label: `My ★≥${filter.myRatingMin}`,
+      onDismiss: () => actions.onMyRatingMinChange(''),
+    })
+  }
+  if (filter.tmdbRatingMin) {
+    activeChips.push({
+      id: 'tmdb-rating',
+      label: `TMDB≥${filter.tmdbRatingMin}`,
+      onDismiss: () => actions.onTmdbRatingMinChange(''),
+    })
+  }
 
   const hasBasicsActive = Boolean(
     filter.status !== null ||
@@ -191,7 +258,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
     filter.tmdbRatingMin
   )
 
-  const activeFilterCount = activeCount ?? activeTags.length
+  const activeFilterCount = activeCount ?? activeChips.length
 
   return (
     <div
@@ -202,15 +269,76 @@ export function FilterDrawer(props: FilterDrawerProps) {
       {/* Handle */}
       {(!isSearchActive || open) && (
         <div className={s.handle} onClick={() => setOpen(!open)}>
-          <div className={s.handleTop}>
-            <div className={s.handleBar} />
+          <button
+            type="button"
+            className={clsx(s.handleBtn, activeFilterCount > 0 && s.handleBtnActive)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(!open)
+            }}
+            aria-expanded={open}
+          >
             <span className={s.handleText}>{t('search.filters')}</span>
-            <div className={s.handleBar} />
-          </div>
-          {!open && activeTags.length > 0 && (
-            <div className={s.activeTags}>
-              {activeTags.map((tag) => (
-                <span key={tag} className={s.activeTag}>{tag}</span>
+            {activeFilterCount > 0 && (
+              <span className={s.handleCount}>({activeFilterCount})</span>
+            )}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              className={clsx(s.chevron, open && s.chevronOpen)}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {!open && activeChips.length > 0 && (
+            <div
+              className={s.chipsScroll}
+              role="list"
+              aria-label={t('search.filters')}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {activeChips.map((chip) => (
+                <div
+                  key={chip.id}
+                  className={s.chip}
+                  role="listitem"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    chip.onDismiss()
+                  }}
+                >
+                  <span className={s.chipLabel}>{chip.label}</span>
+                  <button
+                    type="button"
+                    className={s.chipDismiss}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      chip.onDismiss()
+                    }}
+                    aria-label={t('search.removeFilter', { label: chip.label })}
+                    title={t('search.removeFilter', { label: chip.label })}
+                  >
+                    <svg
+                      width="9"
+                      height="9"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -251,7 +379,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
             className={clsx(s.tabBtn, activeTab === 'basics' && s.tabBtnActive)}
             onClick={() => setActiveTab('basics')}
           >
-            <span>Status & Type</span>
+            <span>{t('search.tabBasics')}</span>
             {hasBasicsActive && <span className={s.tabDot} />}
           </button>
           <button
@@ -261,7 +389,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
             className={clsx(s.tabBtn, activeTab === 'genres' && s.tabBtnActive)}
             onClick={() => setActiveTab('genres')}
           >
-            <span>Genres & Origin</span>
+            <span>{t('search.tabGenres')}</span>
             {hasGenresActive && <span className={s.tabDot} />}
           </button>
           <button
@@ -271,7 +399,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
             className={clsx(s.tabBtn, activeTab === 'dates' && s.tabBtnActive)}
             onClick={() => setActiveTab('dates')}
           >
-            <span>Dates & Ratings</span>
+            <span>{t('search.tabDates')}</span>
             {hasDatesActive && <span className={s.tabDot} />}
           </button>
         </div>

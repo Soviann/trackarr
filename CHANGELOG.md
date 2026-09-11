@@ -6,6 +6,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.18.9] — 2026-09-11
+
+### Ajouté
+- **Poignée fermée unifiée à ligne unique avec puces dismissibles défilantes (`FilterDrawer`)** :
+  - Barre horizontale de 42 px au-dessus de la barre de navigation avec déclencheur `[ FILTRES (compte) ⌄ ]` à gauche et conteneur à défilement horizontal fluide de puces de filtres actifs à droite.
+  - Chaque filtre actif (statut, type, anime, genre, pays, dates, notes, tri) est affiché sous forme de puce cliquable avec croix de suppression `×` permettant de retirer individuellement le critère sans rouvrir le tiroir.
+  - Prévention de la propagation du clic sur les puces et sur la zone de défilement pour garantir un usage tactile sans ouverture involontaire du tiroir.
+
+### Modifié
+- **Persistance des filtres de session** :
+  - Conservation des filtres actifs en mémoire Zustand lors de la navigation entre les vues de détail de titre et la bibliothèque ou la barre de navigation.
+  - Réinitialisation des filtres strictement restreinte au clic explicite de l'utilisateur sur le bouton de réinitialisation (« Réinitialiser »), à la suppression des puces, ou au rechargement de la page.
+- **Protection anti-débordement des onglets sur écrans étroits (320 px)** :
+  - Prise en charge du défilement horizontal (`overflow-x: auto`) sans barre visible sur la barre d'onglets du tiroir de filtres.
+  - Ajustement responsive par média-requête (`@media (max-width: 360px)`) des paddings, espacements et taille de police pour les viewports très compacts (320 px type iPhone SE).
+  - Internationalisation complète des libellés de sous-onglets (`tabBasics`, `tabGenres`, `tabDates`) et labels d'accessibilité de retrait de filtres.
+
 ## [v1.18.8] — 2026-09-11
 
 ### Ajouté

@@ -187,5 +187,48 @@ describe('FilterDrawer', () => {
     fireEvent.click(orderBtn)
     expect(onSortChange).toHaveBeenCalledWith({ field: 'updated_at', order: 'asc' })
   })
+
+  it('renders single-line closed handle with active count and dismissible chips', () => {
+    const onStatusChange = vi.fn()
+    const onIsAnimeChange = vi.fn()
+    const onGenreToggle = vi.fn()
+    const { container, getByText, getByLabelText } = renderFilterDrawer({
+      defaultOpen: false,
+      sort: { field: 'release_date', order: 'desc' },
+      status: 'watching',
+      isAnime: true,
+      selectedGenres: ['Action'],
+      onStatusChange,
+      onIsAnimeChange,
+      onGenreToggle,
+    })
+
+    // Active count in handle button
+    expect(getByText('(3)')).toBeDefined()
+
+    // Dismissible chips are visible when closed
+    expect(getByText('Watching')).toBeDefined()
+    expect(getByText('Anime')).toBeDefined()
+    expect(getByText('Action')).toBeDefined()
+
+    // Dismiss Watching chip
+    const removeWatchingBtn = getByLabelText('Remove filter Watching')
+    fireEvent.click(removeWatchingBtn)
+    expect(onStatusChange).toHaveBeenCalledWith(null)
+
+    // Verify click on dismiss does not expand drawer
+    const drawerEl = container.querySelector('.drawer')
+    expect(drawerEl?.className).toContain('drawerCollapsed')
+
+    // Dismiss Anime chip
+    const removeAnimeBtn = getByLabelText('Remove filter Anime')
+    fireEvent.click(removeAnimeBtn)
+    expect(onIsAnimeChange).toHaveBeenCalledWith(false)
+
+    // Dismiss Action genre chip
+    const removeActionBtn = getByLabelText('Remove filter Action')
+    fireEvent.click(removeActionBtn)
+    expect(onGenreToggle).toHaveBeenCalledWith('Action')
+  })
 })
 
