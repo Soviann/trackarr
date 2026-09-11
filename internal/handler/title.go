@@ -306,7 +306,8 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		ArrIgnored:  true,
 	}
 
-	id, err := h.service.Create(r.Context(), title, body.Names)
+	enqueue := title.TMDBID != nil || title.IMDBID != nil || title.AniListID != nil
+	id, err := h.service.CreateAndEnrich(r.Context(), title, body.Names, enqueue)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
@@ -514,6 +515,20 @@ func (h *TitleHandler) RefreshOne(w http.ResponseWriter, r *http.Request) error 
 
 	if h.bgSvc == nil {
 		return httputil.InternalError("refresh title", fmt.Errorf("background service not available"))
+	}
+
+	if r.URL.Query().Get("sync") == "true" {
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+		if err := h.bgSvc.RefreshByID(ctx, id); err != nil {
+			return httputil.InternalError("refresh title", err)
+		}
+		refreshed, err := h.titles.GetByID(id)
+		if err != nil {
+			return httputil.InternalError("reload refreshed title", err)
+		}
+		httputil.WriteJSON(w, http.StatusOK, refreshed)
+		return nil
 	}
 
 	h.asyncRefresh(id, "refresh")

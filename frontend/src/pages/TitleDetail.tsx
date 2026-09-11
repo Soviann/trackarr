@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'preact/hooks'
 import type { JSX } from 'preact'
+import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { Title, TitleRelation } from '../types'
 import { useApi } from '../hooks/useApi'
@@ -116,8 +117,78 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const genres = title.genres
   const credits = parseJSON<{ name: string; role: string }[]>(title.credits)
 
+  const isAllSeasonWatched = useMemo(() => {
+    if (!current || !current.episodes || current.episodes.length === 0) return false
+    return current.episodes.every((e) => e.watched)
+  }, [current])
+
+  const handleSeasonToggleAll = async () => {
+    if (!current || !current.episodes || current.episodes.length === 0) return
+    const targetWatched = !isAllSeasonWatched
+    const epIds = current.episodes.map((e) => e.id)
+    const prevTitle = title
+
+    setData((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        seasons: (prev.seasons ?? []).map((s) => {
+          if (s.id !== current.id) return s
+          return {
+            ...s,
+            episodes: (s.episodes ?? []).map((e) => ({ ...e, watched: targetWatched })),
+          }
+        }),
+      }
+    })
+
+    try {
+      const updated = await apiFetch<Title>(`/titles/${title.id}/episodes/batch-watch`, {
+        method: 'POST',
+        body: JSON.stringify({
+          episode_ids: epIds,
+          watched: targetWatched,
+        }),
+      })
+      if (updated && updated.id) {
+        setData(updated)
+      } else {
+        await mutate()
+      }
+
+      showUndo({
+        message: targetWatched
+          ? t('undo.seasonMarked', { season: `S${current.season_number}` })
+          : t('undo.seasonUnmarked', { season: `S${current.season_number}` }),
+        onUndo: async () => {
+          setData(prevTitle)
+          await apiFetch(`/titles/${title.id}/episodes/batch-watch`, {
+            method: 'POST',
+            body: JSON.stringify({
+              episode_ids: epIds,
+              watched: !targetWatched,
+            }),
+          })
+          await mutate()
+        },
+      })
+    } catch {
+      setActionError('Failed to update season')
+      mutate()
+    }
+  }
+
   const handleRefresh = async () => {
-    await apiFetch(`/titles/${title.id}/refresh`, { method: 'POST' })
+    try {
+      const updated = await apiFetch<Title>(`/titles/${title.id}/refresh?sync=true`, { method: 'POST' })
+      if (updated && updated.id) {
+        setData(updated)
+      } else {
+        await mutate()
+      }
+    } catch {
+      await mutate()
+    }
   }
 
   // Pull-to-refresh: refetch the title so the spinner stays up until data lands.
@@ -546,10 +617,10 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         <FranchiseRelationsSection relations={title.relations} />
       )}
 
-      {/* Historique button */}
+      {/* Watch history button */}
       <div className={s.historyBtnWrap}>
         <button className={s.historyBtn} onClick={() => setShowHistory(true)}>
-          Historique
+          {t('details.watchHistory')}
         </button>
       </div>
 
@@ -566,8 +637,30 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           <div className={s.progressTrack}>
             <div className={s.progressBar} style={{ width: `${pct}%` }} />
           </div>
-          <div className={s.progressLabel}>
-            S{current.season_number} · {watched} of {total} episodes watched
+          <div className={s.progressHeaderRow}>
+            <div className={s.progressLabel}>
+              {t('details.seasonProgress', { season: current.season_number, watched, total })}
+            </div>
+            <button
+              type="button"
+              className={clsx(s.seasonBatchToggle, isAllSeasonWatched && s.seasonBatchToggleWatched)}
+              onClick={handleSeasonToggleAll}
+              title={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+              aria-label={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+            >
+              <span className={s.seasonBatchLabel}>
+                {isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+              </span>
+              <span className={s.seasonBatchBox}>
+                {isAllSeasonWatched ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                    <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
+                  </svg>
+                ) : (
+                  <div className={s.seasonBatchEmpty} />
+                )}
+              </span>
+            </button>
           </div>
         </div>
       )}
@@ -630,9 +723,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title={`Delete "${name}"?`}
-        description="This removes the title and all its watch history. This cannot be undone."
-        confirmText="Delete"
+        title={t('details.deleteConfirmTitle', { name })}
+        description={t('details.deleteConfirmDesc')}
+        confirmText={t('common.delete')}
         isDangerous
       />
 

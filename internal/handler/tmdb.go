@@ -22,6 +22,23 @@ type tmdbSearchResultDTO struct {
 	Title     string  `json:"title"`
 	Year      int     `json:"year"`
 	PosterURL *string `json:"poster_url"`
+	Type      string  `json:"type,omitempty"`
+	Overview  string  `json:"overview,omitempty"`
+}
+
+func toTMDBDTO(r matching.TMDBSearchResult, mediaType string) tmdbSearchResultDTO {
+	item := tmdbSearchResultDTO{
+		ID:       r.ID,
+		Title:    r.DisplayTitle(),
+		Year:     r.Year(),
+		Type:     mediaType,
+		Overview: r.Overview,
+	}
+	if r.PosterPath != nil && *r.PosterPath != "" {
+		url := tmdbImageURL + *r.PosterPath
+		item.PosterURL = &url
+	}
+	return item
 }
 
 func (h *TMDBHandler) Search(w http.ResponseWriter, r *http.Request) error {
@@ -39,34 +56,45 @@ func (h *TMDBHandler) Search(w http.ResponseWriter, r *http.Request) error {
 		mediaType = "movie"
 	}
 
-	var results []matching.TMDBSearchResult
-	var err error
+	var dto []tmdbSearchResultDTO
 
 	switch mediaType {
 	case "movie":
-		results, err = h.tmdb.SearchMovie(r.Context(), query, 0)
+		results, err := h.tmdb.SearchMovie(r.Context(), query, 0)
+		if err != nil {
+			return httputil.InternalError("TMDB search failed", err)
+		}
+		dto = make([]tmdbSearchResultDTO, 0, len(results))
+		for _, r := range results {
+			dto = append(dto, toTMDBDTO(r, "movie"))
+		}
 	case "tv":
-		results, err = h.tmdb.SearchTV(r.Context(), query, 0)
+		results, err := h.tmdb.SearchTV(r.Context(), query, 0)
+		if err != nil {
+			return httputil.InternalError("TMDB search failed", err)
+		}
+		dto = make([]tmdbSearchResultDTO, 0, len(results))
+		for _, r := range results {
+			dto = append(dto, toTMDBDTO(r, "tv"))
+		}
+	case "all", "multi":
+		movies, _ := h.tmdb.SearchMovie(r.Context(), query, 0)
+		tvs, _ := h.tmdb.SearchTV(r.Context(), query, 0)
+		dto = make([]tmdbSearchResultDTO, 0, len(movies)+len(tvs))
+		maxLen := len(movies)
+		if len(tvs) > maxLen {
+			maxLen = len(tvs)
+		}
+		for i := 0; i < maxLen; i++ {
+			if i < len(movies) {
+				dto = append(dto, toTMDBDTO(movies[i], "movie"))
+			}
+			if i < len(tvs) {
+				dto = append(dto, toTMDBDTO(tvs[i], "tv"))
+			}
+		}
 	default:
 		return httputil.BadRequest("type must be movie or tv")
-	}
-
-	if err != nil {
-		return httputil.InternalError("TMDB search failed", err)
-	}
-
-	dto := make([]tmdbSearchResultDTO, 0, len(results))
-	for _, r := range results {
-		item := tmdbSearchResultDTO{
-			ID:    r.ID,
-			Title: r.DisplayTitle(),
-			Year:  r.Year(),
-		}
-		if r.PosterPath != nil && *r.PosterPath != "" {
-			url := tmdbImageURL + *r.PosterPath
-			item.PosterURL = &url
-		}
-		dto = append(dto, item)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, dto)

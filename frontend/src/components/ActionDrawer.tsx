@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
 import clsx from 'clsx'
 import { useSwipeDownToClose } from '../hooks/useSwipeDownToClose'
+import { useTranslation } from '../i18n'
 import type { Title } from '../types'
 import s from './ActionDrawer.module.css'
 
@@ -19,6 +20,7 @@ export function ActionDrawer({
   title: _title,
   onRate, onEdit, onRematch, onMerge, onRefresh, onDelete, onOpenChange,
 }: ActionDrawerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -81,29 +83,29 @@ export function ActionDrawer({
         className={s.handle}
         onClick={toggleOpen}
         aria-expanded={open}
-        aria-label={open ? 'Close actions' : 'Open actions'}
+        aria-label={open ? t('common.closeActions') : t('common.openActions')}
       >
         <div className={s.handleBar} />
-        <span className={s.handleText}>Actions</span>
+        <span className={s.handleText}>{t('common.actions')}</span>
       </button>
 
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
         <div className={s.buttonRow}>
-          <button onClick={onRate} className={s.btnPrimary}>★ Rate</button>
-          <button onClick={onEdit} className={s.btnGhost}>Edit</button>
+          <button onClick={onRate} className={s.btnPrimary}>★ {t('common.rate')}</button>
+          <button onClick={onEdit} className={s.btnGhost}>{t('common.edit')}</button>
           <button
             onClick={() => setMoreOpen(!moreOpen)}
             className={clsx(s.btnGhost, moreOpen && s.btnGhostActive)}
             aria-expanded={moreOpen}
           >
-            More
+            {t('common.more')}
           </button>
         </div>
 
         {moreOpen && (
           <div className={s.moreSheet}>
-            <button onClick={onRematch} className={s.moreBtn}>Rematch</button>
-            <button onClick={onMerge} className={s.moreBtn}>Merge</button>
+            <button onClick={onRematch} className={s.moreBtn}>{t('common.rematch')}</button>
+            <button onClick={onMerge} className={s.moreBtn}>{t('common.merge')}</button>
             <button
               onClick={handleRefreshClick}
               disabled={refreshState !== 'idle'}
@@ -113,9 +115,9 @@ export function ActionDrawer({
                 refreshState === 'error' && s.moreBtnError,
               )}
             >
-              {refreshState === 'loading' ? '...' : refreshState === 'success' ? '✓ Done' : refreshState === 'error' ? '✗ Failed' : 'Refresh'}
+              {refreshState === 'loading' ? '...' : refreshState === 'success' ? t('common.refreshDone') : refreshState === 'error' ? t('common.refreshFailed') : t('common.refresh')}
             </button>
-            <button onClick={onDelete} className={clsx(s.moreBtn, s.moreBtnDanger)}>Delete</button>
+            <button onClick={onDelete} className={clsx(s.moreBtn, s.moreBtnDanger)}>{t('common.delete')}</button>
           </div>
         )}
 

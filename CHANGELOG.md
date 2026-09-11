@@ -6,6 +6,27 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.20.0] — 2026-09-11
+
+### Ajouté
+- **Case à cocher de marquage en masse de saison avec annulation universelle (`TitleDetail`)** :
+  - Case à cocher d'en-tête de saison (`18x18px`) parfaitement alignée avec la colonne des cases à cocher d'épisodes (`padding: 0 12px` dans le bloc de progression).
+  - Permet de marquer l'intégralité des épisodes de la saison active comme vus ou non vus en un seul tap avec mise à jour optimiste immédiate.
+  - Intégration complète avec le snackbar d'annulation universel (`UndoSnackbar`) permettant d'annuler immédiatement l'opération.
+  - Support backend complet dans `POST /api/titles/{titleID}/episodes/batch-watch` pour le marquage inverse (`watched: false`), avec ajustement du temps de visionnage cumulé, rétrogradation automatique du statut du titre (`Completed` vers `Watching`), et synchronisation AniList.
+- **Découverte et ajout en direct sur la page d'ajout (`/add`)** :
+  - Barre de recherche supérieure avec détection de saisie, effacement rapide (`✕`) et interrogation simultanée décalée (debounced 300ms) de TMDB (`type=all`), AniList et de la bibliothèque locale.
+  - Détection automatique des médias déjà présents dans la collection avec badge cliquable *« Dans la bibliothèque ↗ »* redirigeant directement vers la fiche détaillée (`/title/:id`).
+  - Boutons de suivi rapide en 1 tap `[+ À voir]` et `[+ En cours]` créant instantanément le média enrichi et affichant le toast d'annulation universel avec suppression de rollback en cas d'annulation.
+- **Rafraîchissement synchrone immédiat des métadonnées** :
+  - Prise en charge du paramètre de requête `?sync=true` sur la route `POST /api/titles/{id}/refresh`.
+  - Exécution synchrone de la mise à jour des métadonnées (affiches, résumés, saisons, épisodes) et rechargement direct dans `TitleDetail` sans nécessiter de rafraîchir manuellement la page.
+
+### Modifié
+- **Zéro chaîne codée en dur & stricte parité i18n** :
+  - Remplacement de l'ensemble des textes statiques en anglais dans `ActionDrawer.tsx`, `Login.tsx`, `Setup.tsx`, `Add.tsx` et `TitleDetail.tsx` par des clés de traduction typées.
+  - Parité stricte 1-pour-1 entre les dictionnaires `en.ts` et `fr.ts` validée par l'audit automatisé de linter i18n (`scripts/lint-i18n.mjs`).
+
 ## [v1.19.0] — 2026-09-11
 
 ### Ajouté

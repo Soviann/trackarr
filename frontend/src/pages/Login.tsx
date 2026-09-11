@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import { routeTo } from '../routes'
+import { useTranslation } from '../i18n'
 import s from './Login.module.css'
 
 declare global {
@@ -27,6 +28,7 @@ interface PublicConfig {
 }
 
 export function Login({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const btnRef = useRef<HTMLDivElement>(null)
   const [config, setConfig] = useState<PublicConfig | null>(null)
   const [loading, setLoading] = useState(true)
@@ -169,22 +171,21 @@ export function Login({ path }: { path?: string }) {
           <img src="/favicon.svg" alt="Trackarr" className={s.logo} />
           <div className={s.title}>Trackarr</div>
           <div className={s.subtitle}>
-            {isRecovering ? 'Emergency Recovery' : 'Personal Media Tracker'}
+            {isRecovering ? t('auth.emergencyRecovery') : t('auth.loginSubtitle')}
           </div>
         </div>
 
         {/* RECOVERY RESULT VIEW */}
         {newRecoveryKey ? (
           <div className={s.keyAlert}>
-            <div className={s.keyHeader}>⚠️ New Password Activated!</div>
+            <div className={s.keyHeader}>⚠️ {t('auth.newPasswordActivated')}</div>
             <div className={s.keyDescription}>
-              Your old recovery key was revoked. Here is your <strong>new single-use emergency recovery key</strong>.
-              Save it carefully, it will never be displayed again.
+              {t('auth.newPasswordDesc')}
             </div>
             <div className={s.keyCodeBox}>{newRecoveryKey}</div>
             <div className={s.copyRow}>
               <button type="button" onClick={handleCopyKey} className={s.secondaryBtn} style={{ flex: 1 }}>
-                {copiedKey ? '✅ Copied!' : 'Copy Key'}
+                {copiedKey ? `✅ ${t('auth.keyCopied')}` : t('auth.copyKey')}
               </button>
               <button
                 type="button"
@@ -192,7 +193,7 @@ export function Login({ path }: { path?: string }) {
                 className={s.primaryBtn}
                 style={{ flex: 1 }}
               >
-                Open Trackarr
+                {t('auth.openTrackarr')}
               </button>
             </div>
           </div>
@@ -202,7 +203,7 @@ export function Login({ path }: { path?: string }) {
             {recoveryError && <div className={s.errorAlert}>{recoveryError}</div>}
 
             <div className={s.inputGroup}>
-              <label htmlFor="recovery-key" className={s.label}>Emergency Recovery Key</label>
+              <label htmlFor="recovery-key" className={s.label}>{t('auth.recoveryKey')}</label>
               <input
                 id="recovery-key"
                 type="text"
@@ -216,7 +217,7 @@ export function Login({ path }: { path?: string }) {
             </div>
 
             <div className={s.inputGroup}>
-              <label htmlFor="new-pass" className={s.label}>New Password</label>
+              <label htmlFor="new-pass" className={s.label}>{t('auth.newPassword')}</label>
               <input
                 id="new-pass"
                 type="password"
@@ -230,7 +231,7 @@ export function Login({ path }: { path?: string }) {
             </div>
 
             <div className={s.inputGroup}>
-              <label htmlFor="confirm-pass" className={s.label}>Confirm Password</label>
+              <label htmlFor="confirm-pass" className={s.label}>{t('auth.confirmPassword')}</label>
               <input
                 id="confirm-pass"
                 type="password"
@@ -244,7 +245,7 @@ export function Login({ path }: { path?: string }) {
             </div>
 
             <button type="submit" disabled={submitting} className={s.primaryBtn}>
-              {submitting ? 'Resetting...' : 'Reset Password'}
+              {submitting ? t('auth.resetting') : t('auth.resetPassword')}
             </button>
 
             <button
@@ -255,7 +256,7 @@ export function Login({ path }: { path?: string }) {
               }}
               className={s.linkBtn}
             >
-              Back to Login
+              {t('common.back')}
             </button>
           </form>
         ) : (
@@ -267,7 +268,7 @@ export function Login({ path }: { path?: string }) {
             {showPasswordForm && (
               <form onSubmit={handleLocalLogin} className={s.form}>
                 <div className={s.inputGroup}>
-                  <label htmlFor="login-username" className={s.label}>Username</label>
+                  <label htmlFor="login-username" className={s.label}>{t('auth.username')}</label>
                   <input
                     id="login-username"
                     type="text"
@@ -280,7 +281,7 @@ export function Login({ path }: { path?: string }) {
                 </div>
 
                 <div className={s.inputGroup}>
-                  <label htmlFor="login-password" className={s.label}>Password</label>
+                  <label htmlFor="login-password" className={s.label}>{t('auth.password')}</label>
                   <input
                     id="login-password"
                     type="password"
@@ -293,7 +294,7 @@ export function Login({ path }: { path?: string }) {
                 </div>
 
                 <button type="submit" disabled={submitting} className={s.primaryBtn}>
-                  {submitting ? 'Signing in...' : 'Sign In'}
+                  {submitting ? t('auth.signingIn') : t('auth.signIn')}
                 </button>
 
                 <button
@@ -304,13 +305,13 @@ export function Login({ path }: { path?: string }) {
                   }}
                   className={s.linkBtn}
                 >
-                  Forgot Password? (Emergency Key)
+                  {t('auth.forgotPassword')}
                 </button>
               </form>
             )}
 
             {/* Divider when both are shown */}
-            {showDivider && <div className={s.divider}>OR</div>}
+            {showDivider && <div className={s.divider}>{t('auth.or')}</div>}
 
             {/* Google OAuth Button Container */}
             {showGoogleAuth && (

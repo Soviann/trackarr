@@ -68,9 +68,19 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 
 	var body struct {
 		EpisodeIDs []int64 `json:"episode_ids"`
+		Watched    *bool   `json:"watched"`
 	}
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
 		return httputil.BadRequest("Invalid request")
+	}
+
+	if body.Watched != nil && !*body.Watched {
+		title, err := h.service.MarkEpisodesUnwatchedTx(r.Context(), titleID, body.EpisodeIDs, nil)
+		if err != nil {
+			return httputil.InternalError("Internal error", err)
+		}
+		httputil.WriteJSON(w, http.StatusOK, title)
+		return nil
 	}
 
 	title, prompt, err := h.service.MarkEpisodesWatchedTx(r.Context(), titleID, body.EpisodeIDs, nil, model.WatchEventSourceManual, nil)

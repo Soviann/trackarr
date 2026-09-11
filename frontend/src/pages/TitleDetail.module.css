@@ -426,7 +426,57 @@
 .progressLabel {
   font-size: 10px;
   color: var(--ink);
+}
+
+.progressHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: var(--space-xs);
+  padding: 0 12px;
+}
+
+.seasonBatchToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: var(--ink-dim);
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+
+.seasonBatchToggle:hover {
+  color: var(--ink);
+}
+
+.seasonBatchToggleWatched {
+  color: var(--accent);
+}
+
+.seasonBatchLabel {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.seasonBatchBox {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.seasonBatchEmpty {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink-mute);
+  box-sizing: border-box;
 }
 
 .seasonTabs {
