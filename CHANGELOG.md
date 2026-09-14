@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.2] — 2026-09-14
+
 ### Modifié
 - **Audit hebdomadaire de la documentation et des règles LLM** :
   - Synchronisation de `docs/patterns.md`, `docs/llm.md` et `docs/user-guide.md`.
