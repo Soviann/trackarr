@@ -21,6 +21,31 @@ func (w *TaskQueueWorker) handleEnrichment(ctx context.Context, task model.Task,
 	}
 	logger = logger.With("titleID", payload.TitleID)
 
+	// Defense-in-depth: if payload only has title_id or is missing search cues, recover fields from DB
+	if w.titles != nil && payload.TitleID != 0 && payload.TitleName == "" && payload.TMDBID == 0 && payload.IMDBID == "" && payload.TVDBID == 0 && payload.AniListID == 0 {
+		if existing, err := w.titles.GetByID(payload.TitleID); err == nil && existing != nil {
+			payload.TitleName = existing.PrimaryName()
+			payload.Year = existing.Year
+			payload.TitleType = existing.Type
+			payload.IsAnime = existing.IsAnime
+			if existing.IMDBID != nil {
+				payload.IMDBID = *existing.IMDBID
+			}
+			if existing.TMDBID != nil {
+				payload.TMDBID = *existing.TMDBID
+			}
+			if existing.TVDBID != nil {
+				payload.TVDBID = *existing.TVDBID
+			}
+			if existing.AniListID != nil {
+				payload.AniListID = *existing.AniListID
+			}
+			if existing.MatchStatus == model.MatchStatusConfirmed {
+				payload.PreserveMatch = true
+			}
+		}
+	}
+
 	if w.pipeline == nil {
 		return fmt.Errorf("pipeline not configured")
 	}

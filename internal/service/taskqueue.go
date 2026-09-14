@@ -447,7 +447,7 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 	if result.CoverFile != "" {
 		update.CoverURL = &result.CoverFile
 	}
-	if result.TitleType != payload.TitleType {
+	if result.TitleType != "" && result.TitleType != payload.TitleType && result.MatchStatus != model.MatchStatusUnconfirmed {
 		update.Type = &result.TitleType
 	}
 	if result.Overview != "" {

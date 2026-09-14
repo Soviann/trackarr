@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { route } from 'preact-router'
-import type { Title, TitleStatus, PaginatedResponse, MatchResult } from '../types'
+import type { Title, TitleType, TitleStatus, PaginatedResponse, MatchResult } from '../types'
 import { useApi } from '../hooks/useApi'
 import { useSearchStore } from '../store'
 import { getName } from '../utils'
@@ -18,6 +18,7 @@ interface RematchPayload {
   tmdb_id?: number
   imdb_id?: string
   anilist_id?: number
+  type?: TitleType
 }
 
 interface AddTitlePayload {
@@ -121,6 +122,7 @@ export function Validate({ path }: { path?: string }) {
           body.tmdb_id = resolved.tmdb_id ?? undefined
           body.imdb_id = resolved.imdb_id ?? undefined
           body.anilist_id = resolved.anilist_id ?? undefined
+          body.type = resolved.type
         }
         
         // If it was just a name search, maybe we have nothing to rematch with IDs

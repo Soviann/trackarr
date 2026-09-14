@@ -154,7 +154,10 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     try {
       await apiFetch(`/titles/${title.id}/rematch`, {
         method: 'POST',
-        body: JSON.stringify({ tmdb_id: result.id }),
+        body: JSON.stringify({
+          tmdb_id: result.id,
+          type: mediaType === 'tv' ? 'series' : 'movie',
+        }),
       })
       onDone()
       onClose()

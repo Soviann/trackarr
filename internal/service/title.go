@@ -150,9 +150,9 @@ func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title
 	return writer.Create(ctx, t, names)
 }
 
-// Rematch updates a title's external IDs and enqueues an enrichment task. The
-// service owns the transaction because handlers call it with the pool handle.
-func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64) error {
+// Rematch updates a title's external IDs (and optionally title type) and enqueues
+// an enrichment task. The service owns the transaction because handlers call it with the pool handle.
+func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64, titleType *model.TitleType) error {
 	title, err := s.titles.GetByID(id)
 	if err != nil {
 		return err
@@ -176,6 +176,9 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 	}
 	if tvdbID != nil {
 		update.TVDBID = tvdbID
+	}
+	if titleType != nil && *titleType != "" {
+		update.Type = titleType
 	}
 
 	if err := database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
@@ -203,15 +206,20 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 	} else if title.TVDBID != nil {
 		payloadTVDB = *title.TVDBID
 	}
+	payloadType := title.Type
+	if titleType != nil && *titleType != "" {
+		payloadType = *titleType
+	}
 
 	payload, err := json.Marshal(EnrichmentPayload{
-		TitleID:   id,
-		TitleName: title.PrimaryName(),
-		Year:      title.Year,
-		TitleType: title.Type,
-		IMDBID:    payloadIMDB,
-		TMDBID:    payloadTMDB,
-		TVDBID:    payloadTVDB,
+		TitleID:       id,
+		TitleName:     title.PrimaryName(),
+		Year:          title.Year,
+		TitleType:     payloadType,
+		IMDBID:        payloadIMDB,
+		TMDBID:        payloadTMDB,
+		TVDBID:        payloadTVDB,
+		PreserveMatch: true,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal enrichment payload: %w", err)
@@ -473,8 +481,47 @@ func (s *TitleService) CreateAndEnrich(ctx context.Context, title *model.Title, 
 		newID = id
 
 		if enqueueEnrichment && s.tasks != nil {
-			payloadJSON, _ := json.Marshal(map[string]any{"title_id": newID})
-			dedupKey := fmt.Sprintf("enrich_%d", newID)
+			primaryName := ""
+			for _, n := range names {
+				if n.IsPrimary {
+					primaryName = n.Name
+					break
+				}
+			}
+			if primaryName == "" && len(names) > 0 {
+				primaryName = names[0].Name
+			}
+			var tmdbID int64
+			if title.TMDBID != nil {
+				tmdbID = *title.TMDBID
+			}
+			var imdbID string
+			if title.IMDBID != nil {
+				imdbID = *title.IMDBID
+			}
+			var tvdbID int64
+			if title.TVDBID != nil {
+				tvdbID = *title.TVDBID
+			}
+			var anilistID int64
+			if title.AniListID != nil {
+				anilistID = *title.AniListID
+			}
+
+			payload := EnrichmentPayload{
+				TitleID:       newID,
+				TitleName:     primaryName,
+				Year:          title.Year,
+				TitleType:     title.Type,
+				IsAnime:       title.IsAnime,
+				IMDBID:        imdbID,
+				TMDBID:        tmdbID,
+				TVDBID:        tvdbID,
+				AniListID:     anilistID,
+				PreserveMatch: title.MatchStatus == model.MatchStatusConfirmed,
+			}
+			payloadJSON, _ := json.Marshal(payload)
+			dedupKey := fmt.Sprintf("enrichment:%d", newID)
 			_, _ = repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey)
 		}
 		return nil

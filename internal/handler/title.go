@@ -381,10 +381,11 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		TMDBID    *int64  `json:"tmdb_id"`
-		IMDBID    *string `json:"imdb_id"`
-		AniListID *int64  `json:"anilist_id"`
-		TVDBID    *int64  `json:"tvdb_id"`
+		TMDBID    *int64           `json:"tmdb_id"`
+		IMDBID    *string          `json:"imdb_id"`
+		AniListID *int64           `json:"anilist_id"`
+		TVDBID    *int64           `json:"tvdb_id"`
+		Type      *model.TitleType `json:"type"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
@@ -395,7 +396,7 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("At least one ID is required")
 	}
 
-	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID); err != nil {
+	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID, body.Type); err != nil {
 		return httputil.InternalError("Failed to rematch", err)
 	}
 
