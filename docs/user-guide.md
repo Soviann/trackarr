@@ -37,10 +37,12 @@ The **Library** screen is your media command center:
 - **Completed**: Finished movies, or series where every episode has been watched and the series has ended or was cancelled.
 - **Dropped**: Abandoned titles (quick mark `+1` and Arr availability badges are automatically suppressed on dropped titles).
 
-### Unified Bottom Search & Expandable Filter Drawer:
+### Unified Bottom Search & Compact Filter Drawer:
 - **Docked Search Bar**: Docked cleanly at the bottom of the screen with an integrated text clear button (`✕`) and filter launcher badge (`[ N ]`).
-- **Expandable Filter Drawer**: Slide-up filter panel featuring 3 segmented tabs (*Status & Type*, *Genres & Origin*, *Dates & Ratings*) with smooth swipe-down-to-close touch gesture.
-- **Dedicated Reset Button**: Dedicated `✕ Reset` button in the drawer header (`FILTERS (N ACTIVE)`) to clear filter criteria independently without erasing typed search text.
+- **Single-Line Closed Filter Handle**: A 42px row docked above the navigation bar featuring `[ FILTERS (N) ⌃ ]` trigger and horizontally scrolling dismissible chips (`✕`) to remove active filter criteria directly without opening the drawer.
+- **Compact Slide-Up Drawer**: Slide-up filter panel featuring styled native selects for *Sort* and *Status*, an inline order invert toggle, a *Type* segmented control with an *Anime* pill toggle, and 3 segmented sub-tabs (*Status & Type*, *Genres & Origin*, *Dates & Ratings*) with smooth swipe-down-to-close touch gesture and anti-overflow viewport limits.
+- **Session Filter Persistence**: Active filters persist across title navigation and navbar tab switches via Zustand (`useTitleStore`), resetting only on explicit user click (`✕ Reset`) or full page reload.
+- **Dedicated Reset Button**: Dedicated `✕ Reset` button in the drawer header (`FILTERS (N ACTIVE) ⌄`) to clear filter criteria independently without erasing typed search text.
 
 ### Dynamic Views & Stats:
 - **Year-to-Date Stats Pill**: Displays your viewing summary under the *Library* header (e.g. `2026 · 47 watched · ★ 7.8 avg · 3h this week`).
@@ -52,7 +54,8 @@ The **Library** screen is your media command center:
 - **Sorting Options**: 6 sort criteria (Last updated, Title, Release date, Rating, Date added, Last watched). Tap to activate; tap again to invert ascending/descending.
 
 ### Gestures & Shortcuts:
-- **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular `+1` episode button to immediately mark the next episode as watched without opening the title.
+- **Universal Undo Toast (`UndoSnackbar`)**: Any state-changing progression (`+1` quick mark, episode/movie watch mark, title deletion) triggers a floating snackbar with a 5-second perimeter radial countdown and haptic feedback (`[15, 30, 15]`), allowing 1-tap instant rollback.
+- **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular glassmorphic `+1` episode button to immediately mark the next episode as watched without opening the title.
 - **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards to select them, then use the bottom action bar for bulk status changes or deletion.
 - **Swipe Actions (Match Review)**: Swipe a card left to quickly confirm or fix matches. A full left swipe triggers immediate confirmation.
 - **Pull to Refresh**: Pull down at the top of the Library to refresh data and re-evaluate air dates.
@@ -160,6 +163,7 @@ Adding media to Trackarr is fast and versatile:
 When Trackarr ingests a scrobble from Jellyfin/Plex or an imported title:
 - **High-Confidence Matches**: Auto-confirmed by AI (Gemini) or exact cross-reference IDs, bypassing manual review.
 - **Unconfirmed / Pending Review**: Placed in the **Match Review** queue (`/match-review`) for quick human verification.
+- **Mass Action Protection (`ConfirmationDrawer`)**: Bulk operations like *« Confirm all matches »* are secured by a slide-up confirmation sheet with affirmative/cancel actions before execution.
 - **Rematch**: Open any title ➔ **Actions (Bottom Bar) ➔ More ➔ Rematch** to re-link or paste a new URL.
 
 ---
@@ -168,7 +172,7 @@ When Trackarr ingests a scrobble from Jellyfin/Plex or an imported title:
 
 Anime and split TV seasons frequently release under separate titles (e.g. *JoJo's Bizarre Adventure: Stone Ocean* or *Frieren Season 2*).
 
-- **Season Audit Tool (`/admin/season-audit`)**: Scans for titles sharing external IDs, pairs source strays with parent series, displays side-by-side poster comparisons, and suggests the correct destination season number.
+- **Season Audit Tool (`/admin/season-audit`)**: Scans for titles sharing external IDs, pairs source strays with parent series, displays side-by-side poster comparisons, and suggests the correct destination season number. Merges and mass integrations are protected by `ConfirmationDrawer`.
 - **Manual Title Merge**: Open the title to discard ➔ **Actions ➔ More ➔ Merge** ➔ Search the destination parent title ➔ Choose destination season number. All episodes, watch timestamps, and ratings migrate seamlessly.
 
 ---
@@ -195,6 +199,7 @@ When AniList OAuth is connected:
 - **Automatic Push**: Episode watch events, status changes, and ratings push to AniList in the background.
 - **Multi-Part & Prequel Trees**: Trackarr automatically maps multi-part seasons (e.g. *Attack on Titan Final Season*) to individual AniList media entries using its internal season parts resolver.
 - **Season AniList Strip & Live Search**: View community scores per season and re-link specific anime entries with the ✎ button or *Link entry*. The season mapping sheet instantly searches AniList in the background using the series title, displaying rich result cards (poster, Romaji/English title, format, year, episode count) that can be linked in a single tap, alongside a *Search on AniList.co ↗* browser shortcut and manual ID fallback.
+- **Disconnection Safeguard**: Disconnecting AniList in *Admin ➔ AniList* prompts a confirmation drawer (`ConfirmationDrawer`) to avoid accidental token revocation.
 
 ---
 
