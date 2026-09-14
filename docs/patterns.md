@@ -131,7 +131,7 @@
 | GET | `/api/titles/{id}` | `titles.GetByID` | Detailed title payload |
 | PATCH | `/api/titles/{id}` | `titles.Update` | Update status, rating, or metadata |
 | DELETE | `/api/titles/{id}` | `titles.Delete` | Delete title and cascade associations |
-| POST | `/api/titles/{id}/rematch` | `titles.Rematch` | Reset IDs and trigger re-enrichment |
+| POST | `/api/titles/{id}/rematch` | `titles.Rematch` | Update external IDs and title type, trigger re-enrichment |
 | PUT | `/api/titles/{id}/external-ids` | `titles.SetExternalIDs` | Explicitly overwrite external IDs |
 | POST | `/api/titles/{id}/merge` | `titles.Merge` | Merge source title into target |
 | POST | `/api/titles/{id}/refresh` | `titles.RefreshOne` | Force immediate metadata refresh (supports `?sync=true` for synchronous execution) |

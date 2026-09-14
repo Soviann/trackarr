@@ -81,6 +81,29 @@ func TestBuildEnrichmentUpdate_YearFromReleaseDate(t *testing.T) {
 	})
 }
 
+func TestBuildEnrichmentUpdate_UnconfirmedMatchPreservesType(t *testing.T) {
+	// An unconfirmed/failed match returning TitleTypeMovie must NOT alter a series' type
+	result := &matching.MatchResult{
+		TitleType:   model.TitleTypeMovie,
+		MatchStatus: model.MatchStatusUnconfirmed,
+		MatchSource: matching.MatchSourceNone,
+	}
+	u := service.BuildEnrichmentUpdateForTest(result, service.EnrichmentPayload{
+		TitleType: model.TitleTypeSeries,
+	})
+	assert.Nil(t, u.Type, "unconfirmed match must not change title type")
+
+	// Empty TitleType in result must also not alter type
+	emptyResult := &matching.MatchResult{
+		TitleType:   "",
+		MatchStatus: model.MatchStatusConfirmed,
+	}
+	uEmpty := service.BuildEnrichmentUpdateForTest(emptyResult, service.EnrichmentPayload{
+		TitleType: model.TitleTypeSeries,
+	})
+	assert.Nil(t, uEmpty.Type, "empty result title type must not change title type")
+}
+
 // fakeAniListPusher records PushSeasonState/PushMovieState invocations so
 // dispatch tests can assert the worker routes each task kind to the right
 // method with the payload decoded correctly.
@@ -217,6 +240,45 @@ func TestHandleEnrichment_ResolvesOtherIDsFromIMDB(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.TMDBID, "enrichment must resolve a TMDB id from the IMDb anchor via /find")
 	assert.Equal(t, wantTMDB, *got.TMDBID)
+}
+
+func TestHandleEnrichment_BareTitleIDRecoversFromDB(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titles := repository.NewTitleRepository(db)
+	tasks := repository.NewTaskRepository(db)
+
+	tmdbID := int64(288673)
+	imdbID := "tt11540908"
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2026,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+		IMDBID:      &imdbID,
+	}, []model.TitleName{{Name: "Carrie", Language: "en", IsPrimary: true}})
+
+	pipeline := matching.NewPipeline(nil, nil, nil, nil, t.TempDir())
+	titleSvc := service.NewTitleService(db, titles, tasks, pipeline)
+	worker := service.NewTaskQueueWorker(tasks, titles, pipeline, nil, nil, nil, nil, t.TempDir(), titleSvc, db)
+
+	// Bare payload with only title_id (legacy or incomplete creation payload)
+	raw := `{"title_id": ` + fmt.Sprint(id) + `}`
+	testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, raw, nil)
+
+	queued, err := tasks.ListPending()
+	require.NoError(t, err)
+	require.Len(t, queued, 1)
+	worker.ProcessTask(context.Background(), queued[0])
+
+	got, err := titles.GetByID(id)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleTypeSeries, got.Type, "bare title_id payload must recover type from DB and not degrade to movie")
+	assert.Equal(t, model.MatchStatusConfirmed, got.MatchStatus, "confirmed status must be preserved")
 }
 
 // pendingRefreshFor returns the first pending refresh task targeting titleID, or

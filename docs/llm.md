@@ -80,7 +80,7 @@
 - `POST /api/titles` : Create title (supports manual input or direct URL matching).
 - `PATCH /api/titles/{id}` : Update status, rating, match status, type, anime flag, arr ignored, or personal notes.
 - `DELETE /api/titles/{id}` : Delete title and cascaded relations.
-- `POST /api/titles/{id}/rematch` : Rematch title with new query or URL.
+- `POST /api/titles/{id}/rematch` : Rematch title with external IDs or title type.
 - `PUT /api/titles/{id}/external-ids` : Explicitly overwrite external IDs.
 - `POST /api/titles/{id}/merge` : Merge source title into target title with optional season offset.
 - `POST /api/titles/{id}/refresh` : Trigger metadata re-fetch for a single title (supports `?sync=true` for synchronous execution).

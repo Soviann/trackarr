@@ -530,11 +530,21 @@ func TestTitleService_Rematch_ClearsCoverURL(t *testing.T) {
 	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	newTMDB := int64(88879)
-	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil)
+	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, nil)
 	require.NoError(t, err)
 
 	got, err := titleRepo.GetByID(titleID)
 	require.NoError(t, err)
 	assert.Nil(t, got.CoverURL, "CoverURL must be cleared on rematch")
 	assert.Equal(t, int64(88879), *got.TMDBID)
+	assert.Equal(t, model.TitleTypeMovie, got.Type)
+
+	// Test rematch with title type update (e.g. movie -> series)
+	newType := model.TitleTypeSeries
+	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, &newType)
+	require.NoError(t, err)
+
+	got, err = titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleTypeSeries, got.Type)
 }

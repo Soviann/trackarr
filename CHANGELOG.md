@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.3] — 2026-09-14
+
+### Corrigé
+- **Alignement du type de titre lors du Rematch et fiabilisation de l'enrichissement d'arrière-plan** :
+  - `POST /api/titles/{id}/rematch` et le composant `RematchSheet` transmettent et mettent désormais à jour le type du titre (`type: 'series' | 'movie'`) en fonction de l'onglet de recherche sélectionné, évitant qu'une série remariée ne reste figée en film en base de données.
+  - Correction de l'erreur d'envoi aux applications Arr (`radarr add returned 400: Root folder does not exist`) provoquée par le routage erroné d'une série vers Radarr au lieu de Sonarr lorsque le type en base était corrompu.
+  - Correction de `CreateAndEnrich` qui programmait une tâche d'enrichissement avec un payload vide (`{"title_id": id}`) écrasant le titre nouvellement créé en film non confirmé lors de son exécution.
+  - Ajout d'une protection dans `handleEnrichment` récupérant les données en base si le payload reçu est incomplet, et protection dans `buildEnrichmentUpdate` empêchant tout changement de type de titre lors d'un matching non confirmé.
+
 ## [v1.21.2] — 2026-09-14
 
 ### Modifié
