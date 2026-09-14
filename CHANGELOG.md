@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Audit hebdomadaire de la documentation et des règles LLM** :
+  - Synchronisation de `docs/patterns.md`, `docs/llm.md` et `docs/user-guide.md`.
+  - Harmonisation et nettoyage de l'inventaire des routes API (suppression des doublons d'administration) et des composants frontend (`PrimeBadge`).
+  - Documentation approfondie de la persistance de session des filtres, du tiroir de filtres compact, du Hub Bar unifié et des protections par `ConfirmationDrawer`.
+
+### Sécurité & Dépendances
+- Mise à jour des dépendances Go (`go-dependencies`) et développement frontend (`vitest`).
+
 ## [v1.21.1] — 2026-09-11
 
 ### Corrigé
