@@ -111,12 +111,6 @@
 | POST | `/api/auth/recover` | `auth.Recover` | Emergency recovery with key (`TRCK-...`) & auto-regeneration |
 | POST | `/api/auth/change-password` | `auth.ChangePassword` | Authenticated password change & auto-regeneration |
 | POST | `/api/auth/recovery-key/regenerate` | `auth.RegenerateRecoveryKey` | Regenerate emergency recovery key |
-| GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration and webhook URLs |
-| PUT | `/api/admin/system-settings` | `adminSettings.UpdateSystemSettings` | Update configuration in SQLite & trigger client hot-reload |
-| POST | `/api/admin/system-settings/test/{service}` | `adminSettings.Test*` | Test connection for TMDB, TVDB, Gemini, Radarr, Sonarr, Prowlarr |
-| POST | `/api/admin/system-settings/vapid/generate` | `adminSettings.GenerateVAPIDKeys` | Auto-generate fresh NIST P-256 VAPID keypair |
-| GET | `/api/admin/auth-settings` | `auth.GetAuthSettings` | Get auth mode and configuration state |
-| PUT | `/api/admin/auth-settings` | `auth.UpdateAuthSettings` | Update auth mode (`google`, `password`, `hybrid`) |
 | POST | `/api/auth/logout` | `auth.Logout` | Clear JWT auth cookie |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
@@ -174,6 +168,8 @@
 | PUT | `/api/admin/notifications` | `admin.UpdateNotificationPrefs` | Update Web Push notification preferences |
 | GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
 | PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
+| GET | `/api/admin/auth-settings` | `auth.GetAuthSettings` | Get auth mode and configuration state |
+| PUT | `/api/admin/auth-settings` | `auth.UpdateAuthSettings` | Update auth mode (`google`, `password`, `hybrid`) |
 | GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration and webhook URLs |
 | PUT | `/api/admin/system-settings` | `adminSettings.UpdateSystemSettings` | Update configuration in SQLite & trigger client hot-reload |
 | POST | `/api/admin/system-settings/test/tmdb` | `adminSettings.TestTMDB` | Test TMDB connection |
@@ -251,7 +247,7 @@
 | `CalendarWeekTimeline` | `components/CalendarWeekTimeline.tsx` | 7-day weekly timeline view with rich release cards |
 | `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
 | `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
-| `TitleHistory` | `components/TitleHistory.tsx` | Chronological scrobble session logs on title detail |
+| `PrimeBadge` | `components/PrimeBadge.tsx` | Amazon Prime Video source badge |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList) |
 | `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
