@@ -148,6 +148,9 @@ export const fr: TranslationSchema = {
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',
+    personalInstance: 'Instance personnelle',
+    serverOnline: 'Serveur en ligne',
+    serverOffline: 'Serveur hors-ligne',
     systemSettings: 'Paramètres système & Clés API',
     authSecurity: 'Authentification & Sécurité',
     anilist: 'Synchronisation AniList',

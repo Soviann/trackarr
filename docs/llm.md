@@ -109,7 +109,7 @@
 - `POST /api/anilist/token` : Save AniList OAuth access token.
 - `DELETE /api/anilist/token` : Disconnect AniList integration.
 - `GET /api/admin/auth-settings` & `PUT /api/admin/auth-settings` : Get/update auth mode (`google`, `password`, `hybrid`).
-- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite and trigger client hot-reload.
+- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags) and trigger client hot-reload.
 - `POST /api/admin/system-settings/test/{service}` : Test connection for TMDB, TVDB, Gemini, Radarr, Sonarr, Prowlarr.
 - `POST /api/admin/system-settings/vapid/generate` : Auto-generate fresh NIST P-256 VAPID keypair.
 - `GET /api/admin/counts` : Total library titles and queued items for admin navbar badge.

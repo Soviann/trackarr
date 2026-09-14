@@ -14,6 +14,7 @@ import (
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/Soviann/trackarr/internal/version"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,6 +56,8 @@ func TestGetSystemSettings(t *testing.T) {
 
 	var resp handler.SystemSettingsResponse
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+
+	assert.Equal(t, version.Version, resp.AppVersion)
 
 	// TMDB should fall back to env key (masked)
 	assert.True(t, resp.TMDBConfigured)

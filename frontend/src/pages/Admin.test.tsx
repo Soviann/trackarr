@@ -37,6 +37,7 @@ describe('Admin Dashboard Page', () => {
       }
       if (path === '/admin/system-settings') {
         return {
+          app_version: 'v1.21.3',
           tmdb_configured: true,
           tvdb_configured: true,
           radarr_configured: true,
@@ -53,6 +54,11 @@ describe('Admin Dashboard Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Admin Dashboard')).not.toBeNull()
     })
+
+    // Header version and server status
+    expect(screen.getByText('v1.21.3')).not.toBeNull()
+    expect(screen.getByText('Server online')).not.toBeNull()
+    expect(screen.getByText('Personal instance')).not.toBeNull()
 
     // Section 1
     expect(screen.getByText('Activity & Immediate Actions')).not.toBeNull()

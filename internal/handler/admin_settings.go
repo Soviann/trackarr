@@ -14,6 +14,7 @@ import (
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
+	"github.com/Soviann/trackarr/internal/version"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -36,6 +37,7 @@ func NewAdminSettingsHandler(
 }
 
 type SystemSettingsResponse struct {
+	AppVersion            string `json:"app_version"`
 	TMDBAPIKey            string `json:"tmdb_api_key"`
 	TMDBConfigured        bool   `json:"tmdb_configured"`
 	TVDBAPIKey            string `json:"tvdb_api_key"`
@@ -121,6 +123,7 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 	}
 
 	resp := SystemSettingsResponse{
+		AppVersion:            version.Version,
 		TMDBAPIKey:            maskSecret(get("tmdb_api_key")),
 		TMDBConfigured:        get("tmdb_api_key") != "",
 		TVDBAPIKey:            maskSecret(get("tvdb_api_key")),
