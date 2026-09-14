@@ -170,7 +170,7 @@
 | PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
 | GET | `/api/admin/auth-settings` | `auth.GetAuthSettings` | Get auth mode and configuration state |
 | PUT | `/api/admin/auth-settings` | `auth.UpdateAuthSettings` | Update auth mode (`google`, `password`, `hybrid`) |
-| GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration and webhook URLs |
+| GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration (including `app_version`), masked secrets and webhook URLs |
 | PUT | `/api/admin/system-settings` | `adminSettings.UpdateSystemSettings` | Update configuration in SQLite & trigger client hot-reload |
 | POST | `/api/admin/system-settings/test/tmdb` | `adminSettings.TestTMDB` | Test TMDB connection |
 | POST | `/api/admin/system-settings/test/tvdb` | `adminSettings.TestTVDB` | Test TVDB connection |
