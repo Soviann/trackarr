@@ -44,6 +44,9 @@
    - Active filter state is held in Zustand `useTitleStore` and persists across title navigation and tab switches until explicit reset or reload.
 8. **Unified Hub Bar & BottomSheet Drawers**:
    - On `TitleDetail`, the previous stacked ~720px franchise card and history buttons are unified into a compact ~100px Hub Bar with summary glance rows, opening slide-up `BottomSheet` drawers and elevating season/episode lists by ~600px for immediate mobile visibility.
+9. **Title Rematch & Creation Enrichment Payloads**:
+   - `TitleService.Rematch` accepts an optional `titleType *model.TitleType` alongside external IDs, allowing users to align mismatched media kinds (e.g. series misclassified as movies) during rematch without direct database surgery.
+   - `CreateAndEnrich` constructs a fully populated `EnrichmentPayload` (including primary title name, year, media type, anime flag, external IDs, and match status preservation) with deduplication key `enrichment:%d`, preventing type regression or fallback during async worker execution.
 
 ---
 
@@ -59,7 +62,7 @@
 - `season_external_ids`: Per-part AniList season mappings (`season_id`, `provider: 'anilist'`, `external_id`, `anilist_episode_count`, `anilist_start_date`, `anilist_average_score`, `sort_order`).
 - `title_relations`: Side stories, sagas, and franchise relations (`title_id`, `season_id`, `provider: 'anilist'|'tmdb'|'tvdb'`, `external_id`, `relation_type: 'PREQUEL'|'SEQUEL'|'SPIN_OFF'|'SIDE_STORY'|'ALTERNATIVE'|'COLLECTION'`, `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`).
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
-- `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`).
+- `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---

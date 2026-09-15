@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.5] — 2026-09-15
+
+### Modifié
+- **Audit exhaustif et synchronisation de la documentation et des captures d'écran** :
+  - Régénération intégrale des captures d'écran de l'application (`docs/screenshots/01-library.png` à `07-admin.png`) en haute définition mobile (1000x1610) sur une base de données réelle (7 532 titres), reflétant fidèlement le tiroir de filtres compact avec menus déroulants, la poignée fermée mono-ligne, le héros du prochain épisode avec estimateur de binge, les badges de disponibilité Arr/streaming, le snackbar d'annulation universel et la décomposition naturelle du temps de visionnage.
+  - Mise à jour et enrichissement du sommaire maître (`docs/INDEX.md`), du guide d'introduction (`docs/overview.md`), du guide utilisateur (`docs/user-guide.md`), de la configuration API (`docs/api-setup.md`), des intégrations (`docs/integrations.md`), du déploiement (`docs/deployment.md`), de la maintenance (`docs/maintenance.md`), de la référence LLM (`docs/llm.md`), des patterns d'architecture (`docs/patterns.md`), des tâches de fond (`docs/background-jobs.md`), du modèle de BDD (`docs/dev/database-model.md`), du pipeline de matching (`docs/dev/matching-pipeline.md`) et du fichier `README.md`.
+  - Harmonisation des routes d'administration SPA vers `/admin/settings` (correction des anciennes références `/admin/system-settings`).
+
 ## [v1.21.4] — 2026-09-15
 
 ### Ajouté

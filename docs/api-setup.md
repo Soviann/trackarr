@@ -6,7 +6,7 @@
 
 This guide walks you through obtaining and configuring every external API key and integration supported by **Trackarr**.
 
-All API keys can be set either via environment variables (`.env` / `.env.local` / Docker environment) or configured directly inside Trackarr via the **Admin Dashboard** (`/admin/system-settings` and `/admin/anilist`).
+All API keys can be set either via environment variables (`.env` / `.env.local` / Docker environment) or configured directly inside Trackarr via the **Admin Dashboard** (`/admin/settings` and `/admin/anilist`).
 
 ---
 

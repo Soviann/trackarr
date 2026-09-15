@@ -37,7 +37,7 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - `task_queue`: Asynchronous background jobs. Columns: `id`, `task_type`, `payload`, `status` (`pending`/`running`/`completed`/`failed`/`dead`), `attempts`, `max_attempts`, `run_at`, `created_at`, `updated_at`, `last_error`, `dedup_key`.
 - `match_events`: Audit log for automated actions. Columns: `id`, `title_id`, `kind` (`auto_confirmed`, `season_attached`), `detail`, `created_at`.
 - `season_audit_dismissals`: Discarded duplicate merge proposals. Primary Key: `(source_title_id, target_title_id)`. Columns: `source_title_id`, `target_title_id`, `created_at`.
-- `wrapped_snapshots`: Immutable annual retrospective snapshots. Primary Key: `year`. Columns: `year`, `data_json`, `created_at`.
+- `wrapped_snapshots`: Immutable annual retrospective snapshots. Primary Key: `year`. Columns: `year`, `data_json`, `created_at` (migrations 044–046; empty snapshots are purged).
 - `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences, etc.). Columns: `key`, `value`.
 
 ## Title Merge Invariants (`TitleWriter.Merge`)
