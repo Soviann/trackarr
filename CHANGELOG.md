@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.4] — 2026-09-15
+
 ### Ajouté
 - **Affichage de la version de l'application sur le tableau de bord Admin** :
   - Exposition du champ `app_version` dans la réponse de l'endpoint `GET /api/admin/system-settings`.
@@ -14,6 +16,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ### Supprimé
 - **Nettoyage de l'en-tête d'administration** :
   - Suppression du badge redondant « Online » et du sous-titre « Personal instance » dans l'en-tête du tableau de bord d'administration.
+
+## [v1.21.3] — 2026-09-14
 
 ### Corrigé
 - **Alignement du type de titre lors du Rematch et fiabilisation de l'enrichissement d'arrière-plan** :
