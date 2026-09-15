@@ -55,10 +55,8 @@ describe('Admin Dashboard Page', () => {
       expect(screen.getByText('Admin Dashboard')).not.toBeNull()
     })
 
-    // Header version and server status
+    // Header version
     expect(screen.getByText('v1.21.3')).not.toBeNull()
-    expect(screen.getByText('Server online')).not.toBeNull()
-    expect(screen.getByText('Personal instance')).not.toBeNull()
 
     // Section 1
     expect(screen.getByText('Activity & Immediate Actions')).not.toBeNull()

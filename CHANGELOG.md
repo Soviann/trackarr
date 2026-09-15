@@ -9,12 +9,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ### Ajouté
 - **Affichage de la version de l'application sur le tableau de bord Admin** :
   - Exposition du champ `app_version` dans la réponse de l'endpoint `GET /api/admin/system-settings`.
-  - Affichage d'un badge de version épuré (`vX.Y.Z`) dans le sous-titre de l'en-tête du tableau de bord d'administration (`Admin.tsx`).
+  - Affichage d'un badge de version épuré (`vX.Y.Z`) en haut à droite du tableau de bord d'administration (`Admin.tsx`).
 
-### Modifié
-- **Clarification du statut d'état du serveur dans l'en-tête d'administration** :
-  - Remplacement du badge statique et ambigu « Online » par un indicateur explicite « Serveur en ligne » (`admin.serverOnline`) avec gestion d'état d'erreur ou de coupure (« Serveur hors-ligne », `admin.serverOffline`).
-  - Prise en charge i18n complète en français et en anglais avec internationalisation du titre et du sous-titre d'instance personnelle.
+### Supprimé
+- **Nettoyage de l'en-tête d'administration** :
+  - Suppression du badge redondant « Online » et du sous-titre « Personal instance » dans l'en-tête du tableau de bord d'administration.
 
 ### Corrigé
 - **Alignement du type de titre lors du Rematch et fiabilisation de l'enrichissement d'arrière-plan** :
