@@ -84,8 +84,16 @@ When launching Trackarr for the first time with a fresh database:
 | `VAPID_PUBLIC_KEY` | Web Push public key | — | Optional |
 | `VAPID_PRIVATE_KEY` | Web Push private key | — | Optional |
 | `VAPID_SUBJECT` | Web Push contact mailto (`mailto:user@domain.com`) | — | Optional |
+| `RADARR_URL` / `RADARR_API_KEY` | Radarr instance URL and API Key | — | Optional |
+| `SONARR_URL` / `SONARR_API_KEY` | Sonarr instance URL and API Key | — | Optional |
+| `PROWLARR_URL` / `PROWLARR_API_KEY` | Prowlarr instance URL and API Key | — | Optional |
+| `JELLYFIN_WEBHOOK_SECRET` | Secret token for Jellyfin webhook authentication | — | Optional |
+| `PLEX_WEBHOOK_SECRET` | Secret token for Plex webhook authentication | — | Optional |
+| `COOKIE_SECURE` | Enforce HTTPS Secure flag on session cookies (`true`/`false`) | `false` | Recommended on HTTPS |
+| `METADATA_LANGUAGE` | Preferred language code for title metadata | `fr` | No |
+| `DISABLE_BACKGROUND_TASKS` | Disable 24h cron ticker and background task queue worker | `false` | No |
 
-> ℹ️ *Tip: All API keys (TMDB, AniList, Radarr, Sonarr, Prowlarr) can also be configured dynamically at runtime from the **Admin Dashboard** (`/admin`).*
+> ℹ️ *Tip: All API keys and integration URLs (TMDB, AniList, Radarr, Sonarr, Prowlarr) can also be configured dynamically at runtime from the **Admin Dashboard** (`/admin`).*
 
 ---
 

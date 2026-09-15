@@ -59,11 +59,15 @@
 ## ⚡ Why Trackarr?
 
 - 🚀 **Ultra-Lightweight Go Backend**: Single binary with embedded SQLite WAL and embedded web assets. Idles at **under 30 MB of RAM**, perfectly suited for low-power Synology NAS, Unraid, TrueNAS, Raspberry Pi, and VPS.
-- 📱 **PWA Mobile-First for Android**: Tailored specifically for Android devices (Chrome / Android PWA engine) with native share sheet integration (`Share to Trackarr`), haptic feedback, swipe gestures, and instant pull-to-refresh.
+- 📱 **PWA Mobile-First for Android**: Tailored specifically for Android devices (Chrome / Android PWA engine) with native share sheet integration (`Share to Trackarr`), haptic feedback, swipe gestures, universal undo countdowns, and instant pull-to-refresh.
 - 🎬 **Universal Scrobbling**: Real-time webhook scrobbling from **Jellyfin** and **Plex** with automatic watch time, progress tracking, and catch-up badges.
+- 📆 **Multi-View Calendar & iCal Subscription**: Monthly grid, weekly timeline, and chronological lists with token-secured RFC 5545 calendar feed for Apple Calendar and Google Calendar.
 - 🌸 **AniList 2-Way Sync & Multi-Part Anime**: Seamlessly handles anime seasons split across multiple AniList entries (e.g. Cour 1 / Cour 2) with automated bidirectional rating, progress, and status synchronization.
 - 🤖 **AI-Assisted Title Matching**: Multi-tiered reconciliation engine (Plex/Jellyfin IDs ➔ TMDB ➔ TVDB ➔ AniList ➔ Google Gemini AI fuzzy resolution) for zero-headache metadata accuracy.
+- 🏛️ **Sagas, Universes & Franchise Hub**: Compact glance rows, chronological timeline ordering, watch completion gauges, and 1-click addition of missing movies/series.
+- 📺 **Streaming Watch Providers**: Configurable active subscriptions highlighting availability directly on cards and sheets (Netflix, Prime Video, Disney+, Apple TV+, Max, etc.).
 - 📥 ***arr Automation (Radarr & Sonarr)**: Check library status directly on title detail sheets and push missing movies/shows straight to your Radarr/Sonarr download queues.
+- ✨ **Trackarr Wrapped**: Annual viewing retrospective story player with Gemini AI viewing persona, top favorites, release rankings, and past archive gallery.
 - 🎨 **4 Modern Themes**: In-app theme switcher featuring *Cyber Cyan*, *Sunset Coral*, *Emerald Teal*, and *Vault Amber*.
 
 ---

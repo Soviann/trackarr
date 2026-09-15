@@ -2,7 +2,7 @@
 
 [← Back to Index](INDEX.md)
 
-This guide covers real-time webhooks, media server scrobbling (Jellyfin / Plex), AniList bidirectional sync, and the Radarr / Sonarr (*arr) stack integration.
+This guide covers real-time webhooks, media server scrobbling (Jellyfin / Plex), AniList bidirectional sync, the Radarr / Sonarr (*arr) stack, and streaming watch providers.
 
 ---
 
@@ -59,7 +59,7 @@ Trackarr maintains continuous, bidirectional synchronization with AniList:
 
 Manage your media library and track availability seamlessly:
 
-### Configuration (`/admin/arr` & `/admin/system-settings`):
+### Configuration (`/admin/arr` & `/admin/settings`):
 - **Radarr**: Configure URL (`http://radarr:7878`), API Key, default Root Folder, and Quality Profile.
 - **Sonarr**: Configure URL (`http://sonarr:8989`), API Key, Standard Profile, Anime Profile, and Root Folder.
 
@@ -69,3 +69,12 @@ Manage your media library and track availability seamlessly:
 - **Arr Icon Badges**: 18px indicator pills on search and list cards.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**).
 - **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, and add media directly to Trackarr with 1-click **+ Add**.
+
+---
+
+## 4. Streaming Watch Providers
+
+Trackarr displays streaming badges directly on movie and series detail sheets, indicating whether titles in your watchlist are available on your active subscriptions:
+- **Supported Providers**: Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, and Animation Digital Network (ADN).
+- **Configuration**: Navigate to **Admin Dashboard ➔ System Settings (`/admin/settings`) ➔ Streaming Providers** to check and activate the platforms you subscribe to.
+- **Automated Updates**: Availability is automatically queried and refreshed via TMDB Watch Providers during routine metadata synchronization passes.

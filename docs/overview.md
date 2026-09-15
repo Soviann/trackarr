@@ -11,11 +11,16 @@
 ### What Trackarr Does
 - **Automatic Scrobbling**: Automatically logs finished movies and episodes via Jellyfin and Plex webhooks.
 - **Unified Library**: Track your media across standard statuses: *Watching*, *Caught up*, *Plan to Watch*, *Completed*, and *Dropped*.
-- **Instant Episode Progress**: One-tap progress tracking with episode counters and upcoming air dates.
+- **Instant Episode Progress**: One-tap progress tracking with episode counters, next episode hero actions, and upcoming air dates.
 - **Ratings & AniList Sync**: Native 1–10 scoring with automatic background synchronization to AniList (including multi-part season chaining).
 - ***arr Stack Integration**: Live checks with Radarr and Sonarr, colored status borders, and direct queue management.
 - **Prowlarr Releases Feed**: 1-click addition from your indexer releases into Trackarr.
 - **Smart Matching Engine**: Resolves external IDs across TMDB, TVDB, IMDb, and AniList with Gemini AI verification.
+- **Multi-View Calendar & iCal Export**: Monthly grid, weekly timeline, and chronological lists (`/coming-up`) with token-secured RFC 5545 calendar subscription feed.
+- **Sagas & Franchise Hub**: Chronological timeline ordering for movie collections, TV universes, and anime side stories with completion gauges and 1-click missing title additions.
+- **Configurable Streaming Providers**: Availability badges for active streaming subscriptions (Netflix, Prime Video, Disney+, Apple TV+, Max, etc.).
+- **Universal Undo & Haptics**: 5-second perimeter radial timer countdown allowing instant rollback of progress changes and deletions.
+- **1-Click Backup & Restore**: Full JSON, spreadsheet CSV, and Trakt.tv archive exports plus drag-and-drop backup import with dry-run verification.
 - **Trackarr Wrapped**: Interactive multi-slide annual retrospective with Gemini AI viewing persona, top favorites, release rankings, rewatch champion, and custom fun facts.
 
 ### What Trackarr Intentionally Does NOT Do
