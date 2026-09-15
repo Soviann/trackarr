@@ -146,9 +146,6 @@ export const en = {
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',
-    personalInstance: 'Personal instance',
-    serverOnline: 'Server online',
-    serverOffline: 'Server offline',
     systemSettings: 'System Settings & API Keys',
     authSecurity: 'Authentication & Security',
     anilist: 'AniList Synchronization',

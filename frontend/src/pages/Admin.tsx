@@ -45,7 +45,7 @@ export function Admin({ path }: { path?: string }) {
   const { t } = useTranslation()
   const { data: counts } = useApi<AdminCounts>('/admin/counts')
   const { data: authSettings } = useApi<AuthSettings>('/admin/auth-settings')
-  const { data: sysSettings, error: sysSettingsError } = useApi<SystemSettings>('/admin/system-settings')
+  const { data: sysSettings } = useApi<SystemSettings>('/admin/system-settings')
   const { data: appSettings } = useApi<Settings>('/settings')
 
   const { data: refreshProgress, mutate: mutateRefreshProgress } = useApi<RefreshAllProgress>('/admin/refresh-all/status')
@@ -196,19 +196,10 @@ export function Admin({ path }: { path?: string }) {
       <div className={s.header}>
         <div className={s.headerLeft}>
           <h1 className={s.title}>{t('admin.dashboardTitle')}</h1>
-          <div className={s.subtitle}>
-            <span>Trackarr</span>
-            {sysSettings?.app_version && (
-              <span className={s.versionBadge}>{sysSettings.app_version}</span>
-            )}
-            <span className={s.subtitleDot}>•</span>
-            <span>{t('admin.personalInstance')}</span>
-          </div>
         </div>
-        <div className={`${s.systemStatusPill} ${sysSettingsError ? s.systemStatusPillOffline : ''}`}>
-          <div className={`${s.statusDot} ${sysSettingsError ? s.statusDotOffline : ''}`} />
-          <span>{sysSettingsError ? t('admin.serverOffline') : t('admin.serverOnline')}</span>
-        </div>
+        {sysSettings?.app_version && (
+          <span className={s.versionBadge}>{sysSettings.app_version}</span>
+        )}
       </div>
 
       {/* SECTION 1: ACTIVITY & IMMEDIATE ACTIONS */}

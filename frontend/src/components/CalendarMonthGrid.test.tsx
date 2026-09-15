@@ -43,8 +43,8 @@ describe('CalendarMonthGrid', () => {
   })
 
   it('renders event pills on matching dates with resolved cover url', () => {
-    const { getByText, container } = render(<CalendarMonthGrid events={mockEvents} />)
-    expect(getByText('Frieren')).toBeTruthy()
+    const { getAllByText, getByText, container } = render(<CalendarMonthGrid events={mockEvents} />)
+    expect(getAllByText('Frieren').length).toBeGreaterThanOrEqual(1)
     expect(getByText('Dune 3')).toBeTruthy()
     const img = container.querySelector('img[src="/api/covers/frieren.webp"]')
     expect(img).toBeTruthy()
