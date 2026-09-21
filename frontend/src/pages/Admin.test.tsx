@@ -37,7 +37,7 @@ describe('Admin Dashboard Page', () => {
       }
       if (path === '/admin/system-settings') {
         return {
-          app_version: 'v1.21.4',
+          app_version: 'v1.21.6',
           tmdb_configured: true,
           tvdb_configured: true,
           radarr_configured: true,
@@ -56,7 +56,7 @@ describe('Admin Dashboard Page', () => {
     })
 
     // Header version
-    expect(screen.getByText('v1.21.4')).not.toBeNull()
+    expect(screen.getByText('v1.21.6')).not.toBeNull()
 
     // Section 1
     expect(screen.getByText('Activity & Immediate Actions')).not.toBeNull()
