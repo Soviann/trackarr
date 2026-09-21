@@ -63,3 +63,8 @@ After ID resolution:
 - **Seasons creation**: Seasons are created only by refresh (`TaskTypeRefresh` via TMDB) or first watched episode scrobble (`SeasonWriter.GetOrCreate`), never during initial enrichment payload generation.
 - **Title Type Alignment on Rematch**: `POST /api/titles/{id}/rematch` accepts an optional `type` parameter (`movie` / `series`). When provided, it updates `titles.type` and propagates the type to `EnrichmentPayload` with `PreserveMatch = true`, ensuring type corrections stick without resetting confirmed match status.
 - **Creation Enrichment Payloads**: New titles created via `CreateAndEnrich` enqueue a fully populated `EnrichmentPayload` (including primary name, year, type, anime flag, external IDs, and match status) using deduplication key `enrichment:%d`. If bare `{"title_id": ...}` payloads are encountered, `HandleEnrichment` safely recovers the existing type and state from the database without defaulting to movie.
+
+### Rematch & Type Realignment
+When rematching a title via `POST /api/titles/{id}/rematch`, Trackarr allows changing the media kind (`type: "movie" | "series"`). 
+The service updates the core title record transactionally, triggers a full metadata re-fetch for the target provider, and cascades season/episode structures accordingly.
+
