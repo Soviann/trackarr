@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.6] — 2026-09-21
+
+### Sécurité & Dépendances
+- Mise à jour des dépendances de développement frontend : Vite (`8.3.0`), Vitest (`5.0.1`) et plugins associés (#71).
+
+### Modifié
+- **Audit hebdomadaire de la documentation, de l'i18n et des règles LLM** (#72) :
+  - Vérification de la parité stricte i18n (`en.ts` / `fr.ts`) et de l'absence totale de chaînes en dur ou commentaires non anglais.
+  - Spécification formelle de l'alignement de type au Rematch et des garanties de payload `CreateAndEnrich` dans `docs/dev/matching-pipeline.md`.
+
 ## [v1.21.5] — 2026-09-15
 
 ### Modifié
