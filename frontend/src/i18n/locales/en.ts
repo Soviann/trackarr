@@ -495,6 +495,15 @@ export const en = {
     titleAdded: 'Added "{title}" to library',
     actionUndone: 'Action undone',
   },
+  editSheet: {
+    title: 'Edit title',
+    type: 'Type',
+    anime: 'Anime',
+    movie: 'Movie',
+    series: 'Series',
+    status: 'Status',
+    deleteFromSonarr: 'Delete from Sonarr (remove files & block collection import)',
+  },
 }
 
 type DeepStringify<T> = {

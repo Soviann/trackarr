@@ -529,17 +529,33 @@ func (s *TitleService) CreateAndEnrich(ctx context.Context, title *model.Title, 
 	return newID, err
 }
 
-// Update modifies a title and enqueues any resulting AniList pushes inside a managed transaction.
-func (s *TitleService) Update(ctx context.Context, id int64, update repository.TitleUpdate, before *model.Title, newStatus *model.TitleStatus, newRating *int) error {
+// Update modifies a title and enqueues any resulting AniList pushes or Sonarr deletions inside a managed transaction.
+func (s *TitleService) Update(ctx context.Context, id int64, update repository.TitleUpdate, before *model.Title, newStatus *model.TitleStatus, newRating *int, deleteFromSonarr bool) error {
 	return database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
 		if err := repository.NewTitleWriter(tx).Update(ctx, id, update); err != nil {
 			return err
 		}
 		if before != nil {
 			enqueueAniListPushesOnTitleUpdate(ctx, tx, before, newStatus, newRating)
+			if deleteFromSonarr {
+				enqueueSonarrDeleteOnTitleUpdate(ctx, tx, before)
+			}
 		}
 		return nil
 	})
+}
+
+func enqueueSonarrDeleteOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title) {
+	payload := SonarrDeletePayload{
+		TitleID:                before.ID,
+		SonarrID:               before.SonarrID,
+		TVDBID:                 before.TVDBID,
+		DeleteFiles:            true,
+		AddImportListExclusion: true,
+	}
+	b, _ := json.Marshal(payload)
+	dedup := fmt.Sprintf("sonarr_delete_%d", before.ID)
+	_, _ = repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeSonarrDelete, string(b), &dedup)
 }
 
 // Delete removes a title by ID inside a managed transaction.

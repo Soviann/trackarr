@@ -156,6 +156,7 @@ func (w *TaskQueueWorker) registerBuiltinHandlers() {
 	w.handlers[model.TaskTypeSonarrPush] = func(ctx context.Context, task model.Task, logger *slog.Logger) error {
 		return w.handleArrPush(ctx, task, logger, "sonarr")
 	}
+	w.handlers[model.TaskTypeSonarrDelete] = w.handleSonarrDelete
 	w.handlers[model.TaskTypeGenerateWrapped] = w.handleGenerateWrapped
 }
 

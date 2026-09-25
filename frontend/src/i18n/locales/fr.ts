@@ -497,4 +497,13 @@ export const fr: TranslationSchema = {
     titleAdded: '« {title} » ajouté à la bibliothèque',
     actionUndone: 'Action annulée',
   },
+  editSheet: {
+    title: 'Modifier le titre',
+    type: 'Type',
+    anime: 'Animé',
+    movie: 'Film',
+    series: 'Série',
+    status: 'Statut',
+    deleteFromSonarr: 'Supprimer de Sonarr (effacer les fichiers et bloquer l\'import)',
+  },
 }

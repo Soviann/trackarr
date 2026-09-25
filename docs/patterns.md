@@ -85,7 +85,7 @@
 | `LibraryService` | `internal/service/library.go` | User scrobbles, auto-completion, rating prompts, notifications | `docs/dev/database-model.md` |
 | `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` + `PlayedToCompletion`) | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, multipart + JSON fallback) | `docs/integrations.md` |
-| `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy and push enqueuing | `docs/dev/arr-integration.md` |
+| `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, and deletion enqueuing | `docs/dev/arr-integration.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
 | `BackupService` | `internal/service/backup.go` | 1-Click JSON/CSV/Trakt exports and transactional archive import with dry-run | `docs/maintenance.md` |

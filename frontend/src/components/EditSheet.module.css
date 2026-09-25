@@ -117,3 +117,34 @@
   font-weight: 600;
   color: var(--ink);
 }
+
+.checkboxContainer {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.checkboxText {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink);
+  font-weight: 500;
+}

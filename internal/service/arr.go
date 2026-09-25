@@ -59,6 +59,15 @@ type PushPayload struct {
 	QualityProfile int    `json:"quality_profile"`
 }
 
+// SonarrDeletePayload is the queue payload for sonarr deletion tasks.
+type SonarrDeletePayload struct {
+	TitleID                int64  `json:"title_id"`
+	SonarrID               *int64 `json:"sonarr_id,omitempty"`
+	TVDBID                 *int64 `json:"tvdb_id,omitempty"`
+	DeleteFiles            bool   `json:"delete_files"`
+	AddImportListExclusion bool   `json:"add_import_list_exclusion"`
+}
+
 // EnqueuePush enqueues an arr push task and saves the arr_ignored state if pushing is bypassed.
 func (s *ArrService) EnqueuePush(ctx context.Context, app string, payload PushPayload) error {
 	tx, err := s.writeDB.BeginTx(ctx, nil)
@@ -564,4 +573,72 @@ func (s *ArrService) UpdateTitle(ctx context.Context, titleID int64, payload Pus
 	}
 
 	return s.GetTitleArrDetails(ctx, titleID)
+}
+
+// DeleteSeriesFromSonarr deletes a series from Sonarr, purges files if deleteFiles is true,
+// and records an import list exclusion if addImportListExclusion is true.
+func (s *ArrService) DeleteSeriesFromSonarr(ctx context.Context, payload SonarrDeletePayload) error {
+	var arrID int64
+	if payload.SonarrID != nil && *payload.SonarrID > 0 {
+		arrID = *payload.SonarrID
+	} else if payload.TVDBID != nil && *payload.TVDBID > 0 {
+		// Lookup by TVDB ID in Sonarr
+		endpoint := fmt.Sprintf("/api/v3/series?tvdbId=%d", *payload.TVDBID)
+		resp, err := s.ProxyRequest(ctx, "sonarr", "GET", endpoint, nil)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var items []map[string]interface{}
+				if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
+					if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
+						arrID = int64(idF)
+					}
+				}
+			}
+		}
+		// If still not found, try series lookup
+		if arrID == 0 {
+			lookupEndpoint := fmt.Sprintf("/api/v3/series/lookup?term=tvdb:%d", *payload.TVDBID)
+			resp, err := s.ProxyRequest(ctx, "sonarr", "GET", lookupEndpoint, nil)
+			if err == nil {
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					var items []map[string]interface{}
+					if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
+						if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
+							arrID = int64(idF)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if arrID == 0 {
+		// Series does not exist in Sonarr; ensure local sonarr_id is cleared.
+		if payload.TitleID > 0 {
+			_ = s.clearArrID(ctx, payload.TitleID, "sonarr")
+		}
+		return nil
+	}
+
+	deletePath := fmt.Sprintf("/api/v3/series/%d?deleteFiles=%t&addImportListExclusion=%t",
+		arrID, payload.DeleteFiles, payload.AddImportListExclusion)
+
+	resp, err := s.ProxyRequest(ctx, "sonarr", "DELETE", deletePath, nil)
+	if err != nil {
+		return fmt.Errorf("delete series from sonarr: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("sonarr delete returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	if payload.TitleID > 0 {
+		_ = s.clearArrID(ctx, payload.TitleID, "sonarr")
+	}
+
+	return nil
 }

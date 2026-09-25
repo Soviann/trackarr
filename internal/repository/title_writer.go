@@ -204,7 +204,9 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `radarr_id = ?`)
 		args = append(args, *update.RadarrID)
 	}
-	if update.SonarrID != nil {
+	if update.ClearSonarrID {
+		sets = append(sets, `sonarr_id = NULL`)
+	} else if update.SonarrID != nil {
 		sets = append(sets, `sonarr_id = ?`)
 		args = append(args, *update.SonarrID)
 	}
