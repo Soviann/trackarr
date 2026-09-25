@@ -6,12 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.7] — 2026-09-25
+
 ### Ajouté
 - **Synchronisation de la suppression des séries abandonnées avec Sonarr (#74)** :
   - Option dans le tiroir d'édition (`EditSheet`) pour supprimer une série de Sonarr lors du passage au statut « Abandonné » (cochée par défaut lors du basculement, ou décochée pour les séries déjà abandonnées).
   - Tâche d'arrière-plan `sonarr_delete` envoyant la requête `DELETE /api/v3/series/{id}?deleteFiles=true&addImportListExclusion=true` à Sonarr pour purger les fichiers du disque et ajouter l'exclusion de liste d'import (évite la réimportation automatique par une collection ou liste).
   - Nettoyage automatique de `sonarr_id` et marquage de `arr_ignored = 1` en base de données.
-
 
 ## [v1.21.6] — 2026-09-21
 
