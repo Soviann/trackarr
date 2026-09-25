@@ -330,7 +330,8 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		Type          *model.TitleType   `json:"type"`
 		IsAnime       *bool              `json:"is_anime"`
 		ArrIgnored    *bool              `json:"arr_ignored"`
-		PersonalNotes *string            `json:"personal_notes"`
+		PersonalNotes    *string            `json:"personal_notes"`
+		DeleteFromSonarr *bool              `json:"delete_from_sonarr"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 65536); err != nil {
@@ -342,13 +343,21 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	// would flood AniList with no-op pushes when the UI resends current values.
 	before, _ := h.titles.GetByID(id)
 
+	deleteFromSonarr := body.DeleteFromSonarr != nil && *body.DeleteFromSonarr
+	arrIgnored := body.ArrIgnored
+	if deleteFromSonarr {
+		trueVal := true
+		arrIgnored = &trueVal
+	}
+
 	update := repository.TitleUpdate{
 		Status:        body.Status,
 		MatchStatus:   body.MatchStatus,
 		MyRating:      body.MyRating,
 		Type:          body.Type,
 		IsAnime:       body.IsAnime,
-		ArrIgnored:    body.ArrIgnored,
+		ArrIgnored:    arrIgnored,
+		ClearSonarrID: deleteFromSonarr,
 		PersonalNotes: body.PersonalNotes,
 	}
 	if body.PersonalNotes != nil && *body.PersonalNotes == "" {
@@ -361,7 +370,7 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		update.ClearCoverURL = true
 	}
 
-	if err := h.service.Update(r.Context(), id, update, before, body.Status, body.MyRating); err != nil {
+	if err := h.service.Update(r.Context(), id, update, before, body.Status, body.MyRating, deleteFromSonarr); err != nil {
 		return httputil.InternalError("Internal error", err)
 	}
 

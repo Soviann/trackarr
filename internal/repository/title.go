@@ -127,6 +127,7 @@ type TitleUpdate struct {
 	SimklSlug          *string
 	RadarrID           *int64
 	SonarrID           *int64
+	ClearSonarrID      bool
 	ArrIgnored         *bool
 	WatchProviders     *string // JSON array of model.WatchProvider; "[]" clears
 	OriginCountry      *string // ISO-3166-1 alpha-2; sets titles.origin_country

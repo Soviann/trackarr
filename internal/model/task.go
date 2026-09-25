@@ -12,6 +12,7 @@ const (
 	TaskTypeAniListPushMovie  TaskType = "anilist_push_movie"
 	TaskTypeRadarrPush        TaskType = "radarr_push"
 	TaskTypeSonarrPush        TaskType = "sonarr_push"
+	TaskTypeSonarrDelete      TaskType = "sonarr_delete"
 	TaskTypeGenerateWrapped   TaskType = "generate_wrapped"
 )
 

@@ -259,7 +259,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     }
   }
 
-  const handleSaveEdit = async (updates: { type?: string; status?: string }) => {
+  const handleSaveEdit = async (updates: { type?: string; status?: string; is_anime?: boolean; delete_from_sonarr?: boolean }) => {
     setShowEdit(false)
     if (Object.keys(updates).length === 0) return
     try {

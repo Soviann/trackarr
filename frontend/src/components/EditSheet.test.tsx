@@ -66,4 +66,58 @@ describe('EditSheet', () => {
     fireEvent.click(getByText('Save'))
     expect(onSave).toHaveBeenCalledOnce()
   })
+
+  it('displays Sonarr checkbox checked by default when transitioning series to dropped', () => {
+    const onSave = vi.fn()
+    const { getByText, getByRole } = render(
+      <EditSheet open={true} onClose={vi.fn()} title={mockTitle} onSave={onSave} />
+    )
+    // Initially watching -> no checkbox
+    expect(() => getByRole('checkbox')).toThrow()
+
+    // Click Dropped status
+    fireEvent.click(getByText('Dropped'))
+
+    // Checkbox appears and is checked
+    const checkbox = getByRole('checkbox') as HTMLInputElement
+    expect(checkbox).toBeTruthy()
+    expect(checkbox.checked).toBe(true)
+
+    // Save
+    fireEvent.click(getByText('Save'))
+    expect(onSave).toHaveBeenCalledWith({
+      status: 'dropped',
+      delete_from_sonarr: true,
+    })
+  })
+
+  it('displays Sonarr checkbox unchecked by default for already dropped series', () => {
+    const onSave = vi.fn()
+    const droppedTitle: Title = { ...mockTitle, status: 'dropped' }
+    const { getByRole, getByText } = render(
+      <EditSheet open={true} onClose={vi.fn()} title={droppedTitle} onSave={onSave} />
+    )
+
+    // Checkbox appears immediately and is unchecked
+    const checkbox = getByRole('checkbox') as HTMLInputElement
+    expect(checkbox).toBeTruthy()
+    expect(checkbox.checked).toBe(false)
+
+    // Check it and save
+    fireEvent.click(checkbox)
+    expect(checkbox.checked).toBe(true)
+
+    fireEvent.click(getByText('Save'))
+    expect(onSave).toHaveBeenCalledWith({
+      delete_from_sonarr: true,
+    })
+  })
+
+  it('does not display Sonarr checkbox for movies even when dropped', () => {
+    const movieTitle: Title = { ...mockTitle, type: 'movie', status: 'dropped' }
+    const { queryByRole } = render(
+      <EditSheet open={true} onClose={vi.fn()} title={movieTitle} onSave={vi.fn()} />
+    )
+    expect(queryByRole('checkbox')).toBeNull()
+  })
 })
