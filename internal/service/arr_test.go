@@ -177,3 +177,191 @@ func TestArrService_GetTitleArrDetails_And_UpdateTitle(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, updated.Exists)
 }
+
+func TestArrService_DeleteSeriesFromSonarr_WithSonarrID(t *testing.T) {
+	var deletedURI string
+	var deleteMethod string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			deleteMethod = r.Method
+			deletedURI = r.RequestURI
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key-1",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	sonarrID := int64(88)
+	tvdbID := int64(12345)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{{Name: "Test Series", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteSeriesFromSonarr(context.Background(), service.SonarrDeletePayload{
+		TitleID:                titleID,
+		SonarrID:               &sonarrID,
+		DeleteFiles:            true,
+		AddImportListExclusion: true,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodDelete, deleteMethod)
+	assert.Equal(t, "/api/v3/series/88?deleteFiles=true&addImportListExclusion=true", deletedURI)
+
+	// Verify sonarr_id was cleared in DB
+	updatedTitle, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, updatedTitle.SonarrID)
+}
+
+func TestArrService_DeleteSeriesFromSonarr_FallbackTVDBLookup(t *testing.T) {
+	var deletedURI string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && r.URL.Path == "/api/v3/series" && r.URL.Query().Get("tvdbId") == "67890" {
+			_, _ = w.Write([]byte(`[{"id":99,"title":"Lookup Series"}]`))
+			return
+		}
+		if r.Method == http.MethodDelete && r.URL.Path == "/api/v3/series/99" {
+			deletedURI = r.RequestURI
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key-2",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	tvdbID := int64(67890)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{{Name: "Lookup Series", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteSeriesFromSonarr(context.Background(), service.SonarrDeletePayload{
+		TitleID:                titleID,
+		TVDBID:                 &tvdbID,
+		DeleteFiles:            true,
+		AddImportListExclusion: true,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, "/api/v3/series/99?deleteFiles=true&addImportListExclusion=true", deletedURI)
+}
+
+func TestArrService_DeleteSeriesFromSonarr_NotFoundIgnored(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key-3",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	tvdbID := int64(99999)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{{Name: "Missing Series", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteSeriesFromSonarr(context.Background(), service.SonarrDeletePayload{
+		TitleID:                titleID,
+		TVDBID:                 &tvdbID,
+		DeleteFiles:            true,
+		AddImportListExclusion: true,
+	})
+	require.NoError(t, err)
+}
+
+func TestArrService_DeleteSeriesFromSonarr_ErrorResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`internal server error`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key-4",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	sonarrID := int64(77)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+	}, []model.TitleName{{Name: "Error Series", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteSeriesFromSonarr(context.Background(), service.SonarrDeletePayload{
+		TitleID:                titleID,
+		SonarrID:               &sonarrID,
+		DeleteFiles:            true,
+		AddImportListExclusion: true,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sonarr delete returned 500")
+}

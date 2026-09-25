@@ -229,6 +229,62 @@ func TestTitleHandler_Update_StatusChange_EnqueuesSeasonPushes(t *testing.T) {
 	assert.True(t, seen[s2], "s2 push missing")
 }
 
+func TestTitleHandler_Update_DeleteFromSonarr_EnqueuesTaskAndClearsID(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	sonarrID := int64(42)
+	tvdbID := int64(12345)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{{Name: "Series To Drop", Language: "en", IsPrimary: true}})
+
+	body, _ := json.Marshal(map[string]any{
+		"status":             "dropped",
+		"delete_from_sonarr": true,
+	})
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/titles/%d", titleID), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.Patch("/api/titles/{id}", httputil.WrapHandler(h.Update))
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	// Check updated title in DB
+	title, err := repository.NewTitleRepository(db).GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusDropped, title.Status)
+	assert.Nil(t, title.SonarrID, "sonarr_id must be cleared")
+	assert.True(t, title.ArrIgnored, "arr_ignored must be true")
+
+	// Check enqueued sonarr_delete task
+	tasks, err := repository.NewTaskRepository(db).ListPending()
+	require.NoError(t, err)
+
+	var foundDeleteTask bool
+	for _, task := range tasks {
+		if task.TaskType == model.TaskTypeSonarrDelete {
+			foundDeleteTask = true
+			var p service.SonarrDeletePayload
+			require.NoError(t, json.Unmarshal([]byte(task.Payload), &p))
+			assert.Equal(t, titleID, p.TitleID)
+			require.NotNil(t, p.SonarrID)
+			assert.Equal(t, int64(42), *p.SonarrID)
+			require.NotNil(t, p.TVDBID)
+			assert.Equal(t, int64(12345), *p.TVDBID)
+			assert.True(t, p.DeleteFiles)
+			assert.True(t, p.AddImportListExclusion)
+		}
+	}
+	assert.True(t, foundDeleteTask, "sonarr_delete task must be enqueued")
+}
+
 // TestTitleHandler_Update_RatingOnly_SkipsNonEligibleSeasons verifies the
 // rating-only path: AniList rejects scores on CURRENT/PLANNING entries, so
 // the handler must filter seasons via ShouldPushRating. Only the COMPLETED

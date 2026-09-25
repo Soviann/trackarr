@@ -35,3 +35,12 @@ When a title is pushed directly from the title detail drawer (`ArrPushSheet` via
   - `Downloaded`: Available on disk.
   - `Monitored`: Tracked for future releases.
   - `Ignored`: User marked title to bypass Arr prompts (`arr_ignored = 1`).
+
+## Deletion & Import List Exclusion (Dropped Series)
+When a TV/anime series is marked as `dropped` in Trackarr and the user opts to delete from Sonarr:
+1. `EditSheet` sends `PATCH /api/titles/:id` with `status: "dropped"` and `delete_from_sonarr: true`.
+2. Backend clears `titles.sonarr_id = NULL`, sets `titles.arr_ignored = 1`, and enqueues task `sonarr_delete`.
+3. Background worker executes `DELETE /api/v3/series/{id}?deleteFiles=true&addImportListExclusion=true`:
+   - `deleteFiles=true`: Purges series media files from disk.
+   - `addImportListExclusion=true`: Registers the series with Sonarr's Import List Exclusions, preventing any collection or automated import list from re-adding it.
+
