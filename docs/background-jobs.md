@@ -113,6 +113,7 @@ stateDiagram-v2
 | `anilist_push_movie` | `AniListPushMoviePayload`<br>(`title_id`) | Pushes watch status and user rating for anime movies to AniList GraphQL. |
 | `radarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a movie to the configured Radarr instance download queue with quality profile and root folder settings. |
 | `sonarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a television series to the configured Sonarr instance download queue. |
+| `sonarr_delete` | `SonarrDeletePayload`<br>(`title_id`, `sonarr_id`, `tvdb_id`, `title_name`) | Asynchronously deletes a series from Sonarr (including disk files and adding an import list exclusion) when marked as dropped in EditSheet. |
 | `generate_wrapped` | `GenerateWrappedPayload`<br>(`year`) | Compiles and persists an annual Wrapped snapshot into `wrapped_snapshots` and triggers a Web Push notification (`notif_wrapped_ready`). Automatically enqueued at date (for the immediately elapsed year `now.Year() - 1` provided watch activity exists, strictly without retroactive backfilling), or manually triggered from Admin / Stats. Years with 0 titles are skipped. |
 
 ---
