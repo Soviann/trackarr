@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.21.8] — 2026-09-27
+
 ### Ajouté
 - **Confirmation de réajout à Sonarr pour les séries supprimées** :
   - Détection et persistance de l'historique de suppression de Sonarr via la colonne `titles.sonarr_deleted_at`.
