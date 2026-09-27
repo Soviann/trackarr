@@ -45,7 +45,7 @@
 
 | Model | File | Description & Key Fields |
 |---|---|---|
-| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`. |
+| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `SonarrDeletedAt`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`. |
 | `TitleName` | `internal/model/title.go` | Multi-language and alternative alias names (`TitleID`, `Language`, `Name`). |
 | `Season` | `internal/model/season.go` | `ID`, `TitleID`, `SeasonNumber`, `EpisodeCount`, `WatchedCount`, `AirDate`. |
 | `Episode` | `internal/model/episode.go` | `ID`, `SeasonID`, `EpisodeNumber`, `Name`, `Watched`, `LastWatchedAt`. |
@@ -304,5 +304,5 @@
 3. **Frontend Re-Embed**: `dist/` is embedded in the Go binary. After editing frontend and running `make test-front`, run `touch main.go` so `air` re-embeds the assets.
 4. **PWA Cache Busting**: The service worker caches aggressively. When validating UI changes in the browser, append `?t=$(date +%s)` to the test URL.
 5. **Antigravity NAS Daemon Environment**: The webhook daemon (`scripts/github-pr-daemon/server.py`) running on the NAS is equipped with Git, Make, Docker CLI, Docker Compose, and access to `/var/run/docker.sock` and `.env.local` secrets. It can execute test/lint suites and generate implementation plans directly on the NAS.
-6. **Title Merge Semantics (`TitleWriter.Merge`)**: Consolidating source into dest transfers missing external IDs and metadata (`sonarr_id`, `radarr_id`, `my_rating`, `cover_url`, `overview`, etc.) via `COALESCE`, maintains `arr_ignored = 0` if either was queued, preserves watched state (`watched = 1`, `external_source_id`) on colliding season episodes without dropping history, re-parents `watch_events.episode_id`, copies `title_genres`, recalculates `total_watch_minutes`, and purges orphan tasks.
+6. **Title Merge Semantics (`TitleWriter.Merge`)**: Consolidating source into dest transfers missing external IDs and metadata (`sonarr_id`, `radarr_id`, `sonarr_deleted_at`, `my_rating`, `cover_url`, `overview`, etc.) via `COALESCE`, maintains `arr_ignored = 0` if either was queued, preserves watched state (`watched = 1`, `external_source_id`) on colliding season episodes without dropping history, re-parents `watch_events.episode_id`, copies `title_genres`, recalculates `total_watch_minutes`, and purges orphan tasks.
 7. **Frontend i18n & Hardcoded Text Prevention**: English is the source language for all code, components, tests, and comments. Hardcoded French strings or French comments outside `locales/fr.ts` are forbidden and systematically enforced by both `make test-front` (`src/i18n/i18n-audit.test.ts`) and `make lint-front` (`npm run lint:i18n`). Exclusions for legitimate proper names or specific test assertions require an explicit `// i18n-ignore` inline annotation.

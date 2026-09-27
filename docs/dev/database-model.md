@@ -26,7 +26,7 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - **Rule**: Post-commit side effects (e.g. backfilling, push notifications, webhooks, queue dispatching) must be returned to the caller and executed **after** `WithTxContext` finishes and commits.
 
 ## Tables & Primary Schema Entities
-- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`/`anime`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`.
+- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`/`anime`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`.
 - `title_names`: Multilingual and alternative aliases. Columns: `id`, `title_id`, `name`, `language`, `is_primary`.
 - `title_genres`: Associated genres per title. Columns: `title_id`, `genre`.
 - `title_relations`: Side stories, sagas, and franchise relations. Columns: `id`, `title_id`, `season_id`, `provider` (`anilist`/`tmdb`/`tvdb`), `external_id`, `relation_type` (`PREQUEL`/`SEQUEL`/`SPIN_OFF`/`SIDE_STORY`/`ALTERNATIVE`/`COLLECTION`), `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`, `created_at`.
@@ -42,7 +42,7 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 
 ## Title Merge Invariants (`TitleWriter.Merge`)
 When merging a `sourceID` title into `destID`:
-1. **Metadata & Integrations**: `COALESCE` transfers non-null fields from source (`sonarr_id`, `radarr_id`, `my_rating`, `cover_url`, `overview`, `origin_country`, `watch_providers`, etc.).
+1. **Metadata & Integrations**: `COALESCE` transfers non-null fields from source (`sonarr_id`, `radarr_id`, `sonarr_deleted_at`, `my_rating`, `cover_url`, `overview`, `origin_country`, `watch_providers`, etc.).
 2. **Arr Queue**: `arr_ignored = MIN(dest.arr_ignored, source.arr_ignored)` preserves queue membership.
 3. **Episode Collision Safety**: Colliding seasons preserve watched status (`watched = 1`, `external_source_id`), re-parent `watch_events.episode_id` to dest episode IDs, move uncollided episodes, and delete redundant source episode rows without history loss.
 4. **Genres & Analytics**: `title_genres` are merged (`INSERT OR IGNORE`) and `total_watch_minutes` is recalculated.

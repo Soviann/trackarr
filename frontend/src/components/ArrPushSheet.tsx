@@ -5,6 +5,7 @@ import { getName, getCoverUrl } from '../utils'
 import { BottomSheet } from './BottomSheet'
 import { TypeBadge } from './TypeBadge'
 import { CoverPlaceholder, coverBackground } from './CoverPlaceholder'
+import { useTranslation } from '../i18n'
 import s from './ArrPushSheet.module.css'
 
 interface RootFolder {
@@ -46,6 +47,7 @@ interface ArrPushSheetProps {
 export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetProps) {
   if (!title) return null
 
+  const { t } = useTranslation()
   const isRadarr = title.type === 'movie'
   const app = isRadarr ? 'radarr' : 'sonarr'
   const appLabel = isRadarr ? 'Radarr' : 'Sonarr'
@@ -122,7 +124,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
   const handleSave = async () => {
     if (!hasRequiredID) return
     if (!rootFolder || !qualityProfile) {
-      setError('Please select a root folder and a quality profile.')
+      setError(t('arrPush.selectFolderAndProfile'))
       return
     }
 
@@ -148,7 +150,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
       onSuccess?.(finalID)
       onClose()
     } catch (err: any) {
-      setError(err.message || `Error updating in ${appLabel}`)
+      setError(err.message || t('arrPush.errorUpdating', { app: appLabel }))
     } finally {
       setSaving(false)
     }
@@ -156,10 +158,11 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
 
   const name = getName(title)
   const coverUrl = getCoverUrl(title.cover_url)
-  const isLinked = arrDetails?.exists
+  const isLinked = Boolean(arrDetails?.exists || (!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null))
+  const isPreviouslyDeleted = !isRadarr && !isLinked && Boolean(title.sonarr_deleted_at)
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel={`Manage in ${appLabel}`}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={t('arrPush.manageInApp', { app: appLabel })}>
       <div className={s.sheet}>
         {/* Header with Poster & Essential info */}
         <div className={s.header}>
@@ -183,7 +186,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
               {title.year > 0 && <span className={s.year}>{title.year}</span>}
               <TypeBadge type={title.type as TitleType} size="sm" />
               <span className={`${s.serviceBadge} ${isRadarr ? s.radarrBadge : s.sonarrBadge}`}>
-                {isLinked ? `Linked` : appLabel}
+                {isLinked ? t('arrPush.linked') : appLabel}
               </span>
             </div>
             {arrDetails?.web_url && (
@@ -193,7 +196,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                 rel="noopener noreferrer"
                 className={s.webLink}
               >
-                <span>Open in {appLabel}</span>
+                <span>{t('arrPush.openInApp', { app: appLabel })}</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
@@ -213,7 +216,20 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <span>
-              Missing {isRadarr ? 'TMDB' : 'TVDB'} ID. A rematch is required to link with {appLabel}.
+              {t('arrPush.missingIdWarning', { idType: isRadarr ? 'TMDB' : 'TVDB', app: appLabel })}
+            </span>
+          </div>
+        )}
+
+        {isPreviouslyDeleted && (
+          <div className={s.warningBox}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>
+              {t('arrPush.previouslyDeletedNotice')}
             </span>
           </div>
         )}
@@ -226,11 +242,11 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
 
         {/* Configuration Options */}
         <div className={s.section}>
-          <div className={s.sectionLabel}>{appLabel} Options</div>
+          <div className={s.sectionLabel}>{t('arrPush.appOptions', { app: appLabel })}</div>
           
           <div className={s.formGrid}>
             <div className={s.formGroup}>
-              <label htmlFor="arr-root-folder" className={s.formLabel}>Root Folder</label>
+              <label htmlFor="arr-root-folder" className={s.formLabel}>{t('arrPush.rootFolder')}</label>
               <select
                 id="arr-root-folder"
                 name="root_folder"
@@ -239,7 +255,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                 disabled={loadingOptions || saving}
                 onChange={e => setRootFolder((e.target as HTMLSelectElement).value)}
               >
-                {rootFolders.length === 0 && <option value="">{rootFolder || 'No folders available'}</option>}
+                {rootFolders.length === 0 && <option value="">{rootFolder || t('arrPush.noFolders')}</option>}
                 {rootFolders.map(rf => (
                   <option key={rf.id} value={rf.path}>{rf.path}</option>
                 ))}
@@ -247,7 +263,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
             </div>
 
             <div className={s.formGroup}>
-              <label htmlFor="arr-quality-profile" className={s.formLabel}>Quality Profile</label>
+              <label htmlFor="arr-quality-profile" className={s.formLabel}>{t('arrPush.qualityProfile')}</label>
               <select
                 id="arr-quality-profile"
                 name="quality_profile"
@@ -256,7 +272,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                 disabled={loadingOptions || saving}
                 onChange={e => setQualityProfile((e.target as HTMLSelectElement).value)}
               >
-                {qualityProfiles.length === 0 && <option value="">No profiles available</option>}
+                {qualityProfiles.length === 0 && <option value="">{t('arrPush.noProfiles')}</option>}
                 {qualityProfiles.map(qp => (
                   <option key={qp.id} value={qp.id}>{qp.name}</option>
                 ))}
@@ -264,7 +280,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
             </div>
 
             <div className={s.formGroup}>
-              <label htmlFor="arr-monitored" className={s.formLabel}>Monitored</label>
+              <label htmlFor="arr-monitored" className={s.formLabel}>{t('arrPush.monitored')}</label>
               <select
                 id="arr-monitored"
                 name="monitored"
@@ -273,13 +289,13 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                 disabled={loadingOptions || saving}
                 onChange={e => setMonitored((e.target as HTMLSelectElement).value)}
               >
-                <option value="true">Yes</option>
-                <option value="false">No</option>
+                <option value="true">{t('common.yes')}</option>
+                <option value="false">{t('common.no')}</option>
               </select>
             </div>
 
             <div className={s.formGroup}>
-              <label htmlFor="arr-search" className={s.formLabel}>Search for Missing</label>
+              <label htmlFor="arr-search" className={s.formLabel}>{t('arrPush.searchForMissing')}</label>
               <select
                 id="arr-search"
                 name="search"
@@ -288,8 +304,8 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                 disabled={loadingOptions || saving}
                 onChange={e => setSearch((e.target as HTMLSelectElement).value)}
               >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
+                <option value="false">{t('common.no')}</option>
+                <option value="true">{t('common.yes')}</option>
               </select>
             </div>
           </div>
@@ -304,7 +320,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
             disabled={!hasRequiredID || saving || loadingOptions || !rootFolder || !qualityProfile}
           >
             {saving ? (
-              'Saving...'
+              t('arrPush.saving')
             ) : isLinked ? (
               <>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -312,7 +328,15 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                   <polyline points="17 21 17 13 7 13 7 21" />
                   <polyline points="7 3 7 8 15 8" />
                 </svg>
-                Update in {appLabel}
+                {t('arrPush.updateInApp', { app: appLabel })}
+              </>
+            ) : isPreviouslyDeleted ? (
+              <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                </svg>
+                {t('arrPush.readdToSonarr')}
               </>
             ) : (
               <>
@@ -320,7 +344,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                Send to {appLabel}
+                {t('arrPush.sendToApp', { app: appLabel })}
               </>
             )}
           </button>

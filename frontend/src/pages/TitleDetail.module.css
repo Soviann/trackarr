@@ -537,3 +537,34 @@
 .sonarrBtn:hover {
   background: color-mix(in srgb, var(--brand-sonarr) 25%, transparent);
 }
+
+.arrDeletedGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sonarrDeletedBadge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-sonarr) 12%, transparent);
+  color: var(--brand-sonarr);
+  border: 1px dashed color-mix(in srgb, var(--brand-sonarr) 40%, transparent);
+}
+
+.sonarrReaddBtn {
+  background: color-mix(in srgb, var(--brand-sonarr) 20%, transparent);
+  color: #fff;
+  border: 1px solid var(--brand-sonarr);
+}
+
+.sonarrReaddBtn:hover {
+  background: color-mix(in srgb, var(--brand-sonarr) 35%, transparent);
+}
+

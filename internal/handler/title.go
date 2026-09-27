@@ -351,14 +351,15 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	update := repository.TitleUpdate{
-		Status:        body.Status,
-		MatchStatus:   body.MatchStatus,
-		MyRating:      body.MyRating,
-		Type:          body.Type,
-		IsAnime:       body.IsAnime,
-		ArrIgnored:    arrIgnored,
-		ClearSonarrID: deleteFromSonarr,
-		PersonalNotes: body.PersonalNotes,
+		Status:             body.Status,
+		MatchStatus:        body.MatchStatus,
+		MyRating:           body.MyRating,
+		Type:               body.Type,
+		IsAnime:            body.IsAnime,
+		ArrIgnored:         arrIgnored,
+		ClearSonarrID:      deleteFromSonarr,
+		SetSonarrDeletedAt: deleteFromSonarr,
+		PersonalNotes:      body.PersonalNotes,
 	}
 	if body.PersonalNotes != nil && *body.PersonalNotes == "" {
 		update.ClearPersonalNotes = true

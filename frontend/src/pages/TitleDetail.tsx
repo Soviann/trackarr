@@ -72,6 +72,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showRematch, setShowRematch] = useState(false)
   const [rematchSeasonID, setRematchSeasonID] = useState<number | null>(null)
   const [showArrPush, setShowArrPush] = useState(false)
+  const [showSonarrReaddConfirm, setShowSonarrReaddConfirm] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -97,6 +98,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const name = getName(title)
   const altNames = getAlternativeNames(title)
   const typeLabel = getTypeLabel(title.type)
+  const isSonarrDeleted = title.type === 'series' && title.sonarr_id == null && Boolean(title.sonarr_deleted_at)
   const current = sortedSeasons.find((ss) => ss.season_number === activeSeason)
     ?? sortedSeasons.find((ss) => (ss.episodes ?? []).some((e) => !e.watched))
     ?? sortedSeasons[sortedSeasons.length - 1]
@@ -277,7 +279,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const handleArrPushSuccess = (arrId: number) => {
     setData((prev) => {
       if (!prev) return prev
-      return prev.type === 'movie' ? { ...prev, radarr_id: arrId } : { ...prev, sonarr_id: arrId }
+      return prev.type === 'movie'
+        ? { ...prev, radarr_id: arrId }
+        : { ...prev, sonarr_id: arrId, sonarr_deleted_at: null }
     })
   }
 
@@ -566,29 +570,48 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         <div className={s.detailRow}>
           <span className={s.detailKey}>{title.type === 'movie' ? 'Radarr' : 'Sonarr'}</span>
           <span className={s.detailVal}>
-            <button
-              type="button"
-              onClick={() => setShowArrPush(true)}
-              className={`${s.arrAddBtn} ${title.type === 'movie' ? s.radarrBtn : s.sonarrBtn}`}
-            >
-              {title.radarr_id != null || title.sonarr_id != null ? (
-                <>
+            {isSonarrDeleted ? (
+              <div className={s.arrDeletedGroup}>
+                <span className={s.sonarrDeletedBadge}>
+                  {t('details.sonarrDeletedBadge')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowSonarrReaddConfirm(true)}
+                  className={`${s.arrAddBtn} ${s.sonarrReaddBtn}`}
+                >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                   </svg>
-                  Gérer dans {title.type === 'movie' ? 'Radarr' : 'Sonarr'}
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  Envoyer à {title.type === 'movie' ? 'Radarr' : 'Sonarr'}
-                </>
-              )}
-            </button>
+                  {t('details.readdToSonarr')}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowArrPush(true)}
+                className={`${s.arrAddBtn} ${title.type === 'movie' ? s.radarrBtn : s.sonarrBtn}`}
+              >
+                {title.radarr_id != null || title.sonarr_id != null ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    {t('details.manageInArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    {t('details.sendToArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
+                  </>
+                )}
+              </button>
+            )}
           </span>
         </div>
         {title.original_title && title.original_title !== name && (
@@ -726,6 +749,18 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         description={t('details.deleteConfirmDesc')}
         confirmText={t('common.delete')}
         isDangerous
+      />
+
+      <ConfirmationDrawer
+        open={showSonarrReaddConfirm}
+        onClose={() => setShowSonarrReaddConfirm(false)}
+        onConfirm={() => {
+          setShowSonarrReaddConfirm(false)
+          setShowArrPush(true)
+        }}
+        title={t('details.readdSonarrConfirmTitle')}
+        description={t('details.readdSonarrConfirmDesc')}
+        confirmText={t('details.readdSonarrConfirmAction')}
       />
 
       {/* Bottom sheets */}

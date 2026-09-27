@@ -365,3 +365,78 @@ func TestArrService_DeleteSeriesFromSonarr_ErrorResponse(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sonarr delete returned 500")
 }
+
+func TestArrService_PushTitle_Sonarr_ClearsDeletedAtAndExclusion(t *testing.T) {
+	var exclusionDeleted bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v3/series/lookup":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"tvdbId":54321,"title":"Readded Show"}]`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v3/series":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":88,"tvdbId":54321,"title":"Readded Show"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v3/importlistexclusion":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"id":10,"tvdbId":54321,"title":"Readded Show"}]`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/v3/importlistexclusion/10":
+			exclusionDeleted = true
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key-5",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	tvdbID := int64(54321)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbID,
+		ArrIgnored:  true,
+	}, []model.TitleName{{Name: "Readded Show", Language: "en", IsPrimary: true}})
+
+	// Mark it as deleted from Sonarr
+	err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(context.Background(), titleID, repository.TitleUpdate{
+			SetSonarrDeletedAt: true,
+		})
+	})
+	require.NoError(t, err)
+
+	titleBefore, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.NotNil(t, titleBefore.SonarrDeletedAt)
+	assert.True(t, titleBefore.ArrIgnored)
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	arrID, err := arrSvc.PushTitle(context.Background(), titleID, service.PushPayload{
+		Monitored:      true,
+		RootFolder:     "/tv",
+		QualityProfile: 1,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(88), arrID)
+	assert.True(t, exclusionDeleted, "sonarr import list exclusion must be deleted on re-add")
+
+	titleAfter, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, titleAfter.SonarrID)
+	assert.Equal(t, int64(88), *titleAfter.SonarrID)
+	assert.Nil(t, titleAfter.SonarrDeletedAt, "sonarr_deleted_at must be cleared")
+	assert.False(t, titleAfter.ArrIgnored, "arr_ignored must be reset to false")
+}
+
