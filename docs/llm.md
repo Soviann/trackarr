@@ -51,7 +51,7 @@
 ---
 
 ## 3. Database Schema Overview
-- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`).
+- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`).
 - `title_names`: Multilingual title aliases (`title_id`, `name`, `language`, `is_primary`).
 - `title_genres`: Associated genres per title (`title_id`, `genre`).
 - `seasons`: Season entries (`title_id`, `season_number`, `total_episodes`).

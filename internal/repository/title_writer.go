@@ -210,6 +210,15 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `sonarr_id = ?`)
 		args = append(args, *update.SonarrID)
 	}
+	switch {
+	case update.SetSonarrDeletedAt:
+		sets = append(sets, `sonarr_deleted_at = CURRENT_TIMESTAMP`)
+	case update.ClearSonarrDeletedAt:
+		sets = append(sets, `sonarr_deleted_at = NULL`)
+	case update.SonarrDeletedAt != nil:
+		sets = append(sets, `sonarr_deleted_at = ?`)
+		args = append(args, *update.SonarrDeletedAt)
+	}
 	if update.ArrIgnored != nil {
 		sets = append(sets, `arr_ignored = ?`)
 		args = append(args, *update.ArrIgnored)
@@ -543,7 +552,8 @@ func (w *TitleWriter) Merge(ctx context.Context, destID, sourceID int64, seasonO
 		match_source       = COALESCE(titles.match_source,       src.match_source),
 		match_status       = CASE WHEN titles.match_status = 'confirmed' OR src.match_status = 'confirmed' THEN 'confirmed' ELSE titles.match_status END,
 		series_status      = CASE WHEN titles.series_status = 'returning' OR src.series_status = 'returning' THEN 'returning' ELSE COALESCE(titles.series_status, src.series_status) END,
-		arr_ignored        = MIN(titles.arr_ignored, src.arr_ignored)
+		arr_ignored        = MIN(titles.arr_ignored, src.arr_ignored),
+		sonarr_deleted_at  = CASE WHEN (titles.sonarr_id IS NOT NULL OR src.sonarr_id IS NOT NULL) THEN NULL ELSE COALESCE(titles.sonarr_deleted_at, src.sonarr_deleted_at) END
 		FROM (SELECT * FROM titles WHERE id = ?) AS src
 		WHERE titles.id = ?`, sourceID, destID); err != nil {
 		return fmt.Errorf("transfer external ids and metadata: %w", err)

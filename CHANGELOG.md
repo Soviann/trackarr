@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Confirmation de réajout à Sonarr pour les séries supprimées** :
+  - Détection et persistance de l'historique de suppression de Sonarr via la colonne `titles.sonarr_deleted_at`.
+  - Affichage d'un badge distinctif « Supprimée » et remplacement du bouton d'envoi par « Réajouter à Sonarr » sur la fiche d'une série préalablement supprimée de Sonarr.
+  - Validation de l'intention de l'utilisateur par un tiroir de confirmation (`ConfirmationDrawer`) avant d'ouvrir la feuille de configuration du push Sonarr.
+  - Nettoyage automatique des exclusions de listes d'import Sonarr (`DELETE /api/v3/importlistexclusion/{id}`) lors du réajout réussi et réinitialisation de `sonarr_deleted_at` et `arr_ignored`.
+
 ## [v1.21.7] — 2026-09-25
 
 ### Ajouté

@@ -262,6 +262,7 @@ func TestTitleHandler_Update_DeleteFromSonarr_EnqueuesTaskAndClearsID(t *testing
 	assert.Equal(t, model.TitleStatusDropped, title.Status)
 	assert.Nil(t, title.SonarrID, "sonarr_id must be cleared")
 	assert.True(t, title.ArrIgnored, "arr_ignored must be true")
+	assert.NotNil(t, title.SonarrDeletedAt, "sonarr_deleted_at must be populated")
 
 	// Check enqueued sonarr_delete task
 	tasks, err := repository.NewTaskRepository(db).ListPending()

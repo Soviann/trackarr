@@ -226,6 +226,9 @@ func (s *ArrService) PushTitle(ctx context.Context, titleID int64, payload PushP
 		if err := s.saveArrID(ctx, titleID, app, arrID); err != nil {
 			return 0, err
 		}
+		if app == "sonarr" && title.TVDBID != nil && *title.TVDBID > 0 {
+			s.removeSonarrImportListExclusion(ctx, *title.TVDBID)
+		}
 		return arrID, nil
 	}
 
@@ -273,6 +276,9 @@ func (s *ArrService) PushTitle(ctx context.Context, titleID int64, payload PushP
 	if err := s.saveArrID(ctx, titleID, app, arrID); err != nil {
 		return 0, err
 	}
+	if app == "sonarr" && title.TVDBID != nil && *title.TVDBID > 0 {
+		s.removeSonarrImportListExclusion(ctx, *title.TVDBID)
+	}
 	return arrID, nil
 }
 
@@ -289,6 +295,9 @@ func (s *ArrService) saveArrID(ctx context.Context, titleID int64, app string, a
 		update.RadarrID = &arrID
 	case "sonarr":
 		update.SonarrID = &arrID
+		update.ClearSonarrDeletedAt = true
+		falseVal := false
+		update.ArrIgnored = &falseVal
 	default:
 		return fmt.Errorf("unknown app %q", app)
 	}
@@ -642,3 +651,33 @@ func (s *ArrService) DeleteSeriesFromSonarr(ctx context.Context, payload SonarrD
 
 	return nil
 }
+
+// removeSonarrImportListExclusion removes an import list exclusion for the given TVDB ID if one exists.
+func (s *ArrService) removeSonarrImportListExclusion(ctx context.Context, tvdbID int64) {
+	resp, err := s.ProxyRequest(ctx, "sonarr", "GET", "/api/v3/importlistexclusion", nil)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return
+	}
+
+	var exclusions []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&exclusions); err != nil {
+		return
+	}
+
+	for _, item := range exclusions {
+		tvdbF, ok := item["tvdbId"].(float64)
+		if ok && int64(tvdbF) == tvdbID {
+			if idF, ok := item["id"].(float64); ok && idF > 0 {
+				delResp, err := s.ProxyRequest(ctx, "sonarr", "DELETE", fmt.Sprintf("/api/v3/importlistexclusion/%d", int64(idF)), nil)
+				if err == nil {
+					_ = delResp.Body.Close()
+				}
+			}
+		}
+	}
+}
+

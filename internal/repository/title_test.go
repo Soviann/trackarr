@@ -1923,3 +1923,56 @@ func TestTitleRepository_ListAllForRefresh_Order(t *testing.T) {
 	assert.Equal(t, t3, titles[1].ID)
 	assert.Equal(t, t1, titles[2].ID)
 }
+
+func TestTitleRepository_SonarrDeletedAt(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+	ctx := context.Background()
+
+	sonarrID := int64(101)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+	}, []model.TitleName{{Name: "Sonarr Delete Test", Language: "en", IsPrimary: true}})
+
+	// Initially nil
+	got, err := repo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, got.SonarrDeletedAt)
+
+	// Set SonarrDeletedAt and clear SonarrID
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, titleID, repository.TitleUpdate{
+			ClearSonarrID:      true,
+			SetSonarrDeletedAt: true,
+		})
+	})
+	require.NoError(t, err)
+
+	got, err = repo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, got.SonarrID)
+	require.NotNil(t, got.SonarrDeletedAt)
+
+	// Verify List query also retrieves SonarrDeletedAt
+	listRes, err := repo.List(repository.TitleFilter{Limit: 10})
+	require.NoError(t, err)
+	require.NotEmpty(t, listRes.Titles)
+	assert.NotNil(t, listRes.Titles[0].SonarrDeletedAt)
+
+	// Clear SonarrDeletedAt
+	err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, titleID, repository.TitleUpdate{
+			ClearSonarrDeletedAt: true,
+		})
+	})
+	require.NoError(t, err)
+
+	got, err = repo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, got.SonarrDeletedAt)
+}
+

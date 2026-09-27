@@ -45,6 +45,7 @@ export interface Title {
   tvdb_id: number | null
   radarr_id?: number | null
   sonarr_id?: number | null
+  sonarr_deleted_at?: string | null
   my_rating: number | null
   status: TitleStatus
   series_status: SeriesStatus | null
