@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Sécurité & Dépendances
+- Mise à jour de la dépendance de développement `jsdom` (#76).
+
+### Modifié
+- **Audit hebdomadaire de la documentation, de l'i18n et des règles LLM (#77)** :
+  - Spécification détaillée du cycle de vie de suppression et de réajout Sonarr dans `docs/dev/arr-integration.md`, `docs/dev/database-model.md`, `docs/background-jobs.md`, `docs/llm.md`, `docs/integrations.md` et `docs/user-guide.md`.
+  - Documentation de la migration 048 (`sonarr_deleted_at`) et du rôle protecteur de `ConfirmationDrawer` lors du réajout à Sonarr.
+  - Validation de la parité stricte des dictionnaires de traduction (`en.ts` / `fr.ts`) et de l'absence de chaînes ou commentaires non anglais dans les composants frontend.
+
 ## [v1.21.8] — 2026-09-27
 
 ### Ajouté
