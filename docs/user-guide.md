@@ -131,8 +131,8 @@ Opening a title displays its rich details:
 - **AniList Season Strip**: Per-season community scores and direct ✎ link editor for anime seasons (including split *Part 1 / Part 2* entries). Clicking **Link entry** or ✎ opens the season linker with instant in-app AniList search (with posters, media format, episode count, and 1-click linking) plus a direct *Search on AniList.co ↗* browser shortcut.
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.
-  - **Edit**: Modify title type (Movie/Series), anime flag, or watch status.
-  - **More**: Send to Radarr/Sonarr (File Arr), Rematch, Merge into another title, Refresh Metadata, or Delete.
+  - **Edit**: Modify title type (Movie/Series), anime flag, or watch status. When changing a TV series to *Dropped* (Abandonné), an optional checkbox allows automatically deleting the series from Sonarr (including disk file purge and import list exclusion).
+  - **More**: Send to Radarr/Sonarr (File Arr), Rematch, Merge into another title, Refresh Metadata, or Delete. If a series was previously deleted from Sonarr, Trackarr displays a distinct *« Deleted »* (*« Supprimée »*) badge and substitutes the action with *« Re-add to Sonarr »* (*« Réajouter à Sonarr »*), prompting a protective `ConfirmationDrawer` before configuring push settings and clearing Sonarr import exclusions.
   - **External Links**: Instant shortcuts to IMDb, TMDB, TVDB, and AniList.
 - **Rating Push Notification**: Sends an optional Web Push notification prompting to rate a movie or completed series after finishing it (configurable in *Admin ➔ Notifications*).
 
