@@ -70,6 +70,11 @@ Manage your media library and track availability seamlessly:
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**).
 - **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, and add media directly to Trackarr with 1-click **+ Add**.
 
+### Deletion & Import List Exclusions (Dropped Series):
+- **Sonarr Deletion on Drop**: When marking a series as *Dropped* in the edit sheet, an optional checkbox allows deleting the series from Sonarr.
+- **Disk File Purge & Import Exclusion**: Trackarr dispatches a background job executing `DELETE /api/v3/series/{id}?deleteFiles=true&addImportListExclusion=true`, purging downloaded files from disk and registering the series with Sonarr's Import List Exclusions (preventing automated Trakt or IMDb lists from re-importing it).
+- **Safe Re-add Workflow**: For deleted series (`sonarr_deleted_at != null`), the title detail view displays a distinct *Deleted* (*Supprimée*) badge and *Re-add to Sonarr* (*Réajouter à Sonarr*) button. Clicking it opens a protective `ConfirmationDrawer` before configuring push parameters, and successful re-adding automatically deletes the import list exclusion (`DELETE /api/v3/importlistexclusion/{id}`).
+
 ---
 
 ## 4. Streaming Watch Providers

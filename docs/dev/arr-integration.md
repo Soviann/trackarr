@@ -46,8 +46,8 @@ When a TV/anime series is marked as `dropped` in Trackarr and the user opts to d
 
 ## Re-adding Previously Deleted Series to Sonarr
 When a series has `sonarr_deleted_at != null` and `sonarr_id == null`:
-1. **TitleDetail**: Instead of the standard "Envoyer à Sonarr" button, the row displays a "Supprimée" badge alongside a styled button "Réajouter à Sonarr".
-2. **Intent Validation**: Clicking "Réajouter à Sonarr" displays a `ConfirmationDrawer` modal prompting the user to confirm their intent to re-add the previously deleted and excluded series.
+1. **TitleDetail**: Instead of the standard "Send to Sonarr" ("Envoyer à Sonarr") button, the row displays a "Deleted" ("Supprimée") badge alongside a styled button "Re-add to Sonarr" ("Réajouter à Sonarr").
+2. **Intent Validation**: Clicking "Re-add to Sonarr" ("Réajouter à Sonarr") displays a `ConfirmationDrawer` modal prompting the user to confirm their intent to re-add the previously deleted and excluded series.
 3. **Configuration & Push**: Upon confirmation, `ArrPushSheet` opens with root folder, quality profile, and monitoring options, displaying a notice that the series was previously deleted.
 4. **Execution & Cleanup**: When submitted, `ArrService.PushTitle` pushes the series to Sonarr, clears `titles.sonarr_deleted_at = NULL`, resets `titles.arr_ignored = 0`, updates `titles.sonarr_id`, and purges any matching exclusion in Sonarr via `DELETE /api/v3/importlistexclusion/{id}`.
 

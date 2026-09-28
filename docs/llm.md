@@ -47,6 +47,10 @@
 9. **Title Rematch & Creation Enrichment Payloads**:
    - `TitleService.Rematch` accepts an optional `titleType *model.TitleType` alongside external IDs, allowing users to align mismatched media kinds (e.g. series misclassified as movies) during rematch without direct database surgery.
    - `CreateAndEnrich` constructs a fully populated `EnrichmentPayload` (including primary title name, year, media type, anime flag, external IDs, and match status preservation) with deduplication key `enrichment:%d`, preventing type regression or fallback during async worker execution.
+10. **Sonarr Deletion & Re-add Lifecycle**:
+    - Marking a series as `dropped` can trigger a background `sonarr_delete` job purging files (`deleteFiles=true`) and creating an import list exclusion (`addImportListExclusion=true`) to stop automated re-importing.
+    - Dropped/deleted series persist `sonarr_deleted_at` and reset `sonarr_id = NULL`.
+    - Re-adding to Sonarr prompts an intent verification via `ConfirmationDrawer`, clears existing import list exclusions (`DELETE /api/v3/importlistexclusion/{id}`), resets `sonarr_deleted_at = NULL` and `arr_ignored = 0`, and pushes with fresh quality/root folder settings.
 
 ---
 
