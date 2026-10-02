@@ -223,7 +223,7 @@
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
 | `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
-| `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Caught Up*) |
+| `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Dropped*, *Caught Up*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with single closed handle row docked above navbar (`[ FILTERS (count) ⌃ ]` + scrolling dismissible chips) hidden when open, responsive open drawer starting directly with `FILTERS (N ACTIVE) ⌄` collapse header and reset button, 3 sub-tabs (Status & Type, Genres & Origin, Dates & Ratings), anti-overflow protection (`max-height: min(70vh, 460px)`), and dedicated bottom padding above navbar |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with clear text `✕` button and integrated filter trigger button with active count badge |
