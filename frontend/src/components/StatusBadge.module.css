@@ -17,8 +17,8 @@
 }
 
 .dropped {
-  color: var(--status-crit);
-  background: var(--accent-wash);
+  color: #fff;
+  background: var(--status-crit);
 }
 
 .planToWatch {
