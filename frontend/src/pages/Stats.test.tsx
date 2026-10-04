@@ -63,7 +63,7 @@ describe('Stats', () => {
     const { Stats } = await import('./Stats')
     render(<Stats />)
 
-    expect(screen.getByText('// CUMULATIVE WATCH TIME')).toBeTruthy()
+    expect(screen.getByText('Cumulative Watch Time')).toBeTruthy()
     expect(screen.getByText(/3 yrs 87 d 16 h|3 ans 87 j 16 h/)).toBeTruthy()
   })
 
@@ -106,9 +106,9 @@ describe('Stats', () => {
     const { Stats } = await import('./Stats')
     render(<Stats />)
 
-    expect(screen.getByText('// TOP ACTORS')).toBeTruthy()
+    expect(screen.getByText('Top Actors')).toBeTruthy()
     expect(screen.getByText('Timothée Chalamet')).toBeTruthy() // i18n-ignore
-    expect(screen.getByText('// TOP DIRECTORS')).toBeTruthy()
+    expect(screen.getByText('Top Directors')).toBeTruthy()
     expect(screen.getByText('Denis Villeneuve')).toBeTruthy()
   })
 
@@ -206,7 +206,7 @@ describe('Stats', () => {
     const { container } = render(<Stats />)
 
     // Since total_titles is 0, the section should not render
-    expect(screen.queryByText('// PAST WRAPPED ARCHIVES')).toBeNull()
+    expect(screen.queryByText('Past Wrapped Archives')).toBeNull()
     expect(container.querySelector('[class*="archiveCard"]')).toBeNull()
   })
 
@@ -235,7 +235,7 @@ describe('Stats', () => {
     render(<Stats />)
 
     // Initially expanded
-    expect(screen.getByText('// PAST WRAPPED ARCHIVES')).toBeTruthy()
+    expect(screen.getByText('Past Wrapped Archives')).toBeTruthy()
     expect(screen.getByText('Voyager')).toBeTruthy()
 
     // Click collapse
@@ -243,13 +243,13 @@ describe('Stats', () => {
     fireEvent.click(collapseBtn)
 
     // Now compact mode
-    expect(screen.queryByText('// PAST WRAPPED ARCHIVES')).toBeNull()
+    expect(screen.queryByText('Past Wrapped Archives')).toBeNull()
     expect(screen.getByText(/Show cards \(1\)/)).toBeTruthy()
     expect(screen.getByRole('button', { name: '2025' })).toBeTruthy()
 
     // Click expand
     const expandBtn = screen.getByText(/Show cards \(1\)/)
     fireEvent.click(expandBtn)
-    expect(screen.getByText('// PAST WRAPPED ARCHIVES')).toBeTruthy()
+    expect(screen.getByText('Past Wrapped Archives')).toBeTruthy()
   })
 })

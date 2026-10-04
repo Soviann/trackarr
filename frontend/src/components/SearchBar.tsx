@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'preact/hooks'
+import { route } from 'preact-router'
 import clsx from 'clsx'
 import { useTranslation } from '../i18n'
 import { useSearchStore } from '../store'
+import { detectUrlType, isUrl } from '../utils/url'
+import { routeTo } from '../routes'
 import s from './SearchBar.module.css'
 
 interface SearchBarProps {
@@ -30,10 +33,19 @@ export function SearchBar({
     inputRef.current?.focus()
   }, [])
 
+  const handleInputChange = (val: string) => {
+    const trimmed = val.trim()
+    if (detectUrlType(trimmed) || (isUrl(trimmed) && (trimmed.includes('themoviedb.org') || trimmed.includes('imdb.com') || trimmed.includes('anilist.co') || trimmed.includes('thetvdb.com')))) {
+      route(`${routeTo.adminValidate()}?q=${encodeURIComponent(trimmed)}`)
+      return
+    }
+    setQuery(val)
+  }
+
   return (
     <div className={s.searchBar}>
       <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
@@ -43,7 +55,7 @@ export function SearchBar({
           id="search"
           autocomplete="off"
           value={query}
-          onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+          onInput={(e) => handleInputChange((e.target as HTMLInputElement).value)}
           placeholder={t('search.placeholder')}
           className={s.searchInput}
         />
@@ -96,4 +108,3 @@ export function SearchBar({
     </div>
   )
 }
-

@@ -213,9 +213,9 @@
 
 | Component | File | Purpose |
 |---|---|---|
-| `Navbar` | `components/Navbar.tsx` | 4-tab bottom navigation bar |
+| `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
-| `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
+| `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
 | `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1 (44×44px touch target, event isolation), and Arr availability badge |
@@ -224,10 +224,10 @@
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
 | `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
-| `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Dropped*, *Caught Up*) |
+| `StatusBadge` | `components/StatusBadge.tsx` | Localized pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch* / *À voir*, *Dropped*, *Caught Up* / *À jour*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, and overscroll containment |
-| `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with clear text `✕` button and integrated filter trigger button with active count badge |
+| `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with media URL auto-detection (IMDb, TMDB, AniList), clear text `✕` button, and integrated filter trigger button with active count badge |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |

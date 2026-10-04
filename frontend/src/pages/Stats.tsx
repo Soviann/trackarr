@@ -653,7 +653,7 @@ function YearSection({
 }
 
 function SectionLabel({ children }: { children: string }) {
-  const text = children.startsWith('//') ? children : `// ${children.toUpperCase()}`
+  const text = children.startsWith('// ') ? children.slice(3) : children
   return <h2 className={s.sectionHeader}>{text}</h2>
 }
 

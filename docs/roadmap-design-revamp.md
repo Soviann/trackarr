@@ -80,16 +80,16 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
 ### 📦 SECTION 3 : Clarté UX & Navigation Unifiée Bas de Page (Android)
 *Objectif : Réduire la charge cognitive et rendre l'application chaleureuse et intuitive à une main.*
 
-- [ ] **Refonte de la barre de navigation ([`Navbar.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/Navbar.tsx))** :
+- [x] **Refonte de la barre de navigation ([`Navbar.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/Navbar.tsx))** :
   - Supprimer les trigrammes abrégés (`LIB`, `SCH`, `ADD`, `STA`, `ADM`).
   - Adopter 4 ou 5 onglets explicites avec icônes universelles et libellés traduits (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`).
-- [ ] **Unification de la recherche & découverte au pouce ([`SearchBar.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/SearchBar.tsx))** :
+- [x] **Unification de la recherche & découverte au pouce ([`SearchBar.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/SearchBar.tsx))** :
   - Fusionner l'intention de recherche locale (`/search`) et d'ajout (`/add`) dans un champ unique docked en bas d'écran.
   - Résultat immédiat : recherche d'abord dans la collection personnelle, avec suggestion directe de découverte TMDB/AniList en un clic si le titre est absent.
-- [ ] **Humanisation du wording & dé-geekification** :
+- [x] **Humanisation du wording & dé-geekification** :
   - Remplacer les en-têtes préfixés par des commentaires de code (`// IN PROGRESS`, `// COMING UP`, `// RELEASES`) par une titraille éditoriale élégante.
   - Clarifier les badges d'état (remplacer `PLAN` par "À voir" / "Watchlist").
-- [ ] **Onboarding & états vides accueillants** :
+- [x] **Onboarding & états vides accueillants** :
   - Remplacer la phrase brute d'état vide par une carte d'accueil guidée expliquant les webhooks Jellyfin/Plex et la recherche.
 
 ---
@@ -110,4 +110,4 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
 ---
 
 ## 📅 Prochaine Étape
-Commencer la **Session 3 (SECTION 3 : Clarté UX & Navigation Unifiée Bas de Page (Android))** en générant son plan de mise en œuvre dédié dans `docs/plans/2026-10-04-section-3-bottom-nav-search.md`.
+Commencer la **Session 4 (SECTION 4 : Expérience Grand Écran & Rayonnage Adaptatif (Desktop))** en générant son plan de mise en œuvre dédié dans `docs/plans/2026-10-04-section-4-desktop-grid-sidebar.md`.

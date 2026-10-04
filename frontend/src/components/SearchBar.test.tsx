@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup } from '@testing-library/preact'
+import { route } from 'preact-router'
 import { SearchBar } from './SearchBar'
+
+vi.mock('preact-router', () => ({
+  route: vi.fn(),
+}))
 
 const mockState = {
   query: '',
@@ -86,6 +91,22 @@ describe('SearchBar', () => {
     const badge = container.querySelector('.filterCountBadge')
     expect(badge).not.toBeNull()
     expect(badge?.textContent).toBe('3')
+  })
+
+  it('redirects to /admin/validate when a supported media URL is entered', () => {
+    const { getByPlaceholderText } = render(<SearchBar />)
+    const input = getByPlaceholderText('Search titles...') as HTMLInputElement
+    fireEvent.input(input, { target: { value: 'https://www.themoviedb.org/movie/550-fight-club' } })
+    expect(route).toHaveBeenCalledWith('/admin/validate?q=https%3A%2F%2Fwww.themoviedb.org%2Fmovie%2F550-fight-club')
+    expect(mockState.setQuery).not.toHaveBeenCalled()
+  })
+
+  it('redirects to /admin/validate when an IMDb URL is entered', () => {
+    const { getByPlaceholderText } = render(<SearchBar />)
+    const input = getByPlaceholderText('Search titles...') as HTMLInputElement
+    fireEvent.input(input, { target: { value: 'https://www.imdb.com/title/tt0137523/' } })
+    expect(route).toHaveBeenCalledWith('/admin/validate?q=https%3A%2F%2Fwww.imdb.com%2Ftitle%2Ftt0137523%2F')
+    expect(mockState.setQuery).not.toHaveBeenCalled()
   })
 })
 
