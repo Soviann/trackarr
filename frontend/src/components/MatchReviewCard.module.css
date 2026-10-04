@@ -3,7 +3,6 @@
   border-radius: 12px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--status-color) 20%, transparent);
-  border-left: 3px solid var(--status-color);
   cursor: pointer;
 }
 

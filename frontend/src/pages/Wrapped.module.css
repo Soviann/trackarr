@@ -224,9 +224,7 @@
   font-size: 1.6rem;
   font-weight: 800;
   margin: 0 0 4px;
-  background: linear-gradient(135deg, #ffffff 30%, rgba(255, 255, 255, 0.7) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
 }
 
 .slideSubtitle {
@@ -569,9 +567,7 @@
 .personaArchetype {
   font-size: 1.35rem;
   font-weight: 900;
-  background: linear-gradient(135deg, #f472b6, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #f472b6;
   margin: 0;
   line-height: 1.2;
 }
@@ -719,9 +715,7 @@
   font-size: 1.5rem;
   font-weight: 800;
   margin: 0;
-  background: linear-gradient(135deg, #f472b6, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #f472b6;
 }
 
 .loadingSubtitle {

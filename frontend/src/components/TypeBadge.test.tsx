@@ -9,6 +9,7 @@ describe('TypeBadge', () => {
     const { getByLabelText } = render(<TypeBadge type="movie" />)
     const badge = getByLabelText('Movie')
     expect(badge).toBeTruthy()
+    expect(badge.getAttribute('role')).toBe('img')
     expect(badge.getAttribute('title')).toBeNull()
   })
 

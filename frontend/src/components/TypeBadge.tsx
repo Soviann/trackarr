@@ -25,6 +25,7 @@ export function TypeBadge({ type, size = 'md', radarrId, sonarrId }: TypeBadgePr
 
   return (
     <div
+      role="img"
       className={clsx(
         s.badge,
         size === 'sm' ? s.sizeSm : s.sizeMd,

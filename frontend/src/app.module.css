@@ -9,3 +9,7 @@
 .withSearchBar {
   padding-bottom: 172px;
 }
+
+.main {
+  display: block;
+}

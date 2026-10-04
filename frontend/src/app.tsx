@@ -249,34 +249,36 @@ export function App() {
     <ErrorBoundary>
       <UndoProvider>
         <div className={clsx(s.root, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}>
-          <Router onChange={handleRoute}>
-            <Library path={ROUTE_PATHS.home} />
-            <ComingUp path={ROUTE_PATHS.comingUp} />
-            <ContinueWatching path={ROUTE_PATHS.continueWatching} />
-            <Releases path={ROUTE_PATHS.releases} />
-            <Search path={ROUTE_PATHS.search} />
-            <Add path={ROUTE_PATHS.add} />
-            <Stats path={ROUTE_PATHS.stats} />
-            <Wrapped path={ROUTE_PATHS.wrapped} />
-            <Wrapped path={ROUTE_PATHS.wrappedYear} />
-            <Login path={ROUTE_PATHS.login} />
-            <Setup path={ROUTE_PATHS.setup} />
-            <TitleDetail path={ROUTE_PATHS.title} />
-            <PersonTitles path={ROUTE_PATHS.person} />
-            <Admin path={ROUTE_PATHS.admin} />
-            <AdminSettings path={ROUTE_PATHS.adminSettings} />
-            <AdminAuth path={ROUTE_PATHS.adminAuth} />
-            <Validate path={ROUTE_PATHS.adminValidate} />
-            <AdminTasks path={ROUTE_PATHS.adminTasks} />
-            <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
-            <AdminJellyfin path={ROUTE_PATHS.adminJellyfin} />
-            <AdminAniList path={ROUTE_PATHS.adminAniList} />
-            <AdminArr path={ROUTE_PATHS.adminArr} />
-            <AdminSeasonAudit path={ROUTE_PATHS.adminSeasonAudit} />
-            <Help path={ROUTE_PATHS.adminHelp} />
-            <AnilistCallback path={ROUTE_PATHS.anilistCallback} />
-            <MatchReview path={ROUTE_PATHS.matchReview} />
-          </Router>
+          <main className={s.main} id="main-content">
+            <Router onChange={handleRoute}>
+              <Library path={ROUTE_PATHS.home} />
+              <ComingUp path={ROUTE_PATHS.comingUp} />
+              <ContinueWatching path={ROUTE_PATHS.continueWatching} />
+              <Releases path={ROUTE_PATHS.releases} />
+              <Search path={ROUTE_PATHS.search} />
+              <Add path={ROUTE_PATHS.add} />
+              <Stats path={ROUTE_PATHS.stats} />
+              <Wrapped path={ROUTE_PATHS.wrapped} />
+              <Wrapped path={ROUTE_PATHS.wrappedYear} />
+              <Login path={ROUTE_PATHS.login} />
+              <Setup path={ROUTE_PATHS.setup} />
+              <TitleDetail path={ROUTE_PATHS.title} />
+              <PersonTitles path={ROUTE_PATHS.person} />
+              <Admin path={ROUTE_PATHS.admin} />
+              <AdminSettings path={ROUTE_PATHS.adminSettings} />
+              <AdminAuth path={ROUTE_PATHS.adminAuth} />
+              <Validate path={ROUTE_PATHS.adminValidate} />
+              <AdminTasks path={ROUTE_PATHS.adminTasks} />
+              <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
+              <AdminJellyfin path={ROUTE_PATHS.adminJellyfin} />
+              <AdminAniList path={ROUTE_PATHS.adminAniList} />
+              <AdminArr path={ROUTE_PATHS.adminArr} />
+              <AdminSeasonAudit path={ROUTE_PATHS.adminSeasonAudit} />
+              <Help path={ROUTE_PATHS.adminHelp} />
+              <AnilistCallback path={ROUTE_PATHS.anilistCallback} />
+              <MatchReview path={ROUTE_PATHS.matchReview} />
+            </Router>
+          </main>
           <UndoSnackbar hideNavbar={hideNavbar} />
           {!hideNavbar && (
             <Navbar

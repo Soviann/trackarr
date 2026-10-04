@@ -19,6 +19,7 @@
 - Integrations & Webhooks: `docs/integrations.md`
 - Deployment & Updates (3 Options): `docs/deployment.md`
 - Maintenance & Operations: `docs/maintenance.md`
+- Design Revamp Roadmap: `docs/roadmap-design-revamp.md`
 - LLM Context Reference: `docs/llm.md`
 
 ---
@@ -217,8 +218,8 @@
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
-| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1, and Arr availability badge |
-| `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids |
+| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1 (44×44px touch target, event isolation), and Arr availability badge |
+| `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids with quick mark +1 (44×44px touch target, event isolation) |
 | `PosterStrip` | `components/PosterStrip.tsx` | Horizontal scrolling strip of poster thumbnails |
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
 | `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
@@ -260,7 +261,8 @@
 
 ### Design Tokens & Theming (`frontend/src/tokens.css`)
 - **Theme Variables**: 4 distinct themes (`vault`, `cyber`, `sunset`, `emerald`).
-- **Contrast Token**: `--accent-fg` dynamically guarantees WCAG AAA compliant text contrast on top of `--accent` across all themes (dark background on Vault, Cyber, Emerald; white on Sunset).
+- **Contrast Token**: `--accent-fg` dynamically guarantees WCAG compliant text contrast on top of `--accent` across all themes (dark background `var(--bg)` on Vault, Cyber, Sunset, and Emerald).
+- **Secondary Text Token**: `--ink-mute` is calibrated across all themes to meet WCAG AA contrast (≥ 4.5:1 on dark background).
 - **Brand Tokens**: Dedicated tokens `--brand-imdb`, `--brand-tmdb`, `--brand-tvdb`, `--brand-anilist`, `--brand-radarr` (`#ffc230`), and `--brand-sonarr` (`#00c0ff`).
 - **Dynamic SVG Theming**: SVGs use `currentColor` or CSS variables (`var(--accent)`, `var(--ink)`, `var(--ink-dim)`) instead of static JS imports from `theme.ts`.
 - **Skeleton Shimmer Waves**: `--skeleton-bg` token combined with `@keyframes shimmerWave` provides directional animated gradient waves across all loading skeletons.

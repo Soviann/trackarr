@@ -6,6 +6,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Ergonomie tactile des boutons d'action rapide sur jaquettes (`PosterCard` & `PosterTile`)** :
+  - Agrandissement de la zone de frappe tactile à 44×44px minimum via pseudo-élément sans altérer la taille visuelle du bouton.
+  - Isolation stricte des événements tactiles (`pointerdown` `stopPropagation`) pour éliminer tout déclenchement parasite du clic de navigation ou du geste d'appui long sur la carte.
+  - Remplacement de l'animation élastique cartoon (`springPop`) par une micro-transition de confirmation sobre et nette de 180ms (`quickConfirm`).
+- **Contraste des thèmes & Accessibilité WCAG AA (`tokens.css`)** :
+  - Rehaussement du contraste du jeton de texte secondaire `--ink-mute` à ≥ 4.5:1 sur fond sombre à travers les 4 thèmes (`vault`, `cyber`, `sunset`, `emerald`).
+  - Correction du contraste des boutons d'accent du thème Sunset (`--accent-fg: var(--bg)` garantissant un contraste ≥ 5.1:1 sur corail).
+- **Élimination des tics visuels « AI Slop »** :
+  - Suppression de la bordure gauche arbitraire de 3px sur `MatchReviewCard` et du bandeau d'accent de 3px sur `NextEpisodeHero`.
+  - Remplacement des dégradés avec découpe de texte (`background-clip: text`) dans `Wrapped` par des contrastes solides nets.
+- **Accessibilité technique (Audit & Repères structurels)** :
+  - Ajout du repère structurel `<main id="main-content">` autour des pages routées dans `App.tsx`.
+  - Ajout de `role="img"` sur le composant `TypeBadge` pour conformité avec la spécification des éléments portant un `aria-label`.
+
 ## [v1.21.9] — 2026-10-02
 
 ### Modifié

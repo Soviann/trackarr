@@ -45,7 +45,7 @@ export function PosterTile({ item }: Props) {
     if (!item.isMarking) {
       haptic([15, 30, 15])
       setPopping(true)
-      setTimeout(() => setPopping(false), 450)
+      setTimeout(() => setPopping(false), 180)
       item.onQuickMark?.(item, e)
     }
   }
@@ -81,6 +81,7 @@ export function PosterTile({ item }: Props) {
             type="button"
             className={clsx(s.quickPlusBtn, item.isMarking && s.quickPlusBtnLoading, popping && s.quickPlusBtnPopping)}
             onClick={handleQuickMarkClick}
+            onPointerDown={(e) => e.stopPropagation()}
             disabled={item.isMarking}
             aria-label={`Mark S${item.next_episode.season_number} E${item.next_episode.episode} as watched`}
             title={t('common.markNextWatched')}

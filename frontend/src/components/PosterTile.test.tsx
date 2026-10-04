@@ -84,6 +84,32 @@ describe('PosterTile', () => {
     expect(onQuickMark).toHaveBeenCalledOnce()
   })
 
+  it('stops pointerdown propagation on quick mark button', () => {
+    const item: PosterTileItem = {
+      id: 4,
+      type: 'series',
+      cover_url: null,
+      name: 'Severance',
+      sublabel: 'S02E01',
+      progressRatio: 0.5,
+      next_episode: {
+        id: 101,
+        season_id: 10,
+        episode: 1,
+        season_number: 2,
+      },
+      onQuickMark: vi.fn(),
+    }
+
+    const { getByLabelText } = render(<PosterTile item={item} />)
+    const btn = getByLabelText('Mark S2 E1 as watched')
+    const pointerDownEvent = new PointerEvent('pointerdown', { bubbles: true, cancelable: true })
+    const stopPropagationSpy = vi.spyOn(pointerDownEvent, 'stopPropagation')
+
+    btn.dispatchEvent(pointerDownEvent)
+    expect(stopPropagationSpy).toHaveBeenCalled()
+  })
+
   it('shows loading state when isMarking is true', () => {
     const onQuickMark = vi.fn()
     const item: PosterTileItem = {
