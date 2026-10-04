@@ -10,6 +10,8 @@ export const en = {
     stats: 'Stats',
     admin: 'Admin',
     help: 'Help',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Expand sidebar',
   },
   status: {
     all: 'All',

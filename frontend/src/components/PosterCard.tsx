@@ -88,6 +88,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
       return
     }
     if (!onClick) return
+    if (!selecting && (e.metaKey || e.ctrlKey || e.button === 1)) return
     e.preventDefault()
     e.stopPropagation()
     onClick(e)

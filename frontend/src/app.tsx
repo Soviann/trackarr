@@ -3,8 +3,10 @@ import { route } from 'preact-router'
 import Router from 'preact-router'
 import clsx from 'clsx'
 import { Navbar } from './components/Navbar'
+import { Sidebar } from './components/Sidebar'
 import { FilterDrawer, type FilterState, type FilterActions } from './components/FilterDrawer'
 import { SearchBar } from './components/SearchBar'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { Library } from './pages/Library'
 import { ComingUp } from './pages/ComingUp'
 import { ContinueWatching } from './pages/ContinueWatching'
@@ -154,6 +156,44 @@ export function App() {
 
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('trackarr_sidebar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem('trackarr_sidebar_collapsed', String(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }, [])
+
+  useKeyboardShortcuts({
+    onSearch: useCallback(() => {
+      if (currentPath !== ROUTE_PATHS.search) {
+        route(ROUTE_PATHS.search)
+      } else {
+        const searchInput = document.getElementById('search') as HTMLInputElement | null
+        searchInput?.focus()
+        searchInput?.select()
+      }
+    }, [currentPath]),
+    onEscape: useCallback(() => {
+      if (filterDrawerOpen) {
+        setFilterDrawerOpen(false)
+      }
+    }, [filterDrawerOpen]),
+    enabled: isAuthed,
+  })
+
   const handleResetFilters = useCallback(() => {
     useTitleStore.setState({
       filter: {},
@@ -248,7 +288,15 @@ export function App() {
   return (
     <ErrorBoundary>
       <UndoProvider>
-        <div className={clsx(s.root, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}>
+        <div className={clsx(s.root, sidebarCollapsed && s.rootSidebarCollapsed, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}>
+          {!hideNavbar && (
+            <Sidebar
+              currentPath={currentPath}
+              onNavigate={navigate}
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={handleToggleSidebar}
+            />
+          )}
           <main className={s.main} id="main-content">
             <Router onChange={handleRoute}>
               <Library path={ROUTE_PATHS.home} filterOpen={filterDrawerOpen} />

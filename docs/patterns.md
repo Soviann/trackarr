@@ -214,6 +214,7 @@
 | Component | File | Purpose |
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
+| `Sidebar` | `components/Sidebar.tsx` | Desktop collapsible lateral navigation sidebar (≥ 1024px) with Trackarr branding, vertical navigation tabs, active state indicators, and collapse/expand toggle |
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
@@ -253,6 +254,7 @@
 | `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, single-touch guard, internal scroll check (scrollTop > 0), event isolation, and threshold close |
+| `useKeyboardShortcuts` | `hooks/useKeyboardShortcuts.ts` | Global power user keyboard shortcut listener (`Cmd+K` / `Ctrl+K` & `/` search trigger, `Escape` drawer & dialog dismissal) |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper with disabled state when drawers or dialog sheets are open |
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons with zero-reflow CSS Grid row collapse and GPU slide-out exit animation |

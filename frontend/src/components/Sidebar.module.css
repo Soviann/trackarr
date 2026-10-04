@@ -1,0 +1,208 @@
+.sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 240px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    z-index: 100;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  .collapsed {
+    width: 68px;
+  }
+
+  .header {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-lg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .collapsed .header {
+    padding: 0;
+    justify-content: center;
+  }
+
+  .brandArea {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    outline: none;
+  }
+
+  .brandLogoFull {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .brandLogo {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .brandLogoMini {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .brandAccent {
+    color: var(--accent);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brandSub {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--ink-mute);
+  }
+
+  .nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-md) var(--space-sm);
+    overflow-y: auto;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: var(--radius-button);
+    border: none;
+    background: transparent;
+    color: var(--ink-dim);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-align: left;
+    position: relative;
+    transition: color 150ms ease, background-color 150ms ease;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .collapsed .tab {
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+  }
+
+  .tab:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .tabActive {
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .iconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+  }
+
+  .label {
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .activeBar {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--accent);
+  }
+
+  .footer {
+    padding: var(--space-sm);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .collapseBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--ink-mute);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: color 150ms ease, background-color 150ms ease;
+    white-space: nowrap;
+  }
+
+  .collapsed .collapseBtn {
+    justify-content: center;
+    padding: 8px 0;
+    gap: 0;
+  }
+
+  .collapseBtn:hover {
+    color: var(--ink);
+    background: var(--surface);
+  }
+
+  .collapseIcon {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .collapseIconCollapsed {
+    transform: rotate(180deg);
+  }
+
+  .collapseLabel {
+    line-height: 1.2;
+  }
+}

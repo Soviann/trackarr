@@ -7,6 +7,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Ajouté
+- **Barre latérale repliable grand écran (`Sidebar`)** :
+  - Bascule automatique sur écran large (≥ 1024px) de la barre d'onglets inférieure vers une barre latérale élégante avec logo Trackarr MEDIA, onglets de navigation verticaux et indicateur d'état actif.
+  - Mode compact/replié (68px) avec icônes centrées, infobulles accessibles et persistance du choix de réduction dans le stockage local (`localStorage`).
+  - Décalage fluide du contenu principal et de la barre de recherche ancrée au bas de la vue bureau (`margin-left: var(--sidebar-width)`).
+- **Rayonnage adaptatif fluide sur grand écran (`Library`)** :
+  - Remplacement des 3 colonnes figées par une grille adaptative `auto-fill, minmax(105px..160px, 1fr)` s'étirant de 2-3 colonnes sur smartphone jusqu'à 6-8+ colonnes sur bureau et moniteurs larges.
+  - Alignement automatique des tuiles de chargement squelettes sur l'empreinte exacte des jaquettes 2:3 sans saut d'affichage.
+- **Accélérateurs clavier pour Power Users & Sélection par plage** :
+  - Déclenchement universel de la recherche via `Cmd+K` / `Ctrl+K` ou la touche `/` depuis n'importe quel écran avec ciblage immédiat du champ de recherche.
+  - Fermeture immédiate des tiroirs (`FilterDrawer`), dialogues et modes de sélection avec la touche `Escape`.
+  - Prise en charge de la sélection multiple par plage avec `Shift+Clic` sur les jaquettes de la bibliothèque (`Library`).
 - **Barre de navigation unifiée 5 onglets (`Navbar`)** :
   - Remplacement des trigrammes cryptiques (`LIB`, `SCH`, `ADD`, `STA`, `ADM`) par 5 onglets explicites avec libellés traduits (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`), icônes SVG universelles, typographie sans-serif affinée et cibles tactiles de 48px.
   - Mise en surbrillance contextuelle intelligente préservant l'onglet actif lors de la navigation dans les sous-vues (`/continue-watching` reste sous `Collection`, `/releases` sous `Calendrier`).

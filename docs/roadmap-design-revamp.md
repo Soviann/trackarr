@@ -97,17 +97,17 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
 ### 📦 SECTION 4 : Expérience Grand Écran & Rayonnage Adaptatif (Desktop)
 *Objectif : Offrir une interface digne d'un média center sur bureau sans impacter le mobile.*
 
-- [ ] **Grille responsive fluide ([`Library.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/pages/Library.module.css))** :
+- [x] **Grille responsive fluide ([`Library.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/pages/Library.module.css))** :
   - Remplacer les 3 colonnes figées (`grid-template-columns: 1fr 1fr 1fr;`) par une grille adaptative intelligente `grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));`.
   - Adapter la taille des jaquettes entre mobile (2 à 3 colonnes) et écrans larges (5 à 8 colonnes).
-- [ ] **Navigation latérale desktop (Sidebar repliable)** :
+- [x] **Navigation latérale desktop (Sidebar repliable)** :
   - Sur écran large (≥ 1024px), basculer la barre d'onglets du bas vers une barre latérale élégante.
-- [ ] **Accélérateurs clavier pour Power Users** :
+- [x] **Accélérateurs clavier pour Power Users** :
   - Ajout du raccourci universel `Cmd+K` ou `/` pour ouvrir instantanément la recherche.
   - Fermeture des tiroirs et modales avec la touche `Escape`.
   - Prise en charge de la sélection multiple par plage (Shift+Clic).
 
 ---
 
-## 📅 Prochaine Étape
-Commencer la **Session 4 (SECTION 4 : Expérience Grand Écran & Rayonnage Adaptatif (Desktop))** en générant son plan de mise en œuvre dédié dans `docs/plans/2026-10-04-section-4-desktop-grid-sidebar.md`.
+## 📅 Bilan du Revamp
+Toutes les sections (Section 1 à 4) de la roadmap UI/UX ont été complétées avec succès.

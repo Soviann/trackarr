@@ -1,5 +1,10 @@
 .root {
   min-height: 100vh;
+  --sidebar-width: 240px;
+}
+
+.rootSidebarCollapsed {
+  --sidebar-width: 68px;
 }
 
 .withNavbar {
@@ -12,4 +17,28 @@
 
 .main {
   display: block;
+}
+
+@media (min-width: 1024px) {
+  .root {
+    display: flex;
+  }
+
+  .main {
+    flex: 1;
+    min-width: 0;
+    transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .withNavbar .main {
+    margin-left: var(--sidebar-width);
+  }
+
+  .withNavbar {
+    padding-bottom: 0;
+  }
+
+  .withSearchBar {
+    padding-bottom: 72px;
+  }
 }
