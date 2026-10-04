@@ -17,7 +17,7 @@ export function Navbar({ currentPath, onNavigate, above }: NavbarProps) {
   return (
     <div className={clsx(s.wrapper, !above && s.noAbove)}>
       {above && <div className={s.above}>{above}</div>}
-      <nav className={s.nav} aria-label="Main Navigation">
+      <nav className={s.nav} aria-label={t('nav.mainNav')}>
         {navTabs.map((tab) => {
           const active = activePath === tab.path
           const label = t(tab.labelKey)

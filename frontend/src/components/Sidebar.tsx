@@ -17,7 +17,7 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapse }
   return (
     <aside
       className={clsx(s.sidebar, collapsed && s.collapsed)}
-      aria-label="Desktop Navigation"
+      aria-label={t('nav.desktopNav')}
     >
       <div className={s.header}>
         <button

@@ -237,7 +237,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
       })
       route(routeTo.title(mergeTarget.id))
     } catch (e) {
-      setMergeError('Merge failed. Please try again.')
+      setMergeError(t('search.mergeError'))
       setMerging(false)
     }
   }
@@ -440,7 +440,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
           )}
         </div>
 
-        <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)} ariaLabel="Merge titles">
+        <BottomSheet open={!!mergeTarget} onClose={() => setMergeTarget(null)} ariaLabel={t('search.mergeTitle')}>
           <div className={s.mergeDrawer}>
             <div className={s.mergeTitle}>{t('search.mergeTitle')}</div>
             <div className={s.mergeDesc}>

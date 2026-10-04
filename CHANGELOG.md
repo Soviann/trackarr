@@ -7,6 +7,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Ajouté
+- **Internationalisation complète du frontend & Durcissement i18n (`en` & `fr`)** :
+  - Traduction et couverture multilingue intégrale des composants du coeur applicatif (`TitleDetail`, `Library`, `FilterDrawer`, `Sidebar`, `Navbar`, `Search`, `ArrBadge`, `AniListSheet`, `RatingPrompt`, `SeasonAniListStrip`).
+  - Correction des chaînes françaises résiduelles en dur dans les composants TypeScript/TSX (notamment « Autres titres » dans `TitleDetail`).
+  - Élargissement des règles du linter i18n (`checker.ts`) pour détecter les mots-clés français et garantir la parité stricte des dictionnaires anglais et français.
 - **Barre latérale repliable grand écran (`Sidebar`)** :
   - Bascule automatique sur écran large (≥ 1024px) de la barre d'onglets inférieure vers une barre latérale élégante avec logo Trackarr MEDIA, onglets de navigation verticaux et indicateur d'état actif.
   - Mode compact/replié (68px) avec icônes centrées, infobulles accessibles et persistance du choix de réduction dans le stockage local (`localStorage`).

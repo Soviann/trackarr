@@ -102,6 +102,7 @@ interface MatchReviewBannerProps {
 }
 
 function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchReviewBannerProps) {
+  const { t } = useTranslation()
   if (count === 0) return null
   return (
     <button type="button" onClick={() => route(routeTo.matchReview())} className={s.bannerWrapper}>
@@ -111,10 +112,12 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
         </div>
         <div className={s.bannerBody}>
           <span className={s.bannerTitle}>
-            {count} title{count > 1 ? 's' : ''} need{count === 1 ? 's' : ''} review
+            {count === 1
+              ? t('library.needReviewSingle', { count })
+              : t('library.needReviewPlural', { count })}
           </span>
           <span className={s.bannerSub}>
-            {pendingCount} pending · {unconfirmedCount} unconfirmed
+            {t('library.pendingAndUnconfirmed', { pending: pendingCount, unconfirmed: unconfirmedCount })}
           </span>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -126,10 +129,11 @@ function MatchReviewBanner({ count, pendingCount, unconfirmedCount }: MatchRevie
 }
 
 function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
+  const { t } = useTranslation()
   return (
     <div className={s.loadMoreWrapper}>
       <button onClick={onClick} disabled={loading} className={s.loadMoreBtn}>
-        {loading ? 'Loading...' : 'Load more'}
+        {loading ? t('common.loading') : t('common.loadMore')}
       </button>
     </div>
   )
@@ -310,7 +314,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
       exitSelect()
       invalidate()
     } catch (err) {
-      setBulkError(err instanceof Error ? err.message : 'Bulk status update failed')
+      setBulkError(err instanceof Error ? err.message : t('library.bulkStatusFailed'))
     } finally {
       setBulkPending(false)
     }
@@ -328,7 +332,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
       exitSelect()
       invalidate()
     } catch (err) {
-      setBulkError(err instanceof Error ? err.message : 'Bulk delete failed')
+      setBulkError(err instanceof Error ? err.message : t('library.bulkDeleteFailed'))
       throw err
     } finally {
       setBulkPending(false)
@@ -357,10 +361,10 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
   const useListView = filter.status === 'watching_behind' || filter.status === 'up_to_date'
 
   const statusOptions: { value: string; label: string }[] = [
-    { value: 'watching', label: 'Watching' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'dropped', label: 'Dropped' },
-    { value: 'plan_to_watch', label: 'Plan to Watch' },
+    { value: 'watching', label: t('status.watching') },
+    { value: 'completed', label: t('status.completed') },
+    { value: 'dropped', label: t('status.dropped') },
+    { value: 'plan_to_watch', label: t('status.planToWatch') },
   ]
 
   return (
@@ -380,12 +384,12 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
             Track<span className={s.brandAccent}>arr</span>
           </span>
           <span className={s.brandDivider}>/</span>
-          <span className={s.headerTitle}>Library</span>
+          <span className={s.headerTitle}>{t('library.title')}</span>
         </div>
         <button
           onClick={async () => { await apiFetch('/auth/logout', { method: 'POST' }); route(routeTo.login()) }}
           className={s.logoutBtn}
-          aria-label="Logout"
+          aria-label={t('auth.logout')}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -400,11 +404,11 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
       <div className={s.statsStrip}>
         <span className={s.statsStripYear}>{new Date().getFullYear()}</span>
         <span className={s.statsStripDot}>·</span>
-        <span>{stats?.watched_this_year ?? 0} watched</span>
+        <span>{t('library.watchedThisYear', { count: stats?.watched_this_year ?? 0 })}</span>
         <span className={s.statsStripDot}>·</span>
-        <span>★ {stats?.avg_rating_this_year ? stats.avg_rating_this_year.toFixed(1) : '—'} avg</span>
+        <span>{t('library.avgRatingThisYear', { rating: stats?.avg_rating_this_year ? stats.avg_rating_this_year.toFixed(1) : '—' })}</span>
         <span className={s.statsStripDot}>·</span>
-        <span>{formatWatchtimeShort(stats?.minutes_this_week ?? 0)} this week</span>
+        <span>{t('library.thisWeek', { time: formatWatchtimeShort(stats?.minutes_this_week ?? 0) })}</span>
       </div>
 
       {/* Section hub cards: Coming Up / In Progress / Releases (only if Prowlarr configured) */}
@@ -412,14 +416,14 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
         cards={[
           {
             label: t('library.hubComingUp'),
-            subText: upcoming === null ? undefined : `${upcoming.length} airing soon`,
+            subText: upcoming === null ? undefined : t('library.airingSoon', { count: upcoming.length }),
             posters: upcoming ?? undefined,
             loading: upcoming === null,
             onClick: () => route(routeTo.comingUp()),
           },
           {
             label: t('library.hubInProgress'),
-            subText: continueWatching === null ? undefined : `${continueWatching.length} in progress`,
+            subText: continueWatching === null ? undefined : t('continueWatching.inProgressCount', { count: continueWatching.length }),
             posters: continueWatching ?? undefined,
             loading: continueWatching === null,
             onClick: () => route(routeTo.continueWatching()),
@@ -428,7 +432,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
             ? [
                 {
                   label: t('library.hubReleases'),
-                  subText: 'Explore Prowlarr',
+                  subText: t('library.exploreProwlarr'),
                   variant: 'accent' as const,
                   loading: false,
                   onClick: () => route(routeTo.releases()),
@@ -440,14 +444,14 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
 
       {selecting && (
         <div className={s.selectAllRow}>
-          <button className={s.selectAllBtn} onClick={selectAll}>Select all</button>
-          <span className={s.selectCount}>{selected.size} of {titles.length}</span>
-          <button className={s.cancelBtn} onClick={exitSelect}>Cancel</button>
+          <button className={s.selectAllBtn} onClick={selectAll}>{t('library.selectAll')}</button>
+          <span className={s.selectCount}>{t('library.selectedCount', { count: selected.size, total: titles.length })}</span>
+          <button className={s.cancelBtn} onClick={exitSelect}>{t('common.cancel')}</button>
         </div>
       )}
 
       {loading && titles.length === 0 && (
-        <div className={s.posterGrid} aria-busy="true" aria-label="Loading library">
+        <div className={s.posterGrid} aria-busy="true" aria-label={t('common.loading')}>
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className={s.skeletonTile} aria-hidden="true" />
           ))}
@@ -506,20 +510,20 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
       {/* Bulk action bar */}
       {selecting && selected.size > 0 && (
         <div className={s.actionBar}>
-          <span className={s.actionBarLabel}>{selected.size} selected</span>
+          <span className={s.actionBarLabel}>{t('library.selectedCountShort', { count: selected.size })}</span>
           <button
             className={s.actionBtnStatus}
             onClick={() => setStatusSheetOpen(true)}
             disabled={bulkPending}
           >
-            Status
+            {t('editSheet.status')}
           </button>
           <button
             className={s.actionBtnDelete}
             onClick={() => setDeleteConfirmOpen(true)}
             disabled={bulkPending}
           >
-            Delete
+            {t('common.delete')}
           </button>
         </div>
       )}
@@ -527,7 +531,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
       {bulkError && <ErrorBanner message={bulkError} onDismiss={() => setBulkError(null)} />}
 
       {/* Status picker sheet */}
-      <BottomSheet open={statusSheetOpen} onClose={() => { if (!bulkPending) setStatusSheetOpen(false) }} ariaLabel="Set status for selected titles">
+      <BottomSheet open={statusSheetOpen} onClose={() => { if (!bulkPending) setStatusSheetOpen(false) }} ariaLabel={t('library.statusPickerTitle')}>
         <div className={s.statusSheet}>
           {statusOptions.map(opt => (
             <button
@@ -547,9 +551,9 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={confirmBulkDelete}
-        title={`Delete ${selected.size} title${selected.size > 1 ? 's' : ''}?`}
-        description="This cannot be undone."
-        confirmText="Delete"
+        title={t('library.bulkDeleteConfirmTitle', { count: selected.size, plural: selected.size > 1 ? 's' : '' })}
+        description={t('library.bulkDeleteConfirmDesc')}
+        confirmText={t('common.delete')}
         isDangerous
       />
     </div>

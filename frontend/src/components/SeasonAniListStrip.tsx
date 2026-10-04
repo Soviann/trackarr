@@ -1,5 +1,6 @@
 import type { AniListPart, Season } from '../types'
 import { aniListMediaUrl } from '../utils'
+import { useTranslation } from '../i18n'
 import s from './SeasonAniListStrip.module.css'
 
 interface SeasonAniListStripProps {
@@ -23,14 +24,15 @@ function seasonParts(season: Season): AniListPart[] {
 }
 
 export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListStripProps) {
+  const { t } = useTranslation()
   const parts = seasonParts(season)
 
   if (parts.length === 0) {
     return (
       <div className={s.stripUnmapped}>
         <span className={s.label}>ANILIST</span>
-        <span className={s.unmappedText}>Not mapped for this season</span>
-        <button type="button" className={s.linkButton} onClick={onEdit}>Link entry</button>
+        <span className={s.unmappedText}>{t('seasonAniListStrip.notMapped')}</span>
+        <button type="button" className={s.linkButton} onClick={onEdit}>{t('seasonAniListStrip.linkEntry')}</button>
       </div>
     )
   }
@@ -42,16 +44,16 @@ export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListS
       <div className={s.partList}>
         {parts.map((p, i) => (
           <span key={p.external_id} className={s.partRow}>
-            {multi && <span className={s.partTag}>Part {i + 1}</span>}
+            {multi && <span className={s.partTag}>{t('seasonAniListStrip.part', { num: i + 1 })}</span>}
             <a href={aniListMediaUrl(p.external_id)} target="_blank" rel="noopener noreferrer"
                className={`${s.entryName} ${s.entryLink}`}>
-              {multi ? 'View on AniList' : (entryName ?? `S${season.season_number}`)}
+              {multi ? t('seasonAniListStrip.viewOnAniList') : (entryName ?? `S${season.season_number}`)}
             </a>
             {p.score != null && <span className={s.score}>{p.score}%</span>}
           </span>
         ))}
       </div>
-      <button type="button" className={s.editButton} onClick={onEdit} aria-label="Edit AniList mapping">✎</button>
+      <button type="button" className={s.editButton} onClick={onEdit} aria-label={t('seasonAniListStrip.editMappingAria')}>✎</button>
     </div>
   )
 }

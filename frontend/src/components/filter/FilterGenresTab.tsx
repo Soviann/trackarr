@@ -1,6 +1,7 @@
 import { useState, useRef } from 'preact/hooks'
 import type { RefObject } from 'preact'
 import clsx from 'clsx'
+import { useTranslation } from '../../i18n'
 import type { GenreCount, CountryCount } from '../../types'
 import { countryLabel, isRealCountry } from '../../lib/country'
 import type { FilterState, FilterActions } from './types'
@@ -23,6 +24,7 @@ export function FilterGenresTab({
   genreDropdownRef: externalGenreDropdownRef,
   countryDropdownRef: externalCountryDropdownRef,
 }: FilterGenresTabProps) {
+  const { t } = useTranslation()
   const [genreSearch, setGenreSearch] = useState('')
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false)
   const genreBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -50,24 +52,24 @@ export function FilterGenresTab({
           .filter(g => !genreSearch || g.genre.toLowerCase().includes(genreSearch.toLowerCase()))
         return (
           <>
-            <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Genres</div>
+            <div className={clsx(s.filterLabel, s.filterLabelFirst)}>{t('search.genres')}</div>
             <div className={s.genreOpRow}>
               <button
                 type="button"
                 className={clsx(s.opBtn, genreOp === 'OR' && s.opBtnActive)}
                 onClick={() => actions.onGenreOpChange('OR')}
-              >Any</button>
+              >{t('search.genreOpAny')}</button>
               <button
                 type="button"
                 className={clsx(s.opBtn, genreOp === 'AND' && s.opBtnActive)}
                 onClick={() => actions.onGenreOpChange('AND')}
-              >All</button>
+              >{t('search.genreOpAll')}</button>
               {selectedGenres.length > 0 && (
                 <button
                   type="button"
                   className={s.clearGenresBtn}
                   onClick={() => selectedGenres.forEach(g => actions.onGenreToggle(g))}
-                >Clear</button>
+                >{t('search.clear')}</button>
               )}
             </div>
             <div className={s.genreDropdownWrapper}>
@@ -90,7 +92,8 @@ export function FilterGenresTab({
                   ref={genreInputRef}
                   type="text"
                   className={s.genreInput}
-                  placeholder={selectedGenres.length === 0 ? 'Search genres…' : ''}
+                  placeholder={selectedGenres.length === 0 ? t('search.searchGenresPlaceholder') : ''}
+                  aria-label={t('search.searchGenresPlaceholder')}
                   value={genreSearch}
                   onInput={(e) => setGenreSearch((e.target as HTMLInputElement).value)}
                   onFocus={() => {
@@ -140,14 +143,14 @@ export function FilterGenresTab({
           .filter(c => !q || countryLabel(c.country).toLowerCase().includes(q) || c.country.toLowerCase().includes(q))
         return (
           <>
-            <div className={s.filterLabel}>Country</div>
+            <div className={s.filterLabel}>{t('search.country')}</div>
             {selectedCountries.length > 0 && (
               <div className={s.genreOpRow}>
                 <button
                   type="button"
                   className={s.clearGenresBtn}
                   onClick={() => selectedCountries.forEach(c => actions.onCountryToggle(c))}
-                >Clear</button>
+                >{t('search.clear')}</button>
               </div>
             )}
             <div className={s.genreDropdownWrapper}>
@@ -170,7 +173,8 @@ export function FilterGenresTab({
                   ref={countryInputRef}
                   type="text"
                   className={s.genreInput}
-                  placeholder={selectedCountries.length === 0 ? 'Search countries…' : ''}
+                  placeholder={selectedCountries.length === 0 ? t('search.searchCountriesPlaceholder') : ''}
+                  aria-label={t('search.searchCountriesPlaceholder')}
                   value={countrySearch}
                   onInput={(e) => setCountrySearch((e.target as HTMLInputElement).value)}
                   onFocus={() => {

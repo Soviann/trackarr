@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useTranslation } from '../../i18n'
 import type { FilterState, FilterActions } from './types'
 import { decadeOptions } from './types'
 import s from '../FilterDrawer.module.css'
@@ -9,6 +10,7 @@ interface FilterDatesTabProps {
 }
 
 export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
+  const { t } = useTranslation()
   const {
     myRatingMin,
     tmdbRatingMin,
@@ -20,16 +22,16 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
 
   return (
     <div className={s.tabPane}>
-      <div className={clsx(s.filterLabel, s.filterLabelFirst)}>Rating</div>
+      <div className={clsx(s.filterLabel, s.filterLabelFirst)}>{t('library.sortRating')}</div>
       <div className={s.filterRow}>
         <select
           className={clsx(s.select, Boolean(myRatingMin) && s.selectActive)}
           value={myRatingMin}
           onChange={(e) => actions.onMyRatingMinChange((e.target as HTMLSelectElement).value)}
         >
-          <option value="">My rating: any</option>
+          <option value="">{t('search.myRatingAny')}</option>
           {[1,2,3,4,5,6,7,8,9,10].map(n => (
-            <option key={n} value={String(n)}>My rating ≥ {n}</option>
+            <option key={n} value={String(n)}>{t('search.myRatingMin', { n })}</option>
           ))}
         </select>
         <select
@@ -37,14 +39,14 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
           value={tmdbRatingMin}
           onChange={(e) => actions.onTmdbRatingMinChange((e.target as HTMLSelectElement).value)}
         >
-          <option value="">TMDB: any</option>
+          <option value="">{t('search.tmdbRatingAny')}</option>
           {[5,6,7,8,9].map(n => (
-            <option key={n} value={String(n)}>TMDB ≥ {n}</option>
+            <option key={n} value={String(n)}>{t('search.tmdbRatingMin', { n })}</option>
           ))}
         </select>
       </div>
 
-      <div className={s.filterLabel}>Release date</div>
+      <div className={s.filterLabel}>{t('search.releaseDate')}</div>
       <div className={s.filterRow}>
         <select
           className={clsx(s.select, Boolean(decade) && s.selectActive)}
@@ -55,14 +57,17 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
           }}
         >
           {decadeOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.value === '' ? t('search.decadeAll') : opt.label}
+            </option>
           ))}
         </select>
         <input
           type="date"
           className={s.dateInput}
           value={releaseFrom}
-          placeholder="From"
+          placeholder={t('search.dateFrom')}
+          aria-label={t('search.dateFrom')}
           onChange={(e) => {
             actions.onReleaseFromChange((e.target as HTMLInputElement).value)
             if ((e.target as HTMLInputElement).value) actions.onDecadeChange(null)
@@ -72,7 +77,8 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
           type="date"
           className={s.dateInput}
           value={releaseTo}
-          placeholder="To"
+          placeholder={t('search.dateTo')}
+          aria-label={t('search.dateTo')}
           onChange={(e) => {
             actions.onReleaseToChange((e.target as HTMLInputElement).value)
             if ((e.target as HTMLInputElement).value) actions.onDecadeChange(null)
@@ -87,7 +93,7 @@ export function FilterDatesTab({ filter, actions }: FilterDatesTabProps) {
               checked={includeNoRelease}
               onChange={(e) => actions.onIncludeNoReleaseChange((e.target as HTMLInputElement).checked)}
             />
-            <span>Include without release date</span>
+            <span>{t('search.includeWithoutRelease')}</span>
           </label>
         </div>
       )}
