@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.22.0] — 2026-10-04
+
 ### Ajouté
 - **Internationalisation complète du frontend & Durcissement i18n (`en` & `fr`)** :
   - Traduction et couverture multilingue intégrale des composants du coeur applicatif (`TitleDetail`, `Library`, `FilterDrawer`, `Sidebar`, `Navbar`, `Search`, `ArrBadge`, `AniListSheet`, `RatingPrompt`, `SeasonAniListStrip`).
