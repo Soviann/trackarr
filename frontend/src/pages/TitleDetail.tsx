@@ -86,15 +86,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     [title?.id, title?.seasons]
   )
 
+  const { t } = useTranslation()
+
   if (loading || !title) {
     return (
       <div className={s.loading}>
-        {error ? <ErrorBanner message={error} onRetry={mutate} /> : loading ? 'Loading...' : 'Title not found'}
+        {error ? <ErrorBanner message={error} onRetry={mutate} /> : loading ? t('common.loading') : t('common.notFound')}
       </div>
     )
   }
-
-  const { t } = useTranslation()
   const name = getName(title)
   const altNames = getAlternativeNames(title)
   const typeLabel = getTypeLabel(title.type)
@@ -176,7 +176,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         },
       })
     } catch {
-      setActionError('Failed to update season')
+      setActionError(t('details.failedUpdateSeason'))
       mutate()
     }
   }
@@ -216,7 +216,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         })
       }
     } catch (e) {
-      setActionError('Failed to update episode')
+      setActionError(t('details.failedUpdateEpisode'))
       mutate()
     }
   }
@@ -242,7 +242,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         }
       })
     } catch (e) {
-      setActionError('Failed to update title status')
+      setActionError(t('details.failedUpdateTitleStatus'))
     }
   }
 
@@ -256,7 +256,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       })
       setData(updated)
     } catch (e) {
-      setActionError('Failed to save rating')
+      setActionError(t('details.failedSaveRating'))
       mutate()
     }
   }
@@ -271,7 +271,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       })
       setData(updated)
     } catch (e) {
-      setActionError('Failed to save changes')
+      setActionError(t('details.failedSaveChanges'))
       mutate()
     }
   }
@@ -334,7 +334,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Hero — spacer, holds back button; cover image shows through .page background */}
       <div className={s.hero}>
-        <button onClick={() => history.back()} aria-label="Back" className={s.backBtn}>
+        <button onClick={() => history.back()} aria-label={t('common.back')} className={s.backBtn}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
@@ -427,7 +427,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   type="button"
                   className={s.rateBtn}
                   onClick={() => handleSaveRating(val)}
-                  aria-label={`Rate ${val}/10`}
+                  aria-label={t('ratingPrompt.rateValueAria', { val })}
                 >
                   {val}
                 </button>
@@ -440,12 +440,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Synopsis card */}
       {title.overview && (
         <div className={s.card}>
-          <div className={s.cardLabel}>Synopsis</div>
+          <div className={s.cardLabel}>{t('details.overview')}</div>
           <div className={`${s.synopsisText} ${!synopsisExpanded ? s.synopsisClamped : ''}`}>
             {title.overview}
           </div>
           <button className={s.synopsisToggle} onClick={() => setSynopsisExpanded(!synopsisExpanded)}>
-            {synopsisExpanded ? 'Show less' : 'Show more'}
+            {synopsisExpanded ? t('details.showLess') : t('details.showMore')}
           </button>
         </div>
       )}
@@ -460,7 +460,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       {/* Cast & Crew card */}
       {credits && credits.length > 0 && (
         <div className={s.card}>
-          <div className={s.cardLabel}>Cast & Crew</div>
+          <div className={s.cardLabel}>{t('details.castCrew')}</div>
           <div className={s.castList}>
             {credits.map((c) => (
               <div key={`${c.name}-${c.role}`} className={s.castEntry}>
@@ -480,41 +480,41 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Details card */}
       <div className={s.card}>
-        <div className={s.cardLabel}>Details</div>
+        <div className={s.cardLabel}>{t('details.mediaDetails')}</div>
         <div className={s.detailRow}>
-          <span className={s.detailKey}>Added</span>
+          <span className={s.detailKey}>{t('details.added')}</span>
           <span className={s.detailVal}>{formatDate(title.created_at)}</span>
         </div>
         {title.last_watched_at && (
           <div className={s.detailRow}>
-            <span className={s.detailKey}>Last watched</span>
+            <span className={s.detailKey}>{t('details.lastWatched')}</span>
             <span className={s.detailVal}>{formatDate(title.last_watched_at)}</span>
           </div>
         )}
         {formatWatchtime(title.total_watch_minutes) && (
           <div className={s.detailRow}>
-            <span className={s.detailKey}>Watch time</span>
+            <span className={s.detailKey}>{t('details.watchTime')}</span>
             <span className={s.detailVal}>{formatWatchtime(title.total_watch_minutes)}</span>
           </div>
         )}
         <div className={s.detailRow}>
-          <span className={s.detailKey}>Last refreshed</span>
+          <span className={s.detailKey}>{t('details.lastRefreshed')}</span>
           <span
             className={s.detailVal}
             title={title.last_refreshed_at ? formatDateTime(title.last_refreshed_at) : undefined}
           >
-            {title.last_refreshed_at ? formatRelativeTime(title.last_refreshed_at) : 'Never'}
+            {title.last_refreshed_at ? formatRelativeTime(title.last_refreshed_at) : t('details.never')}
           </span>
         </div>
         {title.match_source && (
           <div className={s.detailRow}>
-            <span className={s.detailKey}>Match</span>
+            <span className={s.detailKey}>{t('details.match')}</span>
             <span className={s.detailVal}>{formatMatchSource(title.match_source)}</span>
           </div>
         )}
         {(title.imdb_id || (title.tmdb_id != null && title.tmdb_id > 0) || (title.tvdb_id != null && title.tvdb_id > 0) || computeAniListUrl(title)) && (
           <div className={s.detailRow}>
-            <span className={s.detailKey}>Sources</span>
+            <span className={s.detailKey}>{t('details.sources')}</span>
             <div className={s.externalLinksWrap}>
               {title.imdb_id && (
                 <a
@@ -616,13 +616,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </div>
         {title.original_title && title.original_title !== name && (
           <div className={s.detailRow}>
-            <span className={s.detailKey}>Original title</span>
+            <span className={s.detailKey}>{t('details.originalTitle')}</span>
             <span className={s.detailVal}>{title.original_title}</span>
           </div>
         )}
         {altNames.length > 0 && (
           <div className={s.altNames}>
-            <div className={s.altNamesLabel}>Autres titres</div>
+            <div className={s.altNamesLabel}>{t('details.altNames')}</div>
             {altNames.map((alt) => {
               const lang = languageLabel(alt.language)
               return (

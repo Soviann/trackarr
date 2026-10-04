@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import clsx from 'clsx'
+import { useTranslation } from '../i18n'
 import { BottomSheet } from './BottomSheet'
 import s from './RatingPrompt.module.css'
 
@@ -18,6 +19,7 @@ export function RatingPrompt({
   open, onClose, titleName, context, initialRating,
   hasImdb, onSave, onSaveAndImdb,
 }: RatingPromptProps) {
+  const { t } = useTranslation()
   const [rating, setRating] = useState(initialRating ?? 0)
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function RatingPrompt({
   }, [initialRating, open])
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel={`Rate ${titleName}`}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={t('ratingPrompt.rateTitleAria', { title: titleName })}>
       {/* Context */}
       {context && (
         <div className={s.context}>
@@ -50,7 +52,16 @@ export function RatingPrompt({
           <span
             key={i}
             onClick={() => setRating(i + 1)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setRating(i + 1)
+              }
+            }}
             className={clsx(s.star, i < rating && s.starActive)}
+            role="button"
+            tabIndex={0}
+            aria-label={t('ratingPrompt.rateValueAria', { val: i + 1 })}
           >
             ★
           </span>
@@ -64,7 +75,7 @@ export function RatingPrompt({
           className={clsx(s.saveButton, rating > 0 && s.saveButtonActive)}
         >
           <span className={clsx(s.saveButtonLabel, rating > 0 && s.saveButtonLabelActive)}>
-            Save rating
+            {t('ratingPrompt.saveRating')}
           </span>
         </button>
 
@@ -75,15 +86,26 @@ export function RatingPrompt({
               className={s.externalButton}
             >
               <span className={s.imdbLabel}>IMDb</span>
-              <span className={s.externalSubLabel}>Save & rate</span>
+              <span className={s.externalSubLabel}>{t('ratingPrompt.saveAndRate')}</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Skip */}
-      <div onClick={onClose} className={s.skip}>
-        <span className={s.skipLabel}>Skip for now</span>
+      <div
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClose()
+          }
+        }}
+        className={s.skip}
+        role="button"
+        tabIndex={0}
+      >
+        <span className={s.skipLabel}>{t('ratingPrompt.skipForNow')}</span>
       </div>
     </BottomSheet>
   )

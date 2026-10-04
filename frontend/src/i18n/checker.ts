@@ -16,7 +16,7 @@ export interface I18nIssue {
 const FRENCH_ACCENT_REGEX = /[éèêëàâîïôùûüçÉÈÊËÀÂÎÏÔÙÛÜÇœæ«»’]/
 
 // Common French indicator words (matched with word boundaries)
-const FRENCH_WORDS_REGEX = /\b(dans|avec|sans|aucun|aucune|supprimer|modifier|fermer|annuler|sauvegarder|enregistrer|suivant|suivante|suivants|suivantes|precedent|precedente|precedents|precedentes|recherche|rechercher|ajouter|bienvenue|erreur|chargement|connexion|deconnexion|saison|saisons|telecharger|parametres|bibliotheque|historique|selectionner|reinitialiser|mot de passe|identifiant|aujourd'hui|hier)\b/i
+const FRENCH_WORDS_REGEX = /\b(dans|avec|sans|aucun|aucune|supprimer|modifier|fermer|annuler|sauvegarder|enregistrer|suivant|suivante|suivants|suivantes|precedent|precedente|precedents|precedentes|recherche|rechercher|ajouter|bienvenue|erreur|chargement|connexion|deconnexion|saison|saisons|telecharger|parametres|bibliotheque|historique|selectionner|reinitialiser|mot de passe|identifiant|aujourd'hui|hier|autre|autres)\b/i
 
 const UI_ATTR_REGEX = /\b(placeholder|title|aria-label|aria-placeholder|aria-description|alt|label)=["']([^"']+)["']/g
 

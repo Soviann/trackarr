@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { Title } from '../types'
 import { aniListMediaUrl, getName, getCoverUrl } from '../utils'
+import { useTranslation } from '../i18n'
 import { BottomSheet } from './BottomSheet'
 import s from './AniListSheet.module.css'
 
@@ -13,16 +14,17 @@ interface AniListSheetProps {
 }
 
 export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniListSheetProps) {
+  const { t } = useTranslation()
   const name = getName(title)
   const hasAnilistMatch = !!title.anilist_id
   const isConfirmed = title.match_status === 'confirmed'
   const coverUrl = getCoverUrl(title.cover_url)
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel="AniList match">
+    <BottomSheet open={open} onClose={onClose} ariaLabel={t('anilistSheet.ariaLabel')}>
       <div className={s.container}>
         <div className={s.heading}>
-          AniList Match
+          {t('anilistSheet.heading')}
         </div>
 
         {hasAnilistMatch ? (
@@ -38,7 +40,7 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
               <div>
                 <div className={s.titleName}>{name}</div>
                 <div className={s.titleId}>
-                  AniList ID: {title.anilist_id}
+                  {t('anilistSheet.anilistId', { id: title.anilist_id! })}
                 </div>
                 <a
                   href={aniListMediaUrl(title.anilist_id!)}
@@ -46,31 +48,31 @@ export function AniListSheet({ open, onClose, title, onConfirm, onFix }: AniList
                   rel="noopener noreferrer"
                   className={s.anilistLink}
                 >
-                  View on AniList
+                  {t('anilistSheet.viewOnAniList')}
                 </a>
               </div>
             </div>
 
             {/* Confidence */}
             <div className={clsx(s.confidence, isConfirmed ? s.confirmed : s.pending)}>
-              {isConfirmed ? 'Match confirmed' : 'Pending confirmation'}
+              {isConfirmed ? t('anilistSheet.matchConfirmed') : t('anilistSheet.pendingConfirmation')}
             </div>
 
             {/* Actions */}
             <div className={s.actions}>
               {!isConfirmed && (
                 <button onClick={onConfirm} className={s.btnConfirm}>
-                  <span className={s.btnConfirmLabel}>Confirm & Sync</span>
+                  <span className={s.btnConfirmLabel}>{t('anilistSheet.confirmAndSync')}</span>
                 </button>
               )}
               <button onClick={onFix} className={s.btnWrong}>
-                <span className={s.btnWrongLabel}>Wrong match</span>
+                <span className={s.btnWrongLabel}>{t('anilistSheet.wrongMatch')}</span>
               </button>
             </div>
           </>
         ) : (
           <div className={s.empty}>
-            No AniList match found. Use the Add screen to search manually.
+            {t('anilistSheet.noMatch')}
           </div>
         )}
       </div>
