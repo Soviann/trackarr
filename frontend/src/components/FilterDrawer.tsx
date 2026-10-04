@@ -347,8 +347,9 @@ export function FilterDrawer(props: FilterDrawerProps) {
 
       {/* Drawer content */}
       <div className={clsx(s.drawer, open ? s.drawerExpanded : s.drawerCollapsed)}>
-        {/* Drawer Header */}
-        <div className={s.drawerHeader}>
+        <div className={s.drawerInner}>
+          {/* Drawer Header */}
+          <div className={s.drawerHeader}>
           <button
             type="button"
             className={s.drawerHeaderTitleBtn}
@@ -458,6 +459,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
         </div>
 
         <div className={s.bottomPad} />
+        </div>
       </div>
     </div>
   )

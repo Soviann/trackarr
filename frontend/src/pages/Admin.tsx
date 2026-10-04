@@ -618,11 +618,11 @@ export function Admin({ path }: { path?: string }) {
               <div
                 className={s.progressBarFill}
                 style={{
-                  width: `${
+                  transform: `scaleX(${
                     refreshProgress.total_titles > 0
-                      ? Math.min(100, Math.round((refreshProgress.processed_titles / refreshProgress.total_titles) * 100))
+                      ? Math.min(1, Math.max(0, refreshProgress.processed_titles / refreshProgress.total_titles))
                       : 0
-                  }%`,
+                  })`,
                 }}
               />
             </div>

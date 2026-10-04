@@ -1,4 +1,5 @@
 .container {
+  --drawer-handle-height: 38px;
   position: fixed;
   bottom: calc(58px + env(safe-area-inset-bottom, 0px));
   left: 0;
@@ -7,15 +8,29 @@
   background: var(--bg);
   border-top: 1px solid var(--border);
   border-radius: var(--radius-drawer) var(--radius-drawer) 0 0;
-  transition: transform 0.2s ease-out;
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  overscroll-behavior-y: contain;
+}
+
+.containerClosed {
+  transform: translateY(calc(100% - var(--drawer-handle-height)));
+}
+
+.containerOpen {
+  transform: translateY(0);
 }
 
 .handle {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 8px 0 6px;
+  height: var(--drawer-handle-height);
+  min-height: var(--drawer-handle-height);
+  padding: 6px 0;
+  box-sizing: border-box;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -40,17 +55,20 @@
 
 .drawer {
   overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease;
+  will-change: opacity;
+  transition: opacity 0.2s ease, visibility 0.25s;
 }
 
 .drawerCollapsed {
-  max-height: 0;
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .drawerExpanded {
-  max-height: 400px;
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .buttonRow {

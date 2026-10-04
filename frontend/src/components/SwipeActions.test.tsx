@@ -238,4 +238,70 @@ describe('SwipeActions', () => {
 
     expect(vibrate).toHaveBeenCalledOnce()
   })
+
+  it('applies containerExiting class when action is executed', async () => {
+    let resolveAction!: () => void
+    const pendingPromise = new Promise<void>((resolve) => { resolveAction = resolve })
+    const asyncAction: SwipeAction = {
+      icon: '✓',
+      color: 'green',
+      label: 'Async Confirm',
+      onAction: () => pendingPromise,
+    }
+
+    const { container } = render(
+      <SwipeActions actions={[asyncAction]}>
+        <div>card content</div>
+      </SwipeActions>
+    )
+    const wrapper = container.firstChild as HTMLElement
+    mockContainerWidth(wrapper, CONTAINER_WIDTH)
+    mockActionsWidth(container, ACTIONS_WIDTH)
+
+    const btn = within(container as HTMLElement).getByRole('button', { name: 'Async Confirm', hidden: true })
+    await act(async () => {
+      btn.click()
+    })
+
+    expect(wrapper.className).toContain('containerExiting')
+
+    await act(async () => {
+      resolveAction()
+    })
+  })
+
+  it('reverts containerExiting and snaps back when action fails', async () => {
+    let rejectAction!: (err: Error) => void
+    const failingPromise = new Promise<void>((_, reject) => { rejectAction = reject })
+    const failingAction: SwipeAction = {
+      icon: '✕',
+      color: 'red',
+      label: 'Fail Action',
+      onAction: () => failingPromise,
+    }
+
+    const { container } = render(
+      <SwipeActions actions={[failingAction]}>
+        <div>card content</div>
+      </SwipeActions>
+    )
+    const wrapper = container.firstChild as HTMLElement
+    mockContainerWidth(wrapper, CONTAINER_WIDTH)
+    mockActionsWidth(container, ACTIONS_WIDTH)
+
+    const btn = within(container as HTMLElement).getByRole('button', { name: 'Fail Action', hidden: true })
+    await act(async () => {
+      btn.click()
+    })
+
+    expect(wrapper.className).toContain('containerExiting')
+
+    // Reject the promise
+    await act(async () => {
+      rejectAction(new Error('Network failure'))
+    })
+
+    // After rejection, containerExiting is removed and content is restored
+    expect(wrapper.className).not.toContain('containerExiting')
+  })
 })

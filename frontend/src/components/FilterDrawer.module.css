@@ -4,6 +4,7 @@
   border-top: 1px solid var(--border);
   overflow: hidden;
   transition: transform 0.2s ease-out;
+  overscroll-behavior-y: contain;
 }
 
 .handle {
@@ -141,18 +142,34 @@
 }
 
 .drawer {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.32, 0.72, 0, 1), transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease;
+  will-change: transform, grid-template-rows, opacity;
   overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease;
+  overscroll-behavior-y: contain;
+}
+
+.drawerInner {
+  min-height: 0;
+  overflow: hidden;
+  max-height: min(70vh, 460px);
+  display: flex;
+  flex-direction: column;
 }
 
 .drawerCollapsed {
-  max-height: 0;
+  grid-template-rows: 0fr;
+  transform: translateY(16px);
   opacity: 0;
+  pointer-events: none;
 }
 
 .drawerExpanded {
-  max-height: min(70vh, 460px);
+  grid-template-rows: 1fr;
+  transform: translateY(0);
   opacity: 1;
+  pointer-events: auto;
 }
 
 .drawerHeader {
@@ -308,6 +325,7 @@
   max-height: min(55vh, 380px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .tabPane {

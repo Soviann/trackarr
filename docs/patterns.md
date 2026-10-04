@@ -214,7 +214,7 @@
 | Component | File | Purpose |
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 4-tab bottom navigation bar |
-| `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons |
+| `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
@@ -226,7 +226,7 @@
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
 | `StatusBadge` | `components/StatusBadge.tsx` | Pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch*, *Dropped*, *Caught Up*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
-| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with single closed handle row docked above navbar (`[ FILTERS (count) ⌃ ]` + scrolling dismissible chips) hidden when open, responsive open drawer starting directly with `FILTERS (N ACTIVE) ⌄` collapse header and reset button, 3 sub-tabs (Status & Type, Genres & Origin, Dates & Ratings), anti-overflow protection (`max-height: min(70vh, 460px)`), and dedicated bottom padding above navbar |
+| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, and overscroll containment |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with clear text `✕` button and integrated filter trigger button with active count badge |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
@@ -252,10 +252,10 @@
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList, re-adding deleted series in TitleDetail) |
 | `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
-| `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, `{ passive: false }` scroll blocking, and threshold close |
+| `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, single-touch guard, internal scroll check (scrollTop > 0), event isolation, and threshold close |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
-| `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper |
-| `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons |
+| `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper with disabled state when drawers or dialog sheets are open |
+| `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons with zero-reflow CSS Grid row collapse and GPU slide-out exit animation |
 | `ErrorBanner` | `components/ErrorBanner.tsx` | Dismissible alert banner for API and network errors |
 | `ErrorBoundary` | `components/ErrorBoundary.tsx` | React error boundary with error recovery fallback |
 

@@ -1,21 +1,29 @@
 .container {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1) 80ms, opacity 200ms ease 80ms;
+  will-change: grid-template-rows, opacity;
   position: relative;
   overflow: hidden;
+}
+
+.containerExiting {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .content {
   position: relative;
   z-index: 1;
+  min-height: 0;
+  overflow: hidden;
   will-change: transform;
   /* touch-action set dynamically via JS — don't set here */
 }
 
 .content.animating {
   transition: transform 200ms ease;
-}
-
-.content.exiting {
-  transition: transform 300ms ease, max-height 300ms ease 150ms, margin-bottom 300ms ease 150ms, opacity 200ms ease;
 }
 
 .actions {

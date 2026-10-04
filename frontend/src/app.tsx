@@ -251,11 +251,11 @@ export function App() {
         <div className={clsx(s.root, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}>
           <main className={s.main} id="main-content">
             <Router onChange={handleRoute}>
-              <Library path={ROUTE_PATHS.home} />
+              <Library path={ROUTE_PATHS.home} filterOpen={filterDrawerOpen} />
               <ComingUp path={ROUTE_PATHS.comingUp} />
               <ContinueWatching path={ROUTE_PATHS.continueWatching} />
               <Releases path={ROUTE_PATHS.releases} />
-              <Search path={ROUTE_PATHS.search} />
+              <Search path={ROUTE_PATHS.search} filterOpen={filterDrawerOpen} />
               <Add path={ROUTE_PATHS.add} />
               <Stats path={ROUTE_PATHS.stats} />
               <Wrapped path={ROUTE_PATHS.wrapped} />
