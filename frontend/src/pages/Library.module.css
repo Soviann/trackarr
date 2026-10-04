@@ -108,11 +108,151 @@
   z-index: 1;
 }
 
-/* States */
+/* States & Guided Onboarding */
 .centered {
   padding: 40px var(--space-lg);
   text-align: center;
   color: var(--ink);
+}
+
+.emptyWrapper {
+  padding: 32px var(--space-lg);
+  display: flex;
+  justify-content: center;
+}
+
+.onboardingCard {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 16px);
+  padding: 28px 24px;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.onboardingBadge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.onboardingTitle {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.onboardingDesc {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  margin: 0 0 24px;
+}
+
+.onboardingActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.onboardingPrimaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-button, 8px);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.onboardingPrimaryBtn:active {
+  opacity: 0.85;
+}
+
+.onboardingSecondaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button, 8px);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.onboardingSecondaryBtn:active {
+  background: var(--bg-elev2);
+}
+
+.emptyCard {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 16px);
+  padding: 24px 20px;
+  max-width: 380px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.emptyText {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+  margin: 0 0 16px;
+}
+
+.resetFiltersBtn {
+  padding: 8px 16px;
+  min-height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: var(--radius-button, 8px);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
 }
 
 /* Counter — mono [ NNN / total ] */

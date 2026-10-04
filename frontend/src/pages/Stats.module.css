@@ -312,11 +312,10 @@
 .sectionHeader {
   margin: 0;
   padding-bottom: var(--space-sm);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
-  font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+  font-size: var(--font-size-base);
+  letter-spacing: 0.02em;
   color: var(--accent);
 }
 

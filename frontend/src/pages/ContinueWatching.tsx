@@ -117,10 +117,10 @@ export function ContinueWatching(_props: { path?: string }) {
           </svg>
         </button>
         <div className={s.headerText}>
-          <span className={s.label}>// Continue Watching</span>
+          <span className={s.label}>{t('continueWatching.title')}</span>
           {items && (
             <span className={s.count}>
-              {items.length} in progress
+              {t('continueWatching.inProgressCount', { count: items.length })}
             </span>
           )}
         </div>
@@ -137,7 +137,7 @@ export function ContinueWatching(_props: { path?: string }) {
       )}
 
       {items && items.length === 0 && (
-        <div className={s.empty}>Nothing in progress.</div>
+        <div className={s.empty}>{t('continueWatching.empty')}</div>
       )}
 
       {items && items.length > 0 && (

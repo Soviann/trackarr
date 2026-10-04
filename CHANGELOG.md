@@ -6,7 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Barre de navigation unifiée 5 onglets (`Navbar`)** :
+  - Remplacement des trigrammes cryptiques (`LIB`, `SCH`, `ADD`, `STA`, `ADM`) par 5 onglets explicites avec libellés traduits (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`), icônes SVG universelles, typographie sans-serif affinée et cibles tactiles de 48px.
+  - Mise en surbrillance contextuelle intelligente préservant l'onglet actif lors de la navigation dans les sous-vues (`/continue-watching` reste sous `Collection`, `/releases` sous `Calendrier`).
+- **Découverte et ajout unifiés au pouce (`SearchBar` & `Search`)** :
+  - Auto-détection des liens partagés ou collés (IMDb, TMDB, AniList) dans la barre de recherche avec redirection instantanée vers la validation de métadonnées.
+  - Recherche instantanée multi-sources intégrant la collection locale et la découverte TMDB / AniList avec boutons d'ajout direct en 1 clic (`+ À voir`, `+ En cours`) et notification d'annulation (`UndoSnackbar`).
+  - Carte d'incitation à la découverte lorsque aucun média local ne correspond à la requête de recherche.
+- **Onboarding guidé et accueil chaleureux (`Library`)** :
+  - Remplacement du message brut d'état vide par une carte d'accueil guidée expliquant les webhooks Jellyfin/Plex et la découverte avec boutons d'action directs.
+  - État vide accueillant avec bouton direct de réinitialisation des filtres lorsqu'aucun média ne correspond aux critères appliqués.
+
 ### Modifié
+- **Humanisation du wording & Dé-geekification** :
+  - Élimination des en-têtes préfixés par des commentaires de code (`// IN PROGRESS`, `// COMING UP`, `// RELEASES`, `// ` dans `Stats`) au profit d'une titraille éditoriale élégante et localisée.
+  - Remplacement des libellés de badges bruts en majuscules (`PLAN`, etc.) par des badges d'état traduits et humanisés (« À voir » / « Watchlist », « En cours », « À jour », « Terminé », « Abandonné »).
 - **Fluidité & Zéro-Reflow (`SwipeActions`)** :
   - Suppression du reflow forcé synchrone (`containerEl.offsetHeight`) et remplacement de la transition combinée `max-height` + `margin-bottom` par un effondrement matériel CSS Grid (`grid-template-rows: 1fr -> 0fr`).
   - Accélération matérielle GPU du glissement horizontal (`transform: translateX(...)`) avec restauration instantanée et sans reflow en cas d'erreur.

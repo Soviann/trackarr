@@ -15,6 +15,7 @@
   position: relative;
   z-index: 2;
   background: var(--bg);
+  border-top: 1px solid var(--border);
 }
 
 .above {
@@ -28,27 +29,36 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 3px;
+  min-height: 48px;
+  padding: 6px 0;
   border: none;
   border-top: 2px solid transparent;
   background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--ink-dim);
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.tab:active {
+  background: var(--surface);
 }
 
 .tabActive {
   color: var(--accent);
   background: var(--accent-wash);
   border-top-color: var(--accent);
+  font-weight: 600;
 }
 
 .label {
   font: inherit;
   color: inherit;
+  line-height: 1.1;
+  white-space: nowrap;
 }
