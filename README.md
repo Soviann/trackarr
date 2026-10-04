@@ -52,6 +52,10 @@
       </td>
     </tr>
   </table>
+  <br />
+  <img src="docs/screenshots/08-desktop-library.png" alt="Desktop Fluid Grid & Lateral Navigation" width="100%" />
+  <br />
+  <sub><b>Desktop Fluid Grid & Collapsible Sidebar (≥ 1024px)</b></sub>
 </div>
 
 ---
@@ -60,6 +64,7 @@
 
 - 🚀 **Ultra-Lightweight Go Backend**: Single binary with embedded SQLite WAL and embedded web assets. Idles at **under 30 MB of RAM**, perfectly suited for low-power Synology NAS, Unraid, TrueNAS, Raspberry Pi, and VPS.
 - 📱 **PWA Mobile-First for Android**: Tailored specifically for Android devices (Chrome / Android PWA engine) with native share sheet integration (`Share to Trackarr`), haptic feedback, swipe gestures, universal undo countdowns, and instant pull-to-refresh.
+- 🖥️ **Adaptive Desktop & Power Shortcuts**: Responsive fluid poster grid (2–3 columns on phone, 6–8+ columns on widescreen), collapsible lateral sidebar (240px ↔ 68px), and fast keyboard shortcuts (`Cmd+K` / `Ctrl+K` & `/` search, `Escape`, `Shift+Click` range select).
 - 🎬 **Universal Scrobbling**: Real-time webhook scrobbling from **Jellyfin** and **Plex** with automatic watch time, progress tracking, and catch-up badges.
 - 📆 **Multi-View Calendar & iCal Subscription**: Monthly grid, weekly timeline, and chronological lists with token-secured RFC 5545 calendar feed for Apple Calendar and Google Calendar.
 - 🌸 **AniList 2-Way Sync & Multi-Part Anime**: Seamlessly handles anime seasons split across multiple AniList entries (e.g. Cour 1 / Cour 2) with automated bidirectional rating, progress, and status synchronization.

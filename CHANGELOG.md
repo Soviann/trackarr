@@ -30,6 +30,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - État vide accueillant avec bouton direct de réinitialisation des filtres lorsqu'aucun média ne correspond aux critères appliqués.
 
 ### Modifié
+- **Synchronisation intégrale des captures d'écran et de la documentation utilisateur** :
+  - Régénération complète des 7 captures d'écran de référence (`docs/screenshots/01-library.png` à `07-admin.png`) en haute définition mobile (1000×1610) ainsi que la capture d'écran bureau (`08-desktop-library.png`), reflétant fidèlement la navigation à 5 onglets, la recherche unifiée, les badges d'état humanisés et le rayonnage adaptatif.
+  - Mise à jour du guide utilisateur (`docs/user-guide.md`), de la vitrine (`README.md`) et de l'index maître (`docs/INDEX.md`) pour documenter la barre latérale bureau, les raccourcis clavier universels et la recherche unifiée.
 - **Humanisation du wording & Dé-geekification** :
   - Élimination des en-têtes préfixés par des commentaires de code (`// IN PROGRESS`, `// COMING UP`, `// RELEASES`, `// ` dans `Stats`) au profit d'une titraille éditoriale élégante et localisée.
   - Remplacement des libellés de badges bruts en majuscules (`PLAN`, etc.) par des badges d'état traduits et humanisés (« À voir » / « Watchlist », « En cours », « À jour », « Terminé », « Abandonné »).
