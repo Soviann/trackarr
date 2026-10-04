@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.22.1] — 2026-10-04
+
+### Corrigé
+- **Navigation active lors de l'ajout depuis un partage** : Correction de l'état actif dans la barre de navigation et la barre latérale qui mettait en surbrillance l'onglet « Admin » lors de l'arrivée sur `/admin/validate` ou `/add` via le partage PWA ou un lien média. L'onglet « Explorer » (`Explore`) est désormais correctement actif.
+
 ## [v1.22.0] — 2026-10-04
 
 ### Ajouté

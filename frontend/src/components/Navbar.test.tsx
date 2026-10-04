@@ -69,6 +69,34 @@ describe('Navbar', () => {
     expect(colBtn.getAttribute('aria-current')).toBe('page')
   })
 
+  it('activates explore tab when adding title from share or url instead of admin', () => {
+    const onNavigate = vi.fn()
+    const { getByRole, rerender } = render(
+      <Navbar currentPath="/admin/validate?q=https%3A%2F%2Fwww.imdb.com%2Ftitle%2Ftt1234567" onNavigate={onNavigate} />
+    )
+
+    const exploreBtn = getByRole('button', { name: 'Explore' })
+    expect(exploreBtn.getAttribute('aria-current')).toBe('page')
+
+    const adminBtn = getByRole('button', { name: 'Admin' })
+    expect(adminBtn.getAttribute('aria-current')).toBeNull()
+
+    rerender(<Navbar currentPath="/add?url=https%3A%2F%2Fwww.imdb.com" onNavigate={onNavigate} />)
+    expect(exploreBtn.getAttribute('aria-current')).toBe('page')
+    expect(adminBtn.getAttribute('aria-current')).toBeNull()
+  })
+
+  it('activates admin tab for /admin and /admin subroutes', () => {
+    const onNavigate = vi.fn()
+    const { getByRole, rerender } = render(
+      <Navbar currentPath="/admin" onNavigate={onNavigate} />
+    )
+    expect(getByRole('button', { name: 'Admin' }).getAttribute('aria-current')).toBe('page')
+
+    rerender(<Navbar currentPath="/admin/settings" onNavigate={onNavigate} />)
+    expect(getByRole('button', { name: 'Admin' }).getAttribute('aria-current')).toBe('page')
+  })
+
   it('renders above slot when provided', () => {
     const { getByText } = render(
       <Navbar

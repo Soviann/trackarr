@@ -53,6 +53,58 @@ describe('Sidebar', () => {
     expect(collectionBtn.getAttribute('aria-current')).toBeNull()
   })
 
+  it('activates explore tab for share and validate routes instead of admin', () => {
+    const onNavigate = vi.fn()
+    const { getByRole, rerender } = render(
+      <Sidebar
+        currentPath="/admin/validate?q=https%3A%2F%2Fwww.imdb.com%2Ftitle%2Ftt1234567"
+        onNavigate={onNavigate}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+      />
+    )
+
+    const exploreBtn = getByRole('button', { name: 'Explore' })
+    expect(exploreBtn.getAttribute('aria-current')).toBe('page')
+
+    const adminBtn = getByRole('button', { name: 'Admin' })
+    expect(adminBtn.getAttribute('aria-current')).toBeNull()
+
+    rerender(
+      <Sidebar
+        currentPath="/add?url=https%3A%2F%2Fwww.imdb.com"
+        onNavigate={onNavigate}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+      />
+    )
+    expect(exploreBtn.getAttribute('aria-current')).toBe('page')
+    expect(adminBtn.getAttribute('aria-current')).toBeNull()
+  })
+
+  it('activates admin tab for /admin and /admin subroutes', () => {
+    const onNavigate = vi.fn()
+    const { getByRole, rerender } = render(
+      <Sidebar
+        currentPath="/admin"
+        onNavigate={onNavigate}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+      />
+    )
+    expect(getByRole('button', { name: 'Admin' }).getAttribute('aria-current')).toBe('page')
+
+    rerender(
+      <Sidebar
+        currentPath="/admin/tasks"
+        onNavigate={onNavigate}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+      />
+    )
+    expect(getByRole('button', { name: 'Admin' }).getAttribute('aria-current')).toBe('page')
+  })
+
   it('handles collapsed mode and toggling', () => {
     const onNavigate = vi.fn()
     const onToggle = vi.fn()

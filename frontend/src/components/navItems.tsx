@@ -73,8 +73,10 @@ export const navTabs: NavTab[] = [
 
 export function getActiveTab(currentPath: string): string {
   const cleanPath = currentPath.split('?')[0] || ROUTE_PATHS.home
+  if (cleanPath === ROUTE_PATHS.adminValidate) return ROUTE_PATHS.search
   const root = cleanPath === ROUTE_PATHS.home ? ROUTE_PATHS.home : `/${cleanPath.split('/')[1]}`
   if (root === ROUTE_PATHS.continueWatching) return ROUTE_PATHS.home
   if (root === ROUTE_PATHS.releases) return ROUTE_PATHS.comingUp
+  if (root === ROUTE_PATHS.add) return ROUTE_PATHS.search
   return root
 }
