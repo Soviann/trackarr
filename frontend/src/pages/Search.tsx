@@ -37,7 +37,7 @@ function getMetadata(t: Title) {
   return parts.join(' \u00b7 ')
 }
 
-export function Search({ path: _ }: { path?: string }) {
+export function Search({ path: _, filterOpen = false }: { path?: string; filterOpen?: boolean }) {
   const { t } = useTranslation()
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
@@ -124,7 +124,7 @@ export function Search({ path: _ }: { path?: string }) {
     t.matched_name && t.matched_name !== getName(t)
 
   return (
-    <PullToRefresh onRefresh={retry}>
+    <PullToRefresh onRefresh={retry} disabled={filterOpen || Boolean(mergeTarget)}>
     <div className={s.page}>
       {/* Results area */}
       <div className={s.results}>

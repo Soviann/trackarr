@@ -113,4 +113,44 @@ describe('useSwipeDownToClose', () => {
 
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('does not close when touch starts on an internally scrolled element (scrollTop > 0)', () => {
+    const onClose = vi.fn()
+    const scrollableChild = document.createElement('div')
+    Object.defineProperty(scrollableChild, 'scrollTop', { value: 50, writable: true })
+    element.appendChild(scrollableChild)
+
+    renderHook(() => {
+      const hook = useSwipeDownToClose({ open: true, onClose, threshold: 50 })
+      hook.ref.current = element
+      return hook
+    })
+
+    act(() => {
+      scrollableChild.dispatchEvent(makeTouchEvent('touchstart', 100))
+      scrollableChild.dispatchEvent(makeTouchEvent('touchmove', 250))
+      scrollableChild.dispatchEvent(makeTouchEvent('touchend', 250))
+    })
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('calls stopPropagation on downward touchmove to isolate gesture from PullToRefresh', () => {
+    const onClose = vi.fn()
+    renderHook(() => {
+      const hook = useSwipeDownToClose({ open: true, onClose, threshold: 50 })
+      hook.ref.current = element
+      return hook
+    })
+
+    const moveEvent = makeTouchEvent('touchmove', 200)
+    const stopSpy = vi.spyOn(moveEvent, 'stopPropagation')
+
+    act(() => {
+      element.dispatchEvent(makeTouchEvent('touchstart', 100))
+      element.dispatchEvent(moveEvent)
+    })
+
+    expect(stopSpy).toHaveBeenCalled()
+  })
 })

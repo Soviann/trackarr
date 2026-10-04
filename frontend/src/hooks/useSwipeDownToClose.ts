@@ -46,7 +46,16 @@ export function useSwipeDownToClose<T extends HTMLElement = HTMLDivElement>({
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (!openRef.current) return
+    if (e.touches.length !== 1) return
     if (shouldIgnoreRef.current?.(e.target)) return
+    let node = e.target as HTMLElement | null
+    while (node && node !== containerRef.current) {
+      if (node.scrollTop > 0) {
+        touchStartY.current = null
+        return
+      }
+      node = node.parentElement
+    }
     touchStartY.current = e.touches[0].clientY
   }, [])
 
@@ -54,6 +63,7 @@ export function useSwipeDownToClose<T extends HTMLElement = HTMLDivElement>({
     if (touchStartY.current === null) return
     const deltaY = e.touches[0].clientY - touchStartY.current
     if (deltaY > 0) {
+      e.stopPropagation()
       if (e.cancelable) {
         e.preventDefault()
       }
@@ -61,14 +71,22 @@ export function useSwipeDownToClose<T extends HTMLElement = HTMLDivElement>({
     }
   }, [])
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
     if (touchStartY.current === null) return
+    if (dragYRef.current > 0) {
+      e.stopPropagation()
+    }
     if (dragYRef.current > threshold) {
       onCloseRef.current()
     }
     setDragY(0)
     touchStartY.current = null
   }, [threshold])
+
+  const handleTouchCancel = useCallback(() => {
+    setDragY(0)
+    touchStartY.current = null
+  }, [])
 
   useEffect(() => {
     const el = containerRef.current
@@ -77,15 +95,15 @@ export function useSwipeDownToClose<T extends HTMLElement = HTMLDivElement>({
     el.addEventListener('touchstart', handleTouchStart, { passive: true })
     el.addEventListener('touchmove', handleTouchMove, { passive: false })
     el.addEventListener('touchend', handleTouchEnd, { passive: true })
-    el.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', handleTouchCancel, { passive: true })
 
     return () => {
       el.removeEventListener('touchstart', handleTouchStart)
       el.removeEventListener('touchmove', handleTouchMove)
       el.removeEventListener('touchend', handleTouchEnd)
-      el.removeEventListener('touchcancel', handleTouchEnd)
+      el.removeEventListener('touchcancel', handleTouchCancel)
     }
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel])
 
   const style = dragY > 0
     ? { transform: `translateY(${dragY}px)`, transition: 'none' }

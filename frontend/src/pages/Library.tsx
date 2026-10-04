@@ -76,7 +76,7 @@ function LoadMoreButton({ onClick, loading }: { onClick: () => void; loading: bo
   )
 }
 
-export function Library(_props: { path?: string }) {
+export function Library({ path: _path, filterOpen = false }: { path?: string; filterOpen?: boolean }) {
   const titles = useTitleStore(s => s.titles)
   const total = useTitleStore(s => s.total)
   const hasMore = useTitleStore(s => s.hasMore)
@@ -222,7 +222,7 @@ export function Library(_props: { path?: string }) {
   ]
 
   return (
-    <PullToRefresh onRefresh={invalidate}>
+    <PullToRefresh onRefresh={invalidate} disabled={filterOpen || selecting || statusSheetOpen || deleteConfirmOpen}>
     <div className={s.page}>
       {backdropCover && (
         <div

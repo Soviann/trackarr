@@ -7,6 +7,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Modifié
+- **Fluidité & Zéro-Reflow (`SwipeActions`)** :
+  - Suppression du reflow forcé synchrone (`containerEl.offsetHeight`) et remplacement de la transition combinée `max-height` + `margin-bottom` par un effondrement matériel CSS Grid (`grid-template-rows: 1fr -> 0fr`).
+  - Accélération matérielle GPU du glissement horizontal (`transform: translateX(...)`) avec restauration instantanée et sans reflow en cas d'erreur.
+- **Transitions matérielles GPU des tiroirs bas d'écran (`ActionDrawer` & `FilterDrawer`)** :
+  - Élimination de `transition: max-height` au profit d'animations sur le compositeur GPU (`transform: translateY(...)`) garantissant 60–120 FPS sur smartphone sans recalcul géométrique du layout.
+  - Fixation de la hauteur de poignée à 38px sur `ActionDrawer` avec translation calculée (`calc(100% - var(--drawer-handle-height))`), et effondrement par grille CSS isolée (`.drawerInner`) sur `FilterDrawer`.
+- **Fluidification de la barre de progression (`Admin`)** :
+  - Remplacement de l'animation de `width` par une transformation matricielle fluide `transform: scaleX(...)` avec point d'ancrage à gauche (`transform-origin: left`).
+- **Résolution des conflits de gestes tactiles avec `PullToRefresh`** :
+  - Confinement strict du défilement vertical (`overscroll-behavior-y: contain`) sur les conteneurs de tiroirs et onglets de filtres pour bloquer le chaînage d'overscroll du navigateur Android.
+  - Détection du défilement interne (`scrollTop > 0`) dans `useSwipeDownToClose` pour préserver le scroll naturel des listes d'options sans fermeture accidentelle du tiroir.
+  - Isolation des événements tactiles (`stopPropagation`) lors du glissement descendant et désactivation automatique de `PullToRefresh` sur `Library` et `Search` tant qu'un tiroir ou une feuille modale est ouverte.
 - **Ergonomie tactile des boutons d'action rapide sur jaquettes (`PosterCard` & `PosterTile`)** :
   - Agrandissement de la zone de frappe tactile à 44×44px minimum via pseudo-élément sans altérer la taille visuelle du bouton.
   - Isolation stricte des événements tactiles (`pointerdown` `stopPropagation`) pour éliminer tout déclenchement parasite du clic de navigation ou du geste d'appui long sur la carte.

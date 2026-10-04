@@ -65,14 +65,14 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
 ### 📦 SECTION 2 : Fluidité & Zéro-Reflow (Animations & Gestuelle Mobile)
 *Objectif : Garantir un défilement et des gestes à 60–120 FPS sur smartphone Android sans blocage de layout.*
 
-- [ ] **Optimisation de l'animation de sortie dans [`SwipeActions.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/SwipeActions.tsx)** :
+- [x] **Optimisation de l'animation de sortie dans [`SwipeActions.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/SwipeActions.tsx)** :
   - Éliminer le reflow forcé synchrone (`containerEl.offsetHeight`) et la transition combinée `max-height` + `margin-bottom`.
-  - Migrer vers un effondrement par CSS Grid (`grid-template-rows: 1fr -> 0fr`) avec accélération GPU (`transform: scaleY` / `opacity`).
-- [ ] **Ouverture/Fermeture sans à-coups des tiroirs bas d'écran ([`ActionDrawer.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/ActionDrawer.module.css) & [`FilterDrawer.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/FilterDrawer.module.css))** :
+  - Migrer vers un effondrement par CSS Grid (`grid-template-rows: 1fr -> 0fr`) avec accélération GPU (`transform: translateX` / `opacity`).
+- [x] **Ouverture/Fermeture sans à-coups des tiroirs bas d'écran ([`ActionDrawer.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/ActionDrawer.module.css) & [`FilterDrawer.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/components/FilterDrawer.module.css))** :
   - Remplacer `transition: max-height` par une translation matérielle fluide `transform: translateY(...)`.
-- [ ] **Fluidification de la barre de progression ([`Admin.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/pages/Admin.module.css))** :
+- [x] **Fluidification de la barre de progression ([`Admin.module.css`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/pages/Admin.module.css))** :
   - Remplacer l'animation de `width` par `transform: scaleX(...)` avec `transform-origin: left`.
-- [ ] **Résolution des conflits de gestes tactiles** :
+- [x] **Résolution des conflits de gestes tactiles** :
   - Empêcher le conflit entre le glissement vers le bas du tiroir de filtres et le `PullToRefresh` natif de la page.
 
 ---
@@ -110,4 +110,4 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
 ---
 
 ## 📅 Prochaine Étape
-Commencer la **Session 2 (SECTION 2 : Fluidité & Zéro-Reflow (Animations & Gestuelle Mobile))** en générant son plan de mise en œuvre dédié dans `docs/plans/2026-10-04-section-2-zero-reflow.md`.
+Commencer la **Session 3 (SECTION 3 : Clarté UX & Navigation Unifiée Bas de Page (Android))** en générant son plan de mise en œuvre dédié dans `docs/plans/2026-10-04-section-3-bottom-nav-search.md`.

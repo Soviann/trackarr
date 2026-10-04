@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useId } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
+import clsx from 'clsx'
 import { haptic, HAPTIC_SHORT } from '../utils/haptic'
 import s from './SwipeActions.module.css'
 
@@ -204,31 +205,16 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
   const executeAction = useCallback((action: SwipeAction) => {
     if (action.disabled) return
 
-    // Exit animation: slide out left, then collapse height
-    const contentEl = contentRef.current
+    // Exit animation: GPU slide out left, then zero-reflow CSS grid collapse
     const containerEl = containerRef.current
-    if (contentEl && containerEl) {
-      const height = containerEl.offsetHeight
+    if (containerEl) {
       updatePhase('exiting')
       applyOffset(-containerEl.offsetWidth)
-
-      // Collapse height after slide
-      setTimeout(() => {
-        containerEl.style.maxHeight = `${height}px`
-        containerEl.style.marginBottom = '0'
-        // Force reflow
-        containerEl.offsetHeight // eslint-disable-line @typescript-eslint/no-unused-expressions
-        containerEl.style.transition = 'max-height 300ms ease, margin-bottom 300ms ease, opacity 200ms ease 150ms'
-        containerEl.style.maxHeight = '0'
-        containerEl.style.overflow = 'hidden'
-        containerEl.style.opacity = '0'
-      }, 200)
     }
 
     // Execute and let parent re-fetch (mutate) remove from DOM
     Promise.resolve(action.onAction()).catch(() => {
-      // On error, clear exit animation styles and snap back
-      if (containerEl) containerEl.style.cssText = ''
+      // On error, clear exit animation and snap back
       applyOffset(0)
       updatePhase('idle')
     })
@@ -291,7 +277,7 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
     }
   }, [handlePointerMove, handlePointerUp, handlePointerCancel])
 
-  const isAnimating = animatingRef.current || phase === 'idle' || phase === 'open'
+  const isAnimating = animatingRef.current || phase === 'idle' || phase === 'open' || phase === 'exiting'
 
   const contentStyle = {
     transform: `translateX(${offset}px)`,
@@ -300,7 +286,7 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
   return (
     <div
       ref={containerRef}
-      class={s.container}
+      class={clsx(s.container, phase === 'exiting' && s.containerExiting)}
       onPointerDown={handlePointerDown}
     >
       <div
@@ -329,7 +315,7 @@ export function SwipeActions({ actions, children, disabled = false, threshold }:
       </div>
       <div
         ref={contentRef}
-        class={`${s.content} ${isAnimating ? s.animating : ''}`}
+        class={clsx(s.content, isAnimating && s.animating)}
         style={contentStyle}
       >
         {children}

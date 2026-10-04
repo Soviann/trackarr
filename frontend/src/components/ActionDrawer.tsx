@@ -75,7 +75,7 @@ export function ActionDrawer({
   return (
     <div
       ref={containerRef}
-      className={s.container}
+      className={clsx(s.container, open ? s.containerOpen : s.containerClosed)}
       style={swipeStyle}
     >
       <button
