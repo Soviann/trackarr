@@ -13,13 +13,13 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Calendar, Wrapped, Franchise tracking, and streaming provider highlights.
 
 ### 2. [User Guide & Troubleshooting](user-guide.md)
-- Complete UI walkthrough: Library statuses (*Watching*, *Caught up*, *Completed*, *Plan*, *Dropped*).
+- Complete UI walkthrough: Library statuses (*Watching*, *Caught up*, *Completed*, *Plan*, *Dropped*), responsive fluid grid, and collapsible desktop sidebar.
 - Multi-View Calendar (Month, Week, List) and RFC 5545 iCal subscription feed (`/coming-up`).
 - Filterable Stats insights, decomposed watch time, Year/Media filters, Top Cast & interactive filmography drawer (`/stats`).
 - Trackarr Wrapped annual retrospective story player and immutable archives gallery (`/wrapped`).
 - Unified Franchise & History Hub Bar with slide-up bottom sheets, Next Episode Hero, and Binge Estimator.
 - Single-line closed filter handle, scrolling dismissible chips, and compact filter drawer with selects.
-- Gestures & shortcuts: Universal Undo snackbar, circular `+1` quick mark, multi-select mode, swipe actions, pull-to-refresh.
+- Gestures & shortcuts: Power user shortcuts (`Cmd+K`, `/`, `Escape`, `Shift+Click`), Universal Undo snackbar, circular `+1` quick mark, multi-select mode, swipe actions, pull-to-refresh.
 - Match Review, Rematching, and Season Audit.
 - Comprehensive Q&A and troubleshooting based on real-world edge cases.
 

@@ -11,7 +11,7 @@ Welcome to the **Trackarr User Guide**. This document explains how to navigate, 
    - [1.1. Multi-View Calendar & iCal Export (`/coming-up`)](#11-multi-view-calendar--ical-export-coming-up)
    - [1.2. Stats Insights & Annual Retrospective (`/stats` & `/wrapped`)](#12-stats-insights--annual-retrospective-stats--wrapped)
 2. [Managing Titles & Episodes](#2-managing-titles--episodes)
-3. [Search, URL Paste & Android Sharing](#3-search-url-paste--android-sharing)
+3. [Search, Live Discovery & Mobile Sharing](#3-search-live-discovery--mobile-sharing)
 4. [Match Review & Rematching](#4-match-review--rematching)
 5. [Season Audit & Title Merges](#5-season-audit--title-merges)
 6. [Arr Stack (Radarr, Sonarr, Prowlarr)](#6-arr-stack-radarr-sonarr-prowlarr)
@@ -37,6 +37,23 @@ The **Library** screen is your media command center:
 - **Completed**: Finished movies, or series where every episode has been watched and the series has ended or was cancelled.
 - **Dropped**: Abandoned titles (quick mark `+1` and Arr availability badges are automatically suppressed on dropped titles).
 
+### Navigation & Responsive Layouts:
+- **Mobile Bottom Navigation**: 5 explicit, translated tabs with universal SVG icons and 48px touch targets:
+  - **Collection** (`/`): Your personal media library with poster grid and watching progress lists.
+  - **Explore** (`/search`): Unified search across your collection and external TMDB/AniList discovery.
+  - **Calendar** (`/coming-up`): Multi-view release calendar and iCal export feed.
+  - **Stats** (`/stats`): In-depth viewing analytics, top cast, and annual Wrapped retrospectives.
+  - **Admin** (`/admin`): System settings, task queue, integrations, and metadata maintenance.
+- **Desktop Navigation Sidebar (≥ 1024px)**: On wider screens, the mobile bottom bar is automatically hidden and replaced by a lateral desktop `<aside>` sidebar:
+  - **Header & Branding**: Full Trackarr brand logo and subtitle in expanded mode; compact mini-logo (`Ta`) in collapsed mode.
+  - **Vertical Navigation Tabs**: Direct links with active state indicator bars and hover tooltips.
+  - **Collapsible Footer**: Toggle between full expanded width (240px) and compact icon-only width (68px). State is saved in `localStorage` (`trackarr_sidebar_collapsed`).
+- **Responsive Fluid Poster Grid**: Rather than rigid fixed columns, the library uses an adaptive `repeat(auto-fill, minmax(105px..160px, 1fr))` grid:
+  - **Mobile (Phone)**: 2–3 columns (e.g. 3 columns on Google Pixel 9 Pro and standard smartphones).
+  - **Tablet (≥ 640px)**: 4–5 columns.
+  - **Desktop (≥ 1024px)**: 6–7 columns.
+  - **Widescreen (≥ 1440px)**: 8+ columns.
+
 ### Unified Bottom Search & Compact Filter Drawer:
 - **Docked Search Bar**: Docked cleanly at the bottom of the screen with an integrated text clear button (`✕`) and filter launcher badge (`[ N ]`).
 - **Single-Line Closed Filter Handle**: A 42px row docked above the navigation bar featuring `[ FILTERS (N) ⌃ ]` trigger and horizontally scrolling dismissible chips (`✕`) to remove active filter criteria directly without opening the drawer.
@@ -54,9 +71,14 @@ The **Library** screen is your media command center:
 - **Sorting Options**: 6 sort criteria (Last updated, Title, Release date, Rating, Date added, Last watched). Tap to activate; tap again to invert ascending/descending.
 
 ### Gestures & Shortcuts:
+- **Power User Keyboard Shortcuts**:
+  - `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux): Instantly trigger universal search from anywhere.
+  - `/`: Quick search trigger (when focus is not inside an active editable field).
+  - `Escape`: Dismiss open drawers (Filters, Actions) or exit multi-selection mode.
+  - `Shift+Click`: Contiguous range multi-selection across library cards.
 - **Universal Undo Toast (`UndoSnackbar`)**: Any state-changing progression (`+1` quick mark, episode/movie watch mark, title deletion) triggers a floating snackbar with a 5-second perimeter radial countdown and haptic feedback (`[15, 30, 15]`), allowing 1-tap instant rollback.
-- **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular glassmorphic `+1` episode button to immediately mark the next episode as watched without opening the title.
-- **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards to select them, then use the bottom action bar for bulk status changes or deletion.
+- **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular glassmorphic `+1` episode button (with generous 44×44px touch target) to immediately mark the next episode as watched without opening the title.
+- **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards or `Shift+Click` a range to select them, then use the bottom action bar for bulk status changes or deletion.
 - **Swipe Actions (Match Review)**: Swipe a card left to quickly confirm or fix matches. A full left swipe triggers immediate confirmation.
 - **Pull to Refresh**: Pull down at the top of the Library to refresh data and re-evaluate air dates.
 - **Android App Shortcuts**: Long-press the Trackarr home screen icon for instant shortcuts to **Add Title** (`/add`), **Library** (`/`), and **Search** (`/search`).
@@ -84,6 +106,10 @@ The **Calendar** page (`/coming-up`) provides a complete schedule of upcoming ep
 ## 1.2. Stats Insights & Annual Retrospective (`/stats` & `/wrapped`)
 
 The **Stats** section offers rich analytics and automated annual retrospectives:
+
+<div align="center">
+  <img src="screenshots/06-stats.png" alt="Stats & Analytics Dashboard" width="300" />
+</div>
 
 ### Global Analytics & Filterable Insights (`/stats`)
 - **Natural Watch Time Decomposition**: Total watch time is decomposed into human-readable units (*e.g. 3 yrs 87 d 16 h / 3 ans 87 j 16 h*) in a dedicated hero card with precise episode and hour subtitles.
@@ -138,16 +164,22 @@ Opening a title displays its rich details:
 
 ---
 
-## 3. Search, Live Add & Mobile Sharing
+## 3. Search, Live Discovery & Mobile Sharing
 
 Adding media to Trackarr is fast and versatile:
-1. **Live Discovery & 1-Tap Add (`/add`)**:
-   - Start typing in the search bar on `/add` to query TMDB and AniList concurrently with debounced live search.
-   - **Local Library Detection**: If a title already exists in your library, it displays an *« In Library ↗ »* badge that links directly to its detail page.
-   - **1-Tap Quick Tracking**: Direct `[+ Plan to Watch]` and `[+ Watching]` buttons add the title fully enriched with external metadata immediately, accompanied by a 5-second universal undo toast notification.
-2. **Search by Name (`/search`)**: Search across your local library with full-text search (FTS5) or toggle TMDB discovery.
-3. **Direct URL Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry via the validation flow.
-4. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
+
+<div align="center">
+  <img src="screenshots/04-search.png" alt="Instant Live Search & Discovery" width="300" />
+</div>
+
+1. **Unified Search & Live Discovery (`/search` — "Explore" Tab)**:
+   - The **Explore** tab combines personal collection search and external database discovery into a single interface.
+   - **Local Library Prioritization**: Search queries first search your local collection using full-text search (FTS5).
+   - **1-Click External Discovery**: Concurrently queries TMDB and AniList. If a title is absent from your library, you can add it directly to *Plan to Watch* (`+ À voir`) or *Watching* (`+ En cours`) with a single tap, accompanied by a 5-second universal undo toast notification.
+   - **Local Library Detection**: External results that already exist in your collection display an *« In Library ↗ »* badge linking directly to their detail page.
+2. **Direct URL & Identifier Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry via the validation flow.
+3. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
+4. **Desktop Hotkeys**: Press `Cmd+K` / `Ctrl+K` or `/` from any page to focus search immediately.
 
 > [!TIP]
 > **Fast-Track Mobile Addition Workflow**:

@@ -213,7 +213,7 @@
 
 | Component | File | Purpose |
 |---|---|---|
-| `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explorer`, `Calendrier`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
+| `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explore`, `Calendar`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
 | `Sidebar` | `components/Sidebar.tsx` | Desktop collapsible lateral navigation sidebar (≥ 1024px) with Trackarr branding, vertical navigation tabs, active state indicators, and collapse/expand toggle |
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
