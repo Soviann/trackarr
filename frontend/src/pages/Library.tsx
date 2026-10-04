@@ -215,6 +215,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
   // Bulk selection state
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const lastClickedIdRef = useRef<number | null>(null)
   const [statusSheetOpen, setStatusSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [bulkPending, setBulkPending] = useState(false)
@@ -236,7 +237,65 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
   function exitSelect() {
     setSelecting(false)
     setSelected(new Set())
+    lastClickedIdRef.current = null
   }
+
+  const handleCardClick = (id: number, e: MouseEvent) => {
+    if (e.shiftKey) {
+      if (!selecting) {
+        setSelecting(true)
+      }
+      const lastId = lastClickedIdRef.current
+      if (lastId !== null && lastId !== id) {
+        const lastIdx = titles.findIndex(x => x.id === lastId)
+        const curIdx = titles.findIndex(x => x.id === id)
+        if (lastIdx !== -1 && curIdx !== -1) {
+          const start = Math.min(lastIdx, curIdx)
+          const end = Math.max(lastIdx, curIdx)
+          setSelected(prev => {
+            const next = new Set(prev)
+            for (let i = start; i <= end; i++) {
+              next.add(titles[i].id)
+            }
+            return next
+          })
+          lastClickedIdRef.current = id
+          return
+        }
+      }
+      toggleSelect(id)
+      lastClickedIdRef.current = id
+      return
+    }
+
+    if (selecting) {
+      toggleSelect(id)
+      lastClickedIdRef.current = id
+      return
+    }
+
+    lastClickedIdRef.current = id
+    route(routeTo.title(id))
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (deleteConfirmOpen) {
+          setDeleteConfirmOpen(false)
+          e.stopPropagation()
+        } else if (statusSheetOpen) {
+          setStatusSheetOpen(false)
+          e.stopPropagation()
+        } else if (selecting) {
+          exitSelect()
+          e.stopPropagation()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [deleteConfirmOpen, statusSheetOpen, selecting])
 
   async function applyBulkStatus(status: string) {
     if (bulkPending) return
@@ -420,11 +479,12 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
                 <PosterCard
                   key={t.id}
                   title={t}
-                  onClick={selecting ? () => toggleSelect(t.id) : undefined}
+                  onClick={(e) => handleCardClick(t.id, e)}
                   onLongPress={selecting ? undefined : () => {
                     haptic(HAPTIC_SHORT)
                     setSelecting(true)
                     toggleSelect(t.id)
+                    lastClickedIdRef.current = t.id
                   }}
                   selecting={selecting}
                   overlay={selecting && (

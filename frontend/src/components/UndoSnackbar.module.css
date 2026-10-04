@@ -37,6 +37,15 @@
   bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
+@media (min-width: 1024px) {
+  .snackbarContainer {
+    left: calc(var(--sidebar-width, 240px) + var(--space-lg));
+    right: auto;
+    bottom: var(--space-lg);
+    margin: 0;
+  }
+}
+
 @keyframes slideInUp {
   from {
     opacity: 0;

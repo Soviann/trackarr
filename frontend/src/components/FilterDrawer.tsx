@@ -139,6 +139,17 @@ export function FilterDrawer(props: FilterDrawerProps) {
     localStorage.setItem(STORAGE_KEY_HOME, String(open))
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, setOpen])
+
   const showSeriesStatus = filter.type === 'series'
 
   interface ActiveChip {

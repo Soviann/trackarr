@@ -12,6 +12,8 @@ export const fr: TranslationSchema = {
     stats: 'Stats',
     admin: 'Admin',
     help: 'Aide',
+    collapseSidebar: 'Réduire le menu',
+    expandSidebar: 'Développer le menu',
   },
   status: {
     all: 'Tous',

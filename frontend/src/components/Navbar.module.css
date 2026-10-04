@@ -62,3 +62,18 @@
   line-height: 1.1;
   white-space: nowrap;
 }
+
+@media (min-width: 1024px) {
+  .nav {
+    display: none;
+  }
+
+  .wrapper {
+    left: var(--sidebar-width, 240px);
+    transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .noAbove {
+    display: none;
+  }
+}

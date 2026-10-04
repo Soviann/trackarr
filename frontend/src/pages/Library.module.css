@@ -278,8 +278,28 @@
 .posterGrid {
   padding: 0 var(--space-lg) var(--space-sm);
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
   gap: var(--space-sm);
+}
+
+@media (min-width: 640px) {
+  .posterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--space-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .posterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: var(--space-md);
+  }
+}
+
+@media (min-width: 1440px) {
+  .posterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
 }
 
 /* Skeleton tile — same footprint as PosterCard so the grid doesn't shift on load. */
