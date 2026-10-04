@@ -116,6 +116,15 @@
   line-height: 1;
 }
 
+.quickPlusBtn::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+}
+
 .quickPlusSign {
   color: var(--accent);
   transition: color 0.18s ease;
@@ -163,13 +172,11 @@
 }
 
 .quickPlusBtnPopping {
-  animation: springPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: quickConfirm 0.18s ease-out;
 }
 
-@keyframes springPop {
+@keyframes quickConfirm {
   0% { transform: scale(1); }
-  35% { transform: scale(1.36); }
-  65% { transform: scale(0.92); }
-  85% { transform: scale(1.08); }
+  50% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }

@@ -41,7 +41,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
     if (!ne || toggling) return
     haptic([15, 30, 15])
     setPopping(true)
-    setTimeout(() => setPopping(false), 450)
+    setTimeout(() => setPopping(false), 180)
     setToggling(true)
     const targetEpisode = ne
     try {
@@ -137,6 +137,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
             type="button"
             className={clsx(s.quickPlusBtn, toggling && s.quickPlusBtnLoading, popping && s.quickPlusBtnPopping)}
             onClick={handleQuickMark}
+            onPointerDown={(e) => e.stopPropagation()}
             disabled={toggling}
             aria-label={`Mark S${ne.season_number} E${ne.episode} as watched`}
             title={t('common.markNextWatched')}

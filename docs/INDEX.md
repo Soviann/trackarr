@@ -49,6 +49,9 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 ### 7. [LLM Context Reference](llm.md)
 - High-density, token-optimized technical reference for AI assistants and LLMs.
 
+### 8. [Design Revamp Roadmap](roadmap-design-revamp.md)
+- Complete UI/UX revamp plan, Android one-handed mobile ergonomic priorities, zero-reflow animations, and adaptive desktop layout.
+
 ---
 
 ## 🛠️ Developer Architecture Guides

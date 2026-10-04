@@ -20,17 +20,6 @@
   overflow: hidden;
 }
 
-.heroCard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--cover-accent, var(--accent, #6366f1));
-  opacity: 0.8;
-}
-
 .headerRow {
   display: flex;
   align-items: center;

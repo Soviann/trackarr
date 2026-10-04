@@ -274,4 +274,28 @@ describe('PosterCard', () => {
 
     expect(onClick).toHaveBeenCalledTimes(1)
   })
+
+  it('stops pointerdown propagation on +1 button so long-press is not triggered', () => {
+    const onLongPress = vi.fn()
+    const watchingSeries: Title = {
+      ...baseTitle,
+      type: 'series',
+      status: 'watching',
+      sonarr_id: 42,
+      next_episode: {
+        id: 99,
+        season_id: 5,
+        episode: 7,
+        season_number: 2,
+      },
+    }
+    const { getByLabelText } = render(<PosterCard title={watchingSeries} onLongPress={onLongPress} />)
+    const btn = getByLabelText('Mark S2 E7 as watched')
+
+    fireEvent(btn, makePointerEvent('pointerdown'))
+    vi.advanceTimersByTime(500)
+
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
 })
+

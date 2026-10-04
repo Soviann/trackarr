@@ -49,6 +49,7 @@ docs/mockups/
 
 # Audits — working notes, never committed
 docs/audits/
+.impeccable/
 
 # Playwright MCP
 .playwright-mcp/
