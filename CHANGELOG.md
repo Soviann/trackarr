@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Polyfill cancelAnimationFrame dans l'environnement de test Vitest/JSDOM** : Fiabilisation du polyfill global afin d'éviter les exceptions non gérées `ReferenceError: cancelAnimationFrame is not defined` déclenchées lors du démontage ou de l'exécution asynchrone des hooks de rendu.
+
+### Documentation
+- **Audit hebdomadaire de la documentation, de l'i18n et des règles LLM** : Synchronisation des spécifications d'ergonomie desktop/mobile, des invariants de navigation unifiée 5 onglets, des raccourcis clavier et de Preact 11 dans `docs/llm.md` et `docs/patterns.md` (#80).
+
 ## [v1.23.0] — 2026-10-05
 
 ### Modifié
