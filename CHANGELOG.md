@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.23.1] — 2026-10-05
+
 ### Corrigé
 - **Polyfill cancelAnimationFrame dans l'environnement de test Vitest/JSDOM** : Fiabilisation du polyfill global afin d'éviter les exceptions non gérées `ReferenceError: cancelAnimationFrame is not defined` déclenchées lors du démontage ou de l'exécution asynchrone des hooks de rendu.
 
