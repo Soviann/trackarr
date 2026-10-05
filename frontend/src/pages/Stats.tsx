@@ -510,7 +510,7 @@ function ActivitySection({
               return (
                 <a key={row.key} href={routeTo.title(row.titleId)} className={s.activityRow}>
                   {coverUrl ? (
-                    <img className={s.activityThumb} src={coverUrl} alt="" role="presentation" loading="lazy" />
+                    <img className={s.activityThumb} src={coverUrl} alt="" loading="lazy" />
                   ) : (
                     <div className={s.activityThumbPlaceholder} />
                   )}

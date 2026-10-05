@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'preact/hooks'
-import type { JSX } from 'preact'
+import type { CSSProperties } from 'preact'
 import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { Title, TitleRelation } from '../types'
@@ -322,7 +322,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       '--cover-accent': title.accent_hex,
       '--cover-accent-wash': hexToRgba(title.accent_hex, 0.10),
     }),
-  } as JSX.CSSProperties
+  } as CSSProperties
 
   return (
     <PullToRefresh

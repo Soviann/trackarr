@@ -6,7 +6,7 @@ Welcome to **Trackarr** (`github.com/Soviann/trackarr`). This document provides 
 
 ## 🏗️ Project Overview
 - **Backend**: Go 1.24, `chi` router, SQLite with WAL mode & FTS5 full-text search.
-- **Frontend**: Preact 10, TypeScript (strict mode), Vite, CSS Modules, PWA Service Worker.
+- **Frontend**: Preact 11, TypeScript (strict mode), Vite, CSS Modules, PWA Service Worker.
 - **Runtime**: Docker Compose containerized environment.
 
 ---
