@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'preact/hooks'
+import { useRef, useEffect, useLayoutEffect } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import s from './BottomSheet.module.css'
 
@@ -31,11 +31,10 @@ export function BottomSheet({ open, onClose, ariaLabel = 'Dialog', children }: B
   useEffect(() => { onCloseRef.current = onClose })
 
   // Enhancement 2 — Body scroll lock with unmount failsafe.
-  // The per-`open` effect handles the nominal open/close transition. The
-  // separate unmount-only effect guarantees the overflow is restored even
-  // if the sheet is torn down abruptly (parent error, hot-reload, crash in
-  // a child during commit) before the per-`open` cleanup fires.
-  useEffect(() => {
+  // We use useLayoutEffect so that overflow mutation runs synchronously with DOM
+  // commit, guaranteeing synchronous restoration on close/unmount before assertions
+  // or subsequent renders run.
+  useLayoutEffect(() => {
     if (!open) return
     prevOverflowRef.current = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -47,7 +46,7 @@ export function BottomSheet({ open, onClose, ariaLabel = 'Dialog', children }: B
     }
   }, [open])
 
-  useEffect(() => () => {
+  useLayoutEffect(() => () => {
     if (prevOverflowRef.current !== null) {
       document.body.style.overflow = prevOverflowRef.current
       prevOverflowRef.current = null

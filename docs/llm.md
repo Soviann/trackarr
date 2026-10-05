@@ -5,7 +5,7 @@
 ---
 
 ## 1. Core Architecture
-- **Stack**: Go 1.24, SQLite 3 (WAL mode, FTS5), `chi/v5`, Preact 10, TypeScript (strict), Vite.
+- **Stack**: Go 1.24, SQLite 3 (WAL mode, FTS5), `chi/v5`, Preact 11, TypeScript (strict), Vite.
 - **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `version`).
 - **HTTP Server**: `internal/router/router.go` wires middleware (CORS, Auth, Compression, Recovery, Rate Limiting) and routes.
 - **Dependency Injection**:

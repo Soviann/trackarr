@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'preact/hooks'
-import type { RefObject, JSX } from 'preact'
+import type { RefObject, CSSProperties } from 'preact'
 
 export interface UseSwipeDownToCloseOptions {
   open: boolean
@@ -9,9 +9,9 @@ export interface UseSwipeDownToCloseOptions {
 }
 
 export interface UseSwipeDownToCloseResult<T extends HTMLElement = HTMLDivElement> {
-  ref: RefObject<T>
+  ref: RefObject<T | null>
   dragY: number
-  style: JSX.CSSProperties | undefined
+  style: CSSProperties | undefined
 }
 
 export function useSwipeDownToClose<T extends HTMLElement = HTMLDivElement>({

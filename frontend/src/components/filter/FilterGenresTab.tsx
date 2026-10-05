@@ -12,8 +12,8 @@ interface FilterGenresTabProps {
   actions: FilterActions
   genres: GenreCount[]
   countries: CountryCount[]
-  genreDropdownRef?: RefObject<HTMLDivElement>
-  countryDropdownRef?: RefObject<HTMLDivElement>
+  genreDropdownRef?: RefObject<HTMLDivElement | null>
+  countryDropdownRef?: RefObject<HTMLDivElement | null>
 }
 
 export function FilterGenresTab({
