@@ -51,6 +51,23 @@
     - Marking a series as `dropped` can trigger a background `sonarr_delete` job purging files (`deleteFiles=true`) and creating an import list exclusion (`addImportListExclusion=true`) to stop automated re-importing.
     - Dropped/deleted series persist `sonarr_deleted_at` and reset `sonarr_id = NULL`.
     - Re-adding to Sonarr prompts an intent verification via `ConfirmationDrawer`, clears existing import list exclusions (`DELETE /api/v3/importlistexclusion/{id}`), resets `sonarr_deleted_at = NULL` and `arr_ignored = 0`, and pushes with fresh quality/root folder settings.
+11. **Collapsible Desktop Sidebar & Fluid Adaptive Shelf**:
+    - Viewports ≥ 1024px automatically hide the bottom navbar and engage `Sidebar.tsx` (68px collapsed icon rail vs 240px expanded navigation panel).
+    - Collapsed state persists in `localStorage` (`trackarr_sidebar_collapsed`).
+    - Library grid uses responsive CSS Grid `auto-fill, minmax(105px..160px, 1fr)` ensuring seamless expansion from 2–3 columns on phone up to 6–8+ columns on desktop monitors.
+12. **Power User Accelerators & Range Selection**:
+    - `useKeyboardShortcuts` binds universal search activation (`Cmd+K`, `Ctrl+K`, `/`) focusing `SearchBar`, and modal/drawer dismissal via `Escape`.
+    - `Library` grid supports contiguous range selection via `Shift+Click` across poster cards.
+13. **Unified 5-Tab Navigation & Contextual Highlighting**:
+    - Primary tabs: `Collection` (`/`), `Explore` (`/search`), `Calendar` (`/coming-up`), `Stats` (`/stats`), `Admin` (`/admin`).
+    - Sub-route context preservation: `/continue-watching` highlights `Collection`; `/releases` highlights `Calendar`; `/add` and `/admin/validate` highlight `Explore`.
+14. **Zero-Reflow Compositor Animations & Touch Containment**:
+    - Drawer/card collapse avoids `offsetHeight` reflows, using GPU CSS Grid track transitions (`grid-template-rows: 1fr -> 0fr`) and composite `transform: translateY(...)`.
+    - Touch containers enforce `overscroll-behavior-y: contain` and verify `scrollTop > 0` in `useSwipeDownToClose` to prevent mobile scroll hijacking.
+    - Poster quick buttons enforce 44×44px hit targets with `pointerdown` event isolation (`stopPropagation`).
+15. **Preact 11 & Synchronous Scroll Lock**:
+    - Frontend runs on Preact 11 (`preact@^11.0.0`) with aligned TypeScript typings (`RefObject`, ARIA image attributes).
+    - `BottomSheet` uses `useLayoutEffect` for synchronous body scroll lock management, guaranteeing immediate restoration of body `overflow` on dismiss and unmount.
 
 ---
 

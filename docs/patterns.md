@@ -204,6 +204,7 @@
 - **Single Source of Truth**: All route patterns live in `ROUTE_PATHS`, route builders in `routeTo`.
 - **API URL Rule**: `apiFetch` and `useApi` automatically prepend `/api`. Never write `apiFetch('/api/...')`.
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
+- **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` maps to `/` (`Collection`), `/releases` maps to `/coming-up` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
 
 ### State Management (`frontend/src/store.ts`)
 - `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and session-persistent filters (`status`, `type`, `is_anime`, `series_status`, `decade`, `release_from`, `release_to`, `genres`, `origin_country`, `my_rating_min`, `tmdb_rating_min`). Filters persist across title details and navigation, resetting only on explicit user action or reload.
@@ -215,6 +216,7 @@
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explore`, `Calendar`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
 | `Sidebar` | `components/Sidebar.tsx` | Desktop collapsible lateral navigation sidebar (≥ 1024px) with Trackarr branding, vertical navigation tabs, active state indicators, and collapse/expand toggle |
+| `navItems` | `components/navItems.tsx` | 5-tab definitions (`navTabs`), SVG icons, and contextual active tab routing (`getActiveTab`) |
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
@@ -310,3 +312,4 @@
 5. **Antigravity NAS Daemon Environment**: The webhook daemon (`scripts/github-pr-daemon/server.py`) running on the NAS is equipped with Git, Make, Docker CLI, Docker Compose, and access to `/var/run/docker.sock` and `.env.local` secrets. It can execute test/lint suites and generate implementation plans directly on the NAS.
 6. **Title Merge Semantics (`TitleWriter.Merge`)**: Consolidating source into dest transfers missing external IDs and metadata (`sonarr_id`, `radarr_id`, `sonarr_deleted_at`, `my_rating`, `cover_url`, `overview`, etc.) via `COALESCE`, maintains `arr_ignored = 0` if either was queued, preserves watched state (`watched = 1`, `external_source_id`) on colliding season episodes without dropping history, re-parents `watch_events.episode_id`, copies `title_genres`, recalculates `total_watch_minutes`, and purges orphan tasks.
 7. **Frontend i18n & Hardcoded Text Prevention**: English is the source language for all code, components, tests, and comments. Hardcoded French strings or French comments outside `locales/fr.ts` are forbidden and systematically enforced by both `make test-front` (`src/i18n/i18n-audit.test.ts`) and `make lint-front` (`npm run lint:i18n`). Exclusions for legitimate proper names or specific test assertions require an explicit `// i18n-ignore` inline annotation.
+8. **Responsive Ergonomics & Desktop Navigation**: Viewports ≥ 1024px engage `Sidebar` (collapsible rail persisted in `localStorage`) and fluid shelf grid (`auto-fill, minmax(105px..160px, 1fr)`). Navigation state follows contextual highlighting (`getActiveTab`) where `/add` and `/admin/validate` preserve the `Explore` tab context.
