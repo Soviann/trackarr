@@ -6,12 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.23.0] — 2026-10-05
+
 ### Modifié
 - **Mise à niveau du framework frontend vers Preact 11** :
   - Passage de `preact` en version `^11.0.0` avec synchronisation des dépendances et de l'environnement de build Vite.
   - Durcissement de la gestion du verrouillage de défilement du corps (`body scroll lock`) dans `BottomSheet` via `useLayoutEffect` garantissant la restauration synchrone du style `overflow` lors des transitions d'affichage et du démontage.
   - Alignement des typages TypeScript Preact 11 (`RefObject`, `CSSProperties`, attributs d'accessibilité ARIA sur les images).
   - Ajout du polyfill de test `cancelAnimationFrame` dans l'environnement d'exécution Vitest/JSDOM.
+
+### Sécurité & Infrastructure
+- **Verrouillage semver-major dans Dependabot** : Restriction des mises à jour automatiques Dependabot aux versions mineures et correctives (`minor` et `patch`) pour gomod, npm et docker afin d'éviter les montées de versions majeures automatisées inattendues (#82).
 
 ## [v1.22.1] — 2026-10-04
 
