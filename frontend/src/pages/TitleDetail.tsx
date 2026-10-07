@@ -20,7 +20,8 @@ import { StatusBadge } from '../components/StatusBadge'
 import { WatchProviderBadges } from '../components/WatchProviderBadges'
 import { getMatchingProviders } from '../utils/providers'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
+import { coverBackground } from '../components/CoverPlaceholder'
+import { CoverImage } from '../components/CoverImage'
 import { TitleHistory } from '../components/TitleHistory'
 import { SeasonSideStories } from '../components/SeasonSideStories'
 import { FranchiseRelationsSection } from '../components/FranchiseRelationsSection'
@@ -194,6 +195,23 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     }
   }
 
+  const [desktopRefreshState, setDesktopRefreshState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+
+  const handleDesktopRefresh = async () => {
+    if (desktopRefreshState !== 'idle') return
+    setDesktopRefreshState('loading')
+    try {
+      await handleRefresh()
+      setDesktopRefreshState('success')
+    } catch {
+      setDesktopRefreshState('error')
+    } finally {
+      setTimeout(() => {
+        setDesktopRefreshState('idle')
+      }, 2000)
+    }
+  }
+
   // Pull-to-refresh: refetch the title so the spinner stays up until data lands.
   const handlePullRefresh = async () => {
     const updated = await apiFetch<Title>(`/titles/${title.id}`)
@@ -332,315 +350,548 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     <div className={s.page} style={pageStyle}>
       {actionError && <ErrorBanner message={actionError} onRetry={() => setActionError(null)} />}
 
-      {/* Hero — spacer, holds back button; cover image shows through .page background */}
+      {/* Atmospheric backdrop for wide/desktop view */}
+      <div className={s.backdrop} aria-hidden="true" />
+
+      {/* Hero — spacer on mobile, holds back button */}
       <div className={s.hero}>
         <button onClick={() => history.back()} aria-label={t('common.back')} className={s.backBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
       </div>
 
-      {/* Identity zone — title + meta float over the cover */}
-      <div className={s.identity}>
-        <div className={s.identityTitle}>{name}</div>
-        <div className={s.identityMeta}>{metaParts.join(' · ')}</div>
-        {genres && genres.length > 0 && (
-          <div className={s.genrePills}>
-            {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
+      {/* Layout Grid / Container */}
+      <div className={s.layoutContainer}>
+        {/* Left column (Desktop: sticky sidebar, Mobile: cards flow underneath) */}
+        <aside className={s.sidebarCol}>
+          {/* Desktop authentic 2:3 vertical poster */}
+          <div className={s.desktopPosterWrap}>
+            <CoverImage
+              coverUrl={title.cover_url}
+              type={title.type}
+              is_anime={title.is_anime}
+              className={s.desktopPoster}
+              iconSize="48px"
+            />
           </div>
-        )}
-        <div style={{ marginTop: '12px' }}>
-          <StatusBadge status={title.status} caughtUp={title.caught_up} />
-        </div>
-      </div>
 
-      {/* Next Episode Hero Button & Binge Estimator */}
-      <NextEpisodeHero
-        title={title}
-        onEpisodeToggle={handleEpisodeToggle}
-        onStatusChange={(status) => handleSaveEdit({ status })}
-      />
-
-      {/* Ratings card */}
-      <div className={s.card} style={{ marginTop: '12px' }}>
-        {title.my_rating != null && title.my_rating > 0 ? (
-          /* State B: Already Rated (Clean display + Edit action) */
-          <div className={s.ratingHeaderRow}>
-            <div className={s.ratedScoreGroup}>
-              <span className={s.statLabelTerminal}>{t('details.myRating')}</span>
-              <span className={s.myRating}>{title.my_rating}</span>
-              <span className={s.myRatingSuffix}>/10</span>
-            </div>
-            <div className={s.ratedActionsGroup}>
-              <div className={s.extRatings}>
-                {title.tmdb_rating != null && (
-                  <div className={s.extItem}>
-                    <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
-                    <div className={s.extSource}>TMDB</div>
-                  </div>
-                )}
-                {title.anilist_rating != null && (
-                  <div className={s.extItem}>
-                    <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
-                    <div className={s.extSource}>AniList</div>
-                  </div>
-                )}
-              </div>
+          {/* Desktop Quick Action Toolbar */}
+          <div className={s.desktopActionToolbar}>
+            <div className={s.desktopActionRow}>
               <button
                 type="button"
-                className={s.btnEditRating}
-                onClick={() => setShowRating(true)}
+                className={clsx(s.desktopActionBtn, s.desktopActionBtnPrimary)}
+                onClick={() => setShowEdit(true)}
               >
-                {t('details.editRating')}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                {t('common.edit')}
+              </button>
+              <button
+                type="button"
+                className={clsx(s.desktopActionBtn, desktopRefreshState === 'loading' && s.desktopActionBtnDisabled)}
+                onClick={handleDesktopRefresh}
+                disabled={desktopRefreshState !== 'idle'}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  className={clsx(desktopRefreshState === 'loading' && s.spinIcon)}
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                {desktopRefreshState === 'loading' ? '...' : desktopRefreshState === 'success' ? t('common.refreshDone') : desktopRefreshState === 'error' ? t('common.refreshFailed') : t('common.refresh')}
               </button>
             </div>
-          </div>
-        ) : (
-          /* State A: Unrated (Direct 1-to-10 1-tap strip) */
-          <div>
-            <div className={s.ratingHeaderRow} style={{ marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className={s.statLabelTerminal}>{t('details.rateThisTitle')}</span>
-                <span className={s.noRating}>{t('details.notRated')}</span>
-              </div>
-              <div className={s.extRatings}>
-                {title.tmdb_rating != null && (
-                  <div className={s.extItem}>
-                    <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
-                    <div className={s.extSource}>TMDB</div>
-                  </div>
-                )}
-                {title.anilist_rating != null && (
-                  <div className={s.extItem}>
-                    <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
-                    <div className={s.extSource}>AniList</div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className={s.rateStrip}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  className={s.rateBtn}
-                  onClick={() => handleSaveRating(val)}
-                  aria-label={t('ratingPrompt.rateValueAria', { val })}
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Synopsis card */}
-      {title.overview && (
-        <div className={s.card}>
-          <div className={s.cardLabel}>{t('details.overview')}</div>
-          <div className={`${s.synopsisText} ${!synopsisExpanded ? s.synopsisClamped : ''}`}>
-            {title.overview}
-          </div>
-          <button className={s.synopsisToggle} onClick={() => setSynopsisExpanded(!synopsisExpanded)}>
-            {synopsisExpanded ? t('details.showLess') : t('details.showMore')}
-          </button>
-        </div>
-      )}
-
-      {/* Personal Notes */}
-      <PersonalNotesCard
-        titleId={title.id}
-        initialNotes={title.personal_notes}
-        onSaved={(notes) => setData((prev) => (prev ? { ...prev, personal_notes: notes } : prev))}
-      />
-
-      {/* Cast & Crew card */}
-      {credits && credits.length > 0 && (
-        <div className={s.card}>
-          <div className={s.cardLabel}>{t('details.castCrew')}</div>
-          <div className={s.castList}>
-            {credits.map((c) => (
-              <div key={`${c.name}-${c.role}`} className={s.castEntry}>
-                <button
-                  type="button"
-                  className={s.castPerson}
-                  onClick={() => route(routeTo.person(c.name))}
-                >
-                  {c.name}
-                </button>
-                <span className={s.castRole}>{c.role}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Details card */}
-      <div className={s.card}>
-        <div className={s.cardLabel}>{t('details.mediaDetails')}</div>
-        <div className={s.detailRow}>
-          <span className={s.detailKey}>{t('details.added')}</span>
-          <span className={s.detailVal}>{formatDate(title.created_at)}</span>
-        </div>
-        {title.last_watched_at && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.lastWatched')}</span>
-            <span className={s.detailVal}>{formatDate(title.last_watched_at)}</span>
-          </div>
-        )}
-        {formatWatchtime(title.total_watch_minutes) && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.watchTime')}</span>
-            <span className={s.detailVal}>{formatWatchtime(title.total_watch_minutes)}</span>
-          </div>
-        )}
-        <div className={s.detailRow}>
-          <span className={s.detailKey}>{t('details.lastRefreshed')}</span>
-          <span
-            className={s.detailVal}
-            title={title.last_refreshed_at ? formatDateTime(title.last_refreshed_at) : undefined}
-          >
-            {title.last_refreshed_at ? formatRelativeTime(title.last_refreshed_at) : t('details.never')}
-          </span>
-        </div>
-        {title.match_source && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.match')}</span>
-            <span className={s.detailVal}>{formatMatchSource(title.match_source)}</span>
-          </div>
-        )}
-        {(title.imdb_id || (title.tmdb_id != null && title.tmdb_id > 0) || (title.tvdb_id != null && title.tvdb_id > 0) || computeAniListUrl(title)) && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.sources')}</span>
-            <div className={s.externalLinksWrap}>
-              {title.imdb_id && (
-                <a
-                  href={`https://www.imdb.com/title/${title.imdb_id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${s.extLinkBadge} ${s.extLinkImdb}`}
-                >
-                  IMDb
-                </a>
-              )}
-              {title.tmdb_id != null && title.tmdb_id > 0 && (
-                <a
-                  href={`https://www.themoviedb.org/${title.type === 'movie' ? 'movie' : 'tv'}/${title.tmdb_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${s.extLinkBadge} ${s.extLinkTmdb}`}
-                >
-                  TMDB
-                </a>
-              )}
-              {title.tvdb_id != null && title.tvdb_id > 0 && (
-                <a
-                  href={`https://thetvdb.com/dereferrer/${title.type === 'movie' ? 'movie' : 'series'}/${title.tvdb_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${s.extLinkBadge} ${s.extLinkTvdb}`}
-                >
-                  TVDB
-                </a>
-              )}
-              {computeAniListUrl(title) && (
-                <a
-                  href={computeAniListUrl(title)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${s.extLinkBadge} ${s.extLinkAnilist}`}
-                >
-                  AniList
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-        {getMatchingProviders(title.watch_providers).length > 0 && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.platforms')}</span>
-            <div className={s.externalLinksWrap}>
-              <WatchProviderBadges providers={title.watch_providers} />
-            </div>
-          </div>
-        )}
-        <div className={s.detailRow}>
-          <span className={s.detailKey}>{title.type === 'movie' ? 'Radarr' : 'Sonarr'}</span>
-          <span className={s.detailVal}>
-            {isSonarrDeleted ? (
-              <div className={s.arrDeletedGroup}>
-                <span className={s.sonarrDeletedBadge}>
-                  {t('details.sonarrDeletedBadge')}
-                </span>
+            <div className={s.desktopActionRow}>
+              {isSonarrDeleted ? (
                 <button
                   type="button"
                   onClick={() => setShowSonarrReaddConfirm(true)}
-                  className={`${s.arrAddBtn} ${s.sonarrReaddBtn}`}
+                  className={clsx(s.desktopActionBtn, s.desktopActionBtnArr)}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="1 4 1 10 7 10" />
                     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                   </svg>
                   {t('details.readdToSonarr')}
                 </button>
-              </div>
-            ) : (
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowArrPush(true)}
+                  className={clsx(s.desktopActionBtn, s.desktopActionBtnArr)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    {title.radarr_id != null || title.sonarr_id != null ? (
+                      <>
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                      </>
+                    ) : (
+                      <>
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </>
+                    )}
+                  </svg>
+                  {title.radarr_id != null || title.sonarr_id != null
+                    ? t('details.manageInArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })
+                    : t('details.sendToArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
+                </button>
+              )}
+            </div>
+
+            <div className={s.desktopActionRow}>
               <button
                 type="button"
-                onClick={() => setShowArrPush(true)}
-                className={`${s.arrAddBtn} ${title.type === 'movie' ? s.radarrBtn : s.sonarrBtn}`}
+                className={s.desktopActionBtn}
+                onClick={() => setShowRematch(true)}
               >
-                {title.radarr_id != null || title.sonarr_id != null ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>
-                    {t('details.manageInArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
-                  </>
-                ) : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                    {t('details.sendToArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
-                  </>
-                )}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                {t('common.rematch')}
               </button>
-            )}
-          </span>
-        </div>
-        {title.original_title && title.original_title !== name && (
-          <div className={s.detailRow}>
-            <span className={s.detailKey}>{t('details.originalTitle')}</span>
-            <span className={s.detailVal}>{title.original_title}</span>
-          </div>
-        )}
-        {altNames.length > 0 && (
-          <div className={s.altNames}>
-            <div className={s.altNamesLabel}>{t('details.altNames')}</div>
-            {altNames.map((alt) => {
-              const lang = languageLabel(alt.language)
-              return (
-                <div key={`${alt.language}-${alt.name}`} className={s.altNameRow}>
-                  <span className={s.altNameFlag} title={lang.label}>{lang.flag}</span>
-                  <span className={s.altNameText}>{alt.name}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+              <button
+                type="button"
+                className={s.desktopActionBtn}
+                onClick={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 7v10M12 12l4 4m0-8l-4 4" />
+                </svg>
+                {t('common.merge')}
+              </button>
+            </div>
 
-      {/* Franchise & Watch History Hub Bar */}
-      <FranchiseRelationsSection
-        relations={title.relations}
-        onOpenHistory={() => setShowHistory(true)}
-      />
+            <div className={s.desktopActionRow}>
+              <button
+                type="button"
+                className={clsx(s.desktopActionBtn, s.desktopActionBtnDanger)}
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                {t('common.delete')}
+              </button>
+            </div>
+          </div>
+
+          {/* Details card (fiche technique) */}
+          <div className={s.card}>
+            <div className={s.cardLabel}>{t('details.mediaDetails')}</div>
+            <div className={s.detailRow}>
+              <span className={s.detailKey}>{t('details.added')}</span>
+              <span className={s.detailVal}>{formatDate(title.created_at)}</span>
+            </div>
+            {title.last_watched_at && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.lastWatched')}</span>
+                <span className={s.detailVal}>{formatDate(title.last_watched_at)}</span>
+              </div>
+            )}
+            {formatWatchtime(title.total_watch_minutes) && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.watchTime')}</span>
+                <span className={s.detailVal}>{formatWatchtime(title.total_watch_minutes)}</span>
+              </div>
+            )}
+            <div className={s.detailRow}>
+              <span className={s.detailKey}>{t('details.lastRefreshed')}</span>
+              <span
+                className={s.detailVal}
+                title={title.last_refreshed_at ? formatDateTime(title.last_refreshed_at) : undefined}
+              >
+                {title.last_refreshed_at ? formatRelativeTime(title.last_refreshed_at) : t('details.never')}
+              </span>
+            </div>
+            {title.match_source && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.match')}</span>
+                <span className={s.detailVal}>{formatMatchSource(title.match_source)}</span>
+              </div>
+            )}
+            {(title.imdb_id || (title.tmdb_id != null && title.tmdb_id > 0) || (title.tvdb_id != null && title.tvdb_id > 0) || computeAniListUrl(title)) && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.sources')}</span>
+                <div className={s.externalLinksWrap}>
+                  {title.imdb_id && (
+                    <a
+                      href={`https://www.imdb.com/title/${title.imdb_id}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${s.extLinkBadge} ${s.extLinkImdb}`}
+                    >
+                      IMDb
+                    </a>
+                  )}
+                  {title.tmdb_id != null && title.tmdb_id > 0 && (
+                    <a
+                      href={`https://www.themoviedb.org/${title.type === 'movie' ? 'movie' : 'tv'}/${title.tmdb_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${s.extLinkBadge} ${s.extLinkTmdb}`}
+                    >
+                      TMDB
+                    </a>
+                  )}
+                  {title.tvdb_id != null && title.tvdb_id > 0 && (
+                    <a
+                      href={`https://thetvdb.com/dereferrer/${title.type === 'movie' ? 'movie' : 'series'}/${title.tvdb_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${s.extLinkBadge} ${s.extLinkTvdb}`}
+                    >
+                      TVDB
+                    </a>
+                  )}
+                  {computeAniListUrl(title) && (
+                    <a
+                      href={computeAniListUrl(title)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${s.extLinkBadge} ${s.extLinkAnilist}`}
+                    >
+                      AniList
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+            {getMatchingProviders(title.watch_providers).length > 0 && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.platforms')}</span>
+                <div className={s.externalLinksWrap}>
+                  <WatchProviderBadges providers={title.watch_providers} />
+                </div>
+              </div>
+            )}
+            <div className={clsx(s.detailRow, s.mobileOnlyArrRow)}>
+              <span className={s.detailKey}>{title.type === 'movie' ? 'Radarr' : 'Sonarr'}</span>
+              <span className={s.detailVal}>
+                {isSonarrDeleted ? (
+                  <div className={s.arrDeletedGroup}>
+                    <span className={s.sonarrDeletedBadge}>
+                      {t('details.sonarrDeletedBadge')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSonarrReaddConfirm(true)}
+                      className={`${s.arrAddBtn} ${s.sonarrReaddBtn}`}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                      </svg>
+                      {t('details.readdToSonarr')}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowArrPush(true)}
+                    className={`${s.arrAddBtn} ${title.type === 'movie' ? s.radarrBtn : s.sonarrBtn}`}
+                  >
+                    {title.radarr_id != null || title.sonarr_id != null ? (
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        {t('details.manageInArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
+                      </>
+                    ) : (
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        {t('details.sendToArr', { app: title.type === 'movie' ? 'Radarr' : 'Sonarr' })}
+                      </>
+                    )}
+                  </button>
+                )}
+              </span>
+            </div>
+            {title.original_title && title.original_title !== name && (
+              <div className={s.detailRow}>
+                <span className={s.detailKey}>{t('details.originalTitle')}</span>
+                <span className={s.detailVal}>{title.original_title}</span>
+              </div>
+            )}
+            {altNames.length > 0 && (
+              <div className={s.altNames}>
+                <div className={s.altNamesLabel}>{t('details.altNames')}</div>
+                {altNames.map((alt) => {
+                  const lang = languageLabel(alt.language)
+                  return (
+                    <div key={`${alt.language}-${alt.name}`} className={s.altNameRow}>
+                      <span className={s.altNameFlag} title={lang.label}>{lang.flag}</span>
+                      <span className={s.altNameText}>{alt.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Personal Notes */}
+          <PersonalNotesCard
+            titleId={title.id}
+            initialNotes={title.personal_notes}
+            onSaved={(notes) => setData((prev) => (prev ? { ...prev, personal_notes: notes } : prev))}
+          />
+        </aside>
+
+        {/* Right column (Desktop: identity header, hero, ratings, synopsis, seasons & episodes, cast, franchise) */}
+        <div className={s.mainCol}>
+          {/* Identity zone */}
+          <div className={s.identity}>
+            {/* Tablet-only authentic 2:3 poster (640px - 1023px) */}
+            <div className={s.tabletPosterWrap}>
+              <CoverImage
+                coverUrl={title.cover_url}
+                type={title.type}
+                is_anime={title.is_anime}
+                className={s.tabletPoster}
+                iconSize="36px"
+              />
+            </div>
+
+            <div className={s.identityInfo}>
+              <div className={s.identityTitle}>{name}</div>
+              <div className={s.identityMeta}>{metaParts.join(' · ')}</div>
+              {genres && genres.length > 0 && (
+                <div className={s.genrePills}>
+                  {genres.map((g) => <span key={g} className={s.genrePill}>{g}</span>)}
+                </div>
+              )}
+              <div style={{ marginTop: '12px' }}>
+                <StatusBadge status={title.status} caughtUp={title.caught_up} />
+              </div>
+            </div>
+          </div>
+
+          {/* Hero & Rating Action Row */}
+          <div className={s.actionRow}>
+            {/* Next Episode Hero Button & Binge Estimator */}
+            <NextEpisodeHero
+              title={title}
+              onEpisodeToggle={handleEpisodeToggle}
+              onStatusChange={(status) => handleSaveEdit({ status })}
+            />
+
+            {/* Ratings card */}
+            <div className={clsx(s.card, s.ratingsCard)}>
+              {title.my_rating != null && title.my_rating > 0 ? (
+                /* State B: Already Rated (Clean display + Edit action) */
+                <div className={s.ratingHeaderRow}>
+                  <div className={s.ratedScoreGroup}>
+                    <span className={s.statLabelTerminal}>{t('details.myRating')}</span>
+                    <span className={s.myRating}>{title.my_rating}</span>
+                    <span className={s.myRatingSuffix}>/10</span>
+                  </div>
+                  <div className={s.ratedActionsGroup}>
+                    <div className={s.extRatings}>
+                      {title.tmdb_rating != null && (
+                        <div className={s.extItem}>
+                          <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
+                          <div className={s.extSource}>TMDB</div>
+                        </div>
+                      )}
+                      {title.anilist_rating != null && (
+                        <div className={s.extItem}>
+                          <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
+                          <div className={s.extSource}>AniList</div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={s.btnEditRating}
+                      onClick={() => setShowRating(true)}
+                    >
+                      {t('details.editRating')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* State A: Unrated (Direct 1-to-10 1-tap strip) */
+                <div>
+                  <div className={s.ratingHeaderRow} style={{ marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={s.statLabelTerminal}>{t('details.rateThisTitle')}</span>
+                      <span className={s.noRating}>{t('details.notRated')}</span>
+                    </div>
+                    <div className={s.extRatings}>
+                      {title.tmdb_rating != null && (
+                        <div className={s.extItem}>
+                          <div className={`${s.extScore} ${s.tmdbColor}`}>{title.tmdb_rating.toFixed(1)}</div>
+                          <div className={s.extSource}>TMDB</div>
+                        </div>
+                      )}
+                      {title.anilist_rating != null && (
+                        <div className={s.extItem}>
+                          <div className={`${s.extScore} ${s.anilistColor}`}>{title.anilist_rating}%</div>
+                          <div className={s.extSource}>AniList</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className={s.rateStrip}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        className={s.rateBtn}
+                        onClick={() => handleSaveRating(val)}
+                        aria-label={t('ratingPrompt.rateValueAria', { val })}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Synopsis card */}
+          {title.overview && (
+            <div className={s.card}>
+              <div className={s.cardLabel}>{t('details.overview')}</div>
+              <div className={`${s.synopsisText} ${!synopsisExpanded ? s.synopsisClamped : ''}`}>
+                {title.overview}
+              </div>
+              <button className={s.synopsisToggle} onClick={() => setSynopsisExpanded(!synopsisExpanded)}>
+                {synopsisExpanded ? t('details.showLess') : t('details.showMore')}
+              </button>
+            </div>
+          )}
+
+          {/* Hub Saisons & Épisodes (Elevated on desktop right after synopsis) */}
+          {/* Progress bar (series/anime) */}
+          {current && title.type !== 'movie' && (
+            <div className={s.progressWrap}>
+              <div className={s.progressTrack}>
+                <div className={s.progressBar} style={{ width: `${pct}%` }} />
+              </div>
+              <div className={s.progressHeaderRow}>
+                <div className={s.progressLabel}>
+                  {t('details.seasonProgress', { season: current.season_number, watched, total })}
+                </div>
+                <button
+                  type="button"
+                  className={clsx(s.seasonBatchToggle, isAllSeasonWatched && s.seasonBatchToggleWatched)}
+                  onClick={handleSeasonToggleAll}
+                  title={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                  aria-label={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                >
+                  <span className={s.seasonBatchLabel}>
+                    {isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                  </span>
+                  <span className={s.seasonBatchBox}>
+                    {isAllSeasonWatched ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                        <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
+                      </svg>
+                    ) : (
+                      <div className={s.seasonBatchEmpty} />
+                    )}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Season tabs */}
+          {sortedSeasons.length > 1 && (
+            <div className={s.seasonTabs}>
+              {sortedSeasons.map((ss) => (
+                <SeasonTab
+                  key={ss.id}
+                  season={ss}
+                  active={ss.id === current?.id}
+                  onClick={() => setActiveSeason(ss.season_number)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* AniList strip for the active season */}
+          {current && title.type !== 'movie' && title.is_anime && (
+            <SeasonAniListStrip
+              season={current}
+              onEdit={() => setRematchSeasonID(current.id)}
+            />
+          )}
+
+          {/* Episode list */}
+          {current && (
+            <div className={s.episodeList}>
+              {[...(current.episodes ?? [])]
+                .sort((a, b) => a.episode - b.episode)
+                .map((ep) => (
+                  <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
+                ))}
+
+              {/* Side stories for the active season */}
+              {activeSeasonSideStories.length > 0 && (
+                <SeasonSideStories
+                  seasonNumber={current.season_number}
+                  sideStories={activeSeasonSideStories}
+                  onToggleWatched={handleToggleSideStoryWatched}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Cast & Crew card */}
+          {credits && credits.length > 0 && (
+            <div className={s.card}>
+              <div className={s.cardLabel}>{t('details.castCrew')}</div>
+              <div className={s.castList}>
+                {credits.map((c) => (
+                  <div key={`${c.name}-${c.role}`} className={s.castEntry}>
+                    <button
+                      type="button"
+                      className={s.castPerson}
+                      onClick={() => route(routeTo.person(c.name))}
+                    >
+                      {c.name}
+                    </button>
+                    <span className={s.castRole}>{c.role}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Franchise & Watch History Hub Bar */}
+          <FranchiseRelationsSection
+            relations={title.relations}
+            onOpenHistory={() => setShowHistory(true)}
+          />
+        </div>
+      </div>
 
       {/* Watch history bottom sheet drawer */}
       {showHistory && (
@@ -653,93 +904,19 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         </BottomSheet>
       )}
 
-      {/* Progress bar (series/anime) */}
-      {current && title.type !== 'movie' && (
-        <div className={s.progressWrap}>
-          <div className={s.progressTrack}>
-            <div className={s.progressBar} style={{ width: `${pct}%` }} />
-          </div>
-          <div className={s.progressHeaderRow}>
-            <div className={s.progressLabel}>
-              {t('details.seasonProgress', { season: current.season_number, watched, total })}
-            </div>
-            <button
-              type="button"
-              className={clsx(s.seasonBatchToggle, isAllSeasonWatched && s.seasonBatchToggleWatched)}
-              onClick={handleSeasonToggleAll}
-              title={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
-              aria-label={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
-            >
-              <span className={s.seasonBatchLabel}>
-                {isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
-              </span>
-              <span className={s.seasonBatchBox}>
-                {isAllSeasonWatched ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
-                    <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
-                  </svg>
-                ) : (
-                  <div className={s.seasonBatchEmpty} />
-                )}
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Season tabs */}
-      {sortedSeasons.length > 1 && (
-        <div className={s.seasonTabs}>
-          {sortedSeasons.map((ss) => (
-            <SeasonTab
-              key={ss.id}
-              season={ss}
-              active={ss.id === current?.id}
-              onClick={() => setActiveSeason(ss.season_number)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* AniList strip for the active season */}
-      {current && title.type !== 'movie' && title.is_anime && (
-        <SeasonAniListStrip
-          season={current}
-          onEdit={() => setRematchSeasonID(current.id)}
+      {/* Action drawer (mobile-only, hidden on desktop via CSS) */}
+      <div className={s.mobileActionDrawerWrap}>
+        <ActionDrawer
+          title={title}
+          onRate={() => setShowRating(true)}
+          onEdit={() => setShowEdit(true)}
+          onRematch={() => setShowRematch(true)}
+          onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
+          onRefresh={handleRefresh}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onOpenChange={setDrawerOpen}
         />
-      )}
-
-      {/* Episode list */}
-      {current && (
-        <div className={s.episodeList}>
-          {[...(current.episodes ?? [])]
-            .sort((a, b) => a.episode - b.episode)
-            .map((ep) => (
-              <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
-            ))}
-
-          {/* Side stories for the active season */}
-          {activeSeasonSideStories.length > 0 && (
-            <SeasonSideStories
-              seasonNumber={current.season_number}
-              sideStories={activeSeasonSideStories}
-              onToggleWatched={handleToggleSideStoryWatched}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Action drawer */}
-      <ActionDrawer
-        title={title}
-        onRate={() => setShowRating(true)}
-        onEdit={() => setShowEdit(true)}
-        onRematch={() => setShowRematch(true)}
-        onMerge={() => route(`/search?mergeSourceId=${title.id}&mergeSourceName=${encodeURIComponent(name)}`)}
-        onRefresh={handleRefresh}
-        onDelete={() => setShowDeleteConfirm(true)}
-        onOpenChange={setDrawerOpen}
-      />
+      </div>
 
       <ConfirmationDrawer
         open={showDeleteConfirm}

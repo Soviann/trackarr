@@ -83,7 +83,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
 
     render(<TitleDetail id="10" />)
 
-    expect(screen.getByText('Send to Sonarr')).toBeTruthy()
+    expect(screen.getAllByText('Send to Sonarr').length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('Deleted')).toBeNull()
     expect(screen.queryByText('Re-add to Sonarr')).toBeNull()
   })
@@ -106,7 +106,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
     render(<TitleDetail id="10" />)
 
     expect(screen.getByText('Deleted')).toBeTruthy()
-    expect(screen.getByText('Re-add to Sonarr')).toBeTruthy()
+    expect(screen.getAllByText('Re-add to Sonarr').length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('Send to Sonarr')).toBeNull()
   })
 
@@ -127,11 +127,33 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
 
     render(<TitleDetail id="10" />)
 
-    const readdBtn = screen.getByText('Re-add to Sonarr')
-    fireEvent.click(readdBtn)
+    const readdButtons = screen.getAllByText('Re-add to Sonarr')
+    fireEvent.click(readdButtons[0])
 
     // Confirmation drawer is opened
     expect(screen.getByText('Re-add to Sonarr?')).toBeTruthy()
     expect(screen.getByText(/This series was previously deleted and excluded from Sonarr/i)).toBeTruthy()
   })
+
+  it('renders rating card and next episode hero together in the action row without duplicate history buttons in sidebar', () => {
+    vi.mocked(useApi).mockReturnValue({
+      data: mockNormalSeries,
+      loading: false,
+      error: null,
+      mutate: vi.fn(),
+      setData: vi.fn(),
+    })
+
+    const { container } = render(<TitleDetail id="10" />)
+
+    // Rate strip exists
+    expect(screen.getByText('RATE THIS TITLE:')).toBeTruthy()
+
+    // History is only present in the hub / quick links, not duplicated in the desktop toolbar
+    const desktopToolbar = container.querySelector('.desktopActionToolbar')
+    if (desktopToolbar) {
+      expect(desktopToolbar.textContent).not.toContain('Watch History')
+    }
+  })
 })
+

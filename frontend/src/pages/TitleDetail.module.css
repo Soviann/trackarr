@@ -29,6 +29,11 @@
   color: var(--ink);
 }
 
+/* Atmospheric backdrop bleed for wide/desktop screens */
+.backdrop {
+  display: none;
+}
+
 /* Hero — pure spacer that holds the back button; cover bg shows through .page */
 .hero {
   position: relative;
@@ -57,6 +62,22 @@
   margin-top: -90px;
   position: relative;
   z-index: 2;
+}
+
+/* Desktop poster card container (hidden on mobile) */
+.desktopPosterWrap {
+  display: none;
+}
+
+.desktopPoster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.identityInfo {
+  display: contents;
 }
 
 .identityTitle {
@@ -566,5 +587,406 @@
 
 .sonarrReaddBtn:hover {
   background: color-mix(in srgb, var(--brand-sonarr) 35%, transparent);
+}
+
+/* Desktop Action Toolbar */
+.desktopActionToolbar {
+  display: none;
+}
+
+.mobileOnlyArrRow {
+  display: flex;
+}
+
+.mobileActionDrawerWrap {
+  display: block;
+}
+
+.layoutContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarCol {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainCol {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.actionRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.ratingsCard {
+  margin-top: 12px;
+}
+
+.tabletPosterWrap {
+  display: none;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    background: var(--bg);
+  }
+
+  .backdrop {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 380px;
+    background: var(--cover-bg, none) center 25% / cover no-repeat;
+    filter: blur(50px);
+    opacity: 0.22;
+    transform: translateZ(0);
+    mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero {
+    height: auto;
+    padding: var(--space-lg) var(--space-lg) var(--space-sm);
+    position: relative;
+    z-index: 2;
+  }
+
+  .backBtn {
+    position: static;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    width: 34px;
+    height: 34px;
+    transition: all 0.15s ease;
+  }
+
+  .backBtn:hover {
+    background: var(--bg-elev2);
+    border-color: var(--border-strong);
+  }
+
+  .identity {
+    margin-top: var(--space-md);
+    padding: 0 var(--space-lg) var(--space-md);
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+  }
+
+  .tabletPosterWrap {
+    display: block;
+    width: 130px;
+    flex-shrink: 0;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius-poster, 10px);
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+  }
+
+  .tabletPoster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .identityInfo {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .identityTitle {
+    font-size: 32px;
+    line-height: 1.15;
+    text-shadow: none;
+  }
+
+  .identityMeta {
+    text-shadow: none;
+  }
+}
+
+/* Studio Sidebar Layout (Desktop >= 1024px) */
+@media (min-width: 1024px) {
+  .page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+    background: var(--bg);
+  }
+
+  .tabletPosterWrap {
+    display: none;
+  }
+
+  .backdrop {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 520px;
+    background: var(--cover-bg, none) center 20% / cover no-repeat;
+    filter: blur(55px);
+    opacity: 0.18;
+    transform: translateZ(0);
+    will-change: transform;
+    mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero {
+    height: auto;
+    padding: var(--space-xl) var(--space-xl) var(--space-md);
+    position: relative;
+    z-index: 2;
+  }
+
+  .backBtn {
+    position: static;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    width: 36px;
+    height: 36px;
+    transition: all 0.15s ease;
+  }
+
+  .backBtn:hover {
+    background: var(--bg-elev2);
+    border-color: var(--border-strong);
+  }
+
+  /* Two-column layout grid: 300px sidebar, flexible right content column up to 1440px */
+  .layoutContainer {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+    padding: 0 var(--space-xl);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Left column: Sticky 300px */
+  .sidebarCol {
+    order: 1;
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Left column cards adapt: margin 0 */
+  .sidebarCol .card {
+    margin: 0;
+  }
+
+  /* Desktop poster card */
+  .desktopPosterWrap {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius-poster, 12px);
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+  }
+
+  /* Desktop Quick Action Toolbar */
+  .desktopActionToolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 12px;
+  }
+
+  .desktopActionRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .desktopActionBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 12px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    font-family: var(--font-sans);
+    color: var(--ink);
+    background: var(--bg-elev2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .desktopActionBtn:hover:not(:disabled) {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+    border-color: var(--border-strong, #475569);
+    color: #fff;
+  }
+
+  .desktopActionBtnDisabled,
+  .desktopActionBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .desktopActionBtnPrimary {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  .desktopActionBtnPrimary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .desktopActionBtnArr {
+    background: color-mix(in srgb, var(--brand-sonarr, #00c49f) 15%, transparent);
+    color: var(--brand-sonarr, #00c49f);
+    border-color: color-mix(in srgb, var(--brand-sonarr, #00c49f) 35%, transparent);
+  }
+
+  .desktopActionBtnArr:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--brand-sonarr, #00c49f) 25%, transparent);
+  }
+
+  .desktopActionBtnDanger {
+    background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+    color: var(--danger, #ef4444);
+    border-color: color-mix(in srgb, var(--danger, #ef4444) 30%, transparent);
+  }
+
+  .desktopActionBtnDanger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger, #ef4444) 22%, transparent);
+  }
+
+  .mobileOnlyArrRow {
+    display: none;
+  }
+
+  /* Right column: Main content */
+  .mainCol {
+    order: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .mainCol .card {
+    margin: 0;
+  }
+
+  .actionRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .ratingsCard {
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .ratingsCard:only-child {
+    grid-column: 1 / -1;
+    max-width: 520px;
+  }
+
+  .mainCol .rateStrip {
+    max-width: none;
+    gap: 6px;
+  }
+
+  .mainCol .rateBtn {
+    max-width: 44px;
+    max-height: 44px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  .mainCol .identity {
+    margin-top: 0;
+    padding: 0;
+  }
+
+  .identityInfo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .identityTitle {
+    font-size: 34px;
+    line-height: 1.15;
+    text-shadow: none;
+  }
+
+  .identityMeta {
+    font-size: var(--font-size-sm);
+    text-shadow: none;
+    margin-top: 8px;
+  }
+
+  /* In mainCol, progressWrap and seasonTabs align seamlessly */
+  .mainCol .progressWrap {
+    margin: 0;
+  }
+
+  .mainCol .seasonTabs {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide mobile action drawer on desktop */
+  .mobileActionDrawerWrap {
+    display: none;
+  }
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
