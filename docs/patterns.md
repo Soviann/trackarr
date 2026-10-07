@@ -282,7 +282,7 @@
 | `/search` | `Search` | `pages/Search.tsx` |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` |
-| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` |
+| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` |
 | `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` |
 | `/login` | `Login` | `pages/Login.tsx` |

@@ -106,6 +106,35 @@
   cursor: not-allowed;
 }
 
+@media (min-width: 1024px) {
+  .container {
+    margin: 0;
+    height: 100%;
+  }
+
+  .heroCard {
+    height: 100%;
+    box-sizing: border-box;
+    justify-content: space-between;
+    padding: 14px 18px;
+    margin: 0;
+  }
+
+  .planCard {
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+  }
+
+  .markBtn {
+    width: auto;
+    align-self: flex-start;
+    padding: 9px 18px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+}
+
 .planCard {
   background: var(--surface-translucent, rgba(26, 29, 36, 0.7));
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));

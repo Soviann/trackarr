@@ -6,6 +6,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.24.0] — 2026-10-07
+
+### Ajouté
+- **Refonte desktop de la fiche titre (« Studio Sidebar »)** : Nouvelle ergonomie en 2 colonnes asymétriques pour les écrans larges (`>= 1024px`) avec :
+  - Colonne latérale gauche (300px sticky) : affiche verticale respectant son ratio authentique 2:3 (`<CoverImage />`), barre d'actions rapides desktop (Éditer, Actualiser TMDB, Gérer Sonarr/Radarr, Relier/Rematch, Fusionner, Supprimer), fiche technique et notes personnelles.
+  - Colonne principale droite (jusqu'à 1440px) : en-tête d'identité du titre, rangée d'actions ergonomique côte-à-côte associant le bandeau de visionnage (`NextEpisodeHero`) et la carte de notation directe (1 à 10 ou note existante), synopsis, hub des saisons et épisodes élevé directement sous le synopsis pour les séries, distribution et relations de franchise.
+  - Disposition intermédiaire tablette portrait (`640px` à `1023px`) : intégration harmonieuse d'une affiche verticale dédiée (130px) dans la zone d'identité du titre avec alignement typographique.
+  - Masquage sur grand écran du tiroir rétractable mobile (`ActionDrawer`) au profit de la barre d'outils desktop, avec préservation stricte à 100% du parcours mobile existant.
+- **Transformation responsive des BottomSheets en modales centrées sur grand écran** :
+  - Sur écrans `>= 768px`, les tiroirs coulissants (`BottomSheet`) se transforment en fenêtres de dialogue modales centrées (`max-width: 480px`, coins arrondis, bordure et ombre élévée), évitant l'étalement à 100% de la largeur d'écran.
+  - Encadrement à 600px max et centrage horizontal du tiroir d'actions mobile (`ActionDrawer`) sur les formats tablettes intermédiaires.
+
 ## [v1.23.1] — 2026-10-05
 
 ### Corrigé
