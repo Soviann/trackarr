@@ -16,6 +16,10 @@
 ## 📸 Showcase
 
 <div align="center">
+  <video src="docs/assets/trackarr-preview.mp4" poster="docs/assets/trackarr-preview.jpg" controls width="100%">
+    <a href="docs/assets/trackarr-preview.mp4">▶ Watch the Trackarr Overview Video</a>
+  </video>
+  <br /><br />
   <table>
     <tr>
       <td align="center" width="33%">
