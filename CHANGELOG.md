@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Composant d'en-tête unifié `<AdminHeader>`** : En-tête réutilisable et sticky pour les pages d'administration avec bouton de retour circulaire (34px), navigation déterministe, titre, et slot d'actions personnalisées.
+
+### Modifié
+- **Standardisation de la largeur des conteneurs d'administration** : Normalisation à `max-width: 840px; margin: 0 auto;` sur AniList, Jellyfin, Notifications et Authentification, corrigeant l'étirement à 100vw sur moniteurs larges.
+
 ## [v1.24.2] — 2026-10-08
 
 ### Corrigé

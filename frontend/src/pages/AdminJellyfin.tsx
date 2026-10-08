@@ -1,11 +1,12 @@
+import type { JSX } from 'preact'
 import { useApi } from '../hooks/useApi'
-import { colors } from '../theme'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { AdminHeader } from '../components/AdminHeader'
 import { formatDateTime24h } from '../utils'
 import type { Settings } from '../types'
 import s from './AdminJellyfin.module.css'
 
-export function AdminJellyfin({ path }: { path?: string }) {
+export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
   const { data: settings, mutate: refetch } = useApi<Settings>('/settings')
 
   const configured = settings?.jellyfin_configured === true
@@ -16,14 +17,7 @@ export function AdminJellyfin({ path }: { path?: string }) {
   return (
     <PullToRefresh onRefresh={refetch}>
       <div className={s.page}>
-        <div className={s.header}>
-          <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-            </svg>
-          </button>
-          <h1 className={s.title}>Jellyfin</h1>
-        </div>
+        <AdminHeader title="Jellyfin" />
 
         {!settings && <div className={s.loading}>Loading...</div>}
 

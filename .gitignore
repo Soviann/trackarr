@@ -49,6 +49,7 @@ docs/mockups/
 
 # Audits — working notes, never committed
 docs/audits/
+docs/ROADMAP.md
 .impeccable/
 
 # Playwright MCP

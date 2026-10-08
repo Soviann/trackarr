@@ -215,6 +215,7 @@
 | Component | File | Purpose |
 |---|---|---|
 | `Navbar` | `components/Navbar.tsx` | 5-tab bottom navigation bar (`Collection`, `Explore`, `Calendar`, `Stats`, `Admin`) with localized labels, safe-area hit targets, and accessible ARIA attributes |
+| `AdminHeader` | `components/AdminHeader.tsx` | Reusable sticky header for admin pages with 34px circular back button, deterministic navigation, title, optional badge slot, and action children slot |
 | `Sidebar` | `components/Sidebar.tsx` | Desktop collapsible lateral navigation sidebar (≥ 1024px) with Trackarr branding, vertical navigation tabs, active state indicators, and collapse/expand toggle |
 | `navItems` | `components/navItems.tsx` | 5-tab definitions (`navTabs`), SVG icons, and contextual active tab routing (`getActiveTab`) |
 | `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |

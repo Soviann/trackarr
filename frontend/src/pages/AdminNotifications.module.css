@@ -1,32 +1,7 @@
 .page {
+  max-width: 840px;
+  margin: 0 auto;
   padding: var(--space-lg) var(--space-lg) 36px;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-}
-
-.backBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  border-radius: 50%;
-  padding: 0;
-}
-
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0;
 }
 
 .loading {
