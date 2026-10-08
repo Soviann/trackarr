@@ -292,7 +292,7 @@
 | `/admin` | `Admin` | `pages/Admin.tsx` |
 | `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` |
 | `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` |
-| `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` |
+| `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` |
 | `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` |
 | `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` |
