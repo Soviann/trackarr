@@ -648,6 +648,7 @@ export const en = {
     part: 'Part {num}',
     viewOnAniList: 'View on AniList',
     editMappingAria: 'Edit AniList mapping',
+    addPart: '+ Part',
   },
 }
 

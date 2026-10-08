@@ -21,10 +21,10 @@ Database table: `title_relations` (Migration 042, PK: `id`, Unique: `title_id, p
 
 ## AniList Season Chain Traversal
 `AniListClient.ResolveSeasonChain(ctx, id)` resolves the root franchise series by traversing `PREQUEL` edges:
-- **Formats**: `TV` and `ONA` entries increment the season ordinal counter. `MOVIE`, `OVA`, and `SPECIAL` are traversed without incrementing ordinal.
+- **Formats**: `TV` and `ONA` entries increment the season ordinal counter unless they are detected as consecutive parts/cours of the same season (`isSameSeasonContinuation`, e.g. *Part 2*, *Cour 2*, *Part II*). `MOVIE`, `OVA`, and `SPECIAL` are traversed without incrementing ordinal.
 - **Edge Selection**: `pickPrequel` prefers `TV` > `ONA` > other `ANIME` edges.
 - **Guards**: Cycle detector fails on revisited node; maximum traversal depth is capped at 25 (`maxChainDepth`).
-- **Return Type**: `SeasonChain{RootID, RootTitle, SeasonNumber, IsRoot, RootIsSeries}`.
+- **Return Type**: `SeasonChain{RootID, RootTitle, SeasonNumber, PartNumber, IsRoot, RootIsSeries}`.
 
 ## Season Auto-Attach Matrix (`decideSeasonAction`)
 Pure function in `internal/service/taskqueue.go`:

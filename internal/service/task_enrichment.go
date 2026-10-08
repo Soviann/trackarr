@@ -345,6 +345,9 @@ func (w *TaskQueueWorker) attachSeason(ctx context.Context, payload EnrichmentPa
 	}
 
 	detail := fmt.Sprintf("%q attached as Season %d of %q", sourceName, chain.SeasonNumber, parentName)
+	if chain.PartNumber > 1 {
+		detail = fmt.Sprintf("%q attached as Season %d Part %d of %q", sourceName, chain.SeasonNumber, chain.PartNumber, parentName)
+	}
 	if err := database.WithTxContext(ctx, w.writeDB, func(tx *sql.Tx) error {
 		return repository.NewMatchEventWriter(tx).Create(ctx, parentID, model.MatchEventSeasonAttached, detail)
 	}); err != nil {

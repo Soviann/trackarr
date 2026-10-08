@@ -53,6 +53,7 @@ export function SeasonAniListStrip({ season, entryName, onEdit }: SeasonAniListS
           </span>
         ))}
       </div>
+      <button type="button" className={s.partButton} onClick={onEdit}>{t('seasonAniListStrip.addPart')}</button>
       <button type="button" className={s.editButton} onClick={onEdit} aria-label={t('seasonAniListStrip.editMappingAria')}>✎</button>
     </div>
   )

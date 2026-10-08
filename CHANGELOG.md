@@ -6,7 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
-## [v1.24.0] — 2026-10-07
+### Corrigé
+- **Résolution des saisons anime multi-parties sur AniList (#84)** :
+  - Détection automatique des split-cours / parties successives d'une même saison (`Part 2`, `Cour 2`, `Part II`, etc.) lors du parcours des relations `PREQUEL` dans `ResolveSeasonChain`.
+  - Évite le gonflement erroné du numéro de saison (ex. *Mushoku Tensei* ou *Moi, quand je me réincarne en Slime* comptabilisés en saison 6 au lieu de la saison 3 partie 2).
+  - Ajout d'un bouton explicite « + Part » (« + Partie ») sur le bandeau `SeasonAniListStrip` pour associer directement une nouvelle partie AniList à la saison sélectionnée.
+
 
 ### Ajouté
 - **Refonte desktop de la fiche titre (« Studio Sidebar »)** : Nouvelle ergonomie en 2 colonnes asymétriques pour les écrans larges (`>= 1024px`) avec :

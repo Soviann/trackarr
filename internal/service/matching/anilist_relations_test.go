@@ -381,3 +381,93 @@ func TestGetFranchiseRelations(t *testing.T) {
 	assert.Equal(t, "OVA", nodes[1].Format)
 	assert.Equal(t, "Training of the Dead", nodes[1].Title)
 }
+
+func TestParseSeasonAndPart(t *testing.T) {
+	tests := []struct {
+		name       string
+		title      string
+		wantSeason int
+		wantPart   int
+	}{
+		{"standard season 1", "Mushoku Tensei: Jobless Reincarnation", 0, 0},
+		{"part 2 split cour", "Mushoku Tensei: Jobless Reincarnation Part 2", 0, 2},
+		{"roman season with part", "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", 2, 2},
+		{"roman numeral title", "Mushoku Tensei II: Isekai Ittara Honki Dasu", 2, 0},
+		{"slime season 3 part 2", "That Time I Got Reincarnated as a Slime Season 3 Part 2", 3, 2},
+		{"cour notation", "Bleach: Thousand-Year Blood War - The Conflict (Cour 3)", 0, 3},
+		{"ordinal cour", "Spy x Family 2nd Cour", 0, 2},
+		{"ordinal season", "Attack on Titan 3rd Season", 3, 0},
+		{"roman part", "Attack on Titan The Final Season Part II", 0, 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := parseSeasonAndPart(tt.title)
+			assert.Equal(t, tt.wantSeason, info.season, "season mismatch")
+			assert.Equal(t, tt.wantPart, info.part, "part mismatch")
+		})
+	}
+}
+
+// TestResolveSeasonChain_MultiPartSplitCours verifies that split-cour multi-part anime
+// (such as Mushoku Tensei, Slime, Attack on Titan) do not inflate the season count.
+func TestResolveSeasonChain_MultiPartSplitCours(t *testing.T) {
+	// Mushoku Tensei chain:
+	// S1 P1 (108465) -> S1 P2 (127720) -> S2 P1 (146065) -> S2 P2 (166873) -> S3 P1 (178789) -> S3 P2 (217434)
+	mtS1P1 := makeTV(108465, "Mushoku Tensei: Jobless Reincarnation")
+	mtS1P2 := makeTV(127720, "Mushoku Tensei: Jobless Reincarnation Part 2", prequelEdge{108465, "TV"})
+	mtS2P1 := makeTV(146065, "Mushoku Tensei: Jobless Reincarnation Season 2", prequelEdge{127720, "TV"})
+	mtS2P2 := makeTV(166873, "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2", prequelEdge{146065, "TV"})
+	mtS3P1 := makeTV(178789, "Mushoku Tensei: Jobless Reincarnation Season 3", prequelEdge{166873, "TV"})
+	mtS3P2 := makeTV(217434, "Mushoku Tensei: Jobless Reincarnation Season 3 Part 2", prequelEdge{178789, "TV"})
+
+	stubs := relationStub{
+		108465: mtS1P1,
+		127720: mtS1P2,
+		146065: mtS2P1,
+		166873: mtS2P2,
+		178789: mtS3P1,
+		217434: mtS3P2,
+	}
+	client := newRelationsTestServer(t, stubs)
+
+	t.Run("mushoku_s1_part2", func(t *testing.T) {
+		chain, err := client.ResolveSeasonChain(context.Background(), 127720)
+		require.NoError(t, err)
+		assert.Equal(t, int64(108465), chain.RootID)
+		assert.Equal(t, 1, chain.SeasonNumber)
+		assert.Equal(t, 2, chain.PartNumber)
+	})
+
+	t.Run("mushoku_s2_part1", func(t *testing.T) {
+		chain, err := client.ResolveSeasonChain(context.Background(), 146065)
+		require.NoError(t, err)
+		assert.Equal(t, int64(108465), chain.RootID)
+		assert.Equal(t, 2, chain.SeasonNumber)
+		assert.Equal(t, 1, chain.PartNumber)
+	})
+
+	t.Run("mushoku_s2_part2", func(t *testing.T) {
+		chain, err := client.ResolveSeasonChain(context.Background(), 166873)
+		require.NoError(t, err)
+		assert.Equal(t, int64(108465), chain.RootID)
+		assert.Equal(t, 2, chain.SeasonNumber)
+		assert.Equal(t, 2, chain.PartNumber)
+	})
+
+	t.Run("mushoku_s3_part1", func(t *testing.T) {
+		chain, err := client.ResolveSeasonChain(context.Background(), 178789)
+		require.NoError(t, err)
+		assert.Equal(t, int64(108465), chain.RootID)
+		assert.Equal(t, 3, chain.SeasonNumber)
+		assert.Equal(t, 1, chain.PartNumber)
+	})
+
+	t.Run("mushoku_s3_part2_must_not_inflate_to_season_6", func(t *testing.T) {
+		chain, err := client.ResolveSeasonChain(context.Background(), 217434)
+		require.NoError(t, err)
+		assert.Equal(t, int64(108465), chain.RootID)
+		assert.Equal(t, 3, chain.SeasonNumber)
+		assert.Equal(t, 2, chain.PartNumber)
+	})
+}

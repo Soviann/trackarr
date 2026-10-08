@@ -650,5 +650,6 @@ export const fr: TranslationSchema = {
     part: 'Partie {num}',
     viewOnAniList: 'Voir sur AniList',
     editMappingAria: 'Modifier l’association AniList',
+    addPart: '+ Partie',
   },
 }
