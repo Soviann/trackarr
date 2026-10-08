@@ -49,12 +49,12 @@ export function CoverImage({
   }
 
   return (
-    <div
+    <CoverPlaceholder
+      type={type}
+      is_anime={is_anime}
+      iconSize={iconSize}
       className={className}
       onClick={onClick}
-      style={{ position: 'relative', overflow: 'hidden' }}
-    >
-      <CoverPlaceholder type={type} is_anime={is_anime} iconSize={iconSize} />
-    </div>
+    />
   )
 }

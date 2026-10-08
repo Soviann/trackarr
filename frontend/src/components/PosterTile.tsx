@@ -62,7 +62,13 @@ export function PosterTile({ item }: Props) {
       onKeyDown={e => e.key === 'Enter' && go()}
     >
       <div className={s.poster}>
-        <CoverImage coverUrl={item.cover_url} type={item.type} is_anime={item.is_anime} alt="" />
+        <CoverImage
+          coverUrl={item.cover_url}
+          type={item.type}
+          is_anime={item.is_anime}
+          alt=""
+          className={s.coverImage}
+        />
         <div className={s.badges}>
           <TypeBadge type={item.type} size="sm" radarrId={item.radarr_id} sonarrId={item.sonarr_id} />
           <WatchProviderBadges providers={providers} />

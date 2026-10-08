@@ -10,9 +10,8 @@
 
 .poster {
   aspect-ratio: 2/3;
-  display: flex;
-  align-items: flex-end;
   position: relative;
+  overflow: hidden;
 }
 
 .coverImage {
@@ -47,7 +46,10 @@
 }
 
 .labelOverlay {
-  width: 100%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 6px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
   z-index: 1;
