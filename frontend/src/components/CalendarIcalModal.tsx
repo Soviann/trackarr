@@ -41,8 +41,14 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
         onClose()
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyDown)
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('keydown', handleKeyDown)
+        }
+      }
+    }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
