@@ -11,6 +11,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ### Modifié
 - **Standardisation de la largeur des conteneurs d'administration** : Normalisation à `max-width: 840px; margin: 0 auto;` sur AniList, Jellyfin, Notifications et Authentification, corrigeant l'étirement à 100vw sur moniteurs larges.
+- **Refonte desktop complète de la page Arr Stack (`/admin/arr`)** :
+  - Suppression définitive du tiroir d'actions fixe en bas d'écran (`.actionDrawer`) et de l'espacement artificiel (`.bottomPad`).
+  - Intégration de l'en-tête unifié sticky `<AdminHeader>` avec bouton d'enregistrement persistant.
+  - Rapatriement de la configuration des connexions (URLs, clés API, tests de connectivité en direct et badges de statut) pour Radarr, Sonarr et Prowlarr en tête de page.
+  - Nouvelle grille responsive en 2 colonnes sur écran large (`>= 768px`) : colonne 1 pour Radarr (Standard & Animé) et colonne 2 pour Sonarr (Standard & Animé), avec alignement split-row des options.
+  - Normalisation au conteneur standard de 840px centré (`max-width: 840px; margin: 0 auto;`).
+  - Internationalisation complète (anglais et français) et accessibilité conforme (labels, `aria-label`, `role="status"`).
 
 ## [v1.24.2] — 2026-10-08
 

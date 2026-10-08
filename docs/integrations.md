@@ -59,9 +59,10 @@ Trackarr maintains continuous, bidirectional synchronization with AniList:
 
 Manage your media library and track availability seamlessly:
 
-### Configuration (`/admin/arr` & `/admin/settings`):
-- **Radarr**: Configure URL (`http://radarr:7878`), API Key, default Root Folder, and Quality Profile.
-- **Sonarr**: Configure URL (`http://sonarr:8989`), API Key, Standard Profile, Anime Profile, and Root Folder.
+### Configuration (`/admin/arr`):
+- **Radarr**: Configure URL (`http://radarr:7878`), API Key, live test connection, default Root Folder, and Quality Profile.
+- **Sonarr**: Configure URL (`http://sonarr:8989`), API Key, live test connection, Standard Profile, Anime Profile, and Root Folder.
+- **Prowlarr**: Configure URL (`http://prowlarr:9696`), API Key, and live test connection.
 
 ### UI Indicators & Push:
 - **Yellow Top Border**: Movie is managed and monitored in **Radarr**.
