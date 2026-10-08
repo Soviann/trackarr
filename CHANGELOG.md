@@ -10,7 +10,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 - **Composant d'en-tête unifié `<AdminHeader>`** : En-tête réutilisable et sticky pour les pages d'administration avec bouton de retour circulaire (34px), navigation déterministe, titre, et slot d'actions personnalisées.
 
 ### Modifié
-- **Standardisation de la largeur des conteneurs d'administration** : Normalisation à `max-width: 840px; margin: 0 auto;` sur AniList, Jellyfin, Notifications et Authentification, corrigeant l'étirement à 100vw sur moniteurs larges.
+- **Standardisation de la largeur des conteneurs d'administration** : Normalisation à `max-width: 840px; margin: 0 auto;` sur AniList, Jellyfin, Notifications et Authentification, à `max-width: 1040px;` sur le hub Admin, et à `max-width: 1200px;` sur les files de tâches et audits de saison, éliminant l'étirement à 100vw sur moniteurs larges.
+- **Polissage desktop et internationalisation complète du hub, des tâches et de l'audit de saison** :
+  - **Hub d'administration (`/admin`)** : Grille responsive en 2 colonnes (`max-width: 1040px; margin: 0 auto;`) pour les cartes de navigation avec étirement automatique des éléments impairs terminaux.
+  - **Tâches en arrière-plan (`/admin/tasks`)** : Intégration de `<AdminHeader>`, disposition en tableau scannable sur écran large (colonnes principales, détails des erreurs, actions alignées), barre d'action groupée flottante centrée et suite de tests unitaires dédiée (`AdminTasks.test.tsx`).
+  - **Audit des saisons (`/admin/season-audit`)** : Intégration de `<AdminHeader>`, connecteurs de diff visuels responsifs (badge directionnel avec numéro de saison suggéré, horizontal sur desktop et vertical sur mobile) entre animes scindés et séries mères.
+  - **Internationalisation complète (i18n)** : Traduction systématique de tous les badges, statuts, filtres et modales d'administration en anglais et en français (`en.ts`, `fr.ts`).
 - **Refonte desktop complète de la page Arr Stack (`/admin/arr`)** :
   - Suppression définitive du tiroir d'actions fixe en bas d'écran (`.actionDrawer`) et de l'espacement artificiel (`.bottomPad`).
   - Intégration de l'en-tête unifié sticky `<AdminHeader>` avec bouton d'enregistrement persistant.
