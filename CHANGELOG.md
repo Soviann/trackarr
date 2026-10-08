@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.24.2] — 2026-10-08
+
+### Corrigé
+- **Disposition des cartes sans affiche en grille desktop (`PosterCard` & `PosterTile`)** :
+  - Suppression du style inline `position: relative` sur `CoverImage` qui écrasait le positionnement absolu de la classe `.coverImage` (`position: absolute; inset: 0`).
+  - Remplacement du conteneur flexbox par un positionnement absolu explicite (`bottom: 0; left: 0; right: 0`) pour le bandeau de texte (`labelOverlay`) sur `PosterCard`, évitant que le placeholder stylisé et le titre ne soient disposés côte-à-côte en colonnes sur grand écran.
+  - Transmission propre de `className` et gestion uniforme du placeholder à 100% de largeur/hauteur sur `PosterTile` et `CoverPlaceholder`.
+
+
 ## [v1.24.1] — 2026-10-08
 
 ### Corrigé

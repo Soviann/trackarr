@@ -1,24 +1,31 @@
+import type { CSSProperties } from 'preact'
+import clsx from 'clsx'
 import type { TitleType } from '../types'
 import { getCoverUrl } from '../utils'
 import { typeIconConfig, resolveTypeIconKey } from './typeIcons'
 import s from './CoverPlaceholder.module.css'
 
-interface CoverPlaceholderProps {
+export interface CoverPlaceholderProps {
   type: TitleType
   is_anime?: boolean
   /** Icon size in px (default: 40% of container) */
   iconSize?: string
+  className?: string
+  onClick?: (e: MouseEvent) => void
+  style?: CSSProperties
 }
 
-export function CoverPlaceholder({ type, is_anime, iconSize }: CoverPlaceholderProps) {
+export function CoverPlaceholder({ type, is_anime, iconSize, className, onClick, style }: CoverPlaceholderProps) {
   const { color, icon } = typeIconConfig[resolveTypeIconKey(type, is_anime)]
   return (
     <div
-      className={s.placeholder}
+      className={clsx(s.placeholder, className)}
+      onClick={onClick}
       style={{
         '--cover-color': color,
         ...(iconSize ? { '--icon-size': iconSize } : {}),
-      } as Record<string, string>}
+        ...style,
+      } as CSSProperties}
     >
       <div className={s.icon}>
         {icon}
