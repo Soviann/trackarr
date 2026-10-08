@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.24.1] — 2026-10-08
+
 ### Corrigé
 - **Résolution des saisons anime multi-parties sur AniList (#84)** :
   - Détection automatique des split-cours / parties successives d'une même saison (`Part 2`, `Cour 2`, `Part II`, etc.) lors du parcours des relations `PREQUEL` dans `ResolveSeasonChain`.
