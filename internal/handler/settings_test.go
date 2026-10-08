@@ -120,6 +120,34 @@ func TestSettingsHandler_Get_JellyfinLastScrobble(t *testing.T) {
 	assert.NotNil(t, result["jellyfin_last_scrobble_at"])
 }
 
+func TestSettingsHandler_Get_PlexLastScrobble(t *testing.T) {
+	h, db := setupSettingsHandler(t)
+
+	// Boundary: before any scrobbles, plex_last_scrobble_at should be serialized as null (present in map with nil value)
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	var initialResult map[string]any
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&initialResult))
+	assert.Contains(t, initialResult, "plex_last_scrobble_at")
+	assert.Nil(t, initialResult["plex_last_scrobble_at"])
+
+	// Nominal: after recording a Plex scrobble
+	_, err := db.Exec(`INSERT INTO titles (id, type, year, status, match_status) VALUES (1, 'movie', 2024, 'completed', 'confirmed')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO watch_events (title_id, source, created_at) VALUES (1, 'plex', '2026-08-18 15:00:00')`)
+	require.NoError(t, err)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rr = httptest.NewRecorder()
+	require.NoError(t, h.Get(rr, req))
+
+	var result map[string]any
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
+	assert.NotNil(t, result["plex_last_scrobble_at"])
+}
+
 type mockProwlarrChecker struct {
 	configured bool
 }

@@ -11,6 +11,7 @@ export interface Settings {
   jellyfin_configured: boolean
   prowlarr_configured?: boolean
   jellyfin_last_scrobble_at?: string | null
+  plex_last_scrobble_at?: string | null
   enabled_watch_providers?: string
 }
 

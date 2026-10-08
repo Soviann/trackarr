@@ -18,6 +18,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Nouvelle grille responsive en 2 colonnes sur écran large (`>= 768px`) : colonne 1 pour Radarr (Standard & Animé) et colonne 2 pour Sonarr (Standard & Animé), avec alignement split-row des options.
   - Normalisation au conteneur standard de 840px centré (`max-width: 840px; margin: 0 auto;`).
   - Internationalisation complète (anglais et français) et accessibilité conforme (labels, `aria-label`, `role="status"`).
+- **Refonte et consolidation de la page Notifications Web Push (`/admin/notifications`)** :
+  - Intégration de la gestion des clés VAPID (génération automatique, contact administrateur, bouton de regénération et copie rapide de la clé publique).
+  - Regroupement des déclencheurs de notification automatisés (rappel d'évaluation, tâche échouée, fin de série).
+  - Adoption de l'en-tête sticky `<AdminHeader>` avec bouton d'enregistrement persistant et retour d'information.
+- **Évolution de la page Serveurs Multimédia (`/admin/jellyfin`)** :
+  - Gestion unifiée et symétrique pour Jellyfin et Plex : jetons secrets de scrobble, URLs de webhook dynamiques avec action de copie en un clic, horodatage du dernier scrobble enregistré et guides détaillés de configuration in-app.
+  - En-tête sticky `<AdminHeader>` avec bouton d'enregistrement persistant.
+- **Nettoyage et simplification des paramètres système (`/admin/settings`)** :
+  - Suppression des sections relocalisées (Stack Arr déplacée vers `/admin/arr`, serveurs multimédia déplacés vers `/admin/jellyfin`, VAPID déplacé vers `/admin/notifications`).
+  - Recentrage sur l'Apparence & Thèmes, les Métadonnées & IA (TMDB, TVDB, Gemini, AniList OAuth, langue des métadonnées) et les plateformes de streaming (Watch Providers).
+  - Adoption de l'en-tête sticky unifié `<AdminHeader>` et normalisation du conteneur à 840px centré.
 
 ## [v1.24.2] — 2026-10-08
 

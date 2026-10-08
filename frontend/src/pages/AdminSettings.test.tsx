@@ -59,9 +59,11 @@ describe('AdminSettings Page', () => {
     })
 
     expect(screen.getByText('🎬 Metadata & Artificial Intelligence')).not.toBeNull()
-    expect(screen.getByText('📺 Media Servers & Webhooks')).not.toBeNull()
-    expect(screen.getByText('📦 Download Stack (Radarr / Sonarr / Prowlarr)')).not.toBeNull()
-    expect(screen.getByText('🔔 Web Push Notifications (VAPID)')).not.toBeNull()
+    expect(screen.getByText('🎨 Appearance & Themes')).not.toBeNull()
+    expect(screen.getByText('📺 Streaming Platforms & Watch Providers')).not.toBeNull()
+    expect(screen.queryByText('📺 Media Servers & Webhooks')).toBeNull()
+    expect(screen.queryByText('📦 Download Stack (Radarr / Sonarr / Prowlarr)')).toBeNull()
+    expect(screen.queryByText('🔔 Web Push Notifications (VAPID)')).toBeNull()
   })
 
   it('handles testing TMDB connection', async () => {

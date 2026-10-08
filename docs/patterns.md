@@ -290,12 +290,12 @@
 | `/setup` | `Setup` | `pages/Setup.tsx` |
 | `/match-review` | `MatchReview` | `pages/MatchReview.tsx` |
 | `/admin` | `Admin` | `pages/Admin.tsx` |
-| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` |
+| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings: Appearance & Themes (theme picker + interface language), Metadata & AI (TMDB, TVDB, Gemini, AniList OAuth, metadata language), Streaming Platforms & Watch Providers |
 | `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` |
 | `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` |
-| `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` |
-| `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` |
+| `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` | Web Push Notifications: VAPID key generation and admin contact subject, automatic configuration status, and notification triggers (rating reminder, failed task, series ended) |
+| `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` | Media Servers & Webhooks: Dual server management for Jellyfin and Plex scrobble webhook secrets, full webhook URLs with copy actions, last scrobble timestamps, and configuration guides |
 | `/admin/anilist` | `AdminAniList` | `pages/AdminAniList.tsx` |
 | `/admin/season-audit` | `AdminSeasonAudit` | `pages/AdminSeasonAudit.tsx` |
 | `/admin/validate` | `Validate` | `pages/Validate.tsx` |

@@ -48,6 +48,8 @@ export function Admin({ path }: { path?: string }) {
   const { data: sysSettings } = useApi<SystemSettings>('/admin/system-settings')
   const { data: appSettings } = useApi<Settings>('/settings')
 
+  const isMediaServerConfigured = Boolean(appSettings?.jellyfin_configured || appSettings?.plex_last_scrobble_at)
+
   const { data: refreshProgress, mutate: mutateRefreshProgress } = useApi<RefreshAllProgress>('/admin/refresh-all/status')
   const [refreshing, setRefreshing] = useState(false)
   const [showRefreshModal, setShowRefreshModal] = useState(false)
@@ -412,7 +414,7 @@ export function Admin({ path }: { path?: string }) {
             </svg>
           </button>
 
-          {/* Jellyfin */}
+          {/* Media Servers */}
           <button
             type="button"
             className={s.card}
@@ -428,12 +430,12 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Jellyfin</span>
-                <span className={`${s.badgeStatus} ${appSettings?.jellyfin_configured ? s.active : ''}`}>
-                  {appSettings?.jellyfin_configured ? 'Configured' : 'Optional'}
+                <span className={s.cardLabel}>{t('admin.mediaServers')}</span>
+                <span className={`${s.badgeStatus} ${isMediaServerConfigured ? s.active : ''}`}>
+                  {isMediaServerConfigured ? t('arrSettings.configured') : t('arrSettings.optional')}
                 </span>
               </div>
-              <span className={s.cardDesc}>Webhook scrobbling and playback sync</span>
+              <span className={s.cardDesc}>{t('admin.mediaServersDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />

@@ -29,6 +29,7 @@ type SettingsResponse struct {
 	JellyfinConfigured    bool       `json:"jellyfin_configured"`
 	ProwlarrConfigured    bool       `json:"prowlarr_configured"`
 	JellyfinLastScrobble  *time.Time `json:"jellyfin_last_scrobble_at"`
+	PlexLastScrobble      *time.Time `json:"plex_last_scrobble_at"`
 	EnabledWatchProviders string     `json:"enabled_watch_providers,omitempty"`
 }
 
@@ -58,6 +59,13 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
+	var plexLastScrobble *time.Time
+	if h.eventRepo != nil {
+		if t, err := h.eventRepo.GetLatestCreatedAtBySource(model.WatchEventSourcePlex); err == nil {
+			plexLastScrobble = t
+		}
+	}
+
 	prowlarrConfigured := false
 	if h.prowlarrSvc != nil {
 		prowlarrConfigured = h.prowlarrSvc.IsConfigured()
@@ -78,6 +86,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		JellyfinConfigured:    h.jellyfinConfigured,
 		ProwlarrConfigured:    prowlarrConfigured,
 		JellyfinLastScrobble:  lastScrobble,
+		PlexLastScrobble:      plexLastScrobble,
 		EnabledWatchProviders: enabledWP,
 	})
 	return nil
