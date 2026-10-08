@@ -66,6 +66,16 @@ describe('SeasonAniListStrip', () => {
     expect(onEdit).toHaveBeenCalledOnce()
   })
 
+  it('renders and fires onEdit when the + Part button is clicked (mapped variant)', () => {
+    const onEdit = vi.fn()
+    const season = makeSeason({ anilist_id: '12345' })
+    const { getByText } = render(<SeasonAniListStrip season={season} onEdit={onEdit} />)
+    const partButton = getByText('+ Part')
+    expect(partButton).toBeTruthy()
+    fireEvent.click(partButton)
+    expect(onEdit).toHaveBeenCalledOnce()
+  })
+
   it('fires onEdit when the link button is clicked (unmapped variant)', () => {
     const onEdit = vi.fn()
     const season = makeSeason({ anilist_id: null })
