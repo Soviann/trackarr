@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
-import { colors } from '../theme'
+import { useTranslation } from '../i18n'
+import { AdminHeader } from '../components/AdminHeader'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { formatRelativeTime } from '../utils'
 import s from './AdminTasks.module.css'
@@ -25,12 +26,6 @@ interface TasksResponse {
   total: number
 }
 
-const typeLabels: Record<string, string> = {
-  enrichment: 'Enrichment',
-  refresh: 'Refresh',
-  cover_fetch: 'Cover',
-}
-
 function parseTitleFromPayload(payload: string): string {
   try {
     const p = JSON.parse(payload)
@@ -43,6 +38,7 @@ function parseTitleFromPayload(payload: string): string {
 type FilterType = 'all' | 'pending' | 'errored'
 
 export function AdminTasks({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const [acting, setActing] = useState<number | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
   const [page, setPage] = useState(1)
@@ -169,47 +165,64 @@ export function AdminTasks({ path }: { path?: string }) {
 
   const allSelected = filteredTasks.length > 0 && selectedIds.size === filteredTasks.length
 
+  const getTaskTypeLabel = (type: string): string => {
+    switch (type) {
+      case 'enrichment':
+        return t('adminTasks.typeEnrichment')
+      case 'refresh':
+        return t('adminTasks.typeRefresh')
+      case 'cover_fetch':
+        return t('adminTasks.typeCover')
+      default:
+        return type
+    }
+  }
+
   return (
     <>
       <div className={s.page}>
-        <div className={s.header}>
-          <div className={s.headerLeft}>
-            <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-              </svg>
-            </button>
-            <h1 className={s.title}>
-              Tasks <span style={{fontSize: '14px', fontWeight: 'normal', color: 'var(--ink)', marginLeft: '8px'}}>({total})</span>
-            </h1>
-          </div>
+        <AdminHeader
+          title={
+            <span>
+              {t('adminTasks.title')}{' '}
+              <span className={s.countBadge}>({total})</span>
+            </span>
+          }
+        >
           <button 
+            type="button"
             className={s.selectToggleBtn} 
             data-active={isSelectMode}
             onClick={handleSelectToggle}
           >
-            {isSelectMode ? 'Cancel' : 'Select'}
+            {isSelectMode ? t('common.cancel') : t('adminTasks.select')}
+          </button>
+        </AdminHeader>
+
+        <div className={s.filterBar}>
+          <button type="button" className={s.filterBtn} data-active={filter === 'all'} onClick={() => setFilter('all')}>
+            {t('adminTasks.filterAll')}
+          </button>
+          <button type="button" className={s.filterBtn} data-active={filter === 'pending'} onClick={() => setFilter('pending')}>
+            {t('adminTasks.filterHealthy')}
+          </button>
+          <button type="button" className={s.filterBtn} data-active={filter === 'errored'} onClick={() => setFilter('errored')}>
+            {t('adminTasks.filterErrored')}
           </button>
         </div>
 
-        <div className={s.filterBar}>
-          <button className={s.filterBtn} data-active={filter === 'all'} onClick={() => setFilter('all')}>All</button>
-          <button className={s.filterBtn} data-active={filter === 'pending'} onClick={() => setFilter('pending')}>Healthy</button>
-          <button className={s.filterBtn} data-active={filter === 'errored'} onClick={() => setFilter('errored')}>Errored</button>
-        </div>
-
-        {loading && <div className={s.loading}>Loading...</div>}
+        {loading && <div className={s.loading}>{t('common.loading')}</div>}
 
         {!loading && total === 0 && (
-          <div className={s.empty}>No tasks match this filter</div>
+          <div className={s.empty}>{t('adminTasks.empty')}</div>
         )}
 
         {filteredTasks.length > 0 && (
           <>
             {isSelectMode && (
               <div className={s.selectionActions}>
-                <button className={s.selectionBtn} onClick={toggleSelectAll}>
-                  {allSelected ? 'Unselect All' : 'Select All'}
+                <button type="button" className={s.selectionBtn} onClick={toggleSelectAll}>
+                  {allSelected ? t('adminTasks.unselectAll') : t('adminTasks.selectAll')}
                 </button>
               </div>
             )}
@@ -230,7 +243,7 @@ export function AdminTasks({ path }: { path?: string }) {
                       <div className={s.checkboxContainer}>
                         <div className={clsx(s.customCheckbox, isSelected && s.customCheckboxChecked)}>
                           {isSelected && (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={colors.bg} stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                               <polyline points="20 6 9 17 4 12" />
                             </svg>
                           )}
@@ -238,36 +251,44 @@ export function AdminTasks({ path }: { path?: string }) {
                       </div>
                     )}
                     <div className={s.taskContent}>
-                      <div className={s.taskHeader}>
-                        <span className={s.taskType}>{typeLabels[task.task_type] ?? task.task_type}</span>
-                        <span className={isDead ? s.badgeDead : s.badgePending}>
-                          {isDead ? 'Failed' : 'Pending'}
-                        </span>
+                      <div className={s.taskPrimary}>
+                        <div className={s.taskHeader}>
+                          <span className={s.taskType}>{getTaskTypeLabel(task.task_type)}</span>
+                          <span className={isDead ? s.badgeDead : s.badgePending}>
+                            {isDead ? t('adminTasks.statusFailed') : t('adminTasks.statusPending')}
+                          </span>
+                        </div>
+                        <div className={s.taskTitle}>{parseTitleFromPayload(task.payload)}</div>
                       </div>
-                      <div className={s.taskTitle}>{parseTitleFromPayload(task.payload)}</div>
-                      <div className={s.taskMeta}>
-                        {task.attempts}/{task.max_attempts} — day {task.day} · {formatRelativeTime(task.run_at)}
+
+                      <div className={s.taskDetails}>
+                        <div className={s.taskMeta}>
+                          {task.attempts}/{task.max_attempts} — day {task.day} · {formatRelativeTime(task.run_at)}
+                        </div>
+                        {task.last_error && (
+                          <div className={s.taskError}>{task.last_error}</div>
+                        )}
                       </div>
-                      {task.last_error && (
-                        <div className={s.taskError}>{task.last_error}</div>
-                      )}
+
                       {isErrored && (
                         <div className={s.taskActions}>
                           {isDead && (
                             <button
+                              type="button"
                               className={s.retryBtn}
                               onClick={(e) => { e.stopPropagation(); handleRetry(task.id); }}
                               disabled={acting === task.id || acting === -1}
                             >
-                              Retry
+                              {t('common.retry')}
                             </button>
                           )}
                           <button
+                            type="button"
                             className={s.deleteBtn}
                             onClick={(e) => { e.stopPropagation(); openDeleteModal(task.id); }}
                             disabled={acting === task.id || acting === -1}
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </div>
                       )}
@@ -278,14 +299,14 @@ export function AdminTasks({ path }: { path?: string }) {
             </section>
 
             {hasMore && (
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-md)' }}>
+              <div className={s.loadMoreContainer}>
                 <button 
-                  className={s.filterBtn} 
-                  style={{ padding: '10px 24px', fontSize: '14px' }} 
+                  type="button"
+                  className={s.loadMoreBtn} 
                   onClick={() => setPage(p => p + 1)}
                   disabled={loading}
                 >
-                  {loading ? 'Loading...' : 'Load More'}
+                  {loading ? t('common.loading') : t('common.loadMore')}
                 </button>
               </div>
             )}
@@ -295,13 +316,16 @@ export function AdminTasks({ path }: { path?: string }) {
 
       {selectedIds.size > 0 && (
         <div className={s.actionBar}>
-          <span className={s.actionText}>{selectedIds.size} selected</span>
+          <span className={s.actionText}>
+            {t('adminTasks.selectedCount', { count: String(selectedIds.size) })}
+          </span>
           <button 
+            type="button"
             className={s.batchDeleteBtn}
             onClick={() => openDeleteModal('batch')}
             disabled={acting === -1}
           >
-            Delete
+            {t('common.delete')}
           </button>
         </div>
       )}
@@ -311,12 +335,12 @@ export function AdminTasks({ path }: { path?: string }) {
         onClose={() => setModalOpen(false)}
         onConfirm={confirmDelete}
         title={modalMode === 'batch'
-          ? `Delete ${selectedIds.size} tasks?`
-          : 'Delete this task?'}
-        confirmText="Delete"
-        cancelText="Cancel"
+          ? t('adminTasks.deleteBatchConfirm', { count: String(selectedIds.size) })
+          : t('adminTasks.deleteSingleConfirm')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         isDangerous
       />
-      </>
-      )
-      }
+    </>
+  )
+}

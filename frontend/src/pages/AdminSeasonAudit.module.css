@@ -1,43 +1,11 @@
 .page {
-  padding: var(--space-lg) var(--space-lg) 180px;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-md);
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.backBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--ink);
-  border-radius: 50%;
-  padding: 0;
-}
-
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-md) 180px;
 }
 
 .scanBtn {
-  background: var(--bg-elev);
+  background: var(--bg-surface);
   border: 1px solid var(--border-strong);
   color: var(--ink);
   padding: 6px 14px;
@@ -45,6 +13,12 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.scanBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .scanBtn:disabled {
@@ -55,7 +29,7 @@
 .loading,
 .empty {
   padding: var(--space-xl);
-  color: var(--ink);
+  color: var(--ink-dim);
   text-align: center;
   font-size: 14px;
 }
@@ -63,7 +37,7 @@
 .topActions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: var(--space-md);
+  margin: var(--space-md) 0;
 }
 
 .mergeAllContainer {
@@ -75,13 +49,18 @@
 
 .acceptAllBtn {
   background: var(--accent);
-  color: var(--bg);
+  color: #000;
   border: none;
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: var(--radius-button);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.acceptAllBtn:hover:not(:disabled) {
+  opacity: 0.9;
 }
 
 .acceptAllBtn:disabled {
@@ -92,7 +71,7 @@
 .ambiguousNotice {
   font-size: 11px;
   color: var(--status-warn);
-  max-width: 360px;
+  max-width: 380px;
   text-align: right;
 }
 
@@ -100,16 +79,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  margin-top: var(--space-md);
 }
 
 .card {
   background: var(--bg-elev);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
 }
 
 .cardHeader {
@@ -122,11 +107,11 @@
 
 .sharedIdChip {
   display: inline-block;
-  background: var(--bg-elev2);
+  background: var(--bg-surface);
   border: 1px solid var(--border-strong);
   color: var(--ink-dim);
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   padding: 2px 8px;
   border-radius: 4px;
   max-width: 100%;
@@ -160,7 +145,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-sm) 0;
+  padding: var(--space-xs) 0;
 }
 
 @media (max-width: 640px) {
@@ -173,10 +158,14 @@
 
 .entitySide {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-md);
   flex: 1;
   min-width: 0;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
 }
 
 .poster {
@@ -200,7 +189,7 @@
 .entityLabel {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   font-weight: 700;
   color: var(--ink-dim);
 }
@@ -218,24 +207,47 @@
   color: var(--ink-dim);
 }
 
-.arrowCol {
+.diffConnector {
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
+  gap: 8px;
+  padding: 0 var(--space-sm);
   flex-shrink: 0;
-  padding: 0 var(--space-xs);
 }
 
-.arrow {
+.connectorLine {
+  height: 1px;
+  width: 24px;
+  background: var(--border-strong);
+}
+
+.connectorBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
   color: var(--accent);
-  font-size: 16px;
+  letter-spacing: 0.02em;
+  font-family: var(--font-mono);
 }
 
 @media (max-width: 640px) {
-  .arrowCol {
-    transform: rotate(90deg);
+  .diffConnector {
+    flex-direction: column;
     padding: var(--space-xs) 0;
+  }
+  .connectorLine {
+    width: 1px;
+    height: 16px;
+  }
+  .connectorBadge svg {
+    transform: rotate(90deg);
   }
 }
 
@@ -255,17 +267,28 @@
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
+  transition: all 0.15s ease;
 }
 
 .acceptBtn {
   background: var(--accent);
-  color: var(--bg);
+  color: #000;
+}
+
+.acceptBtn:hover:not(:disabled) {
+  opacity: 0.9;
 }
 
 .dismissBtn {
   background: transparent;
   color: var(--ink);
   border-color: var(--border-strong);
+}
+
+.dismissBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--status-crit);
+  border-color: var(--status-crit);
 }
 
 .acceptBtn:disabled,
@@ -340,6 +363,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .cancelBtn {
@@ -351,7 +375,11 @@
 .confirmBtn {
   background: var(--accent);
   border: none;
-  color: var(--bg);
+  color: #000;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  opacity: 0.9;
 }
 
 .cancelBtn:disabled,

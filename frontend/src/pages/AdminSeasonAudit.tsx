@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
+import { useTranslation } from '../i18n'
+import { AdminHeader } from '../components/AdminHeader'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { CoverImage } from '../components/CoverImage'
@@ -13,6 +15,7 @@ interface SeasonAuditResponse {
 }
 
 export function AdminSeasonAudit({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const { data, loading, error, mutate } = useApi<SeasonAuditResponse>('/admin/season-audit')
   const [selectedProposal, setSelectedProposal] = useState<SeasonAuditProposal | null>(null)
   const [seasonNumberInput, setSeasonNumberInput] = useState<number>(1)
@@ -103,32 +106,25 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
 
   return (
     <div className={s.page}>
-      <div className={s.header}>
-        <div className={s.headerLeft}>
-          <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-            </svg>
-          </button>
-          <h1 className={s.title}>Season audit</h1>
-        </div>
+      <AdminHeader title={t('seasonAudit.title')}>
         <button
+          type="button"
           className={s.scanBtn}
           onClick={() => mutate()}
           disabled={loading || busyAll || busyDismissId !== null}
         >
-          Rescan
+          {t('seasonAudit.rescan')}
         </button>
-      </div>
+      </AdminHeader>
 
-      {loading && <div className={s.loading}>Scanning...</div>}
+      {loading && <div className={s.loading}>{t('seasonAudit.scanning')}</div>}
 
       {error && <ErrorBanner message={error} onRetry={mutate} />}
 
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
 
       {!loading && !error && proposals.length === 0 && (
-        <div className={s.empty}>No season conflicts found 🎉</div>
+        <div className={s.empty}>{t('seasonAudit.empty')}</div>
       )}
 
       {!loading && !error && proposals.length > 0 && (
@@ -137,16 +133,17 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
             <div className={s.topActions}>
               <div className={s.mergeAllContainer}>
                 <button
+                  type="button"
                   className={s.acceptAllBtn}
                   onClick={() => setConfirmMergeAllOpen(true)}
                   disabled={busyAll || busyDismissId !== null || hasAmbiguous}
-                  title={hasAmbiguous ? 'Disabled: some proposals require manual season assignment' : undefined}
+                  title={hasAmbiguous ? t('seasonAudit.ambiguousNotice') : undefined}
                 >
-                  Merge all ({proposals.length})
+                  {t('seasonAudit.mergeAll', { count: String(proposals.length) })}
                 </button>
                 {hasAmbiguous && (
                   <span className={s.ambiguousNotice}>
-                    Disabled: some proposals require manual season assignment
+                    {t('seasonAudit.ambiguousNotice')}
                   </span>
                 )}
               </div>
@@ -161,11 +158,15 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
               return (
                 <div key={`${p.source_title_id}-${p.target_title_id}`} className={s.card}>
                   <div className={s.cardHeader}>
-                    <div className={s.sharedIdChip}>{p.shared_id}</div>
+                    {p.shared_id && <div className={s.sharedIdChip}>{p.shared_id}</div>}
                     {isSuggested ? (
-                      <span className={s.seasonBadgeSuggested}>Season {p.season_number} suggested</span>
+                      <span className={s.seasonBadgeSuggested}>
+                        {t('seasonAudit.badgeSuggested', { num: String(p.season_number) })}
+                      </span>
                     ) : (
-                      <span className={s.seasonBadgeManual}>Season to define</span>
+                      <span className={s.seasonBadgeManual}>
+                        {t('seasonAudit.badgeManual')}
+                      </span>
                     )}
                   </div>
 
@@ -178,17 +179,30 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
                         alt={p.source_name}
                       />
                       <div className={s.entityInfo}>
-                        <span className={s.entityLabel}>Source (to merge)</span>
+                        <span className={s.entityLabel}>{t('seasonAudit.sourceLabel')}</span>
                         <strong className={s.entityTitle}>{p.source_name}</strong>
                         <span className={s.entityMeta}>
                           {p.source_year ? `${p.source_year} • ` : ''}
-                          {p.source_seasons_count} season{p.source_seasons_count > 1 ? 's' : ''}
+                          {p.source_seasons_count === 1
+                            ? t('seasonAudit.seasonCount', { count: '1' })
+                            : t('seasonAudit.seasonCountPlural', { count: String(p.source_seasons_count) })}
                         </span>
                       </div>
                     </div>
 
-                    <div className={s.arrowCol}>
-                      <span className={s.arrow}>➔</span>
+                    <div className={s.diffConnector}>
+                      <div className={s.connectorLine} />
+                      <div className={s.connectorBadge}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                        <span>
+                          {isSuggested
+                            ? t('seasonAudit.diffConnectorSeason', { num: String(p.season_number) })
+                            : t('seasonAudit.diffConnectorMerge')}
+                        </span>
+                      </div>
+                      <div className={s.connectorLine} />
                     </div>
 
                     <div className={s.entitySide}>
@@ -199,11 +213,13 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
                         alt={p.target_name}
                       />
                       <div className={s.entityInfo}>
-                        <span className={s.entityLabel}>Target (main series)</span>
+                        <span className={s.entityLabel}>{t('seasonAudit.targetLabel')}</span>
                         <strong className={s.entityTitle}>{p.target_name}</strong>
                         <span className={s.entityMeta}>
                           {p.target_year ? `${p.target_year} • ` : ''}
-                          {p.target_seasons_count} season{p.target_seasons_count > 1 ? 's' : ''}
+                          {p.target_seasons_count === 1
+                            ? t('seasonAudit.seasonCount', { count: '1' })
+                            : t('seasonAudit.seasonCountPlural', { count: String(p.target_seasons_count) })}
                         </span>
                       </div>
                     </div>
@@ -211,18 +227,20 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
 
                   <div className={s.cardActions}>
                     <button
+                      type="button"
                       className={s.acceptBtn}
                       onClick={() => openMergeDrawer(p)}
                       disabled={isThisBusy || busyAll}
                     >
-                      Merge...
+                      {t('seasonAudit.btnMerge')}
                     </button>
                     <button
+                      type="button"
                       className={s.dismissBtn}
                       onClick={() => dismiss(p)}
                       disabled={isThisBusy || busyAll}
                     >
-                      {isThisBusy ? 'Dismissing...' : 'Dismiss'}
+                      {isThisBusy ? t('common.loading') : t('seasonAudit.btnDismiss')}
                     </button>
                   </div>
                 </div>
@@ -235,19 +253,21 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
       <BottomSheet
         open={!!selectedProposal}
         onClose={closeMergeDrawer}
-        ariaLabel="Merge season into series"
+        ariaLabel={t('seasonAudit.drawerTitle')}
       >
         {selectedProposal && (
           <div className={s.mergeDrawer}>
-            <div className={s.mergeTitle}>Merge season into series</div>
+            <div className={s.mergeTitle}>{t('seasonAudit.drawerTitle')}</div>
             <div className={s.mergeDesc}>
-              This will merge &quot;{selectedProposal.source_name}&quot; into &quot;{selectedProposal.target_name}&quot;.
-              Episodes, watched progress, and metadata will be attached under the chosen season number. The source title will be removed.
+              {t('seasonAudit.drawerDesc', {
+                source: selectedProposal.source_name,
+                target: selectedProposal.target_name,
+              })}
             </div>
 
             <div className={s.seasonInputGroup}>
               <label htmlFor="audit-target-season" className={s.seasonLabel}>
-                Integrate as season number:
+                {t('seasonAudit.seasonLabel')}
               </label>
               <input
                 id="audit-target-season"
@@ -263,18 +283,20 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
 
             <div className={s.mergeActions}>
               <button
+                type="button"
                 className={s.cancelBtn}
                 onClick={closeMergeDrawer}
                 disabled={isMergingSingle}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
+                type="button"
                 className={s.confirmBtn}
                 onClick={handleSingleMerge}
                 disabled={isMergingSingle || seasonNumberInput < 1}
               >
-                {isMergingSingle ? 'Merging...' : 'Confirm merge'}
+                {isMergingSingle ? t('common.loading') : t('seasonAudit.confirmBtn')}
               </button>
             </div>
           </div>
@@ -285,10 +307,10 @@ export function AdminSeasonAudit({ path }: { path?: string }) {
         open={confirmMergeAllOpen}
         onClose={() => setConfirmMergeAllOpen(false)}
         onConfirm={acceptAll}
-        title="Merge all season conflicts?"
-        description={`This will merge ${proposals.length} source series into target series and cannot be undone.`}
-        confirmText={`Merge all (${proposals.length})`}
-        cancelText="Cancel"
+        title={t('seasonAudit.confirmMergeAllTitle')}
+        description={t('seasonAudit.confirmMergeAllDesc', { count: String(proposals.length) })}
+        confirmText={t('seasonAudit.mergeAll', { count: String(proposals.length) })}
+        cancelText={t('common.cancel')}
         isDangerous
       />
     </div>

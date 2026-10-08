@@ -175,18 +175,18 @@ export function Admin({ path }: { path?: string }) {
   // Auth mode badge label
   const authModeLabel = authSettings
     ? authSettings.auth_mode === 'hybrid'
-      ? 'Hybrid Mode'
+      ? t('admin.authModeHybrid')
       : authSettings.auth_mode === 'google'
-        ? 'Google OAuth'
-        : 'Credentials'
-    : 'Secured'
+        ? t('admin.authModeGoogle')
+        : t('admin.authModePassword')
+    : t('admin.authModeSecured')
 
   // Arr stack status badge
   const arrStatusLabel = sysSettings
     ? sysSettings.radarr_configured || sysSettings.sonarr_configured
-      ? 'Connected'
-      : 'Not configured'
-    : 'Configuration'
+      ? t('admin.connected')
+      : t('admin.notConfigured')
+    : t('admin.configuration')
 
   const arrStatusClass = sysSettings && (sysSettings.radarr_configured || sysSettings.sonarr_configured)
     ? s.active
@@ -212,7 +212,7 @@ export function Admin({ path }: { path?: string }) {
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </span>
-          <span className={s.sectionTitle}>Activity & Immediate Actions</span>
+          <span className={s.sectionTitle}>{t('admin.activitySection')}</span>
         </div>
 
         <div className={s.cardGroup}>
@@ -231,12 +231,12 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Match Validations</span>
+                <span className={s.cardLabel}>{t('admin.matchReview')}</span>
                 {counts && counts.pending_validations > 0 && (
                   <span className={s.badgeCount}>{counts.pending_validations}</span>
                 )}
               </div>
-              <span className={s.cardDesc}>Titles pending confirmation or manual reconciliation</span>
+              <span className={s.cardDesc}>{t('admin.matchReviewDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -257,12 +257,12 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Background Tasks & Errors</span>
+                <span className={s.cardLabel}>{t('admin.tasks')}</span>
                 {counts && counts.dead_tasks > 0 && (
                   <span className={s.badgeCount}>{counts.dead_tasks}</span>
                 )}
               </div>
-              <span className={s.cardDesc}>Asynchronous enrichment queue and diagnostics</span>
+              <span className={s.cardDesc}>{t('admin.tasksDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -285,10 +285,10 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Season & Anime Audit</span>
-                <span className={`${s.badgeStatus} ${s.active}`}>Up to date</span>
+                <span className={s.cardLabel}>{t('admin.seasonAudit')}</span>
+                <span className={`${s.badgeStatus} ${s.active}`}>{t('admin.upToDate')}</span>
               </div>
-              <span className={s.cardDesc}>Detect and merge split anime seasons (AniList Parts)</span>
+              <span className={s.cardDesc}>{t('admin.seasonAuditDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -306,7 +306,7 @@ export function Admin({ path }: { path?: string }) {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </span>
-          <span className={s.sectionTitle}>Integrations & External Services</span>
+          <span className={s.sectionTitle}>{t('admin.integrationsSection')}</span>
         </div>
 
         <div className={s.cardGroup}>
@@ -324,10 +324,10 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>System Settings & API Keys</span>
-                <span className={`${s.badgeStatus} ${s.active}`}>TMDB • TVDB • Webhooks</span>
+                <span className={s.cardLabel}>{t('admin.systemSettings')}</span>
+                <span className={`${s.badgeStatus} ${s.active}`}>{t('admin.systemSettingsBadge')}</span>
               </div>
-              <span className={s.cardDesc}>Manage API keys, Gemini AI, secrets and webhook URLs</span>
+              <span className={s.cardDesc}>{t('admin.systemSettingsDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -350,10 +350,10 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Arr Stack</span>
+                <span className={s.cardLabel}>{t('admin.arrStack')}</span>
                 <span className={`${s.badgeStatus} ${arrStatusClass}`}>{arrStatusLabel}</span>
               </div>
-              <span className={s.cardDesc}>Radarr / Sonarr / Prowlarr</span>
+              <span className={s.cardDesc}>{t('admin.arrStackDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -375,12 +375,12 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>AniList Synchronization</span>
+                <span className={s.cardLabel}>{t('admin.anilist')}</span>
                 <span className={`${s.badgeStatus} ${sysSettings?.anilist_configured ? s.active : ''}`}>
-                  {sysSettings?.anilist_configured ? 'Synced' : 'Optional'}
+                  {sysSettings?.anilist_configured ? t('admin.synced') : t('common.optional')}
                 </span>
               </div>
-              <span className={s.cardDesc}>OAuth account connection, watched episodes and rating push</span>
+              <span className={s.cardDesc}>{t('admin.anilistDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -402,12 +402,12 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Web Push Notifications</span>
+                <span className={s.cardLabel}>{t('admin.notifications')}</span>
                 <span className={`${s.badgeStatus} ${sysSettings?.vapid_configured ? s.active : ''}`}>
-                  {sysSettings?.vapid_configured ? 'Enabled' : 'Optional'}
+                  {sysSettings?.vapid_configured ? t('admin.enabled') : t('common.optional')}
                 </span>
               </div>
-              <span className={s.cardDesc}>Scrobble alerts, rating prompts and library recaps</span>
+              <span className={s.cardDesc}>{t('admin.notificationsDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -453,7 +453,7 @@ export function Admin({ path }: { path?: string }) {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </span>
-          <span className={s.sectionTitle}>Security & Maintenance</span>
+          <span className={s.sectionTitle}>{t('admin.securitySection')}</span>
         </div>
 
         <div className={s.cardGroup}>
@@ -472,10 +472,10 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Authentication & Access</span>
+                <span className={s.cardLabel}>{t('admin.authSecurity')}</span>
                 <span className={`${s.badgeStatus} ${s.active}`}>{authModeLabel}</span>
               </div>
-              <span className={s.cardDesc}>Login mode, admin password and emergency recovery key</span>
+              <span className={s.cardDesc}>{t('admin.authSecurityDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />
@@ -498,9 +498,9 @@ export function Admin({ path }: { path?: string }) {
             </div>
             <div className={s.cardContent}>
               <div className={s.cardTop}>
-                <span className={s.cardLabel}>Documentation & Help</span>
+                <span className={s.cardLabel}>{t('admin.helpDoc')}</span>
               </div>
-              <span className={s.cardDesc}>Matching engine details, shortcuts and usage guide</span>
+              <span className={s.cardDesc}>{t('admin.helpDocDesc')}</span>
             </div>
             <svg className={s.cardArrow} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6" />

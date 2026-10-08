@@ -1,5 +1,5 @@
 .page {
-  max-width: 680px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: var(--space-lg) var(--space-md) 80px;
   display: flex;
@@ -69,9 +69,20 @@
 }
 
 .cardGroup {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .cardGroup {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .cardGroup > *:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 .card {
@@ -93,7 +104,7 @@
 }
 
 .card:hover {
-  background: var(--bg-hover, #312a22);
+  background: var(--surface-hover);
   border-color: var(--border-strong);
   transform: translateY(-1px);
 }
@@ -106,7 +117,7 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: var(--bg-elev2, #312a22);
+  background: var(--bg-elev2);
   border: 1px solid var(--border-strong);
   display: flex;
   align-items: center;
@@ -316,7 +327,7 @@
 .refreshBtnDanger {
   padding: 8px 14px;
   background: transparent;
-  color: var(--danger, #ef4444);
+  color: var(--status-crit);
   font-weight: 600;
   font-size: 13px;
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -331,7 +342,7 @@
 
 .refreshBtnDanger:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.1);
-  border-color: var(--danger, #ef4444);
+  border-color: var(--status-crit);
 }
 
 .refreshBtnSecondary {
