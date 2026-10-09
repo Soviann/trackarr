@@ -250,7 +250,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
     return (
       <div className={s.page}>
         <AdminHeader title={t('arrSettings.title')} />
-        <div className={s.loading}>Loading...</div>
+        <div className={s.loading}>{t('common.loading')}</div>
       </div>
     )
   }

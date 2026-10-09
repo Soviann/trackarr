@@ -12,6 +12,7 @@ import { CoverImage } from '../components/CoverImage'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import clsx from 'clsx'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { useTranslation } from '../i18n'
 import s from './Validate.module.css'
 
 interface RematchPayload {
@@ -36,6 +37,7 @@ interface AddTitlePayload {
 }
 
 export function Validate({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const params = new URLSearchParams(window.location.search)
   const query = params.get('q') ?? ''
   const id = params.get('id')
@@ -184,13 +186,13 @@ export function Validate({ path }: { path?: string }) {
     <div className={s.page}>
       {/* Header */}
       <div className={s.header}>
-        <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label="Back">
+        <button type="button" onClick={() => history.back()} className={s.backBtn} aria-label={t('common.back')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.ink} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
         <div className={s.headerTitle}>
-          {id ? 'Fix match' : isUrl(query) ? 'Adding by URL' : 'Validating title'}
+          {id ? t('validate.fixMatch') : isUrl(query) ? t('validate.addingByUrl') : t('validate.validatingTitle')}
         </div>
       </div>
 
@@ -200,25 +202,25 @@ export function Validate({ path }: { path?: string }) {
           type="text"
           value={inputValue}
           onInput={(e) => setInputValue((e.target as HTMLInputElement).value)}
-          placeholder="Search name or paste TMDB/IMDb/AniList URL..."
+          placeholder={t('validate.searchPlaceholder')}
           className={s.searchInput}
         />
         <button type="submit" className={s.searchBtn}>
-          {loadingSearch || loadingResolve ? '...' : 'Go'}
+          {loadingSearch || loadingResolve ? '...' : t('validate.go')}
         </button>
       </form>
 
       {loading && !results.length && !resolved && !currentTitle && (
         <div className={s.loading}>
           <div className={s.spinner} />
-          {loadingResolve ? 'Identifying...' : 'Matching...'}
+          {loadingResolve ? t('validate.identifying') : t('validate.matching')}
         </div>
       )}
 
       {/* Existing title being fixed */}
       {currentTitle && (
         <div className={s.currentSection}>
-          <div className={s.sectionLabel}>Title to fix</div>
+          <div className={s.sectionLabel}>{t('validate.titleToFix')}</div>
           <div className={s.currentCard}>
             <CoverImage
               coverUrl={currentTitle.cover_url}
@@ -236,7 +238,7 @@ export function Validate({ path }: { path?: string }) {
               <div className={s.resultMeta}>
                 {currentTitle.type} · {currentTitle.year}
                 {currentTitle.original_title && currentTitle.original_title !== getName(currentTitle) && (
-                  <div className={s.originalLabel}>Original: {currentTitle.original_title}</div>
+                  <div className={s.originalLabel}>{t('validate.original', { name: currentTitle.original_title })}</div>
                 )}
               </div>
             </div>
@@ -248,42 +250,42 @@ export function Validate({ path }: { path?: string }) {
       {results.length > 0 && (
         <div className={s.resultsSection}>
           <div className={s.sectionLabel}>
-            Already in library
+            {t('validate.alreadyInLibrary')}
           </div>
-          {results.map((t) => (
+          {results.map((tItem) => (
             <div
-              key={t.id}
-              onClick={() => route(`/title/${t.id}`)}
-              className={clsx(s.resultCard, t.id === Number(id) && s.resultCardCurrent)}
+              key={tItem.id}
+              onClick={() => route(`/title/${tItem.id}`)}
+              className={clsx(s.resultCard, tItem.id === Number(id) && s.resultCardCurrent)}
             >
               <CoverImage
-                coverUrl={t.cover_url}
-                type={t.type}
-                is_anime={t.is_anime}
-                alt={getName(t)}
+                coverUrl={tItem.cover_url}
+                type={tItem.type}
+                is_anime={tItem.is_anime}
+                alt={getName(tItem)}
                 className={s.resultCover}
                 iconSize="18px"
               />
               <div className={s.resultInfo}>
                 <div className={s.resultNameRow}>
-                  <span className={s.resultName}>{getName(t)}</span>
-                  <StatusBadge status={t.status} />
+                  <span className={s.resultName}>{getName(tItem)}</span>
+                  <StatusBadge status={tItem.status} />
                 </div>
                 <div className={s.resultMeta}>
-                  {t.type} · {t.year}
+                  {tItem.type} · {tItem.year}
                 </div>
               </div>
 
-              {id && Number(id) !== t.id && (
+              {id && Number(id) !== tItem.id && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    setMergeTarget(t)
+                    setMergeTarget(tItem)
                   }}
                   className={s.mergeBtn}
                 >
-                  Merge into this
+                  {t('validate.mergeIntoThis')}
                 </button>
               )}
             </div>
@@ -295,12 +297,12 @@ export function Validate({ path }: { path?: string }) {
       {!loading && (
         <div className={s.manualSection}>
         <div className={s.sectionLabel}>
-          {id ? 'Change Match' : 'Add New Title'}
+          {id ? t('validate.changeMatch') : t('validate.addNewTitle')}
         </div>
 
         <div className={s.addCard}>
           <div className={s.addCardTitle}>
-            {id ? 'New Match' : 'Add to library'}
+            {id ? t('validate.newMatch') : t('validate.addToLibrary')}
           </div>
 
           {/* Preview of resolved metadata */}
@@ -315,7 +317,7 @@ export function Validate({ path }: { path?: string }) {
               <div className={s.previewInfo}>
                 <div className={s.previewName}>{resolved.names.find(n => n.is_primary)?.name || resolved.names[0]?.name}</div>
                 <div className={s.previewMeta}>
-                  {resolved.type} · {resolved.release_date?.slice(0, 4) || 'Unknown year'}
+                  {resolved.type} · {resolved.release_date?.slice(0, 4) || t('validate.unknownYear')}
                 </div>
                 <div className={s.previewIds}>
                   {!!resolved.imdb_id && <span className={s.idTag}>IMDb</span>}
@@ -328,7 +330,7 @@ export function Validate({ path }: { path?: string }) {
 
           {!resolved && isUrl(query) && !loading && (
             <div className={s.urlFallback}>
-              Could not identify title from URL. Search by name instead.
+              {t('validate.urlFallback')}
             </div>
           )}
 
@@ -341,7 +343,7 @@ export function Validate({ path }: { path?: string }) {
                   onClick={() => setSelectedStatus(status)}
                   className={clsx(s.statusOption, selectedStatus === status && s.statusOptionSelected)}
                 >
-                  {status === 'plan_to_watch' ? 'Plan to watch' : status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === 'plan_to_watch' ? t('status.planToWatch') : status === 'watching' ? t('status.watching') : t('status.completed')}
                 </button>
               ))}
             </div>
@@ -357,13 +359,13 @@ export function Validate({ path }: { path?: string }) {
             className={s.addBtn}
           >
             <span className={s.addBtnText}>
-              {adding ? (id ? 'Updating...' : 'Adding...') : (id ? 'Update match' : 'Add to library')}
+              {adding ? (id ? t('validate.updating') : t('validate.adding')) : (id ? t('validate.updateMatch') : t('validate.addToLibrary'))}
             </span>
           </button>
           
           {id && !resolved && !isUrl(query) && (
             <div className={s.hint}>
-              Search above or paste an URL (TMDB/AniList) to fix the match for this title.
+              {t('validate.hint')}
             </div>
           )}
         </div>
@@ -374,9 +376,13 @@ export function Validate({ path }: { path?: string }) {
         open={!!mergeTarget}
         onClose={() => setMergeTarget(null)}
         onConfirm={handleMerge}
-        title="Merge titles?"
-        description={`This will merge "${currentTitle ? getName(currentTitle) : 'this title'}" into "${mergeTarget ? getName(mergeTarget) : ''}". Seasons, watch events and names will be moved. This action cannot be undone.`}
-        confirmText={adding ? 'Merging...' : 'Merge now'}
+        title={t('validate.mergeTitle')}
+        description={t('validate.mergeDesc', {
+          source: currentTitle ? getName(currentTitle) : '',
+          target: mergeTarget ? getName(mergeTarget) : '',
+        })}
+        confirmText={adding ? t('validate.merging') : t('validate.mergeNow')}
+        cancelText={t('common.cancel')}
         isDangerous
       />
     </div>

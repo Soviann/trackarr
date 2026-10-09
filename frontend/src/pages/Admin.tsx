@@ -804,7 +804,7 @@ export function Admin({ path }: { path?: string }) {
               }}
               disabled={importing}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"

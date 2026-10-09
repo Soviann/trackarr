@@ -5,10 +5,12 @@ import { apiFetch } from '../api'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { ConfirmationDrawer } from '../components/ConfirmationDrawer'
 import { AdminHeader } from '../components/AdminHeader'
+import { useTranslation } from '../i18n'
 import type { Settings } from '../types'
 import s from './AdminAniList.module.css'
 
 export function AdminAniList({ path }: { path?: string }): JSX.Element {
+  const { t } = useTranslation()
   const { data: settings, mutate: refetch } = useApi<Settings>('/settings')
   const [busy, setBusy] = useState(false)
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false)
@@ -33,31 +35,31 @@ export function AdminAniList({ path }: { path?: string }): JSX.Element {
   return (
     <PullToRefresh onRefresh={refetch}>
       <div className={s.page}>
-        <AdminHeader title="AniList" />
+        <AdminHeader title={t('adminAniList.title')} />
 
         {settings?.anilist_token_invalid === true && (
           <div className={s.reconnectBanner} role="alert">
             <div>
-              <strong>AniList connection expired.</strong>
-              <p>Rating &amp; status sync is paused until you reconnect.</p>
+              <strong>{t('adminAniList.expiredTitle')}</strong>
+              <p>{t('adminAniList.expiredDesc')}</p>
             </div>
-            <a className={s.reconnectButton} href="/api/anilist/auth">Reconnect</a>
+            <a className={s.reconnectButton} href="/api/anilist/auth">{t('adminAniList.reconnect')}</a>
           </div>
         )}
 
-        {!settings && <div className={s.loading}>Loading...</div>}
+        {!settings && <div className={s.loading}>{t('common.loading')}</div>}
 
         {settings && (
           <div className={s.list}>
             <div className={s.item}>
               <div className={s.itemInfo}>
-                <div className={s.itemLabel}>Connection</div>
+                <div className={s.itemLabel}>{t('adminAniList.connectionLabel')}</div>
                 <div className={s.itemDesc}>
-                  {connected ? 'Connected to AniList' : 'Not connected'}
+                  {connected ? t('adminAniList.connectedDesc') : t('adminAniList.notConnectedDesc')}
                 </div>
               </div>
               <span className={connected ? s.statusOn : s.statusOff}>
-                {connected ? 'Connected' : 'Not connected'}
+                {connected ? t('adminAniList.connected') : t('adminAniList.notConnected')}
               </span>
             </div>
 
@@ -69,7 +71,7 @@ export function AdminAniList({ path }: { path?: string }): JSX.Element {
                   onClick={() => setConfirmDisconnectOpen(true)}
                   disabled={busy}
                 >
-                  {busy ? 'Disconnecting...' : 'Disconnect'}
+                  {busy ? t('adminAniList.disconnecting') : t('adminAniList.disconnect')}
                 </button>
               ) : (
                 <button
@@ -78,7 +80,7 @@ export function AdminAniList({ path }: { path?: string }): JSX.Element {
                   onClick={handleConnect}
                   disabled={busy}
                 >
-                  Connect to AniList
+                  {t('adminAniList.connect')}
                 </button>
               )}
             </div>
@@ -89,10 +91,10 @@ export function AdminAniList({ path }: { path?: string }): JSX.Element {
           open={confirmDisconnectOpen}
           onClose={() => setConfirmDisconnectOpen(false)}
           onConfirm={handleDisconnect}
-          title="Disconnect AniList?"
-          description="This will remove your AniList authentication token. Trackarr will stop scrobbling anime watch status to AniList until reconnected."
-          confirmText="Disconnect"
-          cancelText="Cancel"
+          title={t('adminAniList.disconnectModalTitle')}
+          description={t('adminAniList.disconnectModalDesc')}
+          confirmText={t('adminAniList.disconnect')}
+          cancelText={t('common.cancel')}
           isDangerous
         />
       </div>

@@ -2,6 +2,7 @@ import type { JSX } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { apiFetch } from '../api'
 import { AdminHeader } from '../components/AdminHeader'
+import { useTranslation } from '../i18n'
 import s from './AdminAuth.module.css'
 
 interface AuthSettingsResponse {
@@ -13,6 +14,7 @@ interface AuthSettingsResponse {
 }
 
 export function AdminAuth({ path }: { path?: string }): JSX.Element {
+  const { t } = useTranslation()
   const [settings, setSettings] = useState<AuthSettingsResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -67,10 +69,10 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
           username: username.trim() || 'admin',
         }),
       })
-      setModeSuccess('Authentication mode updated!')
+      setModeSuccess(t('adminAuth.modeSuccess'))
       fetchSettings()
     } catch (err: unknown) {
-      setModeError(err instanceof Error ? err.message : 'Failed to update authentication mode')
+      setModeError(err instanceof Error ? err.message : t('adminAuth.modeError'))
     } finally {
       setSavingMode(false)
     }
@@ -83,11 +85,11 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
     setNewKeyAfterPasswordChange(null)
 
     if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters')
+      setPasswordError(t('adminAuth.passwordMinLength'))
       return
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
+      setPasswordError(t('adminAuth.passwordMismatch'))
       return
     }
 
@@ -100,21 +102,21 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
           new_password: newPassword,
         }),
       })
-      setPasswordSuccess('Password updated successfully!')
+      setPasswordSuccess(t('adminAuth.passwordSuccess'))
       setNewKeyAfterPasswordChange(res.new_recovery_key)
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       fetchSettings()
     } catch (err: unknown) {
-      setPasswordError(err instanceof Error ? err.message : 'Failed to change password')
+      setPasswordError(err instanceof Error ? err.message : t('adminAuth.passwordError'))
     } finally {
       setSavingPassword(false)
     }
   }
 
   const handleRegenerateKey = async () => {
-    if (!confirm('Are you sure you want to generate a new emergency recovery key? The old key will be immediately revoked.')) {
+    if (!confirm(t('adminAuth.regenerateConfirm'))) {
       return
     }
     setKeyError('')
@@ -126,7 +128,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
       })
       setNewRegeneratedKey(res.new_recovery_key)
     } catch (err: unknown) {
-      setKeyError(err instanceof Error ? err.message : 'Failed to regenerate recovery key')
+      setKeyError(err instanceof Error ? err.message : t('adminAuth.keyError'))
     } finally {
       setRegeneratingKey(false)
     }
@@ -134,17 +136,17 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
 
   return (
     <div className={s.page}>
-      <AdminHeader title="Authentication & Security" />
+      <AdminHeader title={t('adminAuth.title')} />
 
-      {loading && <div>Loading...</div>}
+      {loading && <div>{t('common.loading')}</div>}
 
       {settings && (
         <>
           {/* SECTION 1: AUTH MODE */}
           <div className={s.section}>
-            <h2 className={s.sectionTitle}>Access Mode</h2>
+            <h2 className={s.sectionTitle}>{t('adminAuth.accessModeTitle')}</h2>
             <div className={s.sectionDesc}>
-              Choose how you sign in to Trackarr. In "Google Only" mode, local password prompts are hidden.
+              {t('adminAuth.accessModeDesc')}
             </div>
 
             {modeSuccess && <div className={s.alertSuccess}>{modeSuccess}</div>}
@@ -152,25 +154,25 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
 
             <form onSubmit={handleSaveMode} className={s.form}>
               <div className={s.inputGroup}>
-                <label htmlFor="auth-mode" className={s.label}>Active Mode</label>
+                <label htmlFor="auth-mode" className={s.label}>{t('adminAuth.activeModeLabel')}</label>
                 <select
                   id="auth-mode"
                   value={authMode}
                   onChange={(e) => setAuthMode((e.target as HTMLSelectElement).value as AuthSettingsResponse['auth_mode'])}
                   className={s.input}
                 >
-                  <option value="hybrid">Hybrid (Local Credentials + Google OAuth)</option>
+                  <option value="hybrid">{t('adminAuth.modeHybrid')}</option>
                   <option value="password" disabled={!settings.has_password}>
-                    Local Credentials Only {!settings.has_password && '(password required)'}
+                    {t('adminAuth.modePasswordOnly')} {!settings.has_password && t('adminAuth.modePasswordRequired')}
                   </option>
                   <option value="google" disabled={!settings.has_google}>
-                    Google OAuth Only {!settings.has_google && '(Google not configured)'}
+                    {t('adminAuth.modeGoogleOnly')} {!settings.has_google && t('adminAuth.modeGoogleNotConfigured')}
                   </option>
                 </select>
               </div>
 
               <div className={s.inputGroup}>
-                <label htmlFor="admin-user" className={s.label}>Local Username</label>
+                <label htmlFor="admin-user" className={s.label}>{t('adminAuth.usernameLabel')}</label>
                 <input
                   id="admin-user"
                   type="text"
@@ -182,7 +184,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
               </div>
 
               <button type="submit" disabled={savingMode} className={s.btnPrimary}>
-                {savingMode ? 'Saving...' : 'Save Access Mode'}
+                {savingMode ? t('adminAuth.savingMode') : t('adminAuth.saveMode')}
               </button>
             </form>
           </div>
@@ -190,10 +192,10 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
           {/* SECTION 2: PASSWORD CHANGE */}
           <div className={s.section}>
             <h2 className={s.sectionTitle}>
-              {settings.has_password ? 'Change Password' : 'Set Local Password'}
+              {settings.has_password ? t('adminAuth.changePasswordTitle') : t('adminAuth.setPasswordTitle')}
             </h2>
             <div className={s.sectionDesc}>
-              Updating your password will automatically regenerate your single-use emergency recovery key.
+              {t('adminAuth.passwordDesc')}
             </div>
 
             {passwordSuccess && <div className={s.alertSuccess}>{passwordSuccess}</div>}
@@ -201,9 +203,9 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
 
             {newKeyAfterPasswordChange && (
               <div className={s.keyAlert}>
-                <div className={s.keyTitle}>⚠️ New Emergency Recovery Key</div>
+                <div className={s.keyTitle}>{t('adminAuth.newKeyTitle')}</div>
                 <div className={s.sectionDesc}>
-                  Your old recovery key was revoked. Save your new key immediately:
+                  {t('adminAuth.newKeyDesc')}
                 </div>
                 <div className={s.keyBox}>{newKeyAfterPasswordChange}</div>
                 <button
@@ -211,7 +213,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
                   onClick={() => void navigator.clipboard.writeText(newKeyAfterPasswordChange)}
                   className={s.btnSecondary}
                 >
-                  Copy Key
+                  {t('adminAuth.copyKey')}
                 </button>
               </div>
             )}
@@ -219,7 +221,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
             <form onSubmit={handleChangePassword} className={s.form}>
               {settings.has_password && (
                 <div className={s.inputGroup}>
-                  <label htmlFor="curr-pass" className={s.label}>Current Password</label>
+                  <label htmlFor="curr-pass" className={s.label}>{t('adminAuth.currentPasswordLabel')}</label>
                   <input
                     id="curr-pass"
                     type="password"
@@ -233,7 +235,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
               )}
 
               <div className={s.inputGroup}>
-                <label htmlFor="new-pass" className={s.label}>New Password (min. 8 characters)</label>
+                <label htmlFor="new-pass" className={s.label}>{t('adminAuth.newPasswordLabel')}</label>
                 <input
                   id="new-pass"
                   type="password"
@@ -246,7 +248,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
               </div>
 
               <div className={s.inputGroup}>
-                <label htmlFor="confirm-pass" className={s.label}>Confirm New Password</label>
+                <label htmlFor="confirm-pass" className={s.label}>{t('adminAuth.confirmPasswordLabel')}</label>
                 <input
                   id="confirm-pass"
                   type="password"
@@ -259,30 +261,30 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
               </div>
 
               <button type="submit" disabled={savingPassword} className={s.btnPrimary}>
-                {savingPassword ? 'Updating...' : 'Update Password'}
+                {savingPassword ? t('adminAuth.updatingPassword') : t('adminAuth.updatePassword')}
               </button>
             </form>
           </div>
 
           {/* SECTION 3: EMERGENCY RECOVERY KEY */}
           <div className={s.section}>
-            <h2 className={s.sectionTitle}>Emergency Recovery Key</h2>
+            <h2 className={s.sectionTitle}>{t('adminAuth.recoveryKeyTitle')}</h2>
             <div className={s.sectionDesc}>
-              If you ever lose access to your account, this key allows you to reset your password without an email server.
+              {t('adminAuth.recoveryKeyDesc')}
             </div>
 
             {keyError && <div className={s.alertError}>{keyError}</div>}
 
             {newRegeneratedKey && (
               <div className={s.keyAlert}>
-                <div className={s.keyTitle}>🔑 New Recovery Key Generated</div>
+                <div className={s.keyTitle}>{t('adminAuth.regeneratedKeyTitle')}</div>
                 <div className={s.keyBox}>{newRegeneratedKey}</div>
                 <button
                   type="button"
                   onClick={() => void navigator.clipboard.writeText(newRegeneratedKey)}
                   className={s.btnSecondary}
                 >
-                  Copy Key
+                  {t('adminAuth.copyKey')}
                 </button>
               </div>
             )}
@@ -293,7 +295,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
               disabled={regeneratingKey}
               className={s.btnSecondary}
             >
-              {regeneratingKey ? 'Generating...' : 'Generate New Recovery Key'}
+              {regeneratingKey ? t('adminAuth.generatingKey') : t('adminAuth.generateKey')}
             </button>
           </div>
         </>
