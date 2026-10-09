@@ -100,15 +100,37 @@ describe('AdminSettings Page', () => {
     render(<AdminSettings />)
 
     await waitFor(() => {
-      expect(screen.getAllByText('Français').length).toBeGreaterThan(0) // i18n-ignore
+      expect(screen.getByTestId('interface-language-dropdown')).not.toBeNull()
     })
 
-    const francaisBtns = screen.getAllByText('Français') // i18n-ignore
-    fireEvent.click(francaisBtns[0])
+    fireEvent.click(screen.getByTestId('interface-language-dropdown'))
+
+    const francaisOption = screen.getByRole('option', { name: /Français/ }) // i18n-ignore
+    fireEvent.click(francaisOption)
 
     await waitFor(() => {
       expect(screen.getByText(/Apparence & Thèmes/)).not.toBeNull() // i18n-ignore
     })
+  })
+
+  it('allows selecting theme via theme dropdown', async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      tmdb_api_key: '',
+      tmdb_configured: false,
+    })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-dropdown')).not.toBeNull()
+    })
+
+    fireEvent.click(screen.getByTestId('theme-dropdown'))
+
+    const sunsetOption = screen.getByRole('option', { name: /Sunset Coral/ })
+    fireEvent.click(sunsetOption)
+
+    expect(screen.getByTestId('theme-dropdown').textContent).toContain('Sunset Coral')
   })
 
   it('allows selecting primary metadata language and saving settings', async () => {
@@ -128,13 +150,13 @@ describe('AdminSettings Page', () => {
     render(<AdminSettings />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Primary Metadata Language/)).not.toBeNull()
+      expect(screen.getByTestId('metadata-language-dropdown')).not.toBeNull()
     })
 
-    // Find the English metadata button (within Metadata section, after Interface English)
-    const englishBtns = screen.getAllByText('English')
-    expect(englishBtns.length).toBeGreaterThan(0)
-    fireEvent.click(englishBtns[englishBtns.length - 1])
+    fireEvent.click(screen.getByTestId('metadata-language-dropdown'))
+
+    const englishOption = screen.getByRole('option', { name: /English/ })
+    fireEvent.click(englishOption)
 
     const saveBtn = screen.getByText('Save Settings')
     fireEvent.click(saveBtn)
@@ -158,19 +180,19 @@ describe('AdminSettings Page', () => {
       .mockResolvedValueOnce({
         tmdb_api_key: '',
         tmdb_configured: false,
-        enabled_watch_providers: 'netflix,prime',
+        enabled_watch_providers: 'prime,disney,apple,max,canal,crunchyroll,paramount,adn',
       })
 
     render(<AdminSettings />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Streaming Platforms & Watch Providers/)).not.toBeNull()
+      expect(screen.getByTestId('watch-providers-dropdown')).not.toBeNull()
     })
 
-    // Find and toggle Netflix button
-    const netflixBtn = screen.getByText('Netflix').closest('button')
-    expect(netflixBtn).not.toBeNull()
-    fireEvent.click(netflixBtn!)
+    fireEvent.click(screen.getByTestId('watch-providers-dropdown'))
+
+    const netflixOption = screen.getByRole('option', { name: /Netflix/ })
+    fireEvent.click(netflixOption)
 
     const saveBtn = screen.getByText('Save Settings')
     fireEvent.click(saveBtn)
@@ -181,5 +203,27 @@ describe('AdminSettings Page', () => {
         body: expect.stringContaining('enabled_watch_providers'),
       }))
     })
+  })
+
+  it('allows selecting all and deselecting all watch providers', async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      tmdb_api_key: '',
+      tmdb_configured: false,
+      enabled_watch_providers: 'netflix',
+    })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('watch-providers-dropdown')).not.toBeNull()
+    })
+
+    fireEvent.click(screen.getByTestId('watch-providers-dropdown'))
+
+    const selectAllBtn = screen.getByText('Select all')
+    fireEvent.click(selectAllBtn)
+
+    const deselectAllBtn = screen.getByText('Deselect all')
+    fireEvent.click(deselectAllBtn)
   })
 })

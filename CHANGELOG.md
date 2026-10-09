@@ -10,6 +10,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 - **Composant d'en-tête unifié `<AdminHeader>`** : En-tête réutilisable et sticky pour les pages d'administration avec bouton de retour circulaire (34px), navigation déterministe, titre, et slot d'actions personnalisées.
 
 ### Modifié
+- **Menus déroulants stylisés et réorganisation des paramètres système (`/admin/settings`)** :
+  - Remplacement des grilles d'options encombrantes par des menus déroulants compacts et élégants : sélecteur de thème avec pastille dégradée, sélecteur de langue d'interface avec drapeaux nationaux, et sélecteur de langue principale des métadonnées avec drapeaux.
+  - Menu déroulant multi-sélection pour les plateformes de streaming (Watch Providers) : affichage des badges actifs dans le déclencheur, cases à cocher interactives avec statut actif/désactivé sans fermeture prématurée, et boutons « Tout sélectionner » / « Tout désélectionner ».
+  - Repositionnement hiérarchique de la section des clés d'API et intelligence artificielle (TMDB, TVDB, Gemini, AniList) en dernière position de la page.
 - **Standardisation de la largeur des conteneurs d'administration** : Normalisation à `max-width: 840px; margin: 0 auto;` sur AniList, Jellyfin, Notifications et Authentification, à `max-width: 1040px;` sur le hub Admin, et à `max-width: 1200px;` sur les files de tâches et audits de saison, éliminant l'étirement à 100vw sur moniteurs larges.
 - **Polissage desktop et internationalisation complète du hub, des tâches et de l'audit de saison** :
   - **Hub d'administration (`/admin`)** : Grille responsive en 2 colonnes (`max-width: 1040px; margin: 0 auto;`) pour les cartes de navigation avec étirement automatique des éléments impairs terminaux.

@@ -290,7 +290,7 @@
 | `/setup` | `Setup` | `pages/Setup.tsx` |
 | `/match-review` | `MatchReview` | `pages/MatchReview.tsx` |
 | `/admin` | `Admin` | `pages/Admin.tsx` | Admin Hub with responsive 2-column navigation grid (1040px) and live status badges |
-| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings: Appearance & Themes (theme picker + interface language), Metadata & AI (TMDB, TVDB, Gemini, AniList OAuth, metadata language), Streaming Platforms & Watch Providers |
+| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings (840px): Appearance & Localization (stylized theme, interface language & metadata language dropdowns), Streaming Platforms (stylized multi-select dropdown), and Metadata & AI keys at bottom |
 | `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` |
 | `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` | Background task queue & diagnostics: widescreen scannable layout (1200px), sticky AdminHeader, and centered floating batch action bar |
