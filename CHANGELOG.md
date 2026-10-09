@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.1] — 2026-10-09
+
 ### Corrigé
 - **Séries terminées lors d'un rafraîchissement métadonnées** :
   - Restriction de la complétion automatique d'épisodes (`completeEpisodes`) au premier backfill d'une série terminée importée sans liste d'épisodes (`!HasSyncedSeasons`). Les séries existantes dont les saisons sont déjà synchronisées ne cochent plus automatiquement les nouveaux épisodes diffusés lors de l'ajout d'une nouvelle saison sur TMDB.
