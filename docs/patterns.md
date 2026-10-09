@@ -241,7 +241,7 @@
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
 | `StatusBadge` | `components/StatusBadge.tsx` | Localized pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch* / *À voir*, *Dropped*, *Caught Up* / *À jour*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
-| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, and overscroll containment |
+| `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, overscroll containment, and automatic close on page navigation |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with media URL auto-detection (IMDb, TMDB, AniList), clear text `✕` button, and integrated filter trigger button with active count badge |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |

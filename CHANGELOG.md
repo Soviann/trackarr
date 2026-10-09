@@ -14,6 +14,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 
 ### Corrigé
+- **Tiroir de filtres de recherche (`FilterDrawer`)** :
+  - Fermeture automatique du tiroir de filtres lors de tout changement de page / navigation (`handleRoute`), garantissant que le tiroir est systématiquement fermé lorsqu'on revient sur la page de recherche ou de bibliothèque.
 - **Association AniList & Gestion des séries sans saisons/épisodes** :
   - **Fallback TVDB → TMDB** : Correction de `refreshSeriesFromTVDB` pour ne renvoyer `true` que si au moins un épisode d'une saison régulière (`> 0`) a été synchronisé. Quand TVDB ne contient aucun épisode (ex: animes en production ou récemment annoncés), Trackarr bascule correctement vers TMDB au lieu d'ignorer la création de saisons.
   - **Création automatique de la Saison 1 lors de l'association AniList** :

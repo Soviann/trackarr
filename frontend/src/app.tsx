@@ -51,6 +51,7 @@ type SeriesStatusFilter = SeriesStatus | null
 
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [vapidKey, setVapidKey] = useState<string>()
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export function App() {
 
   const handleRoute = (e: { url: string }) => {
     setCurrentPath(e.url)
+    setFilterDrawerOpen(false)
     window.scrollTo(0, 0)
   }
 
@@ -153,8 +155,6 @@ export function App() {
   const handleTmdbRatingMinChange = useCallback((v: string) => {
     setFilter({ tmdb_rating_min: v || undefined })
   }, [setFilter])
-
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
