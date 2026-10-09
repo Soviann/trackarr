@@ -47,7 +47,16 @@ export async function apiFetch<T = unknown>(path: string, options?: RequestInit)
 
   if (!res.ok) {
     const text = await res.text()
-    throw new ApiError(res.status, text)
+    let message = text
+    try {
+      const json = JSON.parse(text)
+      if (typeof json === 'object' && json !== null) {
+        message = json.message || json.error || text
+      }
+    } catch {
+      // not JSON, fallback to text
+    }
+    throw new ApiError(res.status, message)
   }
 
   if (res.status === 204 || res.status === 202) return undefined as T

@@ -11,6 +11,7 @@ import (
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	mw "github.com/Soviann/trackarr/internal/middleware"
+	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/service/matching"
@@ -37,6 +38,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	// Repositories (reads — use readDB so list queries don't block on background writes)
 	titleReadRepo := repository.NewTitleRepository(readDB)
+	apiKeyReadRepo := repository.NewAPIKeyRepository(readDB)
 
 	// Services
 	vapidPub, vapidPriv, vapidSub, _ := service.EnsureVAPIDKeys(ctx, writeDB, settingRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
@@ -121,6 +123,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	)
 	adminSettings := handler.NewAdminSettingsHandler(writeDB, settingRepo, reloader)
 
+	apiKeySvc := service.NewAPIKeyService(writeDB, apiKeyReadRepo)
+	adminAPIKeys := handler.NewAdminAPIKeyHandler(apiKeySvc)
+
 	// API routes
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", handler.Health)
@@ -149,11 +154,10 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		// Covers (unauthenticated for caching)
 		r.Get("/covers/{filename}", covers.Serve)
 
-		// Authenticated routes
+		// Interactive Admin Session Routes (strictly browser cookie token)
 		r.Group(func(r chi.Router) {
 			r.Use(mw.JWTAuth(jwtSecret))
 
-			r.Get("/calendar/events", httputil.WrapHandler(calendarHandler.GetEvents))
 			r.Get("/calendar/token", httputil.WrapHandler(calendarHandler.GetToken))
 			r.Post("/calendar/token/regenerate", httputil.WrapHandler(calendarHandler.RegenerateToken))
 
@@ -162,51 +166,14 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Get("/admin/auth-settings", httputil.WrapHandler(auth.GetAuthSettings))
 			r.Put("/admin/auth-settings", httputil.WrapHandler(auth.UpdateAuthSettings))
 
-			r.Get("/titles", httputil.WrapHandler(titles.List))
-			r.Post("/titles", httputil.WrapHandler(titles.Create))
-			// Static sub-routes must come BEFORE /{id} to avoid chi matching them as ID params
-			r.Get("/titles/review-count", httputil.WrapHandler(titles.ReviewCount))
-			r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
-			r.Get("/titles/continue-watching", httputil.WrapHandler(library.ContinueWatching))
-			r.Get("/titles/upcoming", httputil.WrapHandler(library.Upcoming))
-			r.Post("/titles/batch-delete", httputil.WrapHandler(titles.BatchDelete))
-			r.Post("/titles/batch-status", httputil.WrapHandler(titles.BatchStatus))
-			// Parameterized routes after static ones
-			r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
-			r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
-			r.Delete("/titles/{id}", httputil.WrapHandler(titles.Delete))
-			r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
-			r.Put("/titles/{id}/external-ids", httputil.WrapHandler(titles.SetExternalIDs))
-			r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
-			r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
-			r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
-			r.Get("/anilist/search", httputil.WrapHandler(anilistSearch.Search))
-			r.Get("/releases", httputil.WrapHandler(releasesHandler.List))
-			r.Post("/releases/add", httputil.WrapHandler(releasesHandler.Add))
-
-			r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
-			r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
-
-			seasonExternal := handler.NewSeasonExternalHandler(writeDB)
-			r.Post("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.AddAniListID))
-			r.Delete("/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}", httputil.WrapHandler(seasonExternal.RemoveAniListID))
-			r.Put("/titles/{titleID}/seasons/{seasonID}/anilist/order", httputil.WrapHandler(seasonExternal.ReorderAniList))
+			// API Keys Management
+			r.Get("/admin/api-keys", httputil.WrapHandler(adminAPIKeys.List))
+			r.Post("/admin/api-keys", httputil.WrapHandler(adminAPIKeys.Create))
+			r.Post("/admin/api-keys/{id}/revoke", httputil.WrapHandler(adminAPIKeys.Revoke))
+			r.Delete("/admin/api-keys/{id}", httputil.WrapHandler(adminAPIKeys.Delete))
 
 			r.Post("/push/subscribe", httputil.WrapHandler(push.Subscribe))
 			r.Delete("/push/subscribe", httputil.WrapHandler(push.Unsubscribe))
-
-			r.Get("/stats", httputil.WrapHandler(stats.Get))
-			r.Get("/stats/wrapped", httputil.WrapHandler(stats.GetWrapped))
-			r.Get("/stats/wrapped/archives", httputil.WrapHandler(stats.GetWrappedArchives))
-			r.Post("/stats/wrapped/generate", httputil.WrapHandler(stats.RegenerateWrapped))
-			r.Get("/stats/activity", httputil.WrapHandler(activity.List))
-			r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
-			r.Get("/genres", httputil.WrapHandler(genres.List))
-			r.Get("/countries", httputil.WrapHandler(titles.Countries))
-
-			r.Get("/titles/{id}/history", httputil.WrapHandler(history.Get))
-
-			r.Get("/settings", httputil.WrapHandler(settings.Get))
 
 			r.Get("/anilist/auth", httputil.WrapHandler(anilistAuth.Authorize))
 			r.Post("/anilist/token", httputil.WrapHandler(anilistAuth.SaveToken))
@@ -239,18 +206,85 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/admin/season-audit/accept", httputil.WrapHandler(seasonAudit.Accept))
 			r.Post("/admin/season-audit/dismiss", httputil.WrapHandler(seasonAudit.Dismiss))
 
-			// Arr API
-			r.Route("/arr", func(r chi.Router) {
-				r.Get("/{app}/rootfolder", httputil.WrapHandler(arr.ProxyRootFolder))
-				r.Get("/{app}/qualityprofile", httputil.WrapHandler(arr.ProxyQualityProfile))
-				r.Get("/title/{id}", httputil.WrapHandler(arr.GetTitleArr))
-				r.Put("/title/{id}", httputil.WrapHandler(arr.UpdateTitleArr))
-				r.Post("/push/{id}", httputil.WrapHandler(arr.PushToArr))
-				r.Post("/queue/{id}/push", httputil.WrapHandler(arr.PushToArr))
-			})
-
 			clientErrorsRateLimit := mw.RateLimit(ctx, 30, time.Minute)
 			r.With(clientErrorsRateLimit).Post("/client-errors", httputil.WrapHandler(clientErrors.Handle))
+		})
+
+		// Automation & Library Group (Cookie session OR API Key with Granular Scopes)
+		r.Group(func(r chi.Router) {
+			r.Use(mw.UnifiedAuth(jwtSecret, apiKeySvc))
+
+			seasonExternal := handler.NewSeasonExternalHandler(writeDB)
+
+			// Library Read
+			r.Group(func(r chi.Router) {
+				r.Use(mw.RequireScope(model.ScopeLibraryRead))
+
+				r.Get("/calendar/events", httputil.WrapHandler(calendarHandler.GetEvents))
+
+				// Static sub-routes must come BEFORE /{id} to avoid chi matching them as ID params
+				r.Get("/titles", httputil.WrapHandler(titles.List))
+				r.Get("/titles/review-count", httputil.WrapHandler(titles.ReviewCount))
+				r.Get("/titles/resolve", httputil.WrapHandler(titles.Resolve))
+				r.Get("/titles/continue-watching", httputil.WrapHandler(library.ContinueWatching))
+				r.Get("/titles/upcoming", httputil.WrapHandler(library.Upcoming))
+				r.Get("/titles/{id}", httputil.WrapHandler(titles.GetByID))
+				r.Get("/titles/{id}/history", httputil.WrapHandler(history.Get))
+
+				r.Get("/tmdb/search", httputil.WrapHandler(tmdbSearch.Search))
+				r.Get("/anilist/search", httputil.WrapHandler(anilistSearch.Search))
+				r.Get("/releases", httputil.WrapHandler(releasesHandler.List))
+
+				r.Get("/stats", httputil.WrapHandler(stats.Get))
+				r.Get("/stats/wrapped", httputil.WrapHandler(stats.GetWrapped))
+				r.Get("/stats/wrapped/archives", httputil.WrapHandler(stats.GetWrappedArchives))
+				r.Get("/stats/activity", httputil.WrapHandler(activity.List))
+				r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
+				r.Get("/genres", httputil.WrapHandler(genres.List))
+				r.Get("/countries", httputil.WrapHandler(titles.Countries))
+				r.Get("/settings", httputil.WrapHandler(settings.Get))
+			})
+
+			// Library Write
+			r.Group(func(r chi.Router) {
+				r.Use(mw.RequireScope(model.ScopeLibraryWrite))
+
+				r.Post("/titles", httputil.WrapHandler(titles.Create))
+				r.Post("/titles/batch-status", httputil.WrapHandler(titles.BatchStatus))
+				r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
+				r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
+				r.Put("/titles/{id}/external-ids", httputil.WrapHandler(titles.SetExternalIDs))
+				r.Post("/titles/{id}/merge", httputil.WrapHandler(titles.Merge))
+				r.Post("/titles/{id}/refresh", httputil.WrapHandler(titles.RefreshOne))
+				r.Post("/releases/add", httputil.WrapHandler(releasesHandler.Add))
+
+				r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(episodes.ToggleWatched))
+				r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(episodes.BatchMarkWatched))
+
+				r.Post("/titles/{titleID}/seasons/{seasonID}/anilist", httputil.WrapHandler(seasonExternal.AddAniListID))
+				r.Delete("/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}", httputil.WrapHandler(seasonExternal.RemoveAniListID))
+				r.Put("/titles/{titleID}/seasons/{seasonID}/anilist/order", httputil.WrapHandler(seasonExternal.ReorderAniList))
+
+				r.Post("/stats/wrapped/generate", httputil.WrapHandler(stats.RegenerateWrapped))
+			})
+
+			// Library Delete
+			r.Group(func(r chi.Router) {
+				r.Use(mw.RequireScope(model.ScopeLibraryDelete))
+
+				r.Delete("/titles/{id}", httputil.WrapHandler(titles.Delete))
+				r.Post("/titles/batch-delete", httputil.WrapHandler(titles.BatchDelete))
+			})
+
+			// Arr API
+			r.Route("/arr", func(r chi.Router) {
+				r.With(mw.RequireScope(model.ScopeArrRead)).Get("/{app}/rootfolder", httputil.WrapHandler(arr.ProxyRootFolder))
+				r.With(mw.RequireScope(model.ScopeArrRead)).Get("/{app}/qualityprofile", httputil.WrapHandler(arr.ProxyQualityProfile))
+				r.With(mw.RequireScope(model.ScopeArrRead)).Get("/title/{id}", httputil.WrapHandler(arr.GetTitleArr))
+				r.With(mw.RequireScope(model.ScopeArrWrite)).Put("/title/{id}", httputil.WrapHandler(arr.UpdateTitleArr))
+				r.With(mw.RequireScope(model.ScopeArrWrite)).Post("/push/{id}", httputil.WrapHandler(arr.PushToArr))
+				r.With(mw.RequireScope(model.ScopeArrWrite)).Post("/queue/{id}/push", httputil.WrapHandler(arr.PushToArr))
+			})
 		})
 	})
 

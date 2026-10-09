@@ -139,3 +139,108 @@
   text-align: center;
   user-select: all;
 }
+
+.cardForm {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.scopesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scopeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.btnRow {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.keysTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  text-align: left;
+}
+
+.keysTable th {
+  padding: 8px 10px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.keysTable td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-mute);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.scopeBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scopeBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  background: var(--surface-hover);
+  color: var(--ink-mute);
+  border: 1px solid var(--border);
+}
+
+.revokedBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--status-crit) 15%, transparent);
+  color: var(--status-crit);
+  border: 1px solid color-mix(in srgb, var(--status-crit) 30%, transparent);
+}
+
+.prefixCode {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.dangerBtn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--status-crit) 40%, transparent);
+  background: transparent;
+  color: var(--status-crit);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dangerBtn:hover {
+  background: color-mix(in srgb, var(--status-crit) 15%, transparent);
+}
+

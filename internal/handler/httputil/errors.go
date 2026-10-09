@@ -1,9 +1,11 @@
 package httputil
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // APIError represents an error that should be returned to the client.
@@ -57,11 +59,23 @@ func WrapHandler(h HandlerFunc) http.HandlerFunc {
 				if apiErr.Err != nil {
 					log.Printf("%s %s: %v", r.Method, r.URL.Path, apiErr.Err)
 				}
-				http.Error(w, apiErr.Message, apiErr.Status)
+				writeError(w, r, apiErr.Status, apiErr.Message)
 				return
 			}
 			log.Printf("%s %s: %v", r.Method, r.URL.Path, err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			writeError(w, r, http.StatusInternalServerError, "Internal error")
 		}
 	}
+}
+
+func writeError(w http.ResponseWriter, r *http.Request, status int, message string) {
+	if strings.HasPrefix(r.URL.Path, "/api") || r.Header.Get("Accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": message,
+		})
+		return
+	}
+	http.Error(w, message, status)
 }

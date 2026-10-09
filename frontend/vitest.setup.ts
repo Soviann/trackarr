@@ -1,21 +1,41 @@
+import { beforeEach } from 'vitest'
+
 const fallbackCancelAnimationFrame = (id: number) => {
-  if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function' && window.cancelAnimationFrame !== fallbackCancelAnimationFrame) {
-    try {
-      window.cancelAnimationFrame(id)
-      return
-    } catch {
-      // JSDOM window might be destroyed during teardown
-    }
-  }
   clearTimeout(id)
 }
 
-if (typeof globalThis !== 'undefined') {
-  globalThis.cancelAnimationFrame = fallbackCancelAnimationFrame
+const fallbackRequestAnimationFrame = (cb: FrameRequestCallback) => {
+  return setTimeout(cb, 0) as unknown as number
 }
-if (typeof global !== 'undefined') {
-  (global as any).cancelAnimationFrame = fallbackCancelAnimationFrame
+
+function ensurePolyfills() {
+  if (typeof globalThis !== 'undefined') {
+    if (typeof globalThis.cancelAnimationFrame !== 'function') {
+      globalThis.cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof globalThis.requestAnimationFrame !== 'function') {
+      globalThis.requestAnimationFrame = fallbackRequestAnimationFrame
+    }
+  }
+  if (typeof global !== 'undefined') {
+    if (typeof (global as any).cancelAnimationFrame !== 'function') {
+      (global as any).cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof (global as any).requestAnimationFrame !== 'function') {
+      (global as any).requestAnimationFrame = fallbackRequestAnimationFrame
+    }
+  }
+  if (typeof window !== 'undefined') {
+    if (typeof window.cancelAnimationFrame !== 'function') {
+      window.cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof window.requestAnimationFrame !== 'function') {
+      window.requestAnimationFrame = fallbackRequestAnimationFrame
+    }
+  }
 }
-if (typeof window !== 'undefined') {
-  (window as any).cancelAnimationFrame = fallbackCancelAnimationFrame
-}
+
+ensurePolyfills()
+beforeEach(() => {
+  ensurePolyfills()
+})

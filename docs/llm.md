@@ -84,6 +84,7 @@
 - `title_relations`: Side stories, sagas, and franchise relations (`title_id`, `season_id`, `provider: 'anilist'|'tmdb'|'tvdb'`, `external_id`, `relation_type: 'PREQUEL'|'SEQUEL'|'SPIN_OFF'|'SIDE_STORY'|'ALTERNATIVE'|'COLLECTION'`, `format`, `title`, `cover_url`, `year`, `score`, `overview`, `sort_order`).
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
+- `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
 - `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
@@ -98,6 +99,10 @@
 - `POST /api/auth/change-password` : Authenticated password change & auto-regeneration.
 - `POST /api/auth/recovery-key/regenerate` : Regenerate emergency recovery key.
 - `POST /api/auth/logout` : Clear JWT auth cookie.
+- `GET /api/admin/api-keys` : List all configured labeled API keys.
+- `POST /api/admin/api-keys` : Generate labeled API key with granular scopes.
+- `POST /api/admin/api-keys/{id}/revoke` : Revoke active API key.
+- `DELETE /api/admin/api-keys/{id}` : Permanently delete API key.
 - `GET /api/covers/{filename}` : Cached cover image loader (also `/covers/{filename}`).
 - `GET /api/titles` : List titles with status/type/genre/person/country filtering, sorting, pagination.
 - `GET /api/titles/{id}` : Full title entity with names, seasons, episodes, cast, external IDs.
