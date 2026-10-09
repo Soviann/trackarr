@@ -57,12 +57,14 @@
 | `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
 | `NextEpisode` | `internal/model/title.go` | First unwatched episode projection (`ID`, `SeasonID`, `Episode`, `SeasonNumber`, `Name`, `AirDate`, `IsTBA`). |
 | `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, actor/director rankings, and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
+| `APIKey` | `internal/model/api_key.go` | Machine-to-machine authentication credential (`ID`, `Name`, `KeyHash`, `KeyPrefix`, `Scopes`, `CreatedAt`, `LastUsedAt`, `RevokedAt`). |
 
 ### Repositories (`internal/repository/`)
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
 | `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | `Episode` | `GetBySeasonID`, `GetByID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `MarkAllWatchedForTitle` |
@@ -99,6 +101,7 @@
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
 | `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine (`enrichment`, `push`, `arr`) | `docs/background-jobs.md` |
+| `APIKeyService` | `internal/service/api_key.go` | Labeled API Key authentication, format validation, memory-throttled usage tracking | `docs/patterns.md` |
 
 ### API Routes & Handlers (`internal/router/router.go`)
 
@@ -113,6 +116,10 @@
 | POST | `/api/auth/change-password` | `auth.ChangePassword` | Authenticated password change & auto-regeneration |
 | POST | `/api/auth/recovery-key/regenerate` | `auth.RegenerateRecoveryKey` | Regenerate emergency recovery key |
 | POST | `/api/auth/logout` | `auth.Logout` | Clear JWT auth cookie |
+| GET | `/api/admin/api-keys` | `adminAPIKeys.List` | List all labeled API keys |
+| POST | `/api/admin/api-keys` | `adminAPIKeys.Create` | Create a new labeled API key with granular scopes |
+| POST | `/api/admin/api-keys/{id}/revoke` | `adminAPIKeys.Revoke` | Revoke active API key |
+| DELETE | `/api/admin/api-keys/{id}` | `adminAPIKeys.Delete` | Permanently remove API key |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
 | GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |

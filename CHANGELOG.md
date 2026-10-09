@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Architecture de Clés d'API nommées & Scopes granulaires (Milestone 2 - Chunk 5)** :
+  - Migration de base de données `049_api_keys.up.sql` avec table `api_keys` (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`).
+  - Entropie cryptographique de 256 bits (`crypto/rand`, jeton préfixé `trck_live_`, validation regex stricte `^trck_live_[0-9a-f]{64}$`).
+  - Scopes administrables granulaires (`library:read`, `library:write`, `library:delete`, `arr:read`, `arr:write`) avec sanctuarisation absolue des identifiants et secrets système.
+  - Middleware `mw.UnifiedAuth` assurant la compatibilité ascendante entre les sessions web interactives et les clients automatisés tiers, avec limitation de débit conforme aux en-têtes IETF (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` et `Retry-After` sur 429).
+  - Section de gestion des clés API dans l'interface d'administration (`/admin/auth`) : liste tabulaire des clés, sélection des scopes par cases à cocher, affichage unique du jeton avec bouton de copie, révocation et suppression définitive.
+  - Harmonisation des erreurs en format JSON via `httputil.WrapHandler` sur `/api/*` et décodage intelligent dans le client frontend `apiFetch`.
+
 ## [v1.25.0] — 2026-10-09
 
 ### Ajouté

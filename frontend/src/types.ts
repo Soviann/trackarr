@@ -491,4 +491,21 @@ export interface RefreshAllProgress {
   last_error?: string
 }
 
+export type APIKeyScope = 'library:read' | 'library:write' | 'library:delete' | 'arr:read' | 'arr:write'
+
+export interface APIKey {
+  id: number
+  name: string
+  key_prefix: string
+  scopes: APIKeyScope[]
+  created_at: string
+  last_used_at?: string | null
+  revoked_at?: string | null
+}
+
+export interface CreateAPIKeyResponse {
+  key: APIKey
+  token: string
+}
+
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { apiFetch } from '../api'
 import { AdminHeader } from '../components/AdminHeader'
 import { useTranslation } from '../i18n'
+import type { APIKey, APIKeyScope, CreateAPIKeyResponse } from '../types'
 import s from './AdminAuth.module.css'
 
 interface AuthSettingsResponse {
@@ -39,6 +40,20 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
   const [regeneratingKey, setRegeneratingKey] = useState(false)
   const [keyError, setKeyError] = useState('')
 
+  // API Keys Management
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([])
+  const [loadingKeys, setLoadingKeys] = useState(true)
+  const [showCreateKey, setShowCreateKey] = useState(false)
+  const [keyName, setKeyName] = useState('')
+  const [selectedScopes, setSelectedScopes] = useState<APIKeyScope[]>([
+    'library:read',
+    'library:write',
+  ])
+  const [creatingKey, setCreatingKey] = useState(false)
+  const [keyFormError, setKeyFormError] = useState('')
+  const [newCreatedToken, setNewCreatedToken] = useState<string | null>(null)
+  const [copiedToken, setCopiedToken] = useState(false)
+
   const fetchSettings = async () => {
     try {
       const data = await apiFetch<AuthSettingsResponse>('/admin/auth-settings')
@@ -52,9 +67,81 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
     }
   }
 
+  const fetchApiKeys = async () => {
+    try {
+      const data = await apiFetch<APIKey[]>('/admin/api-keys')
+      setApiKeys(data || [])
+    } catch (err) {
+      console.error('Failed to load api keys:', err)
+    } finally {
+      setLoadingKeys(false)
+    }
+  }
+
   useEffect(() => {
     fetchSettings()
+    fetchApiKeys()
   }, [])
+
+  const handleToggleScope = (scope: APIKeyScope) => {
+    setSelectedScopes((prev) =>
+      prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope],
+    )
+  }
+
+  const handleCreateKey = async (e: Event) => {
+    e.preventDefault()
+    setKeyFormError('')
+    if (!keyName.trim()) {
+      setKeyFormError(t('adminAuth.keyNameLabel'))
+      return
+    }
+    if (selectedScopes.length === 0) {
+      setKeyFormError(t('adminAuth.scopesLabel'))
+      return
+    }
+
+    setCreatingKey(true)
+    try {
+      const res = await apiFetch<CreateAPIKeyResponse>('/admin/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: keyName.trim(),
+          scopes: selectedScopes,
+        }),
+      })
+      setNewCreatedToken(res.token)
+      setCopiedToken(false)
+      setKeyName('')
+      setSelectedScopes(['library:read', 'library:write'])
+      setShowCreateKey(false)
+      fetchApiKeys()
+    } catch (err: unknown) {
+      setKeyFormError(err instanceof Error ? err.message : 'Failed to create API key')
+    } finally {
+      setCreatingKey(false)
+    }
+  }
+
+  const handleRevokeKey = async (id: number) => {
+    if (!confirm(t('adminAuth.revokeConfirm'))) return
+    try {
+      await apiFetch(`/admin/api-keys/${id}/revoke`, { method: 'POST' })
+      fetchApiKeys()
+    } catch (err) {
+      console.error('Failed to revoke API key:', err)
+    }
+  }
+
+  const handleDeleteKey = async (id: number) => {
+    if (!confirm(t('adminAuth.deleteConfirm'))) return
+    try {
+      await apiFetch(`/admin/api-keys/${id}`, { method: 'DELETE' })
+      fetchApiKeys()
+    } catch (err) {
+      console.error('Failed to delete API key:', err)
+    }
+  }
 
   const handleSaveMode = async (e: Event) => {
     e.preventDefault()
@@ -297,6 +384,182 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
             >
               {regeneratingKey ? t('adminAuth.generatingKey') : t('adminAuth.generateKey')}
             </button>
+          </div>
+
+          {/* SECTION 4: API KEYS & INTEGRATIONS */}
+          <div className={s.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h2 className={s.sectionTitle}>{t('adminAuth.apiKeysTitle')}</h2>
+                <div className={s.sectionDesc}>{t('adminAuth.apiKeysDesc')}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateKey((v) => !v)}
+                className={s.btnPrimary}
+              >
+                {showCreateKey ? t('adminAuth.cancelKeyBtn') : t('adminAuth.createKeyBtn')}
+              </button>
+            </div>
+
+            {newCreatedToken && (
+              <div className={s.keyAlert}>
+                <div className={s.keyTitle}>{t('adminAuth.keyCreatedTitle')}</div>
+                <div className={s.sectionDesc}>{t('adminAuth.keyCreatedWarning')}</div>
+                <div className={s.keyBox}>{newCreatedToken}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(newCreatedToken)
+                    setCopiedToken(true)
+                  }}
+                  className={s.btnSecondary}
+                >
+                  {copiedToken ? t('common.copied') : t('adminAuth.copyKey')}
+                </button>
+              </div>
+            )}
+
+            {showCreateKey && (
+              <form onSubmit={handleCreateKey} className={s.cardForm}>
+                {keyFormError && <div className={s.alertError}>{keyFormError}</div>}
+
+                <div className={s.inputGroup}>
+                  <label htmlFor="key-name" className={s.label}>{t('adminAuth.keyNameLabel')}</label>
+                  <input
+                    id="key-name"
+                    type="text"
+                    value={keyName}
+                    placeholder={t('adminAuth.keyNamePlaceholder')}
+                    onInput={(e) => setKeyName((e.target as HTMLInputElement).value)}
+                    className={s.input}
+                    required
+                  />
+                </div>
+
+                <div className={s.inputGroup}>
+                  <span className={s.label}>{t('adminAuth.scopesLabel')}</span>
+                  <div className={s.scopesList}>
+                    <label className={s.scopeItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes('library:read')}
+                        onChange={() => handleToggleScope('library:read')}
+                      />
+                      <span>{t('adminAuth.scopeLibraryRead')}</span>
+                    </label>
+                    <label className={s.scopeItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes('library:write')}
+                        onChange={() => handleToggleScope('library:write')}
+                      />
+                      <span>{t('adminAuth.scopeLibraryWrite')}</span>
+                    </label>
+                    <label className={s.scopeItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes('library:delete')}
+                        onChange={() => handleToggleScope('library:delete')}
+                      />
+                      <span>{t('adminAuth.scopeLibraryDelete')}</span>
+                    </label>
+                    <label className={s.scopeItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes('arr:read')}
+                        onChange={() => handleToggleScope('arr:read')}
+                      />
+                      <span>{t('adminAuth.scopeArrRead')}</span>
+                    </label>
+                    <label className={s.scopeItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes('arr:write')}
+                        onChange={() => handleToggleScope('arr:write')}
+                      />
+                      <span>{t('adminAuth.scopeArrWrite')}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className={s.btnRow}>
+                  <button type="submit" disabled={creatingKey} className={s.btnPrimary}>
+                    {creatingKey ? t('adminAuth.creatingKey') : t('adminAuth.createKeySubmit')}
+                  </button>
+                  <button type="button" onClick={() => setShowCreateKey(false)} className={s.btnSecondary}>
+                    {t('adminAuth.cancelKeyBtn')}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className={s.tableWrapper}>
+              {loadingKeys ? (
+                <div>{t('common.loading')}</div>
+              ) : apiKeys.length === 0 ? (
+                <div className={s.sectionDesc}>{t('adminAuth.noKeysYet')}</div>
+              ) : (
+                <table className={s.keysTable}>
+                  <thead>
+                    <tr>
+                      <th>{t('adminAuth.keyName')}</th>
+                      <th>{t('adminAuth.keyPrefix')}</th>
+                      <th>{t('adminAuth.keyScopes')}</th>
+                      <th>{t('adminAuth.keyCreated')}</th>
+                      <th>{t('adminAuth.keyLastUsed')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apiKeys.map((k) => (
+                      <tr key={k.id}>
+                        <td><strong>{k.name}</strong></td>
+                        <td><span className={s.prefixCode}>{k.key_prefix}…</span></td>
+                        <td>
+                          <div className={s.scopeBadges}>
+                            {k.scopes.map((scope) => (
+                              <span key={scope} className={s.scopeBadge}>{scope}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>{new Date(k.created_at).toLocaleDateString()}</td>
+                        <td>
+                          {k.last_used_at
+                            ? new Date(k.last_used_at).toLocaleDateString()
+                            : t('adminAuth.neverUsed')}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            {k.revoked_at ? (
+                              <>
+                                <span className={s.revokedBadge}>{t('adminAuth.revokedBadge')}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteKey(k.id)}
+                                  className={s.dangerBtn}
+                                  title={t('adminAuth.deleteKey')}
+                                >
+                                  {t('adminAuth.deleteKey')}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeKey(k.id)}
+                                className={s.dangerBtn}
+                              >
+                                {t('adminAuth.revokeKey')}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </>
       )}
