@@ -646,6 +646,7 @@ export const fr: TranslationSchema = {
     topActors: 'Acteurs les plus vus',
     topDirectors: 'Réalisateurs les plus vus',
     didYouKnow: 'Le saviez-vous ?',
+    streaks: 'Séries de visionnage',
     currentStreak: 'Série actuelle',
     bestStreak: 'Record de série',
     recentActivity: 'Activité récente',

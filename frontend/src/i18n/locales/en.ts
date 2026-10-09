@@ -644,6 +644,7 @@ export const en = {
     topActors: 'Top Actors',
     topDirectors: 'Top Directors',
     didYouKnow: 'Did you know?',
+    streaks: 'Watch Streaks',
     currentStreak: 'Current streak',
     bestStreak: 'Best streak',
     recentActivity: 'Recent activity',

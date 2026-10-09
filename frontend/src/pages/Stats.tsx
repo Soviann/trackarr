@@ -78,120 +78,123 @@ export function Stats({ path: _path }: { path?: string }) {
 
   return (
     <div className={s.page}>
-      <h1 className={s.pageTitle}>{t('stats.title')}</h1>
+      <div className={s.headerContainer}>
+        <h1 className={s.pageTitle}>{t('stats.title')}</h1>
 
-      {!isBannerDismissed && (
-        <div className={s.wrappedBanner} onClick={() => route(routeTo.wrapped())}>
-          <div className={s.wrappedBannerContent}>
-            <div className={s.wrappedBannerIcon}>✨</div>
-            <div>
-              <div className={s.wrappedBannerTitle}>
-                {t('wrapped.bannerTitle', { year: currentYear })}
-              </div>
-              <div className={s.wrappedBannerSubtitle}>
-                {t('wrapped.bannerSubtitle')}
-              </div>
-            </div>
-          </div>
-          <div className={s.wrappedBannerActions}>
+        <div className={s.statsFiltersBar}>
+          <div className={s.filterPillsRow}>
             <button
-              className={s.wrappedBannerBtn}
-              onClick={(e) => {
-                e.stopPropagation()
-                route(routeTo.wrapped())
+              type="button"
+              className={`${s.pillOpt} ${timeframe === 'all' ? s.pillOptSelected : ''}`}
+              onClick={() => setTimeframe('all')}
+            >
+              {t('stats.allHistory')}
+            </button>
+            <select
+              id="stats-year-filter"
+              name="year"
+              aria-label={t('releases.filterByYear')}
+              className={`${s.yearSelectPill} ${timeframe === 'year' ? s.yearSelectPillSelected : ''}`}
+              value={selectedYear}
+              onChange={(e) => {
+                const yr = Number((e.currentTarget as HTMLSelectElement).value)
+                setSelectedYear(yr)
+                setTimeframe('year')
+              }}
+              onInput={(e) => {
+                const yr = Number((e.currentTarget as HTMLSelectElement).value)
+                setSelectedYear(yr)
+                setTimeframe('year')
               }}
             >
-              {t('wrapped.bannerButton')} →
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={`${s.pillOpt} ${timeframe === '30d' ? s.pillOptSelected : ''}`}
+              onClick={() => setTimeframe('30d')}
+            >
+              {t('stats.last30Days')}
+            </button>
+          </div>
+
+          <div className={s.filterPillsRow}>
+            <button
+              type="button"
+              className={`${s.pillOpt} ${mediaType === 'all' ? s.pillOptSelected : ''}`}
+              onClick={() => setMediaType('all')}
+            >
+              {t('stats.allMedia')}
             </button>
             <button
               type="button"
-              className={s.wrappedBannerDismiss}
-              onClick={handleDismissBanner}
-              aria-label={t('wrapped.bannerDismiss')}
-              title={t('wrapped.bannerDismiss')}
+              className={`${s.pillOpt} ${mediaType === 'movie' ? s.pillOptSelected : ''}`}
+              onClick={() => setMediaType('movie')}
             >
-              ✕
+              {t('stats.movies')}
+            </button>
+            <button
+              type="button"
+              className={`${s.pillOpt} ${mediaType === 'series' ? s.pillOptSelected : ''}`}
+              onClick={() => setMediaType('series')}
+            >
+              {t('stats.series')}
+            </button>
+            <button
+              type="button"
+              className={`${s.pillOpt} ${mediaType === 'anime' ? s.pillOptSelected : ''}`}
+              onClick={() => setMediaType('anime')}
+            >
+              {t('stats.anime')}
             </button>
           </div>
         </div>
+      </div>
+
+      {!isBannerDismissed && (
+        <aside className={s.wrappedBanner} aria-label={t('wrapped.bannerTitle', { year: currentYear })}>
+          <a
+            href={routeTo.wrapped()}
+            className={s.wrappedBannerLink}
+            onClick={(e) => {
+              e.preventDefault()
+              route(routeTo.wrapped())
+            }}
+          >
+            <div className={s.wrappedBannerContent}>
+              <div className={s.wrappedBannerIcon}>✨</div>
+              <div>
+                <div className={s.wrappedBannerTitle}>
+                  {t('wrapped.bannerTitle', { year: currentYear })}
+                </div>
+                <div className={s.wrappedBannerSubtitle}>
+                  {t('wrapped.bannerSubtitle')}
+                </div>
+              </div>
+            </div>
+            <span className={s.wrappedBannerBtn}>
+              {t('wrapped.bannerButton')} →
+            </span>
+          </a>
+          <button
+            type="button"
+            className={s.wrappedBannerDismiss}
+            onClick={handleDismissBanner}
+            aria-label={t('wrapped.bannerDismiss')}
+            title={t('wrapped.bannerDismiss')}
+          >
+            ✕
+          </button>
+        </aside>
       )}
 
       {archives && archives.length > 0 && (
         <WrappedArchivesSection archives={archives} t={t} />
       )}
-
-      <div className={s.statsFiltersBar}>
-        <div className={s.filterPillsRow}>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${timeframe === 'all' ? s.pillOptSelected : ''}`}
-            onClick={() => setTimeframe('all')}
-          >
-            {t('stats.allHistory')}
-          </button>
-          <select
-            id="stats-year-filter"
-            name="year"
-            aria-label={t('releases.filterByYear')}
-            className={`${s.yearSelectPill} ${timeframe === 'year' ? s.yearSelectPillSelected : ''}`}
-            value={selectedYear}
-            onChange={(e) => {
-              const yr = Number((e.currentTarget as HTMLSelectElement).value)
-              setSelectedYear(yr)
-              setTimeframe('year')
-            }}
-            onInput={(e) => {
-              const yr = Number((e.currentTarget as HTMLSelectElement).value)
-              setSelectedYear(yr)
-              setTimeframe('year')
-            }}
-          >
-            {availableYears.map((yr) => (
-              <option key={yr} value={yr}>
-                {yr}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${timeframe === '30d' ? s.pillOptSelected : ''}`}
-            onClick={() => setTimeframe('30d')}
-          >
-            {t('stats.last30Days')}
-          </button>
-        </div>
-
-        <div className={s.filterPillsRow}>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${mediaType === 'all' ? s.pillOptSelected : ''}`}
-            onClick={() => setMediaType('all')}
-          >
-            {t('stats.allMedia')}
-          </button>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${mediaType === 'movie' ? s.pillOptSelected : ''}`}
-            onClick={() => setMediaType('movie')}
-          >
-            {t('stats.movies')}
-          </button>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${mediaType === 'series' ? s.pillOptSelected : ''}`}
-            onClick={() => setMediaType('series')}
-          >
-            {t('stats.series')}
-          </button>
-          <button
-            type="button"
-            className={`${s.pillOpt} ${mediaType === 'anime' ? s.pillOptSelected : ''}`}
-            onClick={() => setMediaType('anime')}
-          >
-            {t('stats.anime')}
-          </button>
-        </div>
-      </div>
 
       <OverviewSection
         overview={data.overview}
@@ -199,21 +202,30 @@ export function Stats({ path: _path }: { path?: string }) {
         locale={locale}
         t={t}
       />
-      <GenreSection genres={data.genres ?? []} t={t} />
-      <TopActorsSection
-        actors={data.top_actors ?? []}
-        onSelectPerson={(name) => setSelectedPerson({ name, role: 'actor' })}
-        t={t}
-      />
-      <TopDirectorsSection
-        directors={data.top_directors ?? []}
-        onSelectPerson={(name) => setSelectedPerson({ name, role: 'director' })}
-        t={t}
-      />
-      <RatingsSection ratings={data.ratings} t={t} />
-      <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} t={t} />
+
+      <div className={s.bentoGrid}>
+        <div className={s.bentoCol}>
+          <GenreSection genres={data.genres ?? []} t={t} />
+          <RatingsSection ratings={data.ratings} t={t} />
+          <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} t={t} />
+        </div>
+        <div className={s.bentoCol}>
+          <TopActorsSection
+            actors={data.top_actors ?? []}
+            onSelectPerson={(name) => setSelectedPerson({ name, role: 'actor' })}
+            t={t}
+          />
+          <TopDirectorsSection
+            directors={data.top_directors ?? []}
+            onSelectPerson={(name) => setSelectedPerson({ name, role: 'director' })}
+            t={t}
+          />
+          <YearSection year={data.year_summary} t={t} />
+        </div>
+      </div>
+
       {data.fun_stats.length > 0 && <FunStatsSection stats={data.fun_stats} t={t} />}
-      <YearSection year={data.year_summary} t={t} />
+
       <ActivitySection t={t} locale={locale} />
 
       <PersonFilmographyDrawer
@@ -290,7 +302,14 @@ function RatingsSection({
         return (
           <div key={rating} className={s.barRow}>
             <span className={s.barLabel}>{rating}</span>
-            <div className={s.barTrack}>
+            <div
+              className={s.barTrack}
+              role="meter"
+              aria-label={`${rating} ★: ${count}`}
+              aria-valuenow={count}
+              aria-valuemin={0}
+              aria-valuemax={max}
+            >
               <div
                 className={s.barFill}
                 style={{ width: count > 0 ? `${Math.max((count / max) * 100, 4)}%` : '0%' }}
@@ -315,7 +334,7 @@ function FunStatsSection({
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }) {
   return (
-    <section className={s.section}>
+    <section className={`${s.section} ${s.funStatsSection}`}>
       <SectionLabel>{t('stats.didYouKnow')}</SectionLabel>
       <div className={s.funStatList}>
         {stats.map((stat) => (
@@ -348,7 +367,14 @@ function GenreSection({
       {genres.map((g) => (
         <div key={g.genre} className={s.barRow}>
           <span className={s.barLabel}>{g.genre}</span>
-          <div className={s.barTrack}>
+          <div
+            className={s.barTrack}
+            role="meter"
+            aria-label={`${g.genre}: ${g.count}`}
+            aria-valuenow={g.count}
+            aria-valuemin={0}
+            aria-valuemax={max}
+          >
             <div
               className={s.barFill}
               style={{ width: `${(g.count / max) * 100}%` }}
@@ -384,13 +410,21 @@ function TopActorsSection({
           title={t('stats.actorCount', { count: a.count, plural: a.count === 1 ? '' : 's' })}
         >
           <span className={s.personLabel}>{a.name}</span>
-          <div className={s.barTrack}>
+          <div
+            className={s.barTrack}
+            role="meter"
+            aria-label={`${a.name}: ${a.count}`}
+            aria-valuenow={a.count}
+            aria-valuemin={0}
+            aria-valuemax={max}
+          >
             <div
               className={s.barFill}
               style={{ width: `${(a.count / max) * 100}%` }}
             />
           </div>
           <span className={s.barValue}>{a.count}</span>
+          <span className={s.personAffordance} aria-hidden="true">→</span>
         </button>
       ))}
     </section>
@@ -420,13 +454,21 @@ function TopDirectorsSection({
           title={t('stats.directorCount', { count: d.count, plural: d.count === 1 ? '' : 's' })}
         >
           <span className={s.personLabel}>{d.name}</span>
-          <div className={s.barTrack}>
+          <div
+            className={s.barTrack}
+            role="meter"
+            aria-label={`${d.name}: ${d.count}`}
+            aria-valuenow={d.count}
+            aria-valuemin={0}
+            aria-valuemax={max}
+          >
             <div
               className={s.barFill}
               style={{ width: `${(d.count / max) * 100}%` }}
             />
           </div>
           <span className={s.barValue}>{d.count}</span>
+          <span className={s.personAffordance} aria-hidden="true">→</span>
         </button>
       ))}
     </section>
@@ -443,6 +485,7 @@ function StreakSection({
   if (streaks.current === 0 && streaks.best === 0) return null
   return (
     <section className={s.section}>
+      <SectionLabel>{t('stats.streaks')}</SectionLabel>
       <div className={s.streakRow}>
         <div className={s.streakCard}>
           <div className={s.streakValue}>🔥 {streaks.current}d</div>
@@ -741,10 +784,14 @@ function WrappedArchivesSection({
           const cover = getCoverUrl(a.top_cover_url)
           const watchTimeStr = formatWatchtime(a.total_watch_minutes) || '—'
           return (
-            <div
+            <a
               key={a.year}
+              href={routeTo.wrapped(a.year)}
               className={s.archiveCard}
-              onClick={() => route(routeTo.wrapped(a.year))}
+              onClick={(e) => {
+                e.preventDefault()
+                route(routeTo.wrapped(a.year))
+              }}
             >
               {cover ? (
                 <img src={cover} alt={a.persona_title} className={s.archiveCover} />
@@ -767,17 +814,11 @@ function WrappedArchivesSection({
                     ))}
                   </div>
                 )}
-                <button
-                  className={s.archiveViewBtn}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    route(routeTo.wrapped(a.year))
-                  }}
-                >
+                <span className={s.archiveViewBtn}>
                   {t('wrapped.viewArchive')} →
-                </button>
+                </span>
               </div>
-            </div>
+            </a>
           )
         })}
       </div>

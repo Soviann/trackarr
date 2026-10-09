@@ -38,6 +38,7 @@ const baseStats: StatsResponse = {
 
 describe('Stats', () => {
   beforeEach(() => {
+    localStorage.clear()
     apiFetchMock.mockReset()
     useApiMock.mockReset()
     useApiMock.mockImplementation((path: string | null) => {
@@ -252,4 +253,40 @@ describe('Stats', () => {
     fireEvent.click(expandBtn)
     expect(screen.getByText('Past Wrapped Archives')).toBeTruthy()
   })
+
+  it('renders semantic meter roles on ratings, genres, and person tracks', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    const meters = screen.getAllByRole('meter')
+    expect(meters.length).toBeGreaterThan(0)
+
+    // Check genre meter
+    const actionMeter = screen.getByLabelText('Action: 5')
+    expect(actionMeter).toBeTruthy()
+    expect(actionMeter.getAttribute('aria-valuenow')).toBe('5')
+    expect(actionMeter.getAttribute('aria-valuemin')).toBe('0')
+
+    // Check actor meter
+    const actorMeter = screen.getByLabelText('Timothée Chalamet: 3') // i18n-ignore
+    expect(actorMeter).toBeTruthy()
+    expect(actorMeter.getAttribute('aria-valuenow')).toBe('3')
+  })
+
+  it('renders wrapped banner as accessible link with separated dismiss button', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    const { container } = render(<Stats />)
+
+    const bannerLink = container.querySelector('a[class*="wrappedBannerLink"]')
+    expect(bannerLink).toBeTruthy()
+    expect(bannerLink?.getAttribute('href')).toBe('/wrapped')
+
+    const dismissBtn = screen.getByLabelText('Dismiss banner')
+    expect(dismissBtn).toBeTruthy()
+    // Dismiss button should not be a descendant of the banner anchor link
+    expect(bannerLink?.contains(dismissBtn)).toBe(false)
+  })
 })
+

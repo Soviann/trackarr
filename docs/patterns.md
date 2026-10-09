@@ -293,7 +293,7 @@
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
 | `/search` | `Search` | `pages/Search.tsx` | Full-text library search with category tabs |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
-| `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts |
+| `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |
 | `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
