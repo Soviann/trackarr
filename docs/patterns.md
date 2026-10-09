@@ -10,6 +10,7 @@
 - SQLite WAL, Writer/Reader Contracts & Deadlocks: `docs/dev/database-model.md`
 - Radarr / Sonarr (*arr) Queue & Push Workflow: `docs/dev/arr-integration.md`
 - Background Jobs & Task Queue Architecture: `docs/background-jobs.md`
+- Native Go MCP Server (stdio): `docs/dev/mcp-server.md`
 
 ## Human / User Documentation
 - Master Index: `docs/INDEX.md`
@@ -35,7 +36,9 @@
 | `import` | `cmd/import.go` | Simkl backup import (`--dry-run` available). |
 | `backfill-accents` | `cmd/backfill_accents.go` | Extract and persist dominant cover accent colors (`--force` flag). |
 | `reset-password` | `cmd/reset_password.go` | Reset admin password and output a fresh emergency recovery key (`--password`, `--username`). |
+| `trackarr-mcp` | `cmd/trackarr-mcp/` | Standalone native Go Model Context Protocol (MCP) server for AI agents. |
 | `make version` | `Makefile` | Print Trackarr version (`Trackarr vX.Y.Z`). |
+| `make build-mcp` | `Makefile` | Build standalone MCP server binary (`./tmp/trackarr-mcp`). |
 | `make reset-password` | `Makefile` | CLI wrapper to reset admin password locally (`PASSWORD=...`, `USERNAME=...`). |
 | `make ssh-db-pull` | `Makefile.local` | Pull prod DB (`trackarr.db` + WAL/SHM) from NAS to local `data/`. |
 | `make ssh-logs` | `Makefile.local` | Dump prod container logs to `data/trackarr.log` (`LINES=...` optional). |

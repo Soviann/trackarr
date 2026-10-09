@@ -6,7 +6,7 @@
 
 ## 1. Core Architecture
 - **Stack**: Go 1.24, SQLite 3 (WAL mode, FTS5), `chi/v5`, Preact 11, TypeScript (strict), Vite.
-- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `version`).
+- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `version`); `cmd/trackarr-mcp/` ➔ Standalone native Go MCP server (`make build-mcp`).
 - **HTTP Server**: `internal/router/router.go` wires middleware (CORS, Auth, Compression, Recovery, Rate Limiting) and routes.
 - **Dependency Injection**:
   - `internal/database`: `DBTX` interface (`*sql.DB` or `*sql.Tx`), helper `WithTx` / `WithTxContext`.
@@ -73,6 +73,12 @@
     - URLs are parsed locally via regex in `matching.ParseURLFull` (0 outbound HTTP calls; private IP addresses discarded for SSRF protection).
     - Duplicate detection checks both external IDs and title name/type/year within the active transaction.
     - Task queue `FetchDue` strictly prioritizes interactive operations (`anilist_push_season`, `anilist_push_movie`, `radarr_push`, `sonarr_push`, `sonarr_delete`) ahead of background enrichment and refresh jobs.
+17. **Native Go MCP Server & Stdio Hygiene**:
+    - `cmd/trackarr-mcp` implements the Model Context Protocol (`mark3labs/mcp-go`) in `stdio` mode with zero Node.js footprint.
+    - `log.SetOutput(os.Stderr)` enforced at startup; stdout is reserved strictly for JSON-RPC messages.
+    - Errors report `CallToolResult{IsError: true}` inside the protocol payload for LLM self-correction.
+    - 11 tools (`search`, `get_title`, `get_continue_watching`, `resolve_url`, `get_stats`, `add_title`, `batch_add`, `update_title`, `set_episode_watched`, `delete_title`, `push_to_arr`) and 2 resources (`trackarr://library/summary`, `trackarr://continue-watching`).
+    - Authenticates via scoped API key (`TRACKARR_API_KEY`) and respects granular scopes (`library:read`, `library:write`, `library:delete`, `arr:write`).
 
 ---
 
@@ -183,5 +189,5 @@
 ---
 
 ## 5. Development Workflow
-- Execute commands via `Makefile`: `make up`, `make down`, `make test`, `make test-front`, `make lint`, `make lint-front`.
+- Execute commands via `Makefile`: `make up`, `make down`, `make test`, `make test-front`, `make lint`, `make lint-front`, `make build`, `make build-mcp`.
 - Live rebuild on frontend changes: Run `make test-front` then `touch main.go`.
