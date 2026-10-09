@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.2] — 2026-10-09
+
 ### Corrigé
 - **Association AniList & Gestion des séries sans saisons/épisodes** :
   - **Fallback TVDB → TMDB** : Correction de `refreshSeriesFromTVDB` pour ne renvoyer `true` que si au moins un épisode d'une saison régulière (`> 0`) a été synchronisé. Quand TVDB ne contient aucun épisode (ex: animes en production ou récemment annoncés), Trackarr bascule correctement vers TMDB au lieu d'ignorer la création de saisons.

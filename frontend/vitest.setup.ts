@@ -10,28 +10,16 @@ const fallbackRequestAnimationFrame = (cb: FrameRequestCallback) => {
 
 function ensurePolyfills() {
   if (typeof globalThis !== 'undefined') {
-    if (typeof globalThis.cancelAnimationFrame !== 'function') {
-      globalThis.cancelAnimationFrame = fallbackCancelAnimationFrame
-    }
-    if (typeof globalThis.requestAnimationFrame !== 'function') {
-      globalThis.requestAnimationFrame = fallbackRequestAnimationFrame
-    }
+    globalThis.cancelAnimationFrame = globalThis.cancelAnimationFrame ?? fallbackCancelAnimationFrame
+    globalThis.requestAnimationFrame = globalThis.requestAnimationFrame ?? fallbackRequestAnimationFrame
   }
   if (typeof global !== 'undefined') {
-    if (typeof (global as any).cancelAnimationFrame !== 'function') {
-      (global as any).cancelAnimationFrame = fallbackCancelAnimationFrame
-    }
-    if (typeof (global as any).requestAnimationFrame !== 'function') {
-      (global as any).requestAnimationFrame = fallbackRequestAnimationFrame
-    }
+    ;(global as any).cancelAnimationFrame = (global as any).cancelAnimationFrame ?? fallbackCancelAnimationFrame
+    ;(global as any).requestAnimationFrame = (global as any).requestAnimationFrame ?? fallbackRequestAnimationFrame
   }
   if (typeof window !== 'undefined') {
-    if (typeof window.cancelAnimationFrame !== 'function') {
-      window.cancelAnimationFrame = fallbackCancelAnimationFrame
-    }
-    if (typeof window.requestAnimationFrame !== 'function') {
-      window.requestAnimationFrame = fallbackRequestAnimationFrame
-    }
+    window.cancelAnimationFrame = window.cancelAnimationFrame ?? fallbackCancelAnimationFrame
+    window.requestAnimationFrame = window.requestAnimationFrame ?? fallbackRequestAnimationFrame
   }
 }
 

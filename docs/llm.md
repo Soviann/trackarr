@@ -141,7 +141,7 @@
 - `POST /api/titles/batch-status` : Update status for multiple titles.
 - `PATCH /api/titles/{titleID}/episodes/{episodeID}` : Toggle watched state (triggers AniList push & auto-completion check).
 - `POST /api/titles/{titleID}/episodes/batch-watch` : Batch mark episodes watched or unwatched (`watched: false`) with watch time recalculation and AniList sync.
-- `POST /api/titles/{titleID}/seasons/{seasonID}/anilist` : Add per-season AniList ID mapping.
+- `POST /api/titles/{titleID}/seasons/{seasonID}/anilist` : Add per-season AniList ID mapping (supports `seasonID <= 0` to auto-provision Season 1).
 - `DELETE /api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` : Remove AniList ID mapping.
 - `PUT /api/titles/{titleID}/seasons/{seasonID}/anilist/order` : Reorder multi-part AniList season mappings.
 - `GET /api/genres` : List genres with counts.
