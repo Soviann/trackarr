@@ -154,7 +154,7 @@
 | POST | `/api/releases/add` | `releasesHandler.Add` | Direct 1-click title creation from release |
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched or unwatched (`watched: false`) |
-| POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season |
+| POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season (provisions Season 1 on demand if seasonID <= 0) |
 | DELETE| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |

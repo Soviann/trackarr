@@ -136,6 +136,39 @@ func TestAddAniListID_RejectsEmpty(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
 
+func TestAddAniListID_SeasonZero_CreatesSeason1AndMaps(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	h := handler.NewSeasonExternalHandler(db)
+
+	titleID := testutil.InsertTitle(t, db, "SSS-Class Revival Hunter", false)
+	// Note: No season exists yet!
+
+	body, _ := json.Marshal(map[string]string{"anilist_id": "216624"})
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("titleID", strconv.FormatInt(titleID, 10))
+	rctx.URLParams.Add("seasonID", "0")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rr := httptest.NewRecorder()
+
+	err := h.AddAniListID(rr, req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+
+	title, err := repository.NewTitleRepository(db).GetByID(titleID)
+	require.NoError(t, err)
+	require.Len(t, title.Seasons, 1, "Season 1 should be created automatically")
+	assert.Equal(t, 1, title.Seasons[0].SeasonNumber)
+	assert.True(t, title.IsAnime)
+	require.NotNil(t, title.AniListID)
+	assert.Equal(t, int64(216624), *title.AniListID)
+
+	parts, err := repository.NewSeasonExternalIDRepository(db).ListParts(context.Background(), title.Seasons[0].ID, repository.ProviderAniList)
+	require.NoError(t, err)
+	require.Len(t, parts, 1)
+	assert.Equal(t, "216624", parts[0].ExternalID)
+}
+
 // --- RemoveAniListID ---
 
 func TestRemoveAniListID_RemovesOnlyTargetPart(t *testing.T) {

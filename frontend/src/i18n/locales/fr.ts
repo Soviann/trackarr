@@ -242,6 +242,7 @@ export const fr: TranslationSchema = {
     failedSaveRating: 'Échec de l’enregistrement de la note',
     failedSaveChanges: 'Échec de l’enregistrement des modifications',
     readdSonarrConfirmAction: 'Réajouter à Sonarr',
+    noEpisodesYet: 'Aucun épisode annoncé pour le moment',
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',

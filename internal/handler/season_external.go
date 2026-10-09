@@ -56,14 +56,25 @@ func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Requ
 		return httputil.BadRequest("invalid anilist_id format")
 	}
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
+		if seasonID <= 0 {
+			titleID, err := httputil.ParseIDParam(r, "titleID")
+			if err != nil || titleID <= 0 {
+				return httputil.BadRequest("Invalid title ID")
+			}
+			season, err := repository.NewSeasonWriter(tx).GetOrCreate(r.Context(), titleID, 1)
+			if err != nil {
+				return err
+			}
+			seasonID = season.ID
+		}
 		if err := repository.NewSeasonExternalIDWriter(tx).Add(
 			r.Context(), seasonID, repository.ProviderAniList, aniListID); err != nil {
 			return err
 		}
-		// Ensure parent title is marked as anime
+		// Ensure parent title is marked as anime and has anilist_id set if empty
 		if _, err := tx.ExecContext(r.Context(),
-			`UPDATE titles SET is_anime = 1 WHERE id = (SELECT title_id FROM seasons WHERE id = ?) AND is_anime = 0`,
-			seasonID,
+			`UPDATE titles SET is_anime = 1, anilist_id = COALESCE(anilist_id, ?) WHERE id = (SELECT title_id FROM seasons WHERE id = ?)`,
+			aniListID, seasonID,
 		); err != nil {
 			return err
 		}

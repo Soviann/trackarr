@@ -6,6 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Association AniList & Gestion des séries sans saisons/épisodes** :
+  - **Fallback TVDB → TMDB** : Correction de `refreshSeriesFromTVDB` pour ne renvoyer `true` que si au moins un épisode d'une saison régulière (`> 0`) a été synchronisé. Quand TVDB ne contient aucun épisode (ex: animes en production ou récemment annoncés), Trackarr bascule correctement vers TMDB au lieu d'ignorer la création de saisons.
+  - **Création automatique de la Saison 1 lors de l'association AniList** :
+    - Dans `TitleService.SetExternalIDs`, l'ajout d'un identifiant AniList sur une série sans saisons crée automatiquement la Saison 1 (`GetOrCreate`) et y attache l'entrée dans `season_external_ids`.
+    - Dans `SeasonExternalHandler.AddAniListID`, acceptation de `seasonID = 0` pour provisionner la Saison 1 et y rattacher l'identifiant AniList.
+  - **Interface utilisateur (`TitleDetail` & `RematchSheet`)** :
+    - Affichage permanent du bandeau `SeasonAniListStrip` pour les séries anime même en l'absence de saison (`current == null`), avec bouton direct « Associer une entrée ».
+    - Affichage d'un état vide explicite pour les épisodes (« Aucun épisode annoncé pour le moment » / « No episodes announced yet ») pour les séries sans saisons ni épisodes.
+    - Prise en charge de `seasonID === 0` dans `RematchSheet` affichant « AniList for S1 ».
+
 ## [v1.26.1] — 2026-10-09
 
 ### Corrigé

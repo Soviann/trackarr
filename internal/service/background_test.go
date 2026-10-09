@@ -333,8 +333,6 @@ func TestBackgroundService_RefreshImportCompletedSeriesWithoutSyncedSeasons_Mark
 	assert.Equal(t, model.TitleStatusCompleted, title.Status)
 }
 
-
-
 func TestBackgroundService_PlanToWatchCompletedEndedSeriesReconcilesToCompleted(t *testing.T) {
 	svc, db, titleRepo, _, _ := setupBackgroundService(t)
 
@@ -726,7 +724,6 @@ func TestBackgroundService_RefreshSeries_DetectsJapaneseAnimationAsAnime(t *test
 	assert.True(t, got.IsAnime, "Japanese animation series must be automatically marked as anime on refresh")
 }
 
-
 // --- Episode-list backfill for completed/dropped titles (heal) ---
 
 // A completed series that was never TMDB-synced (no total_episodes) must NOT be
@@ -1059,4 +1056,92 @@ func TestBackgroundService_RefreshAniListRelations(t *testing.T) {
 	assert.Equal(t, int64(98565), got.Relations[1].ExternalID)
 	assert.Equal(t, "Training of the Dead", got.Relations[1].Title)
 	assert.Equal(t, "OVA", got.Relations[1].Format)
+}
+
+func TestBackgroundService_TVDBEmptyEpisodes_FallsBackToTMDB(t *testing.T) {
+	tmdbID := int64(334591)
+	tvdbID := int64(482319)
+
+	// Mock TMDB
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":     tmdbID,
+			"name":   "SSS-Class Revival Hunter",
+			"status": "In Production",
+			"seasons": []map[string]any{
+				{
+					"season_number": 1,
+					"episode_count": 1,
+				},
+			},
+		})
+	})
+	tmdbMux.HandleFunc(fmt.Sprintf("/tv/%d/season/1", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"season_number": 1,
+			"episodes": []map[string]any{
+				{
+					"episode_number": 1,
+					"name":           "Episode 1",
+				},
+			},
+		})
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	t.Cleanup(tmdbServer.Close)
+	tmdbClient := matching.NewTMDBClient("test-key")
+	tmdbClient.SetBaseURL(tmdbServer.URL)
+
+	// Mock TVDB returning 0 episodes
+	tvdbMux := http.NewServeMux()
+	tvdbMux.HandleFunc(fmt.Sprintf("/series/%d", tvdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"id":   tvdbID,
+				"name": "SSS-Class Revival Hunter",
+			},
+		})
+	})
+	tvdbMux.HandleFunc(fmt.Sprintf("/series/%d/episodes/official", tvdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"episodes": []any{},
+			},
+		})
+	})
+	tvdbServer := httptest.NewServer(tvdbMux)
+	t.Cleanup(tvdbServer.Close)
+	tvdbClient := matching.NewTVDBClient("test-key")
+	tvdbClient.SetBaseURL(tvdbServer.URL)
+	tvdbClient.SetTokenForTest("test-token")
+
+	svc, db, titleRepo, _, episodeRepo := setupBackgroundService(t)
+	svc.SetTMDB(tmdbClient)
+	svc.SetTVDB(tvdbClient)
+
+	title := &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2027,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+		TVDBID:      &tvdbID,
+		IsAnime:     true,
+	}
+	titleID := testutil.CreateTitle(t, db, title, []model.TitleName{{Name: "SSS-Class Revival Hunter", Language: "en", IsPrimary: true}})
+
+	require.NoError(t, svc.RefreshByID(context.Background(), titleID))
+
+	gotTitle, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.Len(t, gotTitle.Seasons, 1, "TMDB season 1 should be created when TVDB has 0 episodes")
+	assert.Equal(t, 1, gotTitle.Seasons[0].SeasonNumber)
+
+	episodes, err := episodeRepo.GetBySeasonID(gotTitle.Seasons[0].ID)
+	require.NoError(t, err)
+	require.Len(t, episodes, 1, "TMDB episode 1 should be created when TVDB has 0 episodes")
+	assert.Equal(t, 1, episodes[0].Episode)
+	require.NotNil(t, episodes[0].Name)
+	assert.Equal(t, "Episode 1", *episodes[0].Name)
 }
