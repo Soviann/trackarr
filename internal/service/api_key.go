@@ -150,6 +150,10 @@ func (s *APIKeyService) RevokeKey(ctx context.Context, id int64) error {
 
 // DeleteKey permanently deletes the key.
 func (s *APIKeyService) DeleteKey(ctx context.Context, id int64) error {
+	s.mu.Lock()
+	delete(s.lastUsed, id)
+	s.mu.Unlock()
+
 	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 		return repository.NewAPIKeyWriter(tx).Delete(ctx, id)
 	})

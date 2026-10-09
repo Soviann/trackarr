@@ -97,31 +97,7 @@ func UnifiedAuth(jwtSecret string, apiKeySvc *service.APIKeyService) func(http.H
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				rawToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 				if apiKeyHeaderRegex.MatchString(rawToken) {
-					key, err := apiKeySvc.AuthenticateToken(r.Context(), rawToken)
-					if err != nil || key == nil {
-						writeUnauthorized(w)
-						return
-					}
-
-					allowed, remaining, resetSecs, retryAfter := limiter.check(key.ID)
-					w.Header().Set("RateLimit-Limit", strconv.Itoa(apiKeyRateLimitMax))
-					w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
-					w.Header().Set("RateLimit-Reset", strconv.Itoa(resetSecs))
-
-					if !allowed {
-						w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-						w.Header().Set("Content-Type", "application/json; charset=utf-8")
-						w.WriteHeader(http.StatusTooManyRequests)
-						_ = json.NewEncoder(w).Encode(map[string]any{
-							"error":       "Too many requests",
-							"retry_after": retryAfter,
-						})
-						return
-					}
-
-					ctx := context.WithValue(r.Context(), APIKeyContextKey, key)
-					ctx = context.WithValue(ctx, AuthTypeContextKey, "api_key")
-					next.ServeHTTP(w, r.WithContext(ctx))
+					handleAPIKey(w, r, next, apiKeySvc, limiter, rawToken)
 					return
 				}
 				// If not an API key format, fall through to cookie check to avoid breaking session cookies
@@ -134,31 +110,7 @@ func UnifiedAuth(jwtSecret string, apiKeySvc *service.APIKeyService) func(http.H
 					return
 				}
 
-				key, err := apiKeySvc.AuthenticateToken(r.Context(), rawToken)
-				if err != nil || key == nil {
-					writeUnauthorized(w)
-					return
-				}
-
-				allowed, remaining, resetSecs, retryAfter := limiter.check(key.ID)
-				w.Header().Set("RateLimit-Limit", strconv.Itoa(apiKeyRateLimitMax))
-				w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
-				w.Header().Set("RateLimit-Reset", strconv.Itoa(resetSecs))
-
-				if !allowed {
-					w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-					w.Header().Set("Content-Type", "application/json; charset=utf-8")
-					w.WriteHeader(http.StatusTooManyRequests)
-					_ = json.NewEncoder(w).Encode(map[string]any{
-						"error":       "Too many requests",
-						"retry_after": retryAfter,
-					})
-					return
-				}
-
-				ctx := context.WithValue(r.Context(), APIKeyContextKey, key)
-				ctx = context.WithValue(ctx, AuthTypeContextKey, "api_key")
-				next.ServeHTTP(w, r.WithContext(ctx))
+				handleAPIKey(w, r, next, apiKeySvc, limiter, rawToken)
 				return
 			}
 
@@ -191,6 +143,34 @@ func UnifiedAuth(jwtSecret string, apiKeySvc *service.APIKeyService) func(http.H
 			writeUnauthorized(w)
 		})
 	}
+}
+
+func handleAPIKey(w http.ResponseWriter, r *http.Request, next http.Handler, apiKeySvc *service.APIKeyService, limiter *apiKeyLimiter, rawToken string) {
+	key, err := apiKeySvc.AuthenticateToken(r.Context(), rawToken)
+	if err != nil || key == nil {
+		writeUnauthorized(w)
+		return
+	}
+
+	allowed, remaining, resetSecs, retryAfter := limiter.check(key.ID)
+	w.Header().Set("RateLimit-Limit", strconv.Itoa(apiKeyRateLimitMax))
+	w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
+	w.Header().Set("RateLimit-Reset", strconv.Itoa(resetSecs))
+
+	if !allowed {
+		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error":       "Too many requests",
+			"retry_after": retryAfter,
+		})
+		return
+	}
+
+	ctx := context.WithValue(r.Context(), APIKeyContextKey, key)
+	ctx = context.WithValue(ctx, AuthTypeContextKey, "api_key")
+	next.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func writeUnauthorized(w http.ResponseWriter) {
