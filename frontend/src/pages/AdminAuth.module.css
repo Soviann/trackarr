@@ -28,6 +28,26 @@
   margin-top: -4px;
 }
 
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.sectionHeaderCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 240px;
+}
+
+.sectionHeaderCol .sectionDesc {
+  margin-top: 0;
+}
+
 .form {
   display: flex;
   flex-direction: column;

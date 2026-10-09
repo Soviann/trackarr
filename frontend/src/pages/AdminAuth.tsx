@@ -388,8 +388,8 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
 
           {/* SECTION 4: API KEYS & INTEGRATIONS */}
           <div className={s.section}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
+            <div className={s.sectionHeader}>
+              <div className={s.sectionHeaderCol}>
                 <h2 className={s.sectionTitle}>{t('adminAuth.apiKeysTitle')}</h2>
                 <div className={s.sectionDesc}>{t('adminAuth.apiKeysDesc')}</div>
               </div>
