@@ -14,7 +14,7 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 1. In Jellyfin, install the **Webhook** plugin (*Dashboard ➔ Plugins ➔ Catalog ➔ Webhook*), then restart Jellyfin.
 2. Navigate to *Dashboard ➔ Plugins ➔ Webhook ➔ Add Generic Destination*.
 3. Configure the destination:
-   - **Webhook URL**: `https://<your-trackarr-url>/api/webhook/jellyfin/<secret>` (where `<secret>` matches `JELLYFIN_WEBHOOK_SECRET` or your configured token).
+   - **Webhook URL**: `https://<your-trackarr-url>/api/webhook/jellyfin/<secret>` (where `<secret>` matches `JELLYFIN_WEBHOOK_SECRET` or your configured token, also visible and copyable with 1-click in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
    - **Notification Type**: Check **Playback Stop** only.
    - **Item Type**: Check **Movies** and **Episodes**.
    - **Send All Properties**: Leave unchecked.
@@ -40,7 +40,7 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 
 ### Plex Webhook Configuration:
 1. In Plex Web, go to **Settings ➔ Webhooks ➔ Add Webhook**.
-2. Set URL to `https://<your-trackarr-url>/api/webhook/plex/<secret>` (where `<secret>` matches `PLEX_WEBHOOK_SECRET` or your configured token).
+2. Set URL to `https://<your-trackarr-url>/api/webhook/plex/<secret>` (where `<secret>` matches `PLEX_WEBHOOK_SECRET` or your configured token, also visible and copyable in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
 3. Scrobble events (`media.scrobble`) will be parsed automatically.
 
 ---
@@ -82,5 +82,5 @@ Manage your media library and track availability seamlessly:
 
 Trackarr displays streaming badges directly on movie and series detail sheets, indicating whether titles in your watchlist are available on your active subscriptions:
 - **Supported Providers**: Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, and Animation Digital Network (ADN).
-- **Configuration**: Navigate to **Admin Dashboard ➔ System Settings (`/admin/settings`) ➔ Streaming Providers** to check and activate the platforms you subscribe to.
+- **Configuration**: Navigate to **Admin Dashboard ➔ System Settings (`/admin/settings`) ➔ Streaming Platforms** to select your active subscriptions using the stylized multi-select dropdown (with bulk select/deselect actions and platform badge counter).
 - **Automated Updates**: Availability is automatically queried and refreshed via TMDB Watch Providers during routine metadata synchronization passes.

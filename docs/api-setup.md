@@ -137,6 +137,10 @@ Trackarr seamlessly interfaces with Radarr and Sonarr to check download availabi
 
 For browser push notifications (e.g. notifications when a new episode airs or when background tasks complete):
 
+### Method 1: 1-Click In-App Generation (Recommended)
+Navigate to **Admin Dashboard ➔ Web Push Notifications (`/admin/notifications`)** and click **Generate VAPID Keys** (*Générer de nouvelles clés*). Trackarr generates the NIST P-256 keypair, saves them securely to the database, and activates push capability instantly. You can also customize your admin contact subject directly on this page.
+
+### Method 2: Manual Key Generation via CLI
 Generate a VAPID key pair:
 ```bash
 # Using npx web-push

@@ -274,33 +274,33 @@
 
 ### Pages Map (`frontend/src/pages/`)
 
-| Route | Page Component | File |
-|---|---|---|
-| `/` | `Library` | `pages/Library.tsx` |
-| `/releases` | `Releases` | `pages/Releases.tsx` |
-| `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` |
-| `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` |
-| `/search` | `Search` | `pages/Search.tsx` |
+| Route | Page Component | File | Description / Layout |
+|---|---|---|---|
+| `/` | `Library` | `pages/Library.tsx` | Main library fluid grid (2-8 columns), custom filters, and bottom navigation |
+| `/releases` | `Releases` | `pages/Releases.tsx` | Prowlarr releases feed with multi-indexer filters and 1-click addition |
+| `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` | In-progress titles, quick watch buttons, and unwatched episodes tracking |
+| `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
+| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with category tabs |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
-| `/stats` | `Stats` | `pages/Stats.tsx` |
+| `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |
-| `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` |
-| `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` |
-| `/login` | `Login` | `pages/Login.tsx` |
-| `/setup` | `Setup` | `pages/Setup.tsx` |
-| `/match-review` | `MatchReview` | `pages/MatchReview.tsx` |
+| `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |
+| `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
+| `/login` | `Login` | `pages/Login.tsx` | Local password login and Google OAuth authentication |
+| `/setup` | `Setup` | `pages/Setup.tsx` | Initial administrative setup and emergency recovery key generation |
+| `/match-review` | `MatchReview` | `pages/MatchReview.tsx` | Review queue for unconfirmed and low-confidence title matches |
 | `/admin` | `Admin` | `pages/Admin.tsx` | Admin Hub with responsive 2-column navigation grid (1040px) and live status badges |
 | `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings (840px): Appearance & Localization (stylized theme, interface language & metadata language dropdowns), Streaming Platforms (stylized multi-select dropdown), and Metadata & AI keys at bottom |
-| `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` |
+| `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` | Authentication & Security (840px): Access mode (hybrid/local/Google OAuth), local credentials, single-use emergency recovery key generation, and sticky AdminHeader |
 | `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` | Background task queue & diagnostics: widescreen scannable layout (1200px), sticky AdminHeader, and centered floating batch action bar |
 | `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` | Web Push Notifications: VAPID key generation and admin contact subject, automatic configuration status, and notification triggers (rating reminder, failed task, series ended) |
 | `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` | Media Servers & Webhooks: Dual server management for Jellyfin and Plex scrobble webhook secrets, full webhook URLs with copy actions, last scrobble timestamps, and configuration guides |
-| `/admin/anilist` | `AdminAniList` | `pages/AdminAniList.tsx` |
+| `/admin/anilist` | `AdminAniList` | `pages/AdminAniList.tsx` | AniList OAuth integration (840px): connection status, live token refresh, disconnect confirmation modal, and sticky AdminHeader |
 | `/admin/season-audit` | `AdminSeasonAudit` | `pages/AdminSeasonAudit.tsx` | Split anime season audit: responsive visual diff connectors (1200px), sticky AdminHeader, and merge modal drawers |
-| `/admin/validate` | `Validate` | `pages/Validate.tsx` |
-| `/admin/help` | `Help` | `pages/Help.tsx` |
-| `/anilist/callback` | `AnilistCallback` | `pages/AnilistCallback.tsx` |
+| `/admin/validate` | `Validate` | `pages/Validate.tsx` | Match validation & rematching workspace: interactive status picker, search drawer, and merge utilities |
+| `/admin/help` | `Help` | `pages/Help.tsx` | In-app user guides, FAQs, and setup instructions accordion |
+| `/anilist/callback` | `AnilistCallback` | `pages/AnilistCallback.tsx` | AniList OAuth authorization code return handler |
 
 ---
 
