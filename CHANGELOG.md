@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Séries terminées lors d'un rafraîchissement métadonnées** :
+  - Restriction de la complétion automatique d'épisodes (`completeEpisodes`) au premier backfill d'une série terminée importée sans liste d'épisodes (`!HasSyncedSeasons`). Les séries existantes dont les saisons sont déjà synchronisées ne cochent plus automatiquement les nouveaux épisodes diffusés lors de l'ajout d'une nouvelle saison sur TMDB.
+  - Réversion automatique du statut d'une série terminée vers `watching` lorsqu'elle reçoit de nouveaux épisodes non vus déjà diffusés et que la série n'est ni terminée ni annulée (`series_status` en cours/returning).
+- **Détection automatique d'anime pour les séries japonaises d'animation** :
+  - Détection automatique d'anime (`is_anime = true`) lors du rafraîchissement des séries TMDB (`refreshSeriesFromTMDB`) lorsque le pays d'origine est le Japon (`origin_country` = JP) et que le genre comprend l'animation.
+  - Détection précoce du statut anime dans les résultats de recherche TMDB (`/api/tmdb/search`), évitant d'ajouter les séries d'animation japonaises avec `is_anime: false` lorsque la recherche AniList est temporairement indisponible ou limitée en débit.
+
 ## [v1.26.0] — 2026-10-09
 
 ### Ajouté

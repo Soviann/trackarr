@@ -246,6 +246,95 @@ func TestBackgroundService_PlanToWatchWithWatchedEpisodesReconcilesToWatching(t 
 	assert.Equal(t, model.TitleStatusWatching, title.Status)
 }
 
+func TestBackgroundService_RefreshCompletedSeriesWithNewAiredEpisodes_DoesNotMarkEpisodesWatchedAndRevertsToWatching(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	returning := model.SeriesStatusReturning
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2023,
+		Status:       model.TitleStatusCompleted,
+		MatchStatus:  model.MatchStatusConfirmed,
+		SeriesStatus: &returning,
+	}, []model.TitleName{{Name: "The Apothecary Diaries", Language: "en", IsPrimary: true}})
+
+	// Season 1 already synced and completed
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	testutil.UpdateSeasonTotalEpisodes(t, db, s1.ID, 2)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", true)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", true)
+
+	// Season 2 newly added with an already aired episode and an upcoming episode
+	s2 := testutil.GetOrCreateSeason(t, db, titleID, 2)
+	testutil.UpdateSeasonTotalEpisodes(t, db, s2.ID, 2)
+	yesterday := time.Now().UTC().Add(-24 * time.Hour).Format("2006-01-02")
+	nextWeek := time.Now().UTC().Add(7 * 24 * time.Hour).Format("2006-01-02")
+	_ = testutil.SeedEpisode(t, db, s2.ID, 1, yesterday, false)
+	_ = testutil.SeedEpisode(t, db, s2.ID, 2, nextWeek, false)
+
+	// Refresh title
+	err := svc.RefreshByID(context.Background(), titleID)
+	require.NoError(t, err)
+
+	eps, err := episodeRepo.GetBySeasonID(s2.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+
+	// Newly aired episode must NOT be marked watched!
+	assert.False(t, eps[0].Watched, "newly aired episode of new season must NOT be automatically marked watched")
+
+	// Upcoming episode must NOT be marked watched!
+	assert.False(t, eps[1].Watched, "upcoming episode must NOT be automatically marked watched")
+
+	// Title status must revert from completed to watching because it has unwatched aired episodes
+	title, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, title.Status, "series must revert from completed to watching")
+}
+
+func TestBackgroundService_RefreshImportCompletedSeriesWithoutSyncedSeasons_MarksAiredEpisodesWatched(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	ended := model.SeriesStatusEnded
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:         model.TitleTypeSeries,
+		Year:         2023,
+		Status:       model.TitleStatusCompleted,
+		MatchStatus:  model.MatchStatusConfirmed,
+		SeriesStatus: &ended,
+	}, []model.TitleName{{Name: "Imported Completed Show", Language: "en", IsPrimary: true}})
+
+	// No synced seasons initially (total_episodes is NULL on season, simulating Simkl import before TMDB sync)
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	// total_episodes is not set on s1, so HasSyncedSeasons is false
+	past := "2024-01-01"
+	future := "2099-01-01"
+	_ = testutil.SeedEpisode(t, db, s1.ID, 1, past, false)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 2, future, false)
+
+	err := svc.RefreshByID(context.Background(), titleID)
+	require.NoError(t, err)
+
+	eps, err := episodeRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+
+	// Aired episode on imported completed title should be backfilled as watched
+	assert.True(t, eps[0].Watched, "aired episode on imported completed title must be marked watched")
+
+	// Future episode must remain unwatched
+	assert.False(t, eps[1].Watched, "future episode must remain unwatched")
+
+	// Title status stays completed
+	title, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, title.Status)
+}
+
+
+
 func TestBackgroundService_PlanToWatchCompletedEndedSeriesReconcilesToCompleted(t *testing.T) {
 	svc, db, titleRepo, _, _ := setupBackgroundService(t)
 
@@ -595,6 +684,48 @@ func TestBackgroundService_RefreshSeries_NoStatusChangeNoPush(t *testing.T) {
 	assert.False(t, results[0].StatusChanged, "no status flip → no StatusChanged flag")
 	assert.Empty(t, push.calls, "no status flip → no push")
 }
+
+func TestBackgroundService_RefreshSeries_DetectsJapaneseAnimationAsAnime(t *testing.T) {
+	tmdbID := int64(312850)
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", tmdbID), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(matching.TMDBTVDetails{
+			ID:            tmdbID,
+			Name:          "Nia Liston",
+			Status:        "Returning Series",
+			OriginCountry: []string{"JP"},
+			Genres: []matching.TMDBGenre{
+				{ID: 16, Name: "Animation"},
+				{ID: 10765, Name: "Sci-Fi & Fantasy"},
+			},
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     false,
+		Year:        2026,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Nia Liston", Language: "en", IsPrimary: true}})
+
+	err := svc.RefreshByID(context.Background(), titleID)
+	require.NoError(t, err)
+
+	got, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.True(t, got.IsAnime, "Japanese animation series must be automatically marked as anime on refresh")
+}
+
 
 // --- Episode-list backfill for completed/dropped titles (heal) ---
 

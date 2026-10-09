@@ -727,7 +727,9 @@ type tvdbFetchResult struct {
 	releaseDate string // year only (e.g. "2008"), used as fallback when TMDB has no date
 }
 
-func isJapaneseAnimation(countries []string, genres []string) bool {
+// IsJapaneseAnimation reports whether the given origin countries include Japan (JP)
+// and genres include Animation or Anime.
+func IsJapaneseAnimation(countries []string, genres []string) bool {
 	hasJP := false
 	for _, c := range countries {
 		if strings.EqualFold(strings.TrimSpace(c), "JP") {
@@ -802,7 +804,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = details.Overview
 		_, credits, runtime, rating := ExtractMovieMetadata(details)
 		out.genres = extractGenreNames(details.Genres)
-		out.isAnime = isJapaneseAnimation(details.OriginCountry, out.genres)
+		out.isAnime = IsJapaneseAnimation(details.OriginCountry, out.genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating
@@ -845,7 +847,7 @@ func (p *Pipeline) fetchTMDBData(ctx context.Context, result *MatchResult, out *
 		out.overview = details.Overview
 		_, credits, runtime, rating := ExtractTVMetadata(details)
 		out.genres = extractGenreNames(details.Genres)
-		out.isAnime = isJapaneseAnimation(details.OriginCountry, out.genres)
+		out.isAnime = IsJapaneseAnimation(details.OriginCountry, out.genres)
 		out.credits = credits
 		out.runtime = runtime
 		out.tmdbRating = rating
