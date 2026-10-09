@@ -843,18 +843,19 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 id: 0,
                 title_id: title.id,
                 season_number: 1,
+                total_episodes: null,
                 episode_count: 0,
                 watched_count: 0,
-                air_date: null,
-                anilist_id: title.anilist_id,
+                anilist_id: title.anilist_id != null ? String(title.anilist_id) : null,
                 anilist_parts: [],
+                episodes: [],
               }}
               onEdit={() => setRematchSeasonID(current?.id ?? 0)}
             />
           )}
 
           {/* Episode list */}
-          {current && (
+          {current && ((current.episodes ?? []).length > 0 || activeSeasonSideStories.length > 0) && (
             <div className={s.episodeList}>
               {[...(current.episodes ?? [])]
                 .sort((a, b) => a.episode - b.episode)
@@ -874,7 +875,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           )}
 
           {/* Empty state for series without seasons/episodes */}
-          {sortedSeasons.length === 0 && title.type !== 'movie' && (
+          {title.type !== 'movie' &&
+            (sortedSeasons.length === 0 ||
+              ((current?.episodes ?? []).length === 0 && activeSeasonSideStories.length === 0)) && (
             <div className={s.emptyEpisodes}>
               <span>{t('details.noEpisodesYet')}</span>
             </div>

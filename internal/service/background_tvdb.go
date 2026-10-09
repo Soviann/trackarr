@@ -101,8 +101,6 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 }
 
 // refreshSeriesFromTVDB syncs season and episode listings from TVDB.
-// Returns true if TVDB season sync succeeded.
-// refreshSeriesFromTVDB syncs season and episode listings from TVDB.
 // Returns true if TVDB season sync succeeded and at least one regular season was synced.
 func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) bool {
 	if s.tvdb == nil || title.TVDBID == nil {

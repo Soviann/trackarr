@@ -55,12 +55,17 @@ func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Requ
 	if _, err := strconv.ParseInt(aniListID, 10, 64); err != nil {
 		return httputil.BadRequest("invalid anilist_id format")
 	}
+	var titleID int64
+	if seasonID <= 0 {
+		var err error
+		titleID, err = httputil.ParseIDParam(r, "titleID")
+		if err != nil || titleID <= 0 {
+			return httputil.BadRequest("Invalid title ID")
+		}
+	}
+
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {
 		if seasonID <= 0 {
-			titleID, err := httputil.ParseIDParam(r, "titleID")
-			if err != nil || titleID <= 0 {
-				return httputil.BadRequest("Invalid title ID")
-			}
 			season, err := repository.NewSeasonWriter(tx).GetOrCreate(r.Context(), titleID, 1)
 			if err != nil {
 				return err
@@ -71,11 +76,8 @@ func (h *SeasonExternalHandler) AddAniListID(w http.ResponseWriter, r *http.Requ
 			r.Context(), seasonID, repository.ProviderAniList, aniListID); err != nil {
 			return err
 		}
-		// Ensure parent title is marked as anime and has anilist_id set if empty
-		if _, err := tx.ExecContext(r.Context(),
-			`UPDATE titles SET is_anime = 1, anilist_id = COALESCE(anilist_id, ?) WHERE id = (SELECT title_id FROM seasons WHERE id = ?)`,
-			aniListID, seasonID,
-		); err != nil {
+		if err := repository.NewTitleWriter(tx).EnsureAnimeAndAniListIDBySeason(
+			r.Context(), seasonID, aniListID); err != nil {
 			return err
 		}
 		service.EnqueueAniListSeasonPush(r.Context(), tx, seasonID)

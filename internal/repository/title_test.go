@@ -1976,3 +1976,75 @@ func TestTitleRepository_SonarrDeletedAt(t *testing.T) {
 	assert.Nil(t, got.SonarrDeletedAt)
 }
 
+func TestTitleWriter_EnsureAnimeAndAniListIDBySeason(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	repo := repository.NewTitleRepository(db)
+
+	t.Run("nominal sets anime flag and anilist id when empty", func(t *testing.T) {
+		titleID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     false,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Series A", Language: "en", IsPrimary: true}})
+
+		var seasonID int64
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			s, err := repository.NewSeasonWriter(tx).GetOrCreate(ctx, titleID, 1)
+			if err != nil {
+				return err
+			}
+			seasonID = s.ID
+			return nil
+		}))
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).EnsureAnimeAndAniListIDBySeason(ctx, seasonID, "12345")
+		}))
+
+		got, err := repo.GetByID(titleID)
+		require.NoError(t, err)
+		assert.True(t, got.IsAnime)
+		require.NotNil(t, got.AniListID)
+		assert.Equal(t, int64(12345), *got.AniListID)
+	})
+
+	t.Run("coalesce preserves existing anilist id", func(t *testing.T) {
+		existingID := int64(99999)
+		titleID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			IsAnime:     false,
+			AniListID:   &existingID,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Series B", Language: "en", IsPrimary: true}})
+
+		var seasonID int64
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			s, err := repository.NewSeasonWriter(tx).GetOrCreate(ctx, titleID, 1)
+			if err != nil {
+				return err
+			}
+			seasonID = s.ID
+			return nil
+		}))
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).EnsureAnimeAndAniListIDBySeason(ctx, seasonID, "54321")
+		}))
+
+		got, err := repo.GetByID(titleID)
+		require.NoError(t, err)
+		assert.True(t, got.IsAnime)
+		require.NotNil(t, got.AniListID)
+		assert.Equal(t, existingID, *got.AniListID, "COALESCE should retain existing anilist_id")
+	})
+
+	t.Run("non-existent season does not error", func(t *testing.T) {
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).EnsureAnimeAndAniListIDBySeason(ctx, 999999, "12345")
+		}))
+	})
+}
+
