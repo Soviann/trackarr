@@ -36,6 +36,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Adoption de l'en-tête sticky unifié `<AdminHeader>` et normalisation du conteneur à 840px centré.
 
 ### Corrigé
+- **Localisation complète des pages d'administration (`/admin/auth`, `/admin/anilist`, `/admin/settings`, `/admin/validate`, `/admin/arr`)** :
+  - Traduction intégrale en français et en anglais des écrans de gestion de la sécurité (`AdminAuth`), de synchronisation AniList (`AdminAniList`), des paramètres d'API et métadonnées (`AdminSettings`), et de l'outil de validation des correspondances (`Validate`).
+  - Élimination des chaînes textuelles en anglais brut dans le JSX (statuts, boutons de test, placeholders, modales de confirmation et sélecteurs de statut).
+  - Parité stricte des dictionnaires `en.ts` et `fr.ts`.
 - **Défilement horizontal sur mobile du hub d'administration (`/admin`)** :
   - Définition de `grid-template-columns: minmax(0, 1fr)` sur `.cardGroup` pour empêcher le débordement des pistes CSS Grid au-delà de la largeur de l'écran.
   - Ajout de `flex-wrap: wrap` et `min-width: 0` sur `.cardTop` et `.cardLabel` pour permettre aux badges d'état volumineux (ex. « TMDB • TVDB • Webhooks ») de passer à la ligne sur écran étroit sans forcer l'élargissement de la carte.

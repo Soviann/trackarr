@@ -222,7 +222,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
             </div>
           </div>
           <div className={s.sectionDesc}>
-            These keys enable search, automatic enrichment, and intelligent title reconciliation for movies, TV shows, and anime.
+            {t('settings.metadataAiKeysDesc')}
           </div>
 
           {/* Primary Metadata Language */}
@@ -261,7 +261,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
             <label htmlFor="tmdb_api_key" className={s.label}>
               <span>TMDB API Key (TheMovieDB)</span>
               <span className={`${s.statusBadge} ${settings.tmdb_configured ? s.statusOk : s.statusMissing}`}>
-                {settings.tmdb_configured ? 'Configured' : 'Not configured'}
+                {settings.tmdb_configured ? t('settings.configured') : t('settings.notConfigured')}
               </span>
             </label>
             <div className={s.fieldRow}>
@@ -272,7 +272,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 autoComplete="off"
                 value={formValues.tmdb_api_key}
                 onInput={(e) => handleChange('tmdb_api_key', (e.target as HTMLInputElement).value)}
-                placeholder="v3 API Key (32 hex characters)"
+                placeholder={t('settings.tmdbPlaceholder')}
                 className={`${s.input} ${s.inputCode}`}
               />
               <button
@@ -281,7 +281,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 onClick={() => handleTest('tmdb', '/admin/system-settings/test/tmdb', { api_key: formValues.tmdb_api_key })}
                 className={s.testBtn}
               >
-                {testResults.tmdb?.loading ? 'Testing...' : 'Test'}
+                {testResults.tmdb?.loading ? t('settings.testing') : t('settings.test')}
               </button>
             </div>
             {testResults.tmdb && (
@@ -300,7 +300,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
             <label htmlFor="tvdb_api_key" className={s.label}>
               <span>TheTVDB API Key (v4)</span>
               <span className={`${s.statusBadge} ${settings.tvdb_configured ? s.statusOk : s.statusMissing}`}>
-                {settings.tvdb_configured ? 'Configured' : 'Not configured'}
+                {settings.tvdb_configured ? t('settings.configured') : t('settings.notConfigured')}
               </span>
             </label>
             <div className={s.fieldRow}>
@@ -311,7 +311,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 autoComplete="off"
                 value={formValues.tvdb_api_key}
                 onInput={(e) => handleChange('tvdb_api_key', (e.target as HTMLInputElement).value)}
-                placeholder="TheTVDB API v4 Project Key"
+                placeholder={t('settings.tvdbPlaceholder')}
                 className={`${s.input} ${s.inputCode}`}
               />
               <button
@@ -320,7 +320,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 onClick={() => handleTest('tvdb', '/admin/system-settings/test/tvdb', { api_key: formValues.tvdb_api_key })}
                 className={s.testBtn}
               >
-                {testResults.tvdb?.loading ? 'Testing...' : 'Test'}
+                {testResults.tvdb?.loading ? t('settings.testing') : t('settings.test')}
               </button>
             </div>
             {testResults.tvdb && (
@@ -339,7 +339,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
             <label htmlFor="gemini_api_keys" className={s.label}>
               <span>Google Gemini API Key(s)</span>
               <span className={`${s.statusBadge} ${settings.gemini_configured ? s.statusOk : s.statusMissing}`}>
-                {settings.gemini_configured ? 'Configured' : 'Optional'}
+                {settings.gemini_configured ? t('settings.configured') : t('settings.optional')}
               </span>
             </label>
             <div className={s.fieldRow}>
@@ -350,7 +350,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 autoComplete="off"
                 value={formValues.gemini_api_keys}
                 onInput={(e) => handleChange('gemini_api_keys', (e.target as HTMLInputElement).value)}
-                placeholder="API keys (comma-separated for automatic rotation)"
+                placeholder={t('settings.geminiPlaceholder')}
                 className={`${s.input} ${s.inputCode}`}
               />
               <button
@@ -359,7 +359,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 onClick={() => handleTest('gemini', '/admin/system-settings/test/gemini', { api_keys: formValues.gemini_api_keys })}
                 className={s.testBtn}
               >
-                {testResults.gemini?.loading ? 'Testing...' : 'Test'}
+                {testResults.gemini?.loading ? t('settings.testing') : t('settings.test')}
               </button>
             </div>
             {testResults.gemini && (
@@ -378,7 +378,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
             <div className={s.label}>
               <span>AniList Client ID & Secret</span>
               <span className={`${s.statusBadge} ${settings.anilist_configured ? s.statusOk : s.statusMissing}`}>
-                {settings.anilist_configured ? 'Configured' : 'Optional'}
+                {settings.anilist_configured ? t('settings.configured') : t('settings.optional')}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -389,7 +389,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 autoComplete="off"
                 value={formValues.anilist_client_id}
                 onInput={(e) => handleChange('anilist_client_id', (e.target as HTMLInputElement).value)}
-                placeholder="Client ID"
+                placeholder={t('settings.clientIdPlaceholder')}
                 className={`${s.input} ${s.inputCode}`}
                 style={{ flex: 1 }}
               />
@@ -400,7 +400,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 autoComplete="off"
                 value={formValues.anilist_client_secret}
                 onInput={(e) => handleChange('anilist_client_secret', (e.target as HTMLInputElement).value)}
-                placeholder="Client Secret"
+                placeholder={t('settings.clientSecretPlaceholder')}
                 className={`${s.input} ${s.inputCode}`}
                 style={{ flex: 1 }}
               />
@@ -463,7 +463,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                   </span>
                   <div className={s.themeInfo}>
                     <span className={s.themeName}>{provider.name}</span>
-                    <span className={s.themeDesc}>{isEnabled ? 'Active' : 'Disabled'}</span>
+                    <span className={s.themeDesc}>{isEnabled ? t('settings.providerActive') : t('settings.providerDisabled')}</span>
                   </div>
                 </button>
               )
