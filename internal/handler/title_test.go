@@ -683,3 +683,105 @@ func TestTitleHandler_Update_PersonalNotes(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rr2.Body).Decode(&updated2))
 	assert.Nil(t, updated2.PersonalNotes)
 }
+
+func TestTitleHandler_BatchCreate(t *testing.T) {
+	h, _, _ := setupHandler(t)
+
+	t.Run("nominal object with items array returns 201 Created", func(t *testing.T) {
+		body := map[string]any{
+			"items": []map[string]any{
+				{"title": "Oppenheimer", "type": "movie", "year": 2023},
+				{"title": "Barbie", "type": "movie", "year": 2023},
+			},
+		}
+		raw, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/titles/batch", bytes.NewReader(raw))
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.BatchCreate(rr, req))
+
+		assert.Equal(t, http.StatusCreated, rr.Code)
+		var res service.BatchCreateResult
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+		assert.Equal(t, 2, res.Total)
+		assert.Equal(t, 2, res.Created)
+		assert.Equal(t, 0, res.Existing)
+		assert.Equal(t, 0, res.Failed)
+	})
+
+	t.Run("nominal raw array payload returns 201 Created", func(t *testing.T) {
+		body := []map[string]any{
+			{"title": "Blade Runner 2049", "type": "movie", "year": 2017},
+		}
+		raw, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/titles/batch", bytes.NewReader(raw))
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.BatchCreate(rr, req))
+
+		assert.Equal(t, http.StatusCreated, rr.Code)
+		var res service.BatchCreateResult
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+		assert.Equal(t, 1, res.Total)
+		assert.Equal(t, 1, res.Created)
+	})
+
+	t.Run("partial success with existing title returns 200 OK", func(t *testing.T) {
+		body := []map[string]any{
+			{"title": "Oppenheimer", "type": "movie", "year": 2023}, // already created above
+			{"title": "Poor Things", "type": "movie", "year": 2023}, // new
+		}
+		raw, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/titles/batch", bytes.NewReader(raw))
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.BatchCreate(rr, req))
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		var res service.BatchCreateResult
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+		assert.Equal(t, 2, res.Total)
+		assert.Equal(t, 1, res.Created)
+		assert.Equal(t, 1, res.Existing)
+	})
+
+	t.Run("empty items returns 400 Bad Request", func(t *testing.T) {
+		body := map[string]any{"items": []any{}}
+		raw, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/titles/batch", bytes.NewReader(raw))
+		rr := httptest.NewRecorder()
+		err := h.BatchCreate(rr, req)
+		require.Error(t, err)
+		apiErr, ok := err.(*httputil.APIError)
+		require.True(t, ok)
+		assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+	})
+
+	t.Run("over 100 items returns 400 Bad Request", func(t *testing.T) {
+		items := make([]map[string]any, 101)
+		for i := range items {
+			items[i] = map[string]any{"title": fmt.Sprintf("Title %d", i)}
+		}
+		raw, _ := json.Marshal(items)
+
+		req := httptest.NewRequest("POST", "/api/titles/batch", bytes.NewReader(raw))
+		rr := httptest.NewRecorder()
+		err := h.BatchCreate(rr, req)
+		require.Error(t, err)
+		apiErr, ok := err.(*httputil.APIError)
+		require.True(t, ok)
+		assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+	})
+
+	t.Run("malformed JSON returns 400 Bad Request", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/titles/batch", strings.NewReader("not valid json"))
+		rr := httptest.NewRecorder()
+		err := h.BatchCreate(rr, req)
+		require.Error(t, err)
+		apiErr, ok := err.(*httputil.APIError)
+		require.True(t, ok)
+		assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+	})
+}
+

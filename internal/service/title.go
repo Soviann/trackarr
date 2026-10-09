@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 	"strconv"
 
@@ -578,6 +580,294 @@ func (s *TitleService) BatchUpdateStatus(ctx context.Context, ids []int64, statu
 		return repository.NewTitleWriter(tx).BatchUpdateStatus(ctx, ids, status)
 	})
 }
+
+type BatchCreateItem struct {
+	Title     string            `json:"title"`
+	Type      model.TitleType   `json:"type,omitempty"`
+	Year      int               `json:"year,omitempty"`
+	URL       string            `json:"url,omitempty"`
+	IMDBID    *string           `json:"imdb_id,omitempty"`
+	TMDBID    *int64            `json:"tmdb_id,omitempty"`
+	TVDBID    *int64            `json:"tvdb_id,omitempty"`
+	AniListID *int64            `json:"anilist_id,omitempty"`
+	IsAnime   bool              `json:"is_anime,omitempty"`
+	Status    model.TitleStatus `json:"status,omitempty"`
+}
+
+type BatchCreateResultItem struct {
+	Index   int    `json:"index"`
+	TitleID *int64 `json:"title_id,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Status  string `json:"status"` // "created", "existing", "error"
+	Error   string `json:"error,omitempty"`
+}
+
+type BatchCreateResult struct {
+	Total    int                     `json:"total"`
+	Created  int                     `json:"created"`
+	Existing int                     `json:"existing"`
+	Failed   int                     `json:"failed"`
+	Items    []BatchCreateResultItem `json:"items"`
+}
+
+func isPrivateOrLocalURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()
+	}
+	return false
+}
+
+// BatchCreate inserts multiple titles in a single atomic transaction, deduplicating
+// against existing titles and enqueuing background enrichment tasks.
+func (s *TitleService) BatchCreate(ctx context.Context, items []BatchCreateItem) (*BatchCreateResult, error) {
+	if len(items) == 0 {
+		return nil, errors.New("batch must contain between 1 and 100 items")
+	}
+	if len(items) > 100 {
+		return nil, errors.New("batch size exceeds maximum limit of 100 items")
+	}
+
+	res := &BatchCreateResult{
+		Total: len(items),
+		Items: make([]BatchCreateResultItem, len(items)),
+	}
+
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		titles := repository.NewTitleRepository(tx)
+		titleWriter := repository.NewTitleWriter(tx)
+		taskWriter := repository.NewTaskWriter(tx)
+
+		for i, item := range items {
+			itemRes := BatchCreateResultItem{
+				Index: i,
+			}
+
+			// Boundary checks
+			if len(item.Title) > 500 {
+				itemRes.Status = "error"
+				itemRes.Error = "title exceeds maximum length of 500 characters"
+				res.Failed++
+				res.Items[i] = itemRes
+				continue
+			}
+			if len(item.URL) > 2048 {
+				itemRes.Status = "error"
+				itemRes.Error = "url exceeds maximum length of 2048 characters"
+				res.Failed++
+				res.Items[i] = itemRes
+				continue
+			}
+
+			// Synchronous URL parsing with SSRF protection
+			if item.URL != "" {
+				if isPrivateOrLocalURL(item.URL) {
+					itemRes.Status = "error"
+					itemRes.Error = "url points to a private or disallowed address"
+					res.Failed++
+					res.Items[i] = itemRes
+					continue
+				}
+				parsed := matching.ParseURLFull(item.URL)
+				if parsed != nil {
+					if parsed.IMDB != "" && item.IMDBID == nil {
+						item.IMDBID = &parsed.IMDB
+					}
+					if parsed.TMDBMovie != 0 && item.TMDBID == nil {
+						item.TMDBID = &parsed.TMDBMovie
+						if item.Type == "" {
+							item.Type = model.TitleTypeMovie
+						}
+					}
+					if parsed.TMDBTV != 0 && item.TMDBID == nil {
+						item.TMDBID = &parsed.TMDBTV
+						if item.Type == "" {
+							item.Type = model.TitleTypeSeries
+						}
+					}
+					if parsed.AniList != 0 && item.AniListID == nil {
+						item.AniListID = &parsed.AniList
+						item.IsAnime = true
+					}
+					if parsed.TVDB != 0 && item.TVDBID == nil {
+						item.TVDBID = &parsed.TVDB
+					}
+					if parsed.TVDBSeriesSlug != "" && item.Type == "" {
+						item.Type = model.TitleTypeSeries
+					}
+					if parsed.TVDBMovieSlug != "" && item.Type == "" {
+						item.Type = model.TitleTypeMovie
+					}
+					if item.Title == "" {
+						if parsed.TVDBSeriesSlug != "" {
+							item.Title = parsed.TVDBSeriesSlug
+						} else if parsed.TVDBMovieSlug != "" {
+							item.Title = parsed.TVDBMovieSlug
+						}
+					}
+				}
+			}
+
+			// Fallback title name if empty but ID present
+			if item.Title == "" {
+				switch {
+				case item.IMDBID != nil && *item.IMDBID != "":
+					item.Title = *item.IMDBID
+				case item.TMDBID != nil && *item.TMDBID != 0:
+					item.Title = fmt.Sprintf("TMDB %d", *item.TMDBID)
+				case item.AniListID != nil && *item.AniListID != 0:
+					item.Title = fmt.Sprintf("AniList %d", *item.AniListID)
+				case item.TVDBID != nil && *item.TVDBID != 0:
+					item.Title = fmt.Sprintf("TVDB %d", *item.TVDBID)
+				}
+			}
+
+			if item.Title == "" {
+				itemRes.Status = "error"
+				itemRes.Error = "title or valid external identifier is required"
+				res.Failed++
+				res.Items[i] = itemRes
+				continue
+			}
+
+			itemRes.Title = item.Title
+
+			// Defaults
+			if item.Type == "" {
+				item.Type = model.TitleTypeMovie
+			}
+			if item.Status == "" {
+				item.Status = model.TitleStatusPlanToWatch
+			}
+			if item.Year < 0 || item.Year > 2100 {
+				item.Year = 0
+			}
+
+			// Check if title already exists in DB
+			var typePtr *model.TitleType
+			if item.Type != "" {
+				typePtr = &item.Type
+			}
+			existing, err := titles.FindByExternalID(item.IMDBID, item.TMDBID, nil, item.AniListID, item.TVDBID, typePtr)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("lookup external id: %w", err)
+			}
+			if existing == nil && item.Title != "" {
+				existing, err = titles.FindByNameAndType(item.Title, item.Type, item.Year)
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					return fmt.Errorf("lookup name and type: %w", err)
+				}
+			}
+
+			if existing != nil {
+				res.Existing++
+				itemRes.Status = "existing"
+				itemRes.TitleID = &existing.ID
+				if pName := existing.PrimaryName(); pName != "" {
+					itemRes.Title = pName
+				}
+				res.Items[i] = itemRes
+				continue
+			}
+
+			// Determine match status and source
+			matchStatus := model.MatchStatusPendingReview
+			if item.TMDBID != nil && *item.TMDBID > 0 {
+				matchStatus = model.MatchStatusConfirmed
+			} else if item.AniListID != nil && *item.AniListID > 0 {
+				matchStatus = model.MatchStatusConfirmed
+			}
+			source := "batch"
+
+			title := &model.Title{
+				Type:        item.Type,
+				IsAnime:     item.IsAnime,
+				Year:        item.Year,
+				Status:      item.Status,
+				MatchStatus: matchStatus,
+				MatchSource: &source,
+				IMDBID:      item.IMDBID,
+				TMDBID:      item.TMDBID,
+				TVDBID:      item.TVDBID,
+				AniListID:   item.AniListID,
+				ArrIgnored:  true,
+			}
+
+			names := []model.TitleName{
+				{
+					Name:      item.Title,
+					Language:  "en",
+					IsPrimary: true,
+				},
+			}
+
+			newID, err := titleWriter.Create(ctx, title, names)
+			if err != nil {
+				return fmt.Errorf("create title: %w", err)
+			}
+
+			// Enqueue background enrichment task if IDs are present
+			if title.TMDBID != nil || title.IMDBID != nil || title.AniListID != nil || title.TVDBID != nil {
+				var tmdbID int64
+				if title.TMDBID != nil {
+					tmdbID = *title.TMDBID
+				}
+				var imdbID string
+				if title.IMDBID != nil {
+					imdbID = *title.IMDBID
+				}
+				var tvdbID int64
+				if title.TVDBID != nil {
+					tvdbID = *title.TVDBID
+				}
+				var anilistID int64
+				if title.AniListID != nil {
+					anilistID = *title.AniListID
+				}
+
+				payload := EnrichmentPayload{
+					TitleID:       newID,
+					TitleName:     item.Title,
+					Year:          title.Year,
+					TitleType:     title.Type,
+					IsAnime:       title.IsAnime,
+					IMDBID:        imdbID,
+					TMDBID:        tmdbID,
+					TVDBID:        tvdbID,
+					AniListID:     anilistID,
+					PreserveMatch: title.MatchStatus == model.MatchStatusConfirmed,
+				}
+				payloadJSON, _ := json.Marshal(payload)
+				dedupKey := fmt.Sprintf("enrichment:%d", newID)
+				if _, err := taskWriter.Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey); err != nil {
+					return fmt.Errorf("enqueue enrichment task: %w", err)
+				}
+			}
+
+			res.Created++
+			itemRes.Status = "created"
+			itemRes.TitleID = &newID
+			res.Items[i] = itemRes
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 
 func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {
 	statusChanged := newStatus != nil && *newStatus != before.Status

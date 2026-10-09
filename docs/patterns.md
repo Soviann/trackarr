@@ -100,7 +100,7 @@
 | `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (daily refresh, cover maintenance, wrapped checks) | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
-| `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine (`enrichment`, `push`, `arr`) | `docs/background-jobs.md` |
+| `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine with priority ordering (interactive pushes ahead of bulk enrichment) | `docs/background-jobs.md` |
 | `APIKeyService` | `internal/service/api_key.go` | Labeled API Key authentication, format validation, memory-throttled usage tracking | `docs/patterns.md` |
 
 ### API Routes & Handlers (`internal/router/router.go`)
@@ -130,6 +130,7 @@
 | GET | `/covers/{filename}` | `covers.Serve` | Legacy top-level cover route without `/api` prefix |
 | GET | `/api/titles` | `titles.List` | Paginated library list with filters and search |
 | POST | `/api/titles` | `titles.Create` | Manually create a new title |
+| POST | `/api/titles/batch` | `titles.BatchCreate` | Bulk ingest titles (up to 100) with local regex URL parsing, deduplication, and task prioritization |
 | GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed titles |
 | GET | `/api/titles/resolve` | `titles.Resolve` | Preview external metadata before creating a title |
 | GET | `/api/titles/continue-watching` | `library.ContinueWatching` | Continue watching grid list with progress, providers & next episode |
