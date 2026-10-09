@@ -35,6 +35,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Recentrage sur l'Apparence & Thèmes, les Métadonnées & IA (TMDB, TVDB, Gemini, AniList OAuth, langue des métadonnées) et les plateformes de streaming (Watch Providers).
   - Adoption de l'en-tête sticky unifié `<AdminHeader>` et normalisation du conteneur à 840px centré.
 
+### Corrigé
+- **Défilement horizontal sur mobile du hub d'administration (`/admin`)** :
+  - Définition de `grid-template-columns: minmax(0, 1fr)` sur `.cardGroup` pour empêcher le débordement des pistes CSS Grid au-delà de la largeur de l'écran.
+  - Ajout de `flex-wrap: wrap` et `min-width: 0` sur `.cardTop` et `.cardLabel` pour permettre aux badges d'état volumineux (ex. « TMDB • TVDB • Webhooks ») de passer à la ligne sur écran étroit sans forcer l'élargissement de la carte.
+  - Sécurisation du conteneur `.page` avec `width: 100%; box-sizing: border-box;` et adaptation responsive de la boîte d'actualisation globale (`.refreshTopRow`).
+
 ## [v1.24.2] — 2026-10-08
 
 ### Corrigé
