@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.0] — 2026-10-09
+
 ### Ajouté
 - **Architecture de Clés d'API nommées & Scopes granulaires (Milestone 2 - Chunk 5)** :
   - Migration de base de données `049_api_keys.up.sql` avec table `api_keys` (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`).
@@ -28,6 +30,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - 2 ressources MCP en direct : `trackarr://library/summary` et `trackarr://continue-watching`.
   - Cible Makefile `make build-mcp` pour la compilation standardisée du serveur MCP dans `./tmp/trackarr-mcp`.
   - Documentation développeur dédiée : `docs/dev/mcp-server.md`.
+
+### Modifié
+- **Consolidation du flux d'authentification par clé d'API & Hygiène mémoire** :
+  - Unification du traitement des en-têtes `Authorization: Bearer` et `X-Api-Key` au sein d'une routine d'authentification commune dans `UnifiedAuth`.
+  - Éviction des identifiants de clés supprimées du cache mémoire de limitation de débit `last_used`.
 
 ## [v1.25.0] — 2026-10-09
 
