@@ -14,6 +14,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Middleware `mw.UnifiedAuth` assurant la compatibilité ascendante entre les sessions web interactives et les clients automatisés tiers, avec limitation de débit conforme aux en-têtes IETF (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` et `Retry-After` sur 429).
   - Section de gestion des clés API dans l'interface d'administration (`/admin/auth`) : liste tabulaire des clés, sélection des scopes par cases à cocher, affichage unique du jeton avec bouton de copie, révocation et suppression définitive.
   - Harmonisation des erreurs en format JSON via `httputil.WrapHandler` sur `/api/*` et décodage intelligent dans le client frontend `apiFetch`.
+- **Ingestion par lot de titres & Priorisation de la file de tâches (Milestone 2 - Chunk 6)** :
+  - Endpoint `POST /api/titles/batch` permettant l'ingestion massive de titres (jusqu'à 100 éléments par requête, tampon maximal de 2 Mo) au sein d'une transaction SQLite atomique unique.
+  - Extraction synchrone locale des identifiants et métadonnées d'URLs médias (IMDb, TMDB, AniList, TVDB) via expressions régulières (0 appel réseau sortant) et neutralisation stricte de tout risque SSRF (rejet des adresses IP privées et d'adresses locales).
+  - Détection avancée des doublons au sein de la transaction active par identifiants externes et par triplet titre / type / année.
+  - Réponses de succès partiel conformes : code HTTP 201 Created si l'intégralité des titres est créée, ou code HTTP 200 OK si des titres existaient déjà ou ont été ignorés.
+  - Ordonnancement prioritaire de la file de tâches (`FetchDue` dans `TaskWriter`) privilégiant les synchronisations interactives (`anilist_push_season`, `anilist_push_movie`, `radarr_push`, `sonarr_push`, `sonarr_delete`) devant les enrichissements et rafraîchissements de métadonnées en arrière-plan.
 
 ## [v1.25.0] — 2026-10-09
 

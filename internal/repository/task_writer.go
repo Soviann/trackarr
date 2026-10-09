@@ -75,7 +75,10 @@ func (w *TaskWriter) FetchDue(ctx context.Context, limit int) ([]model.Task, err
 		`SELECT id, task_type, payload, status, attempts, max_attempts, day, last_error, run_at, created_at, updated_at, dedup_key
 		 FROM task_queue
 		 WHERE status = 'pending' AND run_at <= ?
-		 ORDER BY run_at ASC
+		 ORDER BY CASE
+		   WHEN task_type IN ('anilist_push_season', 'anilist_push_movie', 'radarr_push', 'sonarr_push', 'sonarr_delete') THEN 0
+		   ELSE 1
+		 END ASC, run_at ASC
 		 LIMIT ?`,
 		now, limit,
 	)

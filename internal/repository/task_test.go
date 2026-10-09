@@ -101,3 +101,52 @@ func TestTaskWriter_Enqueue_WakeSleeping(t *testing.T) {
 	assert.Nil(t, task.LastError)
 	assert.Equal(t, 0, task.Attempts)
 }
+
+func TestTaskWriter_FetchDue_Priority(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+
+	// Enqueue tasks with varying timestamps
+	past10 := time.Now().Add(-10 * time.Minute)
+	past5 := time.Now().Add(-5 * time.Minute)
+	past2 := time.Now().Add(-2 * time.Minute)
+	past1 := time.Now().Add(-1 * time.Minute)
+
+	// Enrichment & refresh (priority 1)
+	idEnrich := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 1}`, nil)
+	_, err = db.Exec(`UPDATE task_queue SET run_at = ? WHERE id = ?`, past10, idEnrich)
+	require.NoError(t, err)
+
+	idRefresh := testutil.EnqueueTask(t, db, model.TaskTypeRefresh, `{"title_id": 2}`, nil)
+	_, err = db.Exec(`UPDATE task_queue SET run_at = ? WHERE id = ?`, past5, idRefresh)
+	require.NoError(t, err)
+
+	// Interactive tasks (priority 0)
+	idAniList := testutil.EnqueueTask(t, db, model.TaskTypeAniListPushSeason, `{"season_id": 10}`, nil)
+	_, err = db.Exec(`UPDATE task_queue SET run_at = ? WHERE id = ?`, past2, idAniList)
+	require.NoError(t, err)
+
+	idRadarr := testutil.EnqueueTask(t, db, model.TaskTypeRadarrPush, `{"title_id": 3}`, nil)
+	_, err = db.Exec(`UPDATE task_queue SET run_at = ? WHERE id = ?`, past1, idRadarr)
+	require.NoError(t, err)
+
+	// Fetch all 4 tasks
+	tasks := testutil.FetchDueTasks(t, db, 4)
+	require.Len(t, tasks, 4)
+
+	// Priority 0 must come first, ordered by run_at ASC
+	assert.Equal(t, model.TaskTypeAniListPushSeason, tasks[0].TaskType)
+	assert.Equal(t, idAniList, tasks[0].ID)
+
+	assert.Equal(t, model.TaskTypeRadarrPush, tasks[1].TaskType)
+	assert.Equal(t, idRadarr, tasks[1].ID)
+
+	// Priority 1 must come after, ordered by run_at ASC
+	assert.Equal(t, model.TaskTypeEnrichment, tasks[2].TaskType)
+	assert.Equal(t, idEnrich, tasks[2].ID)
+
+	assert.Equal(t, model.TaskTypeRefresh, tasks[3].TaskType)
+	assert.Equal(t, idRefresh, tasks[3].ID)
+}
+

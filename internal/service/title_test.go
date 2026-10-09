@@ -548,3 +548,203 @@ func TestTitleService_Rematch_ClearsCoverURL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.TitleTypeSeries, got.Type)
 }
+
+func TestTitleService_BatchCreate_Nominal(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	items := []service.BatchCreateItem{
+		{
+			Title: "Inception",
+			Type:  model.TitleTypeMovie,
+			Year:  2010,
+			URL:   "https://www.imdb.com/title/tt1375666/",
+		},
+		{
+			Title: "Breaking Bad",
+			Type:  model.TitleTypeSeries,
+			Year:  2008,
+			URL:   "https://www.themoviedb.org/tv/1396",
+		},
+		{
+			Title: "Frieren: Beyond Journey's End",
+			URL:   "https://anilist.co/anime/154587",
+		},
+	}
+
+	res, err := svc.BatchCreate(context.Background(), items)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Equal(t, 3, res.Total)
+	assert.Equal(t, 3, res.Created)
+	assert.Equal(t, 0, res.Existing)
+	assert.Equal(t, 0, res.Failed)
+	require.Len(t, res.Items, 3)
+
+	for i, it := range res.Items {
+		assert.Equal(t, i, it.Index)
+		assert.Equal(t, "created", it.Status)
+		require.NotNil(t, it.TitleID)
+		assert.NotEmpty(t, it.Title)
+
+		// Verify record exists in DB
+		rec, err := titleRepo.GetByID(*it.TitleID)
+		require.NoError(t, err)
+		assert.Equal(t, it.Title, rec.PrimaryName())
+	}
+
+	// Verify URL extraction results
+	t1, err := titleRepo.GetByID(*res.Items[0].TitleID)
+	require.NoError(t, err)
+	require.NotNil(t, t1.IMDBID)
+	assert.Equal(t, "tt1375666", *t1.IMDBID)
+
+	t2, err := titleRepo.GetByID(*res.Items[1].TitleID)
+	require.NoError(t, err)
+	require.NotNil(t, t2.TMDBID)
+	assert.Equal(t, int64(1396), *t2.TMDBID)
+	assert.Equal(t, model.TitleTypeSeries, t2.Type)
+
+	t3, err := titleRepo.GetByID(*res.Items[2].TitleID)
+	require.NoError(t, err)
+	require.NotNil(t, t3.AniListID)
+	assert.Equal(t, int64(154587), *t3.AniListID)
+	assert.True(t, t3.IsAnime)
+
+	// Verify tasks enqueued in task queue
+	tasks := testutil.FetchDueTasks(t, db, 10)
+	assert.Len(t, tasks, 3)
+}
+
+func TestTitleService_BatchCreate_Duplicates(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	// Pre-create a title in DB
+	tmdbID := int64(550)
+	existingID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        1999,
+		Status:      model.TitleStatusCompleted,
+		TMDBID:      &tmdbID,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Fight Club", Language: "en", IsPrimary: true}})
+
+	// Batch has:
+	// 1. Duplicate of pre-existing title via TMDB URL
+	// 2. New title
+	// 3. Duplicate of item 2 within the same batch
+	items := []service.BatchCreateItem{
+		{
+			Title: "Fight Club",
+			URL:   "https://www.themoviedb.org/movie/550",
+		},
+		{
+			Title: "The Matrix",
+			Type:  model.TitleTypeMovie,
+			Year:  1999,
+		},
+		{
+			Title: "The Matrix",
+			Type:  model.TitleTypeMovie,
+			Year:  1999,
+		},
+	}
+
+	res, err := svc.BatchCreate(context.Background(), items)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Equal(t, 3, res.Total)
+	assert.Equal(t, 1, res.Created)
+	assert.Equal(t, 2, res.Existing)
+	assert.Equal(t, 0, res.Failed)
+
+	assert.Equal(t, "existing", res.Items[0].Status)
+	assert.Equal(t, existingID, *res.Items[0].TitleID)
+
+	assert.Equal(t, "created", res.Items[1].Status)
+	matrixID := *res.Items[1].TitleID
+
+	assert.Equal(t, "existing", res.Items[2].Status)
+	assert.Equal(t, matrixID, *res.Items[2].TitleID)
+}
+
+func TestTitleService_BatchCreate_BoundariesAndErrors(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	t.Run("empty items rejected", func(t *testing.T) {
+		res, err := svc.BatchCreate(context.Background(), []service.BatchCreateItem{})
+		require.Error(t, err)
+		assert.Nil(t, res)
+		assert.Contains(t, err.Error(), "between 1 and 100 items")
+	})
+
+	t.Run("over 100 items rejected", func(t *testing.T) {
+		many := make([]service.BatchCreateItem, 101)
+		for i := range many {
+			many[i] = service.BatchCreateItem{Title: "Title"}
+		}
+		res, err := svc.BatchCreate(context.Background(), many)
+		require.Error(t, err)
+		assert.Nil(t, res)
+		assert.Contains(t, err.Error(), "maximum limit of 100 items")
+	})
+
+	t.Run("item boundary violations and SSRF guards", func(t *testing.T) {
+		longTitle := string(make([]byte, 501))
+		longURL := "https://example.com/" + string(make([]byte, 2050))
+
+		items := []service.BatchCreateItem{
+			{Title: longTitle},
+			{Title: "Valid", URL: longURL},
+			{Title: "Private IP", URL: "http://192.168.1.1/movie"},
+			{Title: "Localhost", URL: "http://localhost:8080/series"},
+			{Title: "", URL: ""}, // neither title nor URL
+			{Title: "Valid Title", Type: model.TitleTypeMovie, Year: 2020},
+		}
+
+		res, err := svc.BatchCreate(context.Background(), items)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		assert.Equal(t, 6, res.Total)
+		assert.Equal(t, 1, res.Created)
+		assert.Equal(t, 5, res.Failed)
+
+		assert.Equal(t, "error", res.Items[0].Status)
+		assert.Contains(t, res.Items[0].Error, "500 characters")
+
+		assert.Equal(t, "error", res.Items[1].Status)
+		assert.Contains(t, res.Items[1].Error, "2048 characters")
+
+		assert.Equal(t, "error", res.Items[2].Status)
+		assert.Contains(t, res.Items[2].Error, "disallowed address")
+
+		assert.Equal(t, "error", res.Items[3].Status)
+		assert.Contains(t, res.Items[3].Error, "disallowed address")
+
+		assert.Equal(t, "error", res.Items[4].Status)
+		assert.Contains(t, res.Items[4].Error, "title or valid external identifier")
+
+		assert.Equal(t, "created", res.Items[5].Status)
+	})
+}
+

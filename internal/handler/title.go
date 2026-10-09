@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -316,6 +317,47 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	httputil.WriteJSON(w, http.StatusCreated, created)
 	return nil
 }
+
+func (h *TitleHandler) BatchCreate(w http.ResponseWriter, r *http.Request) error {
+	var raw json.RawMessage
+	// 2 MB limit as per specifications (2097152 bytes)
+	if err := httputil.ReadJSON(r, &raw, 2097152); err != nil {
+		return httputil.BadRequest("Invalid request body")
+	}
+
+	var items []service.BatchCreateItem
+	if err := json.Unmarshal(raw, &items); err != nil {
+		var wrapper struct {
+			Items []service.BatchCreateItem `json:"items"`
+		}
+		if err := json.Unmarshal(raw, &wrapper); err != nil {
+			return httputil.BadRequest("Invalid JSON format: expected array or object with 'items' key")
+		}
+		items = wrapper.Items
+	}
+
+	if len(items) == 0 {
+		return httputil.BadRequest("Batch must contain between 1 and 100 items")
+	}
+	if len(items) > 100 {
+		return httputil.BadRequest("Batch size cannot exceed 100 items")
+	}
+
+	result, err := h.service.BatchCreate(r.Context(), items)
+	if err != nil {
+		return httputil.InternalError("Failed to process batch", err)
+	}
+
+	// Partial success reporting: HTTP 201 Created if all new, HTTP 200 OK if some already existed or skipped
+	status := http.StatusOK
+	if result.Created == result.Total && result.Total > 0 {
+		status = http.StatusCreated
+	}
+
+	httputil.WriteJSON(w, status, result)
+	return nil
+}
+
 
 func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	id, err := httputil.ParseIDParam(r, "id")

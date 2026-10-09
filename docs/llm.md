@@ -68,6 +68,11 @@
 15. **Preact 11 & Synchronous Scroll Lock**:
     - Frontend runs on Preact 11 (`preact@^11.0.0`) with aligned TypeScript typings (`RefObject`, ARIA image attributes).
     - `BottomSheet` uses `useLayoutEffect` for synchronous body scroll lock management, guaranteeing immediate restoration of body `overflow` on dismiss and unmount.
+16. **Batch Ingestion & Task Queue Prioritization**:
+    - `POST /api/titles/batch` handles bulk title ingestion (up to 100 items per request, 2MB body limit) inside a single atomic SQLite transaction.
+    - URLs are parsed locally via regex in `matching.ParseURLFull` (0 outbound HTTP calls; private IP addresses discarded for SSRF protection).
+    - Duplicate detection checks both external IDs and title name/type/year within the active transaction.
+    - Task queue `FetchDue` strictly prioritizes interactive operations (`anilist_push_season`, `anilist_push_movie`, `radarr_push`, `sonarr_push`, `sonarr_delete`) ahead of background enrichment and refresh jobs.
 
 ---
 
@@ -107,6 +112,7 @@
 - `GET /api/titles` : List titles with status/type/genre/person/country filtering, sorting, pagination.
 - `GET /api/titles/{id}` : Full title entity with names, seasons, episodes, cast, external IDs.
 - `POST /api/titles` : Create title (supports manual input or direct URL matching).
+- `POST /api/titles/batch` : High-throughput bulk title ingestion (up to 100 items, 2MB cap, local regex URL parsing, deduplication, 201 Created vs 200 OK partial success).
 - `PATCH /api/titles/{id}` : Update status, rating, match status, type, anime flag, arr ignored, or personal notes.
 - `DELETE /api/titles/{id}` : Delete title and cascaded relations.
 - `POST /api/titles/{id}/rematch` : Rematch title with external IDs or title type.

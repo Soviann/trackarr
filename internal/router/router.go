@@ -250,6 +250,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 				r.Use(mw.RequireScope(model.ScopeLibraryWrite))
 
 				r.Post("/titles", httputil.WrapHandler(titles.Create))
+				r.Post("/titles/batch", httputil.WrapHandler(titles.BatchCreate))
 				r.Post("/titles/batch-status", httputil.WrapHandler(titles.BatchStatus))
 				r.Patch("/titles/{id}", httputil.WrapHandler(titles.Update))
 				r.Post("/titles/{id}/rematch", httputil.WrapHandler(titles.Rematch))
