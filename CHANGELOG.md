@@ -20,6 +20,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
   - Détection avancée des doublons au sein de la transaction active par identifiants externes et par triplet titre / type / année.
   - Réponses de succès partiel conformes : code HTTP 201 Created si l'intégralité des titres est créée, ou code HTTP 200 OK si des titres existaient déjà ou ont été ignorés.
   - Ordonnancement prioritaire de la file de tâches (`FetchDue` dans `TaskWriter`) privilégiant les synchronisations interactives (`anilist_push_season`, `anilist_push_movie`, `radarr_push`, `sonarr_push`, `sonarr_delete`) devant les enrichissements et rafraîchissements de métadonnées en arrière-plan.
+- **Serveur MCP Go natif (Model Context Protocol) & Outils pour Assistants IA (Milestone 2 - Chunk 7)** :
+  - Binaire Go autonome (`cmd/trackarr-mcp`) conforme à la spécification officielle MCP via `github.com/mark3labs/mcp-go`, sans runtime Node.js et avec une empreinte mémoire minimale (~12-15 Mo).
+  - Hygiène stricte du transport stdio (`log.SetOutput(os.Stderr)`) garantissant un flux JSON-RPC exempt de toute pollution de logs diagnostiques sur la sortie standard.
+  - 11 outils MCP complets avec gestion d'erreur auto-corrective (`CallToolResult{IsError: true}`) : `trackarr_search`, `trackarr_get_title`, `trackarr_get_continue_watching`, `trackarr_resolve_url`, `trackarr_get_stats`, `trackarr_add_title`, `trackarr_batch_add`, `trackarr_update_title`, `trackarr_set_episode_watched`, `trackarr_delete_title` (marqué destructif et protégé par le scope `library:delete`) et `trackarr_push_to_arr` (protégé par le scope `arr:write`).
+  - Compaction de tokens côté client pour préserver la fenêtre de contexte des modèles de langage.
+  - 2 ressources MCP en direct : `trackarr://library/summary` et `trackarr://continue-watching`.
+  - Cible Makefile `make build-mcp` pour la compilation standardisée du serveur MCP dans `./tmp/trackarr-mcp`.
+  - Documentation développeur dédiée : `docs/dev/mcp-server.md`.
 
 ## [v1.25.0] — 2026-10-09
 

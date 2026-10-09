@@ -6,7 +6,7 @@ export
 DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
-.PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build migrate version
+.PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build build-mcp migrate version
 .PHONY: import import-dry db-reset reset-import backfill-accents reset-password
 
 .DEFAULT_GOAL := help
@@ -45,6 +45,9 @@ dev-frontend: ## Start Vite dev server (inside container with HMR)
 
 build: ## Build production binary
 	$(EXEC) go build -tags sqlite_fts5 -o ./tmp/trackarr .
+
+build-mcp: ## Build MCP server binary
+	$(EXEC) go build -tags sqlite_fts5 -o ./tmp/trackarr-mcp ./cmd/trackarr-mcp
 
 version: ## Show application version
 	$(EXEC) ./tmp/trackarr version
