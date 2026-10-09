@@ -152,15 +152,9 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 	if oc := matching.ExtractOriginCountry(details.OriginCountry); oc != nil {
 		metaUpdate.OriginCountry = oc
 	}
-	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
 
-	var tmdbNames map[string]string
-	if names, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
-		tmdbNames = names
-	}
-
+	var genreList []string
 	if genres != "" {
-		var genreList []string
 		if err := json.Unmarshal([]byte(genres), &genreList); err == nil && len(genreList) > 0 {
 			if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 				return repository.NewGenreWriter(tx).ReplaceForTitle(ctx, title.ID, genreList)
@@ -168,6 +162,19 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 				log.Printf("background: save genres for title %d: %v", title.ID, err)
 			}
 		}
+	}
+
+	if !title.IsAnime && title.Type == model.TitleTypeSeries && matching.IsJapaneseAnimation(details.OriginCountry, genreList) {
+		isAnimeTrue := true
+		metaUpdate.IsAnime = &isAnimeTrue
+		title.IsAnime = true
+	}
+
+	logTitleUpdate(title.ID, "series metadata", s.updateTitle(ctx, title.ID, metaUpdate))
+
+	var tmdbNames map[string]string
+	if names, err := s.tmdb.GetTitleNames(ctx, *title.TMDBID, "tv"); err == nil {
+		tmdbNames = names
 	}
 
 	if !s.hasValidCover(title) && title.AniListID != nil {

@@ -24,6 +24,7 @@ type tmdbSearchResultDTO struct {
 	PosterURL *string `json:"poster_url"`
 	Type      string  `json:"type,omitempty"`
 	Overview  string  `json:"overview,omitempty"`
+	IsAnime   bool    `json:"is_anime,omitempty"`
 }
 
 func toTMDBDTO(r matching.TMDBSearchResult, mediaType string) tmdbSearchResultDTO {
@@ -33,6 +34,7 @@ func toTMDBDTO(r matching.TMDBSearchResult, mediaType string) tmdbSearchResultDT
 		Year:     r.Year(),
 		Type:     mediaType,
 		Overview: r.Overview,
+		IsAnime:  mediaType == "tv" && r.IsJapaneseAnimeSeries(),
 	}
 	if r.PosterPath != nil && *r.PosterPath != "" {
 		url := tmdbImageURL + *r.PosterPath

@@ -27,7 +27,8 @@
    - Quick +1 episode mark and Arr availability badge (`SxxExx DISPO`) are strictly hidden on titles with `status = 'dropped'`.
    - Quick +1 episode mark, Arr availability badge (`SxxExx DISPO`), and Next Episode hero banner are strictly hidden for unaired episodes (future air date or missing air date) and placeholder episodes marked as "TBA" or "TBD" (`IsTBA = true`).
    - "Caught up" status is derived and propagated dynamically when all currently aired episodes have been watched while future episodes remain scheduled.
-   - Bulk completion (`MarkAllWatchedForTitle`) and unwatched episode checks (`HasUnwatchedEpisodes`) strictly ignore unaired future episodes and TBA/TBD placeholders, ensuring completed series do not falsely mark future episodes as watched and ended series auto-complete cleanly.
+   - Bulk completion (`MarkAllWatchedForTitle`) and unwatched episode checks (`HasUnwatchedEpisodes`) strictly ignore unaired future episodes and TBA/TBD placeholders. Furthermore, `completeEpisodes` only runs during the initial backfill of newly imported completed titles without synced seasons (`!HasSyncedSeasons`), ensuring existing completed series never auto-mark newly added seasons/episodes as watched on refresh. If an existing completed series gets new aired episodes, its status automatically transitions to `watching`.
+   - Japanese animated series (`origin_country` contains "JP" and genre contains "Animation") are automatically detected and promoted to `is_anime = true` upon TMDB search discovery and metadata refresh, unlocking AniList backfills.
 4. **AniList Synchronization Constraints**:
    - Scores (1–10) are only pushed when anime status is `Completed` or `Dropped` (AniList API restriction).
    - Multi-part seasons map to separate AniList IDs in `season_external_ids` (`provider = 'anilist'`); episode counts are distributed sequentially across parts.

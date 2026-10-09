@@ -107,7 +107,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
     const timer = setTimeout(async () => {
       try {
         const [tmdbRes, anilistRes] = await Promise.allSettled([
-          apiFetch<Array<{ id: number; title: string; year: number; poster_url: string | null; type?: string; overview?: string }>>(
+          apiFetch<Array<{ id: number; title: string; year: number; poster_url: string | null; type?: string; overview?: string; is_anime?: boolean }>>(
             `/tmdb/search?query=${encodeURIComponent(trimmed)}&type=all`
           ),
           apiFetch<Array<{ id: number; title: string; year?: number | null; format?: string; poster_url?: string | null; english_title?: string; romaji_title?: string }>>(
@@ -127,7 +127,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
               title: tmdb.title,
               year: tmdb.year,
               type: isSeries ? 'series' : 'movie',
-              isAnime: false,
+              isAnime: isSeries && Boolean(tmdb.is_anime),
               posterUrl: tmdb.poster_url,
               source: 'TMDB',
               tmdbId: tmdb.id,

@@ -214,6 +214,8 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 		TitleName: title.PrimaryName,
 	}
 
+	needsInitialBackfill := title.Type != model.TitleTypeMovie && !title.HasSyncedSeasons && title.Status == model.TitleStatusCompleted
+
 	var tmdbNames, tvdbNames, aniListNames map[string]string
 
 	// Step 1: Refresh from TMDB if available
@@ -296,12 +298,25 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 					}
 				}
 			}
-		} else if title.Status == model.TitleStatusPlanToWatch {
-			if hasWatched, err := s.titles.HasWatchedEpisodes(title.ID); err == nil && hasWatched {
-				watching := model.TitleStatusWatching
-				if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &watching}); err == nil {
-					title.Status = model.TitleStatusWatching
-					log.Printf("background: updated %q status plan_to_watch -> watching", result.TitleName)
+		} else {
+			// Series is returning, in_production, or status unknown (not ended/cancelled)
+			if title.Status == model.TitleStatusPlanToWatch {
+				if hasWatched, err := s.titles.HasWatchedEpisodes(title.ID); err == nil && hasWatched {
+					watching := model.TitleStatusWatching
+					if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &watching}); err == nil {
+						title.Status = model.TitleStatusWatching
+						log.Printf("background: updated %q status plan_to_watch -> watching", result.TitleName)
+					}
+				}
+			} else if title.Status == model.TitleStatusCompleted && !needsInitialBackfill {
+				// An existing series previously completed now has new aired unwatched episodes.
+				// Revert from completed to watching so it surfaces in continue-watching / active library.
+				if hasUnwatched, err := s.titles.HasUnwatchedEpisodes(title.ID); err == nil && hasUnwatched {
+					watching := model.TitleStatusWatching
+					if err := s.updateTitle(ctx, title.ID, repository.TitleUpdate{Status: &watching}); err == nil {
+						title.Status = model.TitleStatusWatching
+						log.Printf("background: updated %q status completed -> watching (new unwatched episodes)", result.TitleName)
+					}
 				}
 			}
 		}
@@ -309,8 +324,9 @@ func (s *BackgroundService) refreshTitle(ctx context.Context, title *repository.
 
 	// Step 2b: enforce "a completed series has every episode watched". Runs after
 	// Step 1 has (re)populated the list, so episodes freshly backfilled for an
-	// import-completed title get marked too. Idempotent (only flips unwatched rows).
-	if title.Type != model.TitleTypeMovie && title.Status == model.TitleStatusCompleted {
+	// import-completed title get marked too. Only applies to newly backfilled titles
+	// that had no synced seasons prior to this refresh pass.
+	if needsInitialBackfill && title.Status == model.TitleStatusCompleted {
 		s.completeEpisodes(ctx, title.ID)
 	}
 

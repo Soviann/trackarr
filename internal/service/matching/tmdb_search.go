@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // TMDBSearchResult represents a single search result from TMDB.
 type TMDBSearchResult struct {
-	ID           int64   `json:"id"`
-	Title        string  `json:"title"`        // movies
-	Name         string  `json:"name"`         // TV shows
-	ReleaseDate  string  `json:"release_date"` // movies
-	FirstAirDate string  `json:"first_air_date"`
-	PosterPath   *string `json:"poster_path"`
-	Overview     string  `json:"overview"`
+	ID            int64    `json:"id"`
+	Title         string   `json:"title"`        // movies
+	Name          string   `json:"name"`         // TV shows
+	ReleaseDate   string   `json:"release_date"` // movies
+	FirstAirDate  string   `json:"first_air_date"`
+	PosterPath    *string  `json:"poster_path"`
+	Overview      string   `json:"overview"`
+	GenreIDs      []int    `json:"genre_ids"`
+	OriginCountry []string `json:"origin_country"`
 }
 
 func (r TMDBSearchResult) DisplayTitle() string {
@@ -35,6 +38,25 @@ func (r TMDBSearchResult) Year() int {
 		return y
 	}
 	return 0
+}
+
+func (r TMDBSearchResult) IsJapaneseAnimeSeries() bool {
+	hasJP := false
+	for _, c := range r.OriginCountry {
+		if strings.EqualFold(strings.TrimSpace(c), "JP") {
+			hasJP = true
+			break
+		}
+	}
+	if !hasJP {
+		return false
+	}
+	for _, g := range r.GenreIDs {
+		if g == 16 { // TMDB genre 16 = Animation
+			return true
+		}
+	}
+	return false
 }
 
 type tmdbSearchResponse struct {
