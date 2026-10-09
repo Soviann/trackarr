@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.25.0] — 2026-10-09
+
 ### Ajouté
 - **Composant d'en-tête unifié `<AdminHeader>`** : En-tête réutilisable et sticky pour les pages d'administration avec bouton de retour circulaire (34px), navigation déterministe, titre, et slot d'actions personnalisées.
 
