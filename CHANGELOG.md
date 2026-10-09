@@ -6,16 +6,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.3] — 2026-10-09
+
 ### Amélioré
 - **Page Statistiques (`/stats`) — Refonte UX/UI Desktop & Accessibilité** :
   - **Mise en page Desktop Bento Dashboard (≥ 1024px)** : Conteneur centré (`max-width: 1200px`), barre d'outils filtres intégrée avec le titre, grille de KPIs en 4 colonnes avec carte héros équilibrée, et disposition en bento 2 colonnes équilibrées (genres et notes à gauche, acteurs, réalisateurs, séries de jours et résumé annuel à droite).
   - **Accessibilité (A11y)** : Résolution des boutons imbriqués dans les cartes interactives (`WrappedBanner` et `ArchiveCard`), séparation nette du lien d'action et du bouton de fermeture, et ajout des rôles sémantiques `role="meter"` avec attributs `aria-valuenow`, `aria-valuemin`, `aria-valuemax` sur l'ensemble des jauges de statistiques.
   - **Affordances & Thèmes** : Ajout d'indicateurs visuels de navigation (`→`) sur les lignes interactives d'acteurs et de réalisateurs (ouverture du tiroir de filmographie), suppression des couleurs en dur (`#1e2029`, cyan non lié au thème) et respect strict des jetons de design `tokens.css`.
 
-
 ### Corrigé
 - **Tiroir de filtres de recherche (`FilterDrawer`)** :
   - Fermeture automatique du tiroir de filtres lors de tout changement de page / navigation (`handleRoute`), garantissant que le tiroir est systématiquement fermé lorsqu'on revient sur la page de recherche ou de bibliothèque.
+
+## [v1.26.2] — 2026-10-09
+
+### Corrigé
 - **Association AniList & Gestion des séries sans saisons/épisodes** :
   - **Fallback TVDB → TMDB** : Correction de `refreshSeriesFromTVDB` pour ne renvoyer `true` que si au moins un épisode d'une saison régulière (`> 0`) a été synchronisé. Quand TVDB ne contient aucun épisode (ex: animes en production ou récemment annoncés), Trackarr bascule correctement vers TMDB au lieu d'ignorer la création de saisons.
   - **Création automatique de la Saison 1 lors de l'association AniList** :
