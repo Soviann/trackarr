@@ -201,5 +201,34 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
     expect(screen.queryByText('ANILIST')).toBeNull()
     expect(screen.getByText('No episodes announced yet')).toBeTruthy()
   })
+
+  it('renders empty episodes message when season exists but has 0 episodes', () => {
+    const seriesWithEmptySeason: Title = {
+      ...mockNormalSeries,
+      seasons: [
+        {
+          id: 101,
+          title_id: 10,
+          season_number: 1,
+          total_episodes: null,
+          episode_count: 0,
+          watched_count: 0,
+          episodes: [],
+        },
+      ],
+    }
+
+    vi.mocked(useApi).mockReturnValue({
+      data: seriesWithEmptySeason,
+      loading: false,
+      error: null,
+      mutate: vi.fn(),
+      setData: vi.fn(),
+    })
+
+    render(<TitleDetail id="10" />)
+
+    expect(screen.getByText('No episodes announced yet')).toBeTruthy()
+  })
 })
 

@@ -699,3 +699,12 @@ func (w *TitleWriter) BatchUpdateStatus(ctx context.Context, ids []int64, status
 	}
 	return nil
 }
+
+// EnsureAnimeAndAniListIDBySeason marks the parent title of seasonID as anime and sets anilist_id if empty.
+func (w *TitleWriter) EnsureAnimeAndAniListIDBySeason(ctx context.Context, seasonID int64, aniListID string) error {
+	query := `UPDATE titles SET is_anime = 1, anilist_id = COALESCE(anilist_id, ?) WHERE id = (SELECT title_id FROM seasons WHERE id = ?)`
+	if _, err := w.tx.ExecContext(ctx, query, aniListID, seasonID); err != nil {
+		return fmt.Errorf("ensure anime and anilist id by season: %w", err)
+	}
+	return nil
+}
