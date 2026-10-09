@@ -240,6 +240,7 @@ export const en = {
     failedSaveRating: 'Failed to save rating',
     failedSaveChanges: 'Failed to save changes',
     readdSonarrConfirmAction: 'Re-add to Sonarr',
+    noEpisodesYet: 'No episodes announced yet',
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',

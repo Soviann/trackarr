@@ -155,5 +155,51 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(desktopToolbar.textContent).not.toContain('Watch History')
     }
   })
+
+  it('renders SeasonAniListStrip and empty episodes message for anime series without seasons', () => {
+    const emptyAnimeSeries: Title = {
+      ...mockNormalSeries,
+      is_anime: true,
+      seasons: [],
+    }
+
+    vi.mocked(useApi).mockReturnValue({
+      data: emptyAnimeSeries,
+      loading: false,
+      error: null,
+      mutate: vi.fn(),
+      setData: vi.fn(),
+    })
+
+    render(<TitleDetail id="10" />)
+
+    // SeasonAniListStrip is rendered with link button
+    expect(screen.getByText('ANILIST')).toBeTruthy()
+    expect(screen.getByText('Link entry')).toBeTruthy()
+
+    // Empty episodes state is rendered
+    expect(screen.getByText('No episodes announced yet')).toBeTruthy()
+  })
+
+  it('renders empty episodes message without SeasonAniListStrip for non-anime series without seasons', () => {
+    const emptyNonAnimeSeries: Title = {
+      ...mockNormalSeries,
+      is_anime: false,
+      seasons: [],
+    }
+
+    vi.mocked(useApi).mockReturnValue({
+      data: emptyNonAnimeSeries,
+      loading: false,
+      error: null,
+      mutate: vi.fn(),
+      setData: vi.fn(),
+    })
+
+    render(<TitleDetail id="10" />)
+
+    expect(screen.queryByText('ANILIST')).toBeNull()
+    expect(screen.getByText('No episodes announced yet')).toBeTruthy()
+  })
 })
 

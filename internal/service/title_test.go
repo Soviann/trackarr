@@ -321,6 +321,53 @@ func TestSetExternalIDs_IMDBOnlyAnchorEnqueuesEnrichment(t *testing.T) {
 		"auto-fill locks only the user-supplied IMDb id, leaving TMDB/TVDB/AniList open for back-fill")
 }
 
+func TestSetExternalIDs_SeriesWithoutSeasons_CreatesSeason1AndAttachesAniList(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	defer db.Close()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	tmdb := int64(334591)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2027,
+		TMDBID: &tmdb,
+		Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "SSS-Class Revival Hunter", Language: "en", IsPrimary: true}})
+
+	// Note: No seasons inserted!
+
+	aniListID := int64(216624)
+	require.NoError(t, svc.SetExternalIDs(context.Background(), db, id, service.ExternalIDEdit{
+		TMDBID:    &tmdb,
+		AniListID: &aniListID,
+	}))
+
+	// Verify Season 1 was created
+	fullTitle, err := titleRepo.GetByID(id)
+	require.NoError(t, err)
+	require.Len(t, fullTitle.Seasons, 1, "Season 1 should be created when attaching AniList to series without seasons")
+	assert.Equal(t, 1, fullTitle.Seasons[0].SeasonNumber)
+	require.NotNil(t, fullTitle.AniListID)
+	assert.Equal(t, aniListID, *fullTitle.AniListID)
+	assert.True(t, fullTitle.IsAnime)
+
+	// Verify season_external_ids has AniList mapping
+	gotPart, err := testutil.GetSeasonExternalID(t, db, fullTitle.Seasons[0].ID, "anilist")
+	require.NoError(t, err)
+	assert.Equal(t, "216624", gotPart)
+
+	// Verify AniList push task enqueued
+	var taskCount int
+	require.NoError(t, db.QueryRow(
+		`SELECT COUNT(*) FROM task_queue WHERE task_type = 'anilist_push_season'`,
+	).Scan(&taskCount))
+	assert.Equal(t, 1, taskCount)
+}
+
 func TestMerge_ReSearchesAniListWhenSourceLacksID(t *testing.T) {
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)
@@ -747,4 +794,3 @@ func TestTitleService_BatchCreate_BoundariesAndErrors(t *testing.T) {
 		assert.Equal(t, "created", res.Items[5].Status)
 	})
 }
-

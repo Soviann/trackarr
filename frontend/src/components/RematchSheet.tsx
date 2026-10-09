@@ -249,7 +249,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
       <div className={s.content}>
         {seasonID != null ? (
           <>
-            <div className={s.status}>AniList for S{season?.season_number ?? '?'}</div>
+            <div className={s.status}>AniList for S{season?.season_number ?? (seasonID === 0 ? 1 : '?')}</div>
 
             {/* Search row */}
             <div className={s.searchRow}>

@@ -836,11 +836,20 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             </div>
           )}
 
-          {/* AniList strip for the active season */}
-          {current && title.type !== 'movie' && title.is_anime && (
+          {/* AniList strip for the active season or unmapped anime series */}
+          {title.type !== 'movie' && title.is_anime && (
             <SeasonAniListStrip
-              season={current}
-              onEdit={() => setRematchSeasonID(current.id)}
+              season={current ?? {
+                id: 0,
+                title_id: title.id,
+                season_number: 1,
+                episode_count: 0,
+                watched_count: 0,
+                air_date: null,
+                anilist_id: title.anilist_id,
+                anilist_parts: [],
+              }}
+              onEdit={() => setRematchSeasonID(current?.id ?? 0)}
             />
           )}
 
@@ -861,6 +870,13 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   onToggleWatched={handleToggleSideStoryWatched}
                 />
               )}
+            </div>
+          )}
+
+          {/* Empty state for series without seasons/episodes */}
+          {sortedSeasons.length === 0 && title.type !== 'movie' && (
+            <div className={s.emptyEpisodes}>
+              <span>{t('details.noEpisodesYet')}</span>
             </div>
           )}
 

@@ -297,7 +297,7 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 	var seasonID int64
 	if edit.AniListSeasonID != nil {
 		seasonID = *edit.AniListSeasonID
-	} else if title.Type != model.TitleTypeMovie && len(title.Seasons) > 0 && edit.AniListID != nil {
+	} else if title.Type != model.TitleTypeMovie && edit.AniListID != nil {
 		for _, s := range title.Seasons {
 			if s.SeasonNumber == 1 {
 				seasonID = s.ID
@@ -305,9 +305,13 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 				break
 			}
 		}
-		if !routeAniListToSeason {
+		if !routeAniListToSeason && len(title.Seasons) > 0 {
 			seasonID = title.Seasons[0].ID
 			routeAniListToSeason = true
+		}
+		if !routeAniListToSeason {
+			routeAniListToSeason = true
+			seasonID = 0
 		}
 	}
 
@@ -322,6 +326,13 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 			return err
 		}
 		if routeAniListToSeason {
+			if seasonID == 0 {
+				season, err := repository.NewSeasonWriter(tx).GetOrCreate(ctx, id, 1)
+				if err != nil {
+					return err
+				}
+				seasonID = season.ID
+			}
 			writer := repository.NewSeasonExternalIDWriter(tx)
 			if edit.AniListID != nil {
 				if err := writer.Add(ctx, seasonID, repository.ProviderAniList, strconv.FormatInt(*edit.AniListID, 10)); err != nil {
@@ -867,7 +878,6 @@ func (s *TitleService) BatchCreate(ctx context.Context, items []BatchCreateItem)
 
 	return res, nil
 }
-
 
 func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {
 	statusChanged := newStatus != nil && *newStatus != before.Status

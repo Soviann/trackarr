@@ -103,7 +103,7 @@ func (s *BackgroundService) refreshFromTVDB(ctx context.Context, title *reposito
 // refreshSeriesFromTVDB syncs season and episode listings from TVDB.
 // Returns true if TVDB season sync succeeded.
 // refreshSeriesFromTVDB syncs season and episode listings from TVDB.
-// Returns true if TVDB season sync succeeded.
+// Returns true if TVDB season sync succeeded and at least one regular season was synced.
 func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *repository.TitleLite, result *RefreshResult) bool {
 	if s.tvdb == nil || title.TVDBID == nil {
 		return false
@@ -117,11 +117,12 @@ func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *re
 	}
 	result.Refreshed = true
 
+	syncedAny := false
 	for seasonNum, episodes := range episodesBySeason {
 		if err := ctx.Err(); err != nil {
-			return true
+			return syncedAny
 		}
-		if seasonNum == 0 {
+		if seasonNum == 0 || len(episodes) == 0 {
 			continue
 		}
 
@@ -138,7 +139,7 @@ func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *re
 			}
 		}
 
-		_ = database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		if err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
 			season, err := repository.NewSeasonWriter(tx).Upsert(ctx, title.ID, seasonNum, len(episodes))
 			if err != nil {
 				return err
@@ -150,8 +151,10 @@ func (s *BackgroundService) refreshSeriesFromTVDB(ctx context.Context, title *re
 				return repository.NewEpisodeWriter(tx).DeleteBeyond(ctx, season.ID, maxEp)
 			}
 			return nil
-		})
+		}); err == nil {
+			syncedAny = true
+		}
 	}
 
-	return true
+	return syncedAny
 }

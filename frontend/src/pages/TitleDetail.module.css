@@ -519,6 +519,12 @@
   gap: 6px;
 }
 
+.emptyEpisodes {
+  padding: var(--space-md) var(--space-lg);
+  color: var(--ink-dim);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
 
 .arrAddBtn {
   font-size: 11px;

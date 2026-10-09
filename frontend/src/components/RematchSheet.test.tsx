@@ -215,4 +215,48 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
       expect(onClose).toHaveBeenCalled()
     })
   })
+
+  it('supports seasonID=0 for linking season 1 when no seasons exist yet', async () => {
+    mockApiFetch.mockImplementation(async (url: string) => {
+      if (url.startsWith('/anilist/search')) {
+        return [
+          {
+            id: 216624,
+            title: 'SSS-Class Revival Hunter',
+            year: 2027,
+            format: 'TV',
+          },
+        ]
+      }
+      return undefined
+    })
+
+    const title = makeTitle([])
+    const onDone = vi.fn()
+    const onClose = vi.fn()
+
+    const { getByText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} seasonID={0} onDone={onDone} />,
+    )
+
+    expect(getByText('AniList for S1')).toBeDefined()
+
+    await waitFor(() => {
+      expect(getByText('SSS-Class Revival Hunter')).toBeDefined()
+    })
+
+    fireEvent.click(getByText('SSS-Class Revival Hunter'))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/seasons/0/anilist',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ anilist_id: '216624' }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
 })
