@@ -269,6 +269,7 @@
 | `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, single-touch guard, internal scroll check (scrollTop > 0), event isolation, and threshold close |
+| `useIsDesktop` | `hooks/useIsDesktop.ts` | Reactive media query listener for desktop viewports (`min-width: 1024px`) with safe SSR fallback |
 | `useKeyboardShortcuts` | `hooks/useKeyboardShortcuts.ts` | Global power user keyboard shortcut listener (`Cmd+K` / `Ctrl+K` & `/` search trigger, `Escape` drawer & dialog dismissal) |
 | `BottomSheet` | `components/BottomSheet.tsx` | Slide-up modal sheet with drag gestures and backdrop |
 | `PullToRefresh`| `components/PullToRefresh.tsx` | Touch-based pull-to-refresh wrapper with disabled state when drawers or dialog sheets are open |
@@ -292,7 +293,7 @@
 | `/releases` | `Releases` | `pages/Releases.tsx` | Prowlarr releases feed with multi-indexer filters and 1-click addition |
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` | In-progress titles, quick watch buttons, and unwatched episodes tracking |
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
-| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with category tabs |
+| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, and external discovery persistence |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |

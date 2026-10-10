@@ -78,6 +78,20 @@ export interface Title {
   matched_language?: string
 }
 
+export interface DiscoveryItem {
+  id: string
+  title: string
+  year: number
+  type: TitleType
+  isAnime: boolean
+  posterUrl: string | null
+  source: 'TMDB' | 'AniList'
+  tmdbId?: number
+  anilistId?: number
+  localTitleId?: number
+  adding?: boolean
+}
+
 export interface TitleRelation {
   id: number
   title_id: number

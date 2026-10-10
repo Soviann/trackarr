@@ -4,6 +4,13 @@
   background: var(--bg);
 }
 
+.searchBarTop {
+  padding: 0;
+  border-top: none;
+  background: transparent;
+  flex: 1;
+}
+
 .searchInner {
   background: var(--bg-surface);
   border-radius: var(--radius-pill);

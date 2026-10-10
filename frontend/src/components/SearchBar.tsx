@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact'
 import { useEffect, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
@@ -12,6 +13,9 @@ interface SearchBarProps {
   isFiltersOpen?: boolean
   onToggleFilters?: () => void
   activeFilterCount?: number
+  variant?: 'docked' | 'top'
+  className?: string
+  children?: ComponentChildren
 }
 
 export function SearchBar({
@@ -19,6 +23,9 @@ export function SearchBar({
   isFiltersOpen = false,
   onToggleFilters,
   activeFilterCount = 0,
+  variant = 'docked',
+  className,
+  children,
 }: SearchBarProps) {
   const { t } = useTranslation()
   const query = useSearchStore(s => s.query)
@@ -43,7 +50,7 @@ export function SearchBar({
   }
 
   return (
-    <div className={s.searchBar}>
+    <search className={clsx(s.searchBar, variant === 'top' && s.searchBarTop, className)} role="search">
       <div className={clsx(s.searchInner, query ? s.searchInnerFocused : s.searchInnerIdle)}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -53,6 +60,7 @@ export function SearchBar({
           type="text"
           name="search"
           id="search"
+          aria-label={t('search.placeholder')}
           autocomplete="off"
           value={query}
           onInput={(e) => handleInputChange((e.target as HTMLInputElement).value)}
@@ -104,7 +112,8 @@ export function SearchBar({
             )}
           </button>
         )}
+        {children}
       </div>
-    </div>
+    </search>
   )
 }

@@ -34,6 +34,7 @@ import { Help } from './pages/Help'
 import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
 import { useServiceWorker } from './hooks/useServiceWorker'
+import { useIsDesktop } from './hooks/useIsDesktop'
 import { updateBadge } from './utils/badge'
 import { setPreferredMetadataLanguage } from './utils'
 import { setEnabledWatchProviders } from './utils/providers'
@@ -282,17 +283,25 @@ export function App() {
     />
   ) : null
 
-  const above = isSearch ? (
-    <>
-      {filterDrawer}
-      <SearchBar
-        showTMDBToggle={!mergeSourceId}
-        isFiltersOpen={filterDrawerOpen}
-        onToggleFilters={() => setFilterDrawerOpen(!filterDrawerOpen)}
-        activeFilterCount={activeFilterCount}
-      />
-    </>
-  ) : filterDrawer
+  const isDesktop = useIsDesktop()
+
+  const handleToggleFilterDrawer = useCallback(() => {
+    setFilterDrawerOpen((prev) => !prev)
+  }, [])
+
+  const above = isSearch
+    ? (isDesktop ? null : (
+        <>
+          {filterDrawer}
+          <SearchBar
+            showTMDBToggle={!mergeSourceId}
+            isFiltersOpen={filterDrawerOpen}
+            onToggleFilters={handleToggleFilterDrawer}
+            activeFilterCount={activeFilterCount}
+          />
+        </>
+      ))
+    : filterDrawer
 
   return (
     <ErrorBoundary>
@@ -312,7 +321,13 @@ export function App() {
               <ComingUp path={ROUTE_PATHS.comingUp} />
               <ContinueWatching path={ROUTE_PATHS.continueWatching} />
               <Releases path={ROUTE_PATHS.releases} />
-              <Search path={ROUTE_PATHS.search} filterOpen={filterDrawerOpen} />
+              <Search
+                path={ROUTE_PATHS.search}
+                filterOpen={filterDrawerOpen}
+                onToggleFilters={handleToggleFilterDrawer}
+                desktopFilterDrawer={isDesktop ? filterDrawer : undefined}
+                activeFilterCount={activeFilterCount}
+              />
               <Add path={ROUTE_PATHS.add} />
               <Stats path={ROUTE_PATHS.stats} />
               <Wrapped path={ROUTE_PATHS.wrapped} />

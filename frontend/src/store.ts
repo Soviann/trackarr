@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { apiFetch } from './api'
-import { Title, PaginatedResponse, StatusCounts } from './types'
+import { Title, PaginatedResponse, StatusCounts, DiscoveryItem } from './types'
 
 const PAGE_SIZE = 48
 
@@ -196,6 +196,8 @@ export const useTitleStore = create<TitleState>((set, get) => ({
 export interface SearchState {
   query: string
   results: Title[]
+  discoveryResults: DiscoveryItem[]
+  loadingDiscovery: boolean
   total: number
   hasMore: boolean
   loading: boolean
@@ -205,6 +207,8 @@ export interface SearchState {
   _searchGen: number
   setQuery: (q: string) => void
   setSearchOnTMDB: (v: boolean) => void
+  setDiscoveryResults: (items: DiscoveryItem[] | ((prev: DiscoveryItem[]) => DiscoveryItem[])) => void
+  setLoadingDiscovery: (loading: boolean) => void
   search: (filter: TitleState['filter']) => Promise<void>
   loadMore: (filter: TitleState['filter']) => Promise<void>
   clear: () => void
@@ -213,6 +217,8 @@ export interface SearchState {
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
   results: [],
+  discoveryResults: [],
+  loadingDiscovery: false,
   total: 0,
   hasMore: false,
   loading: false,
@@ -223,6 +229,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
   setQuery: (query) => set({ query }),
   setSearchOnTMDB: (searchOnTMDB) => set({ searchOnTMDB }),
+  setDiscoveryResults: (updater) =>
+    set((state) => ({
+      discoveryResults: typeof updater === 'function' ? updater(state.discoveryResults) : updater,
+    })),
+  setLoadingDiscovery: (loadingDiscovery) => set({ loadingDiscovery }),
 
   search: async (filter) => {
     const { query, results } = get()
@@ -302,5 +313,15 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  clear: () => set({ query: '', results: [], total: 0, hasMore: false, error: null, searchOnTMDB: false }),
+  clear: () =>
+    set({
+      query: '',
+      results: [],
+      discoveryResults: [],
+      loadingDiscovery: false,
+      total: 0,
+      hasMore: false,
+      error: null,
+      searchOnTMDB: false,
+    }),
 }))

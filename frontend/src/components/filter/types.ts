@@ -50,6 +50,7 @@ export interface FilterDrawerProps {
   onReset?: () => void
   activeCount?: number
   defaultOpen?: boolean
+  className?: string
 
   // Legacy flat props for backward compatibility
   status?: StatusFilter
