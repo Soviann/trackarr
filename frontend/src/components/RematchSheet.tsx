@@ -3,6 +3,7 @@ import type { AniListSearchResult, Title } from '../types'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
+import { ArrUnlinkDrawer } from './ArrUnlinkDrawer'
 import s from './RematchSheet.module.css'
 
 interface RematchSheetProps {
@@ -47,6 +48,12 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   const [searchingAniList, setSearchingAniList] = useState(false)
   const [hasSearchedAniList, setHasSearchedAniList] = useState(false)
   const [showManualSeason, setShowManualSeason] = useState(false)
+  const [showArrUnlink, setShowArrUnlink] = useState(false)
+  const [pendingRematch, setPendingRematch] = useState<{ type: 'tmdb'; result: TMDBResult } | { type: 'manual' } | null>(null)
+
+  const isRadarr = title.type === 'movie'
+  const appLabel = isRadarr ? 'Radarr' : 'Sonarr'
+  const hasArrLink = Boolean((title.radarr_id != null && title.radarr_id > 0) || (title.sonarr_id != null && title.sonarr_id > 0))
 
   // For a series the on-screen AniList link is driven by a season, not
   // the title row — so the manual editor edits that season's mapping (prefer
@@ -149,7 +156,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     doSearch(query, type)
   }
 
-  const handleSelect = async (result: TMDBResult) => {
+  const executeRematch = async (result: TMDBResult, deleteFromArr: boolean) => {
     setSaving(true)
     try {
       await apiFetch(`/titles/${title.id}/rematch`, {
@@ -157,6 +164,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
         body: JSON.stringify({
           tmdb_id: result.id,
           type: mediaType === 'tv' ? 'series' : 'movie',
+          delete_from_arr: deleteFromArr,
         }),
       })
       onDone()
@@ -166,7 +174,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     }
   }
 
-  const handleManualSave = async () => {
+  const executeManualSave = async (deleteFromArr: boolean) => {
     // Authoritative snapshot: every field is sent, empty = clear the ID. The
     // server locks what's filled in; auto_fill lets it back-fill the blanks.
     setSaving(true)
@@ -180,6 +188,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
           tvdb_id: manualTvdb.trim(),
           anilist_season_id: anilistSeason ? anilistSeason.id : null,
           auto_fill: autoFill,
+          delete_from_arr: deleteFromArr,
         }),
       })
       onDone()
@@ -187,6 +196,34 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSelect = async (result: TMDBResult) => {
+    if (hasArrLink) {
+      setPendingRematch({ type: 'tmdb', result })
+      setShowArrUnlink(true)
+      return
+    }
+    await executeRematch(result, false)
+  }
+
+  const handleManualSave = async () => {
+    if (hasArrLink) {
+      setPendingRematch({ type: 'manual' })
+      setShowArrUnlink(true)
+      return
+    }
+    await executeManualSave(false)
+  }
+
+  const handleArrUnlinkConfirm = async (deleteFromArr: boolean) => {
+    if (pendingRematch?.type === 'tmdb') {
+      await executeRematch(pendingRematch.result, deleteFromArr)
+    } else if (pendingRematch?.type === 'manual') {
+      await executeManualSave(deleteFromArr)
+    }
+    setShowArrUnlink(false)
+    setPendingRematch(null)
   }
 
   const handleAddPart = async () => {
@@ -245,7 +282,8 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? 'Link AniList season' : 'Rematch title'}>
+    <>
+      <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? 'Link AniList season' : 'Rematch title'}>
       <div className={s.content}>
         {seasonID != null ? (
           <>
@@ -482,5 +520,15 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
         )}
       </div>
     </BottomSheet>
+    <ArrUnlinkDrawer
+      open={showArrUnlink}
+      appName={appLabel}
+      onClose={() => {
+        setShowArrUnlink(false)
+        setPendingRematch(null)
+      }}
+      onConfirm={handleArrUnlinkConfirm}
+    />
+    </>
   )
 }

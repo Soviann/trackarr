@@ -265,6 +265,7 @@
 | `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
 | `PrimeBadge` | `components/PrimeBadge.tsx` | Amazon Prime Video source badge |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList, re-adding deleted series in TitleDetail) |
+| `ArrUnlinkDrawer` | `components/ArrUnlinkDrawer.tsx` | Slide-up 3-way modal prompting whether to delete from Arr or unlink only upon rematch or external ID modification |
 | `UndoSnackbar` | `components/UndoSnackbar.tsx` | Universal floating undo notification with perimeter radial/clock timer countdown (5s) for state-changing actions (+1, episode/movie mark, title deletion) |
 | `CollapsibleSection` | `components/CollapsibleSection.tsx` | Foldable accordion container with toggle indicator |
 | `useSwipeDownToClose` | `hooks/useSwipeDownToClose.ts` | Reusable touch hook managing drag offset, single-touch guard, internal scroll check (scrollTop > 0), event isolation, and threshold close |

@@ -819,6 +819,13 @@ export const fr: TranslationSchema = {
     previouslyDeletedNotice: 'Cette série a été précédemment supprimée et exclue de Sonarr. La réajouter rétablira le suivi dans Sonarr.',
     selectFolderAndProfile: 'Veuillez sélectionner un dossier racine et un profil de qualité.',
     errorUpdating: 'Erreur lors de la mise à jour dans {app}',
+    staleEntryNotice: 'Ce titre n\'a pas été trouvé dans {app} (il a peut-être été supprimé). Vous pouvez l\'ajouter maintenant.',
+  },
+  rematch: {
+    arrUnlinkTitle: 'Dissocier de {app} ?',
+    arrUnlinkDesc: 'Ce titre est actuellement lié à {app}. Modifier son association va le dissocier. Souhaitez-vous également supprimer l\'ancienne entrée de {app} ?',
+    arrDeleteAndRematch: 'Supprimer de {app} et réassocier',
+    arrUnlinkOnly: 'Dissocier uniquement et réassocier',
   },
   anilistSheet: {
     heading: 'Correspondance AniList',

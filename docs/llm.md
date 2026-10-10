@@ -45,8 +45,11 @@
    - Active filter state is held in Zustand `useTitleStore` and persists across title navigation and tab switches until explicit reset or reload.
 8. **Unified Hub Bar & BottomSheet Drawers**:
    - On `TitleDetail`, the previous stacked ~720px franchise card and history buttons are unified into a compact ~100px Hub Bar with summary glance rows, opening slide-up `BottomSheet` drawers and elevating season/episode lists by ~600px for immediate mobile visibility.
-9. **Title Rematch & Creation Enrichment Payloads**:
-   - `TitleService.Rematch` accepts an optional `titleType *model.TitleType` alongside external IDs, allowing users to align mismatched media kinds (e.g. series misclassified as movies) during rematch without direct database surgery.
+9. **Title Rematch, External IDs & Arr Unlink Semantics**:
+   - `TitleService.Rematch` accepts an optional `titleType *model.TitleType` alongside external IDs, allowing users to align mismatched media kinds during rematch without database surgery.
+   - On TMDB rematch without explicit `tvdb_id`, Trackarr clears existing `tvdb_id` and `imdb_id`, passing `0` into `EnrichmentPayload` to re-derive fresh external IDs from TMDB and prevent stale IDs from persisting.
+   - Changing external IDs or rematching unlinks existing Arr connections (`ClearSonarrID`, `ClearRadarrID`, `ClearSonarrDeletedAt`, `arr_ignored = 0`). The user is prompted via `ArrUnlinkDrawer` whether to delete the entry in Sonarr/Radarr (`delete_from_arr: true`) or keep it unlinked (`delete_from_arr: false`).
+   - `ArrPushSheet` performs live detection (`GET /arr/title/:id`); if a previously linked entry was removed from Arr, it warns the user, switches to "Send to {App}", and notifies the parent to clear local state.
    - `CreateAndEnrich` constructs a fully populated `EnrichmentPayload` (including primary title name, year, media type, anime flag, external IDs, and match status preservation) with deduplication key `enrichment:%d`, preventing type regression or fallback during async worker execution.
 10. **Sonarr Deletion & Re-add Lifecycle**:
     - Marking a series as `dropped` can trigger a background `sonarr_delete` job purging files (`deleteFiles=true`) and creating an import list exclusion (`addImportListExclusion=true`) to stop automated re-importing.

@@ -6,6 +6,20 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Gestion du déliement et suppression Arr lors du rematch ou modification d'identifiants externes** :
+  - **Tiroir de confirmation `ArrUnlinkDrawer`** : lorsqu'une fiche est liée à Sonarr ou Radarr, toute réassociation (rematch TMDB) ou modification d'identifiants externes présente un tiroir de confirmation à 3 choix : supprimer l'entrée dans Sonarr/Radarr et réassocier, délier uniquement dans Trackarr et réassocier, ou annuler.
+  - **Suppression côté backend** : implémentation de `DeleteMovieFromRadarr` et `DeleteTitleFromArr` dans `ArrService` pour purger proprement le film de Radarr ou la série de Sonarr si demandé (`delete_from_arr: true`).
+- **Détection en direct des entrées Arr supprimées (`ArrPushSheet`)** :
+  - Détection automatique lorsqu'une fiche liée dans Trackarr n'existe plus dans Sonarr ou Radarr (`liveDetails.exists === false`).
+  - Affichage d'un bandeau d'avertissement et bascule automatique du bouton vers « Envoyer à {App} ».
+  - Notification du composant parent (`TitleDetail`) pour réinitialiser immédiatement l'état lié local sans nécessiter de rechargement manuel.
+
+### Corrigé
+- **Réinitialisation des identifiants dépendants lors du rematch TMDB** :
+  - Réinitialisation systématique de `tvdb_id` et `imdb_id` lors d'un rematch via TMDB sans `tvdb_id` explicite, permettant à l'enrichissement de redériver les identifiants frais depuis TMDB au lieu de conserver un identifiant tiers obsolète ou erroné.
+  - Déliement systématique des identifiants Sonarr/Radarr (`ClearSonarrID`, `ClearRadarrID`, `ClearSonarrDeletedAt`) lors d'un changement de correspondance pour éviter toute mise à jour involontaire d'une mauvaise entrée.
+
 ## [v1.26.4] — 2026-10-10
 
 ### Sécurité & Dépendances

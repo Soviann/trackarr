@@ -7,8 +7,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -569,31 +571,128 @@ func TestTitleService_Rematch_ClearsCoverURL(t *testing.T) {
 	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
 
 	cover := "old_cover.jpg"
+	staleTVDB := int64(12345)
+	staleIMDB := "tt1111111"
+	radarrID := int64(55)
 	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
 		CoverURL:    &cover,
+		TVDBID:      &staleTVDB,
+		IMDBID:      &staleIMDB,
+		RadarrID:    &radarrID,
 	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
 	newTMDB := int64(88879)
-	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, nil)
+	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, nil, false)
 	require.NoError(t, err)
 
 	got, err := titleRepo.GetByID(titleID)
 	require.NoError(t, err)
 	assert.Nil(t, got.CoverURL, "CoverURL must be cleared on rematch")
 	assert.Equal(t, int64(88879), *got.TMDBID)
+	assert.Nil(t, got.TVDBID, "stale TVDBID must be cleared when rematching with new TMDBID")
+	assert.Nil(t, got.IMDBID, "stale IMDBID must be cleared when rematching with new TMDBID")
+	assert.Nil(t, got.RadarrID, "radarr_id must be unlinked on rematch")
 	assert.Equal(t, model.TitleTypeMovie, got.Type)
+
+	// Verify enrichment payload had TVDBID: 0
+	tasks, err := taskRepo.ListPending()
+	require.NoError(t, err)
+	require.NotEmpty(t, tasks)
+	var payload service.EnrichmentPayload
+	err = json.Unmarshal([]byte(tasks[0].Payload), &payload)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), payload.TVDBID, "enrichment payload must carry 0 for TVDBID on TMDB rematch")
 
 	// Test rematch with title type update (e.g. movie -> series)
 	newType := model.TitleTypeSeries
-	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, &newType)
+	err = svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, &newType, false)
 	require.NoError(t, err)
 
 	got, err = titleRepo.GetByID(titleID)
 	require.NoError(t, err)
 	assert.Equal(t, model.TitleTypeSeries, got.Type)
+}
+
+func TestTitleService_Rematch_DeleteFromArr(t *testing.T) {
+	var deletedFromSonarr bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/series/99") {
+			deletedFromSonarr = true
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	settingsRepo := repository.NewSettingRepository(db)
+
+	cfg := &config.Config{
+		SonarrURL:    ts.URL,
+		SonarrAPIKey: "sonarr-key",
+	}
+	arrSvc := service.NewArrService(cfg, settingsRepo, titleRepo, db)
+
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+	svc.SetArrService(arrSvc)
+
+	sonarrID := int64(99)
+	tvdbID := int64(375674)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{{Name: "Show", Language: "en", IsPrimary: true}})
+
+	newTMDB := int64(298754)
+	err := svc.Rematch(context.Background(), db, titleID, nil, &newTMDB, nil, nil, nil, true)
+	require.NoError(t, err)
+
+	assert.True(t, deletedFromSonarr, "must have called Sonarr DELETE when deleteFromArr is true")
+
+	after, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, after.SonarrID, "sonarr_id must be cleared")
+	assert.Nil(t, after.TVDBID, "stale tvdb_id must be cleared")
+}
+
+func TestTitleService_SetExternalIDs_UnlinksArr(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	sonarrID := int64(99)
+	oldTVDB := int64(111)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		SonarrID:    &sonarrID,
+		TVDBID:      &oldTVDB,
+	}, []model.TitleName{{Name: "Show", Language: "en", IsPrimary: true}})
+
+	newTVDB := int64(222)
+	err := svc.SetExternalIDs(context.Background(), db, titleID, service.ExternalIDEdit{
+		TVDBID: &newTVDB,
+	})
+	require.NoError(t, err)
+
+	after, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, after.SonarrID, "sonarr_id must be unlinked when TVDB ID changed")
+	assert.Equal(t, int64(222), *after.TVDBID)
 }
 
 func TestTitleService_BatchCreate_Nominal(t *testing.T) {

@@ -93,6 +93,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc, backupSvc)
 	admin.SetShutdownWG(shutdownWG)
 	arrSvc := service.NewArrService(cfg, settingRepo, titleRepo, writeDB)
+	titleSvc.SetArrService(arrSvc)
 	arr := handler.NewArrHandler(arrSvc, titleRepo, writeDB)
 	prowlarrSvc := service.NewProwlarrService(cfg, settingRepo, titleReadRepo, tmdbClient)
 	releasesHandler := handler.NewReleasesHandler(writeDB, prowlarrSvc, titleRepo, taskRepo)

@@ -817,6 +817,13 @@ export const en = {
     previouslyDeletedNotice: 'This series was previously deleted and excluded from Sonarr. Re-adding it will restore tracking in Sonarr.',
     selectFolderAndProfile: 'Please select a root folder and a quality profile.',
     errorUpdating: 'Error updating in {app}',
+    staleEntryNotice: 'This title was not found in {app} (it may have been deleted). You can add it now.',
+  },
+  rematch: {
+    arrUnlinkTitle: 'Unlink from {app}?',
+    arrUnlinkDesc: 'This title is currently linked to {app}. Changing its match will unlink it. Do you also want to delete the previous entry from {app}?',
+    arrDeleteAndRematch: 'Delete from {app} & Rematch',
+    arrUnlinkOnly: 'Unlink only & Rematch',
   },
   anilistSheet: {
     heading: 'AniList Match',

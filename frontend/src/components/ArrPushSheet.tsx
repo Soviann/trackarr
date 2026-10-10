@@ -42,9 +42,10 @@ interface ArrPushSheetProps {
   onClose: () => void
   title: Title | null
   onSuccess?: (arrId: number) => void
+  onUnlinked?: () => void
 }
 
-export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetProps) {
+export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: ArrPushSheetProps) {
   if (!title) return null
 
   const { t } = useTranslation()
@@ -63,6 +64,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
   const [rootFolders, setRootFolders] = useState<RootFolder[]>([])
   const [qualityProfiles, setQualityProfiles] = useState<QualityProfile[]>([])
   const [arrDetails, setArrDetails] = useState<ArrTitleDetails | null>(null)
+  const [staleMissing, setStaleMissing] = useState(false)
   
   const [monitored, setMonitored] = useState('true')
   const [search, setSearch] = useState('false')
@@ -75,6 +77,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
   useEffect(() => {
     if (!open) {
       setError(null)
+      setStaleMissing(false)
       return
     }
 
@@ -104,6 +107,10 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
           setRootFolder(rfList.length > 0 ? rfList[0].path : '')
         }
       } else {
+        if ((!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null)) {
+          setStaleMissing(true)
+          onUnlinked?.()
+        }
         const defMonitored = (settings as any)[`${prefix}_monitored`] || 'true'
         const defSearch = (settings as any)[`${prefix}_search`] || 'false'
         const defRoot = (settings as any)[`${prefix}_root_folder`] || (rfList.length > 0 ? rfList[0].path : '')
@@ -158,11 +165,12 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
 
   const name = getName(title)
   const coverUrl = getCoverUrl(title.cover_url)
-  const isLinked = Boolean(arrDetails?.exists || (!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null))
+  const isLinked = Boolean(arrDetails ? arrDetails.exists : (!staleMissing && ((!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null))))
+  const isStaleMissing = staleMissing || Boolean(arrDetails && !arrDetails.exists && ((!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null)))
   const isPreviouslyDeleted = !isRadarr && !isLinked && Boolean(title.sonarr_deleted_at)
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel={t('arrPush.manageInApp', { app: appLabel })}>
+    <BottomSheet open={open} onClose={onClose} ariaLabel={isLinked ? t('arrPush.manageInApp', { app: appLabel }) : t('arrPush.sendToApp', { app: appLabel })}>
       <div className={s.sheet}>
         {/* Header with Poster & Essential info */}
         <div className={s.header}>
@@ -217,6 +225,19 @@ export function ArrPushSheet({ open, onClose, title, onSuccess }: ArrPushSheetPr
             </svg>
             <span>
               {t('arrPush.missingIdWarning', { idType: isRadarr ? 'TMDB' : 'TVDB', app: appLabel })}
+            </span>
+          </div>
+        )}
+
+        {isStaleMissing && (
+          <div className={s.warningBox}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>
+              {t('arrPush.staleEntryNotice', { app: appLabel })}
             </span>
           </div>
         )}

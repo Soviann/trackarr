@@ -68,6 +68,15 @@ type SonarrDeletePayload struct {
 	AddImportListExclusion bool   `json:"add_import_list_exclusion"`
 }
 
+// RadarrDeletePayload is the payload for Radarr deletion tasks.
+type RadarrDeletePayload struct {
+	TitleID            int64  `json:"title_id"`
+	RadarrID           *int64 `json:"radarr_id,omitempty"`
+	TMDBID             *int64 `json:"tmdb_id,omitempty"`
+	DeleteFiles        bool   `json:"delete_files"`
+	AddImportExclusion bool   `json:"add_import_exclusion"`
+}
+
 // EnqueuePush enqueues an arr push task and saves the arr_ignored state if pushing is bypassed.
 func (s *ArrService) EnqueuePush(ctx context.Context, app string, payload PushPayload) error {
 	tx, err := s.writeDB.BeginTx(ctx, nil)
@@ -649,6 +658,101 @@ func (s *ArrService) DeleteSeriesFromSonarr(ctx context.Context, payload SonarrD
 		_ = s.clearArrID(ctx, payload.TitleID, "sonarr")
 	}
 
+	return nil
+}
+
+// DeleteMovieFromRadarr deletes a movie from Radarr, purges files if deleteFiles is true,
+// and records an import exclusion if addImportExclusion is true.
+func (s *ArrService) DeleteMovieFromRadarr(ctx context.Context, payload RadarrDeletePayload) error {
+	var arrID int64
+	if payload.RadarrID != nil && *payload.RadarrID > 0 {
+		arrID = *payload.RadarrID
+	} else if payload.TMDBID != nil && *payload.TMDBID > 0 {
+		// Lookup by TMDB ID in Radarr
+		endpoint := fmt.Sprintf("/api/v3/movie?tmdbId=%d", *payload.TMDBID)
+		resp, err := s.ProxyRequest(ctx, "radarr", "GET", endpoint, nil)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var items []map[string]interface{}
+				if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
+					if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
+						arrID = int64(idF)
+					}
+				}
+			}
+		}
+		// If still not found, try movie lookup
+		if arrID == 0 {
+			lookupEndpoint := fmt.Sprintf("/api/v3/movie/lookup?term=tmdb:%d", *payload.TMDBID)
+			resp, err := s.ProxyRequest(ctx, "radarr", "GET", lookupEndpoint, nil)
+			if err == nil {
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					var items []map[string]interface{}
+					if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
+						if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
+							arrID = int64(idF)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if arrID == 0 {
+		// Movie does not exist in Radarr; ensure local radarr_id is cleared.
+		if payload.TitleID > 0 {
+			_ = s.clearArrID(ctx, payload.TitleID, "radarr")
+		}
+		return nil
+	}
+
+	deletePath := fmt.Sprintf("/api/v3/movie/%d?deleteFiles=%t&addImportExclusion=%t",
+		arrID, payload.DeleteFiles, payload.AddImportExclusion)
+
+	resp, err := s.ProxyRequest(ctx, "radarr", "DELETE", deletePath, nil)
+	if err != nil {
+		return fmt.Errorf("delete movie from radarr: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("radarr delete returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	if payload.TitleID > 0 {
+		_ = s.clearArrID(ctx, payload.TitleID, "radarr")
+	}
+
+	return nil
+}
+
+// DeleteTitleFromArr removes a title from either Radarr or Sonarr based on its type / IDs.
+func (s *ArrService) DeleteTitleFromArr(ctx context.Context, title *model.Title, deleteFiles bool) error {
+	if title == nil {
+		return nil
+	}
+	if title.Type == model.TitleTypeMovie {
+		if title.RadarrID != nil && *title.RadarrID > 0 {
+			return s.DeleteMovieFromRadarr(ctx, RadarrDeletePayload{
+				TitleID:     title.ID,
+				RadarrID:    title.RadarrID,
+				TMDBID:      title.TMDBID,
+				DeleteFiles: deleteFiles,
+			})
+		}
+	} else {
+		if title.SonarrID != nil && *title.SonarrID > 0 {
+			return s.DeleteSeriesFromSonarr(ctx, SonarrDeletePayload{
+				TitleID:     title.ID,
+				SonarrID:    title.SonarrID,
+				TVDBID:      title.TVDBID,
+				DeleteFiles: deleteFiles,
+			})
+		}
+	}
 	return nil
 }
 

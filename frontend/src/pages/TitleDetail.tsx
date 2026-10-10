@@ -965,6 +965,9 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onClose={() => setShowArrPush(false)}
         title={title}
         onSuccess={handleArrPushSuccess}
+        onUnlinked={() => {
+          setData((prev) => (prev ? { ...prev, sonarr_id: undefined, radarr_id: undefined } : prev))
+        }}
       />
 
       <RatingPrompt

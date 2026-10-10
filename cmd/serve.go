@@ -150,6 +150,7 @@ func Serve(distFS embed.FS) error {
 
 	arrSvc := service.NewArrService(cfg, settingRepo, titleRepo, writeDB)
 	worker.SetArrService(arrSvc)
+	titleSvc.SetArrService(arrSvc)
 
 	if !cfg.DisableBackgroundTasks {
 		worker.Start(ctx)

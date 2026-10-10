@@ -1,0 +1,71 @@
+.content {
+  padding: var(--space-xl);
+  padding-bottom: calc(var(--space-xl) + 20px);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--space-md);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.description {
+  font-size: 15px;
+  color: var(--ink-secondary);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.deleteBtn, .unlinkBtn, .cancelBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-button);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.deleteBtn {
+  background: var(--status-crit);
+  color: #fff;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.unlinkBtn {
+  background: var(--bg-surface);
+  color: var(--ink);
+  border: 1px solid var(--border-subtle);
+}
+
+.unlinkBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.cancelBtn {
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.deleteBtn:disabled, .unlinkBtn:disabled, .cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
