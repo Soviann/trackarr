@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.4] — 2026-10-10
+
+### Sécurité & Dépendances
+- **Résolution de la vulnérabilité Dependabot #40 (GHSA-68fv-2mgg-jv7q / CVE-2026-93749)** :
+  - Mise à jour de la dépendance de développement transitive `source-map-js` vers la version `1.2.2` afin d'éliminer le risque de déni de service par blocage synchrone de la boucle d'événements lors du parsing de source maps indexées (#87).
+- **Mises à jour des dépendances frontend & CI** :
+  - Mise à niveau du groupe de dépendances frontend : `vite` (`8.3.3`) et `jsdom` (`30.1.2`) (#85).
+  - Mise à niveau du groupe de dépendances GitHub Actions (`actions/checkout`, `actions/setup-go`, `actions/setup-node`) (#86).
+
 ## [v1.26.3] — 2026-10-09
 
 ### Amélioré
