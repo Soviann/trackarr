@@ -83,6 +83,12 @@
     - Errors report `CallToolResult{IsError: true}` inside the protocol payload for LLM self-correction.
     - 11 tools (`search`, `get_title`, `get_continue_watching`, `resolve_url`, `get_stats`, `add_title`, `batch_add`, `update_title`, `set_episode_watched`, `delete_title`, `push_to_arr`) and 2 resources (`trackarr://library/summary`, `trackarr://continue-watching`).
     - Authenticates via scoped API key (`TRACKARR_API_KEY`) and respects granular scopes (`library:read`, `library:write`, `library:delete`, `arr:write`).
+18. **Adaptive Desktop Search & Multi-View Exploration**:
+    - Viewports ≥ 1024px anchor `SearchBar` in a sticky top header alongside filter drawer triggers and view switcher (`grid` vs `list`, persisted in `localStorage: trackarr_search_view_mode`), hiding the bottom navbar. Mobile (< 1024px) retains bottom-docked search bar above navbar tabs.
+    - `FilterDrawer` disables vertical touch gestures (`useSwipeDownToClose`) on desktop (≥ 1024px) and constrains maximum width to 1040px.
+    - Search cards render as semantic `<a>` links for native middle-click, `Cmd/Ctrl+click` new tab navigation, and `:hover` elevation.
+    - 150ms debounce on local query dispatches prevents SQLite FTS5 spam.
+    - Multi-source external discovery (TMDB & AniList) persists in `useSearchStore` (`discoveryResults`, `loadingDiscovery`) across route transitions.
 
 ---
 

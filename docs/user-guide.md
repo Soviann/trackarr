@@ -54,10 +54,10 @@ The **Library** screen is your media command center:
   - **Desktop (≥ 1024px)**: 6–7 columns.
   - **Widescreen (≥ 1440px)**: 8+ columns.
 
-### Unified Bottom Search & Compact Filter Drawer:
-- **Docked Search Bar**: Docked cleanly at the bottom of the screen with an integrated text clear button (`✕`) and filter launcher badge (`[ N ]`).
-- **Single-Line Closed Filter Handle**: A 42px row docked above the navigation bar featuring `[ FILTERS (N) ⌃ ]` trigger and horizontally scrolling dismissible chips (`✕`) to remove active filter criteria directly without opening the drawer.
-- **Compact Slide-Up Drawer**: Slide-up filter panel featuring styled native selects for *Sort* and *Status*, an inline order invert toggle, a *Type* segmented control with an *Anime* pill toggle, and 3 segmented sub-tabs (*Status & Type*, *Genres & Origin*, *Dates & Ratings*) with smooth swipe-down-to-close touch gesture and anti-overflow viewport limits.
+### Unified Search & Compact Filter Drawer:
+- **Viewport-Aware Search Bar**: On mobile devices (< 1024px), docked cleanly above bottom navigation tabs with an integrated text clear button (`✕`) and filter launcher badge (`[ N ]`). On desktop workstations (≥ 1024px), anchors as a sticky top header alongside the filters trigger and the view mode switcher.
+- **Single-Line Closed Filter Handle (Mobile)**: A 42px row docked above the navigation bar featuring `[ FILTERS (N) ⌃ ]` trigger and horizontally scrolling dismissible chips (`✕`) to remove active filter criteria directly without opening the drawer.
+- **Compact Slide-Up Drawer**: Slide-up filter panel featuring styled native selects for *Sort* and *Status*, an inline order invert toggle, a *Type* segmented control with an *Anime* pill toggle, and 3 segmented sub-tabs (*Status & Type*, *Genres & Origin*, *Dates & Ratings*). Features smooth swipe-down-to-close touch gestures on mobile (< 1024px) and a fixed max-width card panel (1040px) on desktop without gesture interference.
 - **Session Filter Persistence**: Active filters persist across title navigation and navbar tab switches via Zustand (`useTitleStore`), resetting only on explicit user click (`✕ Reset`) or full page reload.
 - **Dedicated Reset Button**: Dedicated `✕ Reset` button in the drawer header (`FILTERS (N ACTIVE) ⌄`) to clear filter criteria independently without erasing typed search text.
 
@@ -174,8 +174,10 @@ Adding media to Trackarr is fast and versatile:
 
 1. **Unified Search & Live Discovery (`/search` — "Explore" Tab)**:
    - The **Explore** tab combines personal collection search and external database discovery into a single interface.
-   - **Local Library Prioritization**: Search queries first search your local collection using full-text search (FTS5).
-   - **1-Click External Discovery**: Concurrently queries TMDB and AniList. If a title is absent from your library, you can add it directly to *Plan to Watch* (`+ À voir`) or *Watching* (`+ En cours`) with a single tap, accompanied by a 5-second universal undo toast notification.
+   - **Adaptive Desktop Interface (≥ 1024px)**: On desktop monitors, search controls are anchored at the top of the viewport in a sticky header, leaving full screen height for results. Includes an integrated **Grid / List** view switcher (`⊞` vs `☰`, persisted in `localStorage`) displaying library matches either as fluid `PosterCard` posters or compact metadata strips.
+   - **Local Library Prioritization & Debouncing**: Search queries first search your local collection using SQLite full-text search (FTS5) with a 150ms debounce for instantaneous yet server-friendly filtering.
+   - **Semantic Navigation & Multitasking**: Local search results render as native HTML links (`<a>`), allowing standard middle-click, `Cmd+Click`, `Ctrl+Click` (open in new tab), and accessible keyboard focus navigation.
+   - **1-Click External Discovery & Persistence**: Concurrently queries TMDB and AniList in a multi-column responsive grid. External results persist in the search store across detail view navigation. If a title is absent from your library, you can add it directly to *Plan to Watch* (`+ À voir`) or *Watching* (`+ En cours`) with a single tap, accompanied by a 5-second universal undo toast notification.
    - **Local Library Detection**: External results that already exist in your collection display an *« In Library ↗ »* badge linking directly to their detail page.
 2. **Direct URL & Identifier Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry via the validation flow.
 3. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.

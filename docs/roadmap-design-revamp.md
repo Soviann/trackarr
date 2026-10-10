@@ -106,6 +106,11 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
   - Ajout du raccourci universel `Cmd+K` ou `/` pour ouvrir instantanément la recherche.
   - Fermeture des tiroirs et modales avec la touche `Escape`.
   - Prise en charge de la sélection multiple par plage (Shift+Clic).
+- [x] **Refonte ergonomique de la recherche grand écran ([`Search.tsx`](file:///Users/nicolasvasse/Soviann/plextracker/frontend/src/pages/Search.tsx))** :
+  - Barre de recherche sticky au sommet de l'écran sur desktop (≥ 1024px) avec masquage de la navbar basse, tout en conservant la barre docked au pouce sur mobile (< 1024px).
+  - Bascule de mode d'affichage Grille Posters (`PosterCard`) / Liste compacte mémorisée dans `localStorage`.
+  - Liens sémantiques `<a>` avec support du clic molette, Cmd/Ctrl+clic, survol et focus clavier.
+  - Debounce de 150ms sur les requêtes locales et persistance des découvertes TMDB/AniList dans le store Zustand.
 
 ---
 
