@@ -163,4 +163,42 @@ describe('App navigation & filter drawer', () => {
     expect(container.querySelector('.drawerExpanded')).toBeNull()
     expect(container.querySelector('.drawerCollapsed')).not.toBeNull()
   })
+
+  it('clears search store when navigating away from /search to another page', async () => {
+    window.history.pushState({}, '', '/search')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // Navigate away to coming-up page
+    await act(async () => {
+      route('/coming-up')
+    })
+
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears search store when exiting merge mode on /search', async () => {
+    window.history.pushState({}, '', '/search?mergeSourceId=12&mergeSourceName=Frieren')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // Navigate to plain /search (e.g. clicking Explore tab)
+    await act(async () => {
+      route('/search')
+    })
+
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not clear search store when navigating between non-search pages', async () => {
+    window.history.pushState({}, '', '/coming-up')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    await act(async () => {
+      route('/continue-watching')
+    })
+
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+  })
 })
