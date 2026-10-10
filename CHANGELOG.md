@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Amélioré
+- **Réinitialisation automatique de la recherche et préremplissage lors des fusions** :
+  - **Vidage automatique du champ de recherche** : Le champ de recherche et ses résultats sont désormais automatiquement vidés lors de la navigation hors de la page de recherche (`/search`) ou lors de la sortie du mode fusion, évitant de conserver une recherche obsolète à travers les différentes pages de l'application.
+  - **Préremplissage du titre de série en mode fusion** : Lors du déclenchement d'une fusion depuis la fiche d'un titre (`TitleDetail`), le champ de recherche de la page de sélection est automatiquement prérempli avec le nom localisé exact de la série (`mergeSourceName`), lançant directement la recherche des doublons cibles potentiels.
+
 ## [v1.26.5] — 2026-10-10
 
 ### Ajouté

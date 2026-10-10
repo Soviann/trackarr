@@ -71,6 +71,15 @@ export function App() {
   usePush(isAuthed ? vapidKey : undefined)
 
   const handleRoute = (e: { url: string }) => {
+    const prevPathname = currentPath.split('?')[0]
+    const nextPathname = e.url.split('?')[0]
+    const prevIsMerge = new URLSearchParams(currentPath.split('?')[1] ?? '').has('mergeSourceId')
+    const nextIsMerge = new URLSearchParams(e.url.split('?')[1] ?? '').has('mergeSourceId')
+
+    if ((prevPathname === ROUTE_PATHS.search && nextPathname !== ROUTE_PATHS.search) || (prevIsMerge && !nextIsMerge)) {
+      useSearchStore.getState().clear()
+    }
+
     setCurrentPath(e.url)
     setFilterDrawerOpen(false)
     window.scrollTo(0, 0)

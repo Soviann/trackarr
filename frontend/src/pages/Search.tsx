@@ -75,6 +75,12 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
   const [loadingDiscovery, setLoadingDiscovery] = useState(false)
 
   useEffect(() => {
+    if (mergeSourceId && mergeSourceName) {
+      useSearchStore.getState().setQuery(mergeSourceName)
+    }
+  }, [mergeSourceId, mergeSourceName])
+
+  useEffect(() => {
     search(filter)
   }, [
     search,
