@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.5] — 2026-10-10
+
 ### Ajouté
 - **Gestion du déliement et suppression Arr lors du rematch ou modification d'identifiants externes** :
   - **Tiroir de confirmation `ArrUnlinkDrawer`** : lorsqu'une fiche est liée à Sonarr ou Radarr, toute réassociation (rematch TMDB) ou modification d'identifiants externes présente un tiroir de confirmation à 3 choix : supprimer l'entrée dans Sonarr/Radarr et réassocier, délier uniquement dans Trackarr et réassocier, ou annuler.
