@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.7] — 2026-10-10
+
 ### Ajouté
 - **Refonte ergonomique et visuelle de la page de recherche sur grand écran (Desktop ≥ 1024px)** :
   - **Barre de recherche haute fixe sur desktop** : Repositionnement de la barre de recherche au sommet de la page sur desktop, éliminant l'inversion ergonomique du champ ancré en bas de l'écran tout en préservant intacte la barre basse sur mobile (< 1024px).
