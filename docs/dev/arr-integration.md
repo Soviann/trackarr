@@ -51,4 +51,25 @@ When a series has `sonarr_deleted_at != null` and `sonarr_id == null`:
 3. **Configuration & Push**: Upon confirmation, `ArrPushSheet` opens with root folder, quality profile, and monitoring options, displaying a notice that the series was previously deleted.
 4. **Execution & Cleanup**: When submitted, `ArrService.PushTitle` pushes the series to Sonarr, clears `titles.sonarr_deleted_at = NULL`, resets `titles.arr_ignored = 0`, updates `titles.sonarr_id`, and purges any matching exclusion in Sonarr via `DELETE /api/v3/importlistexclusion/{id}`.
 
+## Rematch & External ID Modification (Unlink & Arr Deletion)
+When rematching or editing external IDs on a title previously linked to Sonarr or Radarr:
+1. **Re-derivation of Dependent External IDs**:
+   - On TMDB rematch without explicit `tvdb_id`, Trackarr clears existing `tvdb_id` and `imdb_id` so that fresh values can be discovered from TMDB external IDs, avoiding retention of stale third-party IDs.
+2. **Unlinking Arr Association**:
+   - Any rematch or external ID modification unlinks the title (`ClearSonarrID = true`, `ClearRadarrID = true`, `ClearSonarrDeletedAt = true`, `arr_ignored = 0`).
+3. **User Choice & Arr Deletion (`ArrUnlinkDrawer`)**:
+   - If the title had `sonarr_id` or `radarr_id` set, the UI displays `ArrUnlinkDrawer` offering:
+     - **Delete from {App} & Rematch**: Removes the entry from Sonarr (`DELETE /api/v3/series/{id}`) or Radarr (`DELETE /api/v3/movie/{id}`) via `DeleteTitleFromArr`, clears Trackarr's links, and performs the rematch.
+     - **Unlink only & Rematch**: Retains the existing entry in Sonarr/Radarr, clears Trackarr's links, and rematches.
+     - **Cancel**: Aborts without modifying the title.
+
+## Live Status & Stale Link Detection (`ArrPushSheet`)
+When opening `ArrPushSheet`:
+1. Trackarr fetches live state from Sonarr/Radarr via `GET /api/arr/title/:id`.
+2. If Trackarr has `sonarr_id` or `radarr_id` recorded on the title but the live check returns `exists: false` (the entry was deleted directly in Sonarr/Radarr):
+   - `ArrPushSheet` warns the user with an alert banner (`staleEntryNotice`).
+   - The action button automatically reflects addition ("Send to {App}") rather than update ("Update in {App}").
+   - `ArrPushSheet` invokes `onUnlinked()` so parent components (e.g. `TitleDetail`) immediately reset local `sonarr_id` / `radarr_id` state without requiring a full manual refresh.
+
+
 

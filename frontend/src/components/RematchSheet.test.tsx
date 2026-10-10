@@ -260,3 +260,143 @@ describe('RematchSheet — season mode (multi-link AniList manager)', () => {
     })
   })
 })
+
+describe('RematchSheet — title mode and Arr unlinking', () => {
+  beforeEach(() => {
+    mockApiFetch.mockImplementation(async (url: string) => {
+      if (url.startsWith('/tmdb/search')) {
+        return [
+          {
+            id: 101,
+            title: 'Correct Show',
+            year: 2024,
+            poster_url: 'https://example.com/p.jpg',
+            overview: 'Overview',
+          },
+        ]
+      }
+      return undefined
+    })
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+
+  it('rematches directly when title is not linked to Arr', async () => {
+    const title = { ...makeTitle(), sonarr_id: null, radarr_id: null }
+    const onDone = vi.fn()
+    const onClose = vi.fn()
+
+    const { getByText, getByLabelText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} onDone={onDone} />,
+    )
+
+    fireEvent.click(getByLabelText('Search'))
+
+    await waitFor(() => {
+      expect(getByText('Correct Show')).toBeDefined()
+    })
+
+    fireEvent.click(getByText('Correct Show'))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/rematch',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            tmdb_id: 101,
+            type: 'series',
+            delete_from_arr: false,
+          }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('shows ArrUnlinkDrawer and sends delete_from_arr: true when user selects Delete from Sonarr', async () => {
+    const title = { ...makeTitle(), type: 'series' as const, sonarr_id: 123, radarr_id: null }
+    const onDone = vi.fn()
+    const onClose = vi.fn()
+
+    const { getByText, getByLabelText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} onDone={onDone} />,
+    )
+
+    fireEvent.click(getByLabelText('Search'))
+
+    await waitFor(() => {
+      expect(getByText('Correct Show')).toBeDefined()
+    })
+
+    // Click result: drawer should appear because sonarr_id is set
+    fireEvent.click(getByText('Correct Show'))
+
+    await waitFor(() => {
+      expect(getByText('Delete from Sonarr & Rematch')).toBeDefined()
+    })
+
+    // Confirm with Delete
+    fireEvent.click(getByText('Delete from Sonarr & Rematch'))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/rematch',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            tmdb_id: 101,
+            type: 'series',
+            delete_from_arr: true,
+          }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('shows ArrUnlinkDrawer and sends delete_from_arr: false when user selects Unlink only', async () => {
+    const title = { ...makeTitle(), type: 'movie' as const, sonarr_id: null, radarr_id: 456 }
+    const onDone = vi.fn()
+    const onClose = vi.fn()
+
+    const { getByText, getByLabelText } = render(
+      <RematchSheet open={true} onClose={onClose} title={title} onDone={onDone} />,
+    )
+
+    fireEvent.click(getByLabelText('Search'))
+
+    await waitFor(() => {
+      expect(getByText('Correct Show')).toBeDefined()
+    })
+
+    fireEvent.click(getByText('Correct Show'))
+
+    await waitFor(() => {
+      expect(getByText('Unlink only & Rematch')).toBeDefined()
+    })
+
+    fireEvent.click(getByText('Unlink only & Rematch'))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/titles/42/rematch',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            tmdb_id: 101,
+            type: 'movie',
+            delete_from_arr: false,
+          }),
+        }),
+      )
+      expect(onDone).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+})

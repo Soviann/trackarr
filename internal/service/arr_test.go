@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Soviann/trackarr/internal/config"
@@ -439,4 +440,137 @@ func TestArrService_PushTitle_Sonarr_ClearsDeletedAtAndExclusion(t *testing.T) {
 	assert.Nil(t, titleAfter.SonarrDeletedAt, "sonarr_deleted_at must be cleared")
 	assert.False(t, titleAfter.ArrIgnored, "arr_ignored must be reset to false")
 }
+
+func TestArrService_DeleteMovieFromRadarr_Nominal(t *testing.T) {
+	var requestedPath string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.String()
+		if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/42") {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		RadarrURL:    ts.URL,
+		RadarrAPIKey: "radarr-key-delete",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	radarrID := int64(42)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		RadarrID:    &radarrID,
+	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID:            titleID,
+		RadarrID:           &radarrID,
+		DeleteFiles:        true,
+		AddImportExclusion: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "/api/v3/movie/42?deleteFiles=true&addImportExclusion=true", requestedPath)
+
+	after, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, after.RadarrID, "radarr_id must be cleared locally after deletion")
+}
+
+func TestArrService_DeleteMovieFromRadarr_LookupByTMDB(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v3/movie":
+			assert.Equal(t, "9999", r.URL.Query().Get("tmdbId"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"id":77,"title":"Found Movie"}]`))
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/77"):
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		RadarrURL:    ts.URL,
+		RadarrAPIKey: "radarr-key-delete",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	tmdbID := int64(9999)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Found Movie", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID:     titleID,
+		TMDBID:      &tmdbID,
+		DeleteFiles: true,
+	})
+	require.NoError(t, err)
+
+	after, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, after.RadarrID)
+}
+
+func TestArrService_DeleteMovieFromRadarr_ServerError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message":"Internal server error"}`))
+	}))
+	defer ts.Close()
+
+	cfg := &config.Config{
+		RadarrURL:    ts.URL,
+		RadarrAPIKey: "radarr-key-delete",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	radarrID := int64(42)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		RadarrID:    &radarrID,
+	}, []model.TitleName{{Name: "Error Movie", Language: "en", IsPrimary: true}})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID:     titleID,
+		RadarrID:    &radarrID,
+		DeleteFiles: true,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "radarr delete returned 500")
+}
+
 

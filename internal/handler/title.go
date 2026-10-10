@@ -433,11 +433,12 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		TMDBID    *int64           `json:"tmdb_id"`
-		IMDBID    *string          `json:"imdb_id"`
-		AniListID *int64           `json:"anilist_id"`
-		TVDBID    *int64           `json:"tvdb_id"`
-		Type      *model.TitleType `json:"type"`
+		TMDBID        *int64           `json:"tmdb_id"`
+		IMDBID        *string          `json:"imdb_id"`
+		AniListID     *int64           `json:"anilist_id"`
+		TVDBID        *int64           `json:"tvdb_id"`
+		Type          *model.TitleType `json:"type"`
+		DeleteFromArr bool             `json:"delete_from_arr"`
 	}
 
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
@@ -448,7 +449,7 @@ func (h *TitleHandler) Rematch(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("At least one ID is required")
 	}
 
-	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID, body.Type); err != nil {
+	if err := h.service.Rematch(r.Context(), h.db, id, body.IMDBID, body.TMDBID, body.AniListID, body.TVDBID, body.Type, body.DeleteFromArr); err != nil {
 		return httputil.InternalError("Failed to rematch", err)
 	}
 
@@ -473,6 +474,7 @@ func (h *TitleHandler) SetExternalIDs(w http.ResponseWriter, r *http.Request) er
 		TVDBID          string `json:"tvdb_id"`
 		AniListSeasonID *int64 `json:"anilist_season_id"`
 		AutoFill        bool   `json:"auto_fill"`
+		DeleteFromArr   bool   `json:"delete_from_arr"`
 	}
 	if err := httputil.ReadJSON(r, &body, 4096); err != nil {
 		return httputil.BadRequest("Invalid request")
@@ -494,6 +496,7 @@ func (h *TitleHandler) SetExternalIDs(w http.ResponseWriter, r *http.Request) er
 	edit := service.ExternalIDEdit{
 		AniListSeasonID: body.AniListSeasonID,
 		AutoFill:        body.AutoFill,
+		DeleteFromArr:   body.DeleteFromArr,
 	}
 	if edit.TMDBID, err = parseID(body.TMDBID, "TMDB ID"); err != nil {
 		return err

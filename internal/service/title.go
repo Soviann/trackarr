@@ -22,10 +22,15 @@ type TitleService struct {
 	titles   *repository.TitleRepository
 	tasks    *repository.TaskRepository
 	pipeline *matching.Pipeline
+	arrSvc   *ArrService
 }
 
 func NewTitleService(db *sql.DB, titles *repository.TitleRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline) *TitleService {
 	return &TitleService{db: db, titles: titles, tasks: tasks, pipeline: pipeline}
+}
+
+func (s *TitleService) SetArrService(arrSvc *ArrService) {
+	s.arrSvc = arrSvc
 }
 
 // CreateFromScrobble constructs a new title from scrobble metadata and starts matching.
@@ -154,7 +159,7 @@ func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title
 
 // Rematch updates a title's external IDs (and optionally title type) and enqueues
 // an enrichment task. The service owns the transaction because handlers call it with the pool handle.
-func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64, titleType *model.TitleType) error {
+func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID *string, tmdbID *int64, anilistID *int64, tvdbID *int64, titleType *model.TitleType, deleteFromArr bool) error {
 	title, err := s.titles.GetByID(id)
 	if err != nil {
 		return err
@@ -169,6 +174,14 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 	}
 	if tmdbID != nil {
 		update.TMDBID = tmdbID
+		// When rematching via TMDB without an explicit TVDB ID, clear the old TVDB ID
+		// so stale cross-references (or previous mismatches) do not taint the new match.
+		if tvdbID == nil {
+			update.ClearTVDBID = true
+		}
+		if imdbID == nil {
+			update.ClearIMDBID = true
+		}
 	}
 	if imdbID != nil {
 		update.IMDBID = imdbID
@@ -183,10 +196,27 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 		update.Type = titleType
 	}
 
+	// Arr synchronization:
+	// If the title was linked to Radarr or Sonarr, a Rematch means its identity changed.
+	// We unlink it from Trackarr, and optionally delete the old entry from Arr.
+	hasArrLink := (title.RadarrID != nil && *title.RadarrID > 0) || (title.SonarrID != nil && *title.SonarrID > 0)
+	if hasArrLink {
+		update.ClearRadarrID = true
+		update.ClearSonarrID = true
+		update.ClearSonarrDeletedAt = true
+		falseVal := false
+		update.ArrIgnored = &falseVal
+	}
+
 	if err := database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
 		return repository.NewTitleWriter(tx).Update(ctx, id, update)
 	}); err != nil {
 		return err
+	}
+
+	// Post-commit side effects: delete old entry from Sonarr/Radarr if requested
+	if hasArrLink && deleteFromArr && s.arrSvc != nil {
+		_ = s.arrSvc.DeleteTitleFromArr(ctx, title, true)
 	}
 
 	// Enqueue enrichment task
@@ -199,13 +229,13 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 	payloadIMDB := ""
 	if imdbID != nil {
 		payloadIMDB = *imdbID
-	} else if title.IMDBID != nil {
+	} else if tmdbID == nil && title.IMDBID != nil {
 		payloadIMDB = *title.IMDBID
 	}
 	payloadTVDB := int64(0)
 	if tvdbID != nil {
 		payloadTVDB = *tvdbID
-	} else if title.TVDBID != nil {
+	} else if tmdbID == nil && title.TVDBID != nil {
 		payloadTVDB = *title.TVDBID
 	}
 	payloadType := title.Type
@@ -247,6 +277,7 @@ type ExternalIDEdit struct {
 	TVDBID          *int64
 	AniListSeasonID *int64
 	AutoFill        bool
+	DeleteFromArr   bool
 }
 
 // SetExternalIDs applies a manual external-ID snapshot. Unlike Rematch (which
@@ -315,6 +346,19 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 		}
 	}
 
+	// Arr synchronization:
+	// If TMDB or TVDB ID changed and title had an Arr link, unlink it and optionally delete from Arr.
+	tmdbChanged := (edit.TMDBID == nil && title.TMDBID != nil) || (edit.TMDBID != nil && (title.TMDBID == nil || *edit.TMDBID != *title.TMDBID))
+	tvdbChanged := (edit.TVDBID == nil && title.TVDBID != nil) || (edit.TVDBID != nil && (title.TVDBID == nil || *edit.TVDBID != *title.TVDBID))
+	hasArrLink := (title.RadarrID != nil && *title.RadarrID > 0) || (title.SonarrID != nil && *title.SonarrID > 0)
+	if (tmdbChanged || tvdbChanged) && hasArrLink {
+		update.ClearRadarrID = true
+		update.ClearSonarrID = true
+		update.ClearSonarrDeletedAt = true
+		falseVal := false
+		update.ArrIgnored = &falseVal
+	}
+
 	// When both poster sources (TMDB, TVDB) are gone, reset the cover so a later
 	// refresh re-derives it from AniList instead of keeping the stale one.
 	if edit.TMDBID == nil && edit.TVDBID == nil {
@@ -347,6 +391,11 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	// Post-commit side effects: delete old entry from Sonarr/Radarr if requested
+	if (tmdbChanged || tvdbChanged) && hasArrLink && edit.DeleteFromArr && s.arrSvc != nil {
+		_ = s.arrSvc.DeleteTitleFromArr(ctx, title, true)
 	}
 
 	// Metadata refresh. Enqueue the enrichment pipeline when the user supplied a

@@ -140,4 +140,59 @@ describe('ArrPushSheet', () => {
       expect(onClose).toHaveBeenCalledOnce()
     })
   })
+
+  it('triggers onUnlinked and shows stale entry notice when title was linked but no longer exists in Sonarr', async () => {
+    const linkedTitle: Title = {
+      ...baseTitle,
+      sonarr_id: 99,
+    }
+    const onUnlinked = vi.fn()
+
+    vi.mocked(apiFetch).mockImplementation(async (path: string) => {
+      if (path === '/admin/arr') return { sonarr_std_root_folder: '/tv', sonarr_std_quality_profile: '1' }
+      if (path.includes('/rootfolder')) return [{ id: 1, path: '/tv' }]
+      if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD - 1080p' }]
+      if (path === '/arr/title/42') return { exists: false }
+      return {}
+    })
+
+    render(<ArrPushSheet open={true} onClose={vi.fn()} title={linkedTitle} onUnlinked={onUnlinked} />)
+
+    await waitFor(() => {
+      expect(onUnlinked).toHaveBeenCalledOnce()
+      expect(screen.getByText(/was not found in Sonarr/i)).toBeTruthy()
+      expect(screen.getByText('Send to Sonarr')).toBeTruthy()
+    })
+  })
+
+  it('renders "Update in Sonarr" and does not call onUnlinked when entry exists in Sonarr', async () => {
+    const linkedTitle: Title = {
+      ...baseTitle,
+      sonarr_id: 99,
+    }
+    const onUnlinked = vi.fn()
+
+    vi.mocked(apiFetch).mockImplementation(async (path: string) => {
+      if (path === '/admin/arr') return { sonarr_std_root_folder: '/tv', sonarr_std_quality_profile: '1' }
+      if (path.includes('/rootfolder')) return [{ id: 1, path: '/tv' }]
+      if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD - 1080p' }]
+      if (path === '/arr/title/42') {
+        return {
+          exists: true,
+          mon: true,
+          root_folder: '/tv',
+          quality_profile_id: 1,
+        }
+      }
+      return {}
+    })
+
+    render(<ArrPushSheet open={true} onClose={vi.fn()} title={linkedTitle} onUnlinked={onUnlinked} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Update in Sonarr')).toBeTruthy()
+    })
+    expect(onUnlinked).not.toHaveBeenCalled()
+    expect(screen.queryByText(/This entry no longer exists in Sonarr/i)).toBeNull()
+  })
 })

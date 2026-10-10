@@ -200,7 +200,9 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `simkl_slug = ?`)
 		args = append(args, *update.SimklSlug)
 	}
-	if update.RadarrID != nil {
+	if update.ClearRadarrID {
+		sets = append(sets, `radarr_id = NULL`)
+	} else if update.RadarrID != nil {
 		sets = append(sets, `radarr_id = ?`)
 		args = append(args, *update.RadarrID)
 	}

@@ -126,6 +126,7 @@ type TitleUpdate struct {
 	SimklID            *int64
 	SimklSlug          *string
 	RadarrID             *int64
+	ClearRadarrID        bool
 	SonarrID             *int64
 	ClearSonarrID        bool
 	ArrIgnored           *bool
