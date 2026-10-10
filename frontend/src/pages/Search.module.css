@@ -4,6 +4,68 @@
   min-height: calc(100vh - 172px);
 }
 
+.desktopHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.desktopHeaderInner {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.viewSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+  margin-left: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.viewBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.viewBtn:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.viewBtnActive {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.desktopFiltersSlot {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 var(--space-xl) var(--space-md);
+}
+
 .results {
   flex: 1;
 }
@@ -29,6 +91,7 @@
   align-items: center;
   justify-content: center;
   margin: 0 auto var(--space-lg);
+  color: var(--ink-dim);
 }
 
 .emptyText {
@@ -39,7 +102,7 @@
 
 .emptySubtext {
   font-size: var(--font-size-xs);
-  color: #fff;
+  color: var(--ink-mute);
   margin-top: var(--space-xs);
 }
 
@@ -59,6 +122,13 @@
   gap: var(--space-sm);
 }
 
+.posterGrid {
+  padding: 0 var(--space-lg) var(--space-sm);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-md);
+}
+
 .card {
   display: flex;
   gap: var(--space-md);
@@ -68,6 +138,31 @@
   padding: 10px var(--space-md);
   border: 1px solid var(--border-strong);
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+  background: var(--bg-elev2);
+  border-color: var(--accent-dim, var(--accent));
+  transform: translateY(-1px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cardChevron {
+  color: var(--ink-dim);
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.card:hover .cardChevron {
+  color: var(--accent);
+  transform: translateX(2px);
 }
 
 .coverWrap {
@@ -246,7 +341,7 @@
   color: var(--ink);
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .confirmBtn {
@@ -255,10 +350,10 @@
   border: none;
   border-radius: var(--radius-button);
   padding: 14px;
-  color: #fff;
+  color: var(--accent-fg);
   font-weight: 700;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .confirmBtn:disabled {
@@ -444,4 +539,62 @@
 
 .discoverPromptBtn:active {
   opacity: 0.85;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    min-height: 100vh;
+  }
+
+  .posterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-md);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-sm) var(--space-xl) var(--space-md);
+  }
+
+  .cardList {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 var(--space-xl);
+  }
+
+  .cardCover {
+    width: 48px;
+    height: 68px;
+  }
+
+  .resultCount {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: var(--space-lg) var(--space-xl) var(--space-sm);
+  }
+
+  .discoveryList {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: var(--space-md);
+    padding: 0 var(--space-xl);
+  }
+
+  .sectionDivider {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 16px var(--space-xl) 8px;
+  }
+
+  .loadMoreWrap {
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1440px) {
+  .posterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    max-width: 1600px;
+  }
 }

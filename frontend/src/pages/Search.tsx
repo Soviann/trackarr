@@ -1,8 +1,8 @@
+import type { ComponentChildren } from 'preact'
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
-import type { Title, TitleStatus } from '../types'
-import { colors } from '../theme'
+import type { Title, TitleStatus, DiscoveryItem } from '../types'
 import { useTranslation } from '../i18n'
 import { useTitleStore, useSearchStore } from '../store'
 import { getName, getTypeLabel } from '../utils'
@@ -15,23 +15,12 @@ import { ArrBadge } from '../components/ArrBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverImage } from '../components/CoverImage'
+import { PosterCard } from '../components/PosterCard'
+import { SearchBar } from '../components/SearchBar'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 import s from './Search.module.css'
-
-interface DiscoveryItem {
-  id: string
-  title: string
-  year: number
-  type: 'movie' | 'series'
-  isAnime: boolean
-  posterUrl: string | null
-  source: 'TMDB' | 'AniList'
-  tmdbId?: number
-  anilistId?: number
-  localTitleId?: number
-  adding?: boolean
-}
 
 function getMetadata(t: Title) {
   const parts = [getTypeLabel(t.type), String(t.year)]
@@ -46,9 +35,24 @@ function getMetadata(t: Title) {
   return parts.join(' \u00b7 ')
 }
 
-export function Search({ path: _, filterOpen = false }: { path?: string; filterOpen?: boolean }) {
+interface SearchProps {
+  path?: string
+  filterOpen?: boolean
+  onToggleFilters?: () => void
+  desktopFilterDrawer?: ComponentChildren
+  activeFilterCount?: number
+}
+
+export function Search({
+  path: _,
+  filterOpen = false,
+  onToggleFilters,
+  desktopFilterDrawer,
+  activeFilterCount = 0,
+}: SearchProps) {
   const { t } = useTranslation()
   const { showUndo } = useUndo()
+  const isDesktop = useIsDesktop()
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
   const results = useSearchStore(s => s.results)
@@ -62,17 +66,43 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
   const loadMore = useSearchStore(s => s.loadMore)
   const searchOnTMDB = useSearchStore(s => s.searchOnTMDB)
   const setSearchOnTMDB = useSearchStore(s => s.setSearchOnTMDB)
+  const discoveryResults = useSearchStore(s => s.discoveryResults) ?? []
+  const setDiscoveryResults = useSearchStore(s => s.setDiscoveryResults) ?? (() => {})
+  const loadingDiscovery = useSearchStore(s => s.loadingDiscovery) ?? false
+  const setLoadingDiscovery = useSearchStore(s => s.setLoadingDiscovery) ?? (() => {})
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    try {
+      const stored = localStorage.getItem('trackarr_search_view_mode')
+      return stored === 'list' ? 'list' : 'grid'
+    } catch {
+      return 'grid'
+    }
+  })
+
+  const handleSetViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode)
+    try {
+      localStorage.setItem('trackarr_search_view_mode', mode)
+    } catch {
+      // ignore
+    }
+  }
 
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const mergeSourceId = params.get('mergeSourceId')
   const mergeSourceName = params.get('mergeSourceName')
 
+  const filteredResults = useMemo(() => {
+    if (!mergeSourceId) return results
+    const sourceIdNum = Number(mergeSourceId)
+    return results.filter((t) => t.id !== sourceIdNum)
+  }, [results, mergeSourceId])
+
   const [mergeTarget, setMergeTarget] = useState<Title | null>(null)
   const [targetSeason, setTargetSeason] = useState(1)
   const [merging, setMerging] = useState(false)
   const [mergeError, setMergeError] = useState<string | null>(null)
-  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryItem[]>([])
-  const [loadingDiscovery, setLoadingDiscovery] = useState(false)
 
   useEffect(() => {
     if (mergeSourceId && mergeSourceName) {
@@ -81,7 +111,15 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
   }, [mergeSourceId, mergeSourceName])
 
   useEffect(() => {
-    search(filter)
+    const trimmed = query.trim()
+    if (!trimmed) {
+      search(filter)
+      return
+    }
+    const timer = setTimeout(() => {
+      search(filter)
+    }, 150)
+    return () => clearTimeout(timer)
   }, [
     search,
     query,
@@ -170,7 +208,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
       }
     }, 350)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [searchOnTMDB, query])
+  }, [searchOnTMDB, query, setDiscoveryResults, setLoadingDiscovery])
 
   const discoveryItems = useMemo(() => {
     return discoveryResults.map((item) => {
@@ -210,7 +248,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
       setDiscoveryResults((prev) =>
         prev.map((r) => (r.id === item.id ? { ...r, localTitleId: created.id, adding: false } : r))
       )
-      useTitleStore.getState().invalidate()
+      void useTitleStore.getState().invalidate()
 
       showUndo({
         message: t('undo.titleAdded', { title: item.title }),
@@ -219,7 +257,7 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
             prev.map((r) => (r.id === item.id ? { ...r, localTitleId: undefined } : r))
           )
           await apiFetch(`/titles/${created.id}`, { method: 'DELETE' })
-          useTitleStore.getState().invalidate()
+          void useTitleStore.getState().invalidate()
         },
       })
     } catch {
@@ -254,13 +292,66 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
   return (
     <PullToRefresh onRefresh={retry} disabled={filterOpen || Boolean(mergeTarget)}>
       <div className={s.page}>
+        {/* Desktop Sticky Header */}
+        {isDesktop && (
+          <header className={s.desktopHeader}>
+            <div className={s.desktopHeaderInner}>
+              <SearchBar
+                variant="top"
+                showTMDBToggle={!mergeSourceId}
+                isFiltersOpen={filterOpen}
+                onToggleFilters={onToggleFilters}
+                activeFilterCount={activeFilterCount}
+              >
+                <div className={s.viewSwitcher} role="group" aria-label={t('search.viewMode')}>
+                  <button
+                    type="button"
+                    className={clsx(s.viewBtn, viewMode === 'grid' && s.viewBtnActive)}
+                    onClick={() => handleSetViewMode('grid')}
+                    aria-label={t('search.viewGrid')}
+                    title={t('search.viewGrid')}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="7" height="7" />
+                      <rect x="14" y="3" width="7" height="7" />
+                      <rect x="14" y="14" width="7" height="7" />
+                      <rect x="3" y="14" width="7" height="7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx(s.viewBtn, viewMode === 'list' && s.viewBtnActive)}
+                    onClick={() => handleSetViewMode('list')}
+                    aria-label={t('search.viewList')}
+                    title={t('search.viewList')}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <line x1="3" y1="6" x2="3.01" y2="6" />
+                      <line x1="3" y1="12" x2="3.01" y2="12" />
+                      <line x1="3" y1="18" x2="3.01" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              </SearchBar>
+            </div>
+            {desktopFilterDrawer && filterOpen && (
+              <div className={s.desktopFiltersSlot}>
+                {desktopFilterDrawer}
+              </div>
+            )}
+          </header>
+        )}
+
         {/* Results area */}
         <div className={s.results}>
           {!query.trim() && (
             <div className={s.emptyState}>
               <div className={s.emptyInner}>
                 <div className={s.emptyIcon}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                 </div>
@@ -288,59 +379,67 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
                 </span>
               </div>
 
-              <div className={s.cardList}>
-                {results.filter(t => t.id !== Number(mergeSourceId)).map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => {
-                      if (mergeSourceId) {
-                        setMergeTarget(t)
-                        setTargetSeason(1)
-                      } else {
-                        route(routeTo.title(t.id))
-                      }
-                    }}
-                    className={s.card}
-                  >
-                    <div className={s.coverWrap}>
-                      <CoverImage
-                        coverUrl={t.cover_url}
-                        type={t.type}
-                        is_anime={t.is_anime}
-                        alt={getName(t)}
-                        className={s.cardCover}
-                        iconSize="18px"
-                      />
-                      <div className={s.typeBadge}>
-                        <TypeBadge type={t.type} size="sm" radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
-                      </div>
-                    </div>
-                    <div className={s.cardBody}>
-                      <div className={s.cardHeader}>
-                        <span className={s.cardTitle}>{getName(t)}</span>
-                        <StatusBadge status={t.status} caughtUp={t.caught_up} />
-                        <ArrBadge type={t.type} radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
-                      </div>
-                      {hasMatchedAlt(t) && (
-                        <div className={s.matchedRow}>
-                          <span className={s.matchedName}>{t.matched_name}</span>
-                          {t.matched_language && (
-                            <span className={s.matchedLang}>{t.matched_language}</span>
-                          )}
+              {isDesktop && viewMode === 'grid' && !mergeSourceId ? (
+                <div className={s.posterGrid}>
+                  {filteredResults.map((t) => (
+                    <PosterCard key={t.id} title={t} />
+                  ))}
+                </div>
+              ) : (
+                <div className={s.cardList}>
+                  {filteredResults.map((t) => (
+                    <a
+                      key={t.id}
+                      href={routeTo.title(t.id)}
+                      onClick={(e) => {
+                        if (mergeSourceId) {
+                          e.preventDefault()
+                          setMergeTarget(t)
+                          setTargetSeason(1)
+                        }
+                      }}
+                      className={s.card}
+                    >
+                      <div className={s.coverWrap}>
+                        <CoverImage
+                          coverUrl={t.cover_url}
+                          type={t.type}
+                          is_anime={t.is_anime}
+                          alt={getName(t)}
+                          className={s.cardCover}
+                          iconSize="18px"
+                        />
+                        <div className={s.typeBadge}>
+                          <TypeBadge type={t.type} size="sm" radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
                         </div>
-                      )}
-                      <div className={s.cardMeta}>{getMetadata(t)}</div>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.inkDim} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      {mergeSourceId ? (
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke={colors.accent} />
-                      ) : (
-                        <polyline points="9 18 15 12 9 6" />
-                      )}
-                    </svg>
-                  </div>
-                ))}
-              </div>
+                      </div>
+                      <div className={s.cardBody}>
+                        <div className={s.cardHeader}>
+                          <span className={s.cardTitle}>{getName(t)}</span>
+                          <StatusBadge status={t.status} caughtUp={t.caught_up} />
+                          <ArrBadge type={t.type} radarrId={t.radarr_id} sonarrId={t.sonarr_id} />
+                        </div>
+                        {hasMatchedAlt(t) && (
+                          <div className={s.matchedRow}>
+                            <span className={s.matchedName}>{t.matched_name}</span>
+                            {t.matched_language && (
+                              <span className={s.matchedLang}>{t.matched_language}</span>
+                            )}
+                          </div>
+                        )}
+                        <div className={s.cardMeta}>{getMetadata(t)}</div>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" className={s.cardChevron}>
+                        {mergeSourceId ? (
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="var(--accent)" />
+                        ) : (
+                          <polyline points="9 18 15 12 9 6" />
+                        )}
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              )}
 
               {hasMore && (
                 <div className={s.loadMoreWrap}>
@@ -406,8 +505,9 @@ export function Search({ path: _, filterOpen = false }: { path?: string; filterO
                           href={routeTo.title(r.localTitleId)}
                           className={s.inLibraryLink}
                           onClick={(e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
                             e.preventDefault()
-                            route(routeTo.title(r.localTitleId!))
+                            if (r.localTitleId) route(routeTo.title(r.localTitleId))
                           }}
                         >
                           {t('search.inLibrary')} ↗

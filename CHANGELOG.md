@@ -6,6 +6,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Refonte ergonomique et visuelle de la page de recherche sur grand écran (Desktop ≥ 1024px)** :
+  - **Barre de recherche haute fixe sur desktop** : Repositionnement de la barre de recherche au sommet de la page sur desktop, éliminant l'inversion ergonomique du champ ancré en bas de l'écran tout en préservant intacte la barre basse sur mobile (< 1024px).
+  - **Bascule d'affichage Grille / Liste** : Intégration d'un sélecteur de vue (grille de posters réactive `PosterCard` ou liste détaillée compacte) avec mémorisation de la préférence dans le stockage local.
+  - **Navigation sémantique et clavier** : Remplacement des conteneurs génériques par des liens natifs `<a>` avec styles de survol `:hover` et focus clavier accessible (`:focus-visible`), restaurant l'ouverture dans un nouvel onglet (clic molette / Cmd+clic).
+  - **Disposition en grille multi-colonnes pour les résultats de découverte TMDB / AniList** : Adaptation responsive en bento 2 colonnes sur écran large au lieu de bandes étirées sur toute la largeur.
+
+### Amélioré
+- **Performance et réactivité de la recherche** :
+  - **Debounce de 150ms sur les recherches locales** : Élimination du spam de requêtes simultanées vers SQLite FTS5 lors de la frappe rapide.
+  - **Persistance des résultats de découverte TMDB/AniList** : Conservation des résultats externes dans le store Zustand lors de la navigation vers la fiche d'un titre et du retour arrière.
+  - **Désactivation des gestes tactiles verticaux sur desktop** : Désactivation du hook de glissement tactile (`useSwipeDownToClose`) sur desktop dans le tiroir de filtres pour éliminer les conflits d'interaction à la souris.
+
 ## [v1.26.6] — 2026-10-10
 
 ### Amélioré

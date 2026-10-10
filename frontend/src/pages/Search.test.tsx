@@ -1,5 +1,6 @@
 import { render, cleanup } from '@testing-library/preact'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import type { Title } from '../types'
 import { Search } from './Search'
 
 vi.mock('../api', () => ({
@@ -14,6 +15,11 @@ vi.mock('../hooks/useScrollRestoration', () => ({
   useScrollRestoration: vi.fn(),
 }))
 
+const mockIsDesktop = vi.fn().mockReturnValue(false)
+vi.mock('../hooks/useIsDesktop', () => ({
+  useIsDesktop: () => mockIsDesktop(),
+}))
+
 vi.mock('../context/UndoContext', () => ({
   useUndo: () => ({
     showUndo: vi.fn(),
@@ -22,13 +28,17 @@ vi.mock('../context/UndoContext', () => ({
 
 const mockSearchState = {
   query: '',
-  results: [],
+  results: [] as Title[],
   total: 0,
   hasMore: false,
   loading: false,
   loadingMore: false,
   error: null,
   searchOnTMDB: false,
+  discoveryResults: [],
+  loadingDiscovery: false,
+  setDiscoveryResults: vi.fn(),
+  setLoadingDiscovery: vi.fn(),
   search: vi.fn(),
   loadMore: vi.fn(),
   setQuery: vi.fn(),
@@ -92,5 +102,41 @@ describe('Search Page', () => {
     render(<Search />)
 
     expect(mockSearchState.setQuery).not.toHaveBeenCalled()
+  })
+
+  it('mobile view: does not render desktopHeader', () => {
+    mockIsDesktop.mockReturnValue(false)
+    const { container } = render(<Search />)
+
+    expect(container.querySelector('.desktopHeader')).toBeNull()
+  })
+
+  it('desktop view: renders desktopHeader with SearchBar and view switcher', () => {
+    mockIsDesktop.mockReturnValue(true)
+    const { container } = render(<Search />)
+
+    expect(container.querySelector('.desktopHeader')).not.toBeNull()
+    expect(container.querySelector('.viewSwitcher')).not.toBeNull()
+  })
+
+  it('renders search results as semantic links with href to title detail', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = 'Frieren'
+    mockSearchState.results = [
+      {
+        id: 42,
+        type: 'series',
+        is_anime: true,
+        year: 2023,
+        status: 'watching',
+        names: [{ name: "Frieren: Beyond Journey's End", language: 'en', is_primary: true }],
+      } as unknown as Title,
+    ]
+
+    const { container } = render(<Search />)
+
+    const cardLink = container.querySelector('a.card') as HTMLAnchorElement | null
+    expect(cardLink).not.toBeNull()
+    expect(cardLink?.getAttribute('href')).toBe('/title/42')
   })
 })

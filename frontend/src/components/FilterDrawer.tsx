@@ -5,6 +5,7 @@ import { apiFetch } from '../api'
 import { countryLabel } from '../lib/country'
 import { useTranslation } from '../i18n'
 import { useSwipeDownToClose } from '../hooks/useSwipeDownToClose'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 import type {
   StatusFilter,
   TypeFilter,
@@ -112,8 +113,10 @@ export function FilterDrawer(props: FilterDrawerProps) {
   const [genres, setGenres] = useState<GenreCount[]>([])
   const [countries, setCountries] = useState<CountryCount[]>([])
 
+  const isDesktop = useIsDesktop()
+
   const { ref: containerRef, dragY, style: swipeStyle } = useSwipeDownToClose({
-    open,
+    open: open && !isDesktop,
     onClose: () => setOpen(false),
     shouldIgnore: (target) => {
       const node = target as Node | null
@@ -274,8 +277,8 @@ export function FilterDrawer(props: FilterDrawerProps) {
   return (
     <div
       ref={containerRef}
-      style={swipeStyle}
-      className={s.container}
+      style={isDesktop ? undefined : swipeStyle}
+      className={clsx(s.container, props.className)}
     >
       {/* Closed Handle: only visible when drawer is closed in library view */}
       {!isSearchActive && !open && (
