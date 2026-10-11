@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.14] — 2026-10-11
+
 ### Ajouté
 - **Hub de Sagas & Franchises avec actions 1-tap (`MED-1` / Lot 4)** :
   - **Suppression de la redirection perturbante** : Clic sur une œuvre non présente dans la bibliothèque ne redirige plus vers `/admin/validate`.
