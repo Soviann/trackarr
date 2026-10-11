@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.11] — 2026-10-11
+
 ### Ajouté
 - **Optimisation I/O SQLite WAL et maintenance automatique du serveur (`ARCH-1`)** :
   - **Pragmas DSN SQLite haute performance** : Paramétrage du DSN avec `_synchronous=NORMAL`, `_cache_size=-32000` (32 Mo de cache en RAM) et `_temp_store=MEMORY` (`PRAGMA temp_store = 2`), éliminant les `fsync` bloquants à chaque commit de transaction sur les disques durs de NAS (Synology DS920+) tout en garantissant une résilience totale aux pannes.
