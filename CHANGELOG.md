@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Désambiguïsation IA multi-candidats et transmission des indices d'épisode (`EpisodeHints`)** :
+  - **Désambiguïsation multi-candidats dans la recherche TMDB (`DisambiguateCandidates`)** : Lorsque la recherche TMDB renvoie plusieurs résultats pertinents et que le moteur IA (Gemini) est actif, les 5 premiers candidats (titre, année, synopsis) sont soumis à l'IA pour sélectionner le candidat exact avec confiance élevée ou moyenne, évitant de retenir aveuglément le premier résultat.
+  - **Transmission d'indices d'épisode lors des scrobbles (`EpisodeHints`)** : Extraction du titre d'épisode, numéros de saison/épisode et identifiant IMDb d'épisode depuis les webhooks Jellyfin et Plex vers le pipeline de correspondance (`CreateFromScrobble` → `MatchInput`), enrichissant la vérification `VerifyMatch` et la désambiguïsation de catalogue.
+
+### Amélioré
+- **Garde d'ambiguïté locale dans `FindByNameAndType`** :
+  - Lorsque l'année n'est pas spécifiée (`year <= 0`), la méthode vérifie désormais le nombre de titres locaux distincts portant ce nom. Si plusieurs titres existent (`count > 1`), la méthode renvoie `sql.ErrNoRows` au lieu d'en choisir un arbitrairement via `LIMIT 1`, forçant le pipeline à passer par la désambiguïsation en ligne enrichie des indices d'épisode.
+
 ## [v1.26.9] — 2026-10-11
 
 ### Corrigé

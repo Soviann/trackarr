@@ -593,6 +593,11 @@ func TestTitleRepository_FindByNameAndType(t *testing.T) {
 		assert.Equal(t, "WildC.A.T.S: Covert Action Teams", got.PrimaryName())
 	})
 
+	t.Run("returns ErrNoRows when year is 0 and multiple titles exist with that name", func(t *testing.T) {
+		_, err := repo.FindByNameAndType("The Flash", model.TitleTypeSeries, 0)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+	})
+
 	t.Run("does not match title with different year when year is specified", func(t *testing.T) {
 		_, err := repo.FindByNameAndType("The Flash", model.TitleTypeSeries, 2014)
 		assert.ErrorIs(t, err, sql.ErrNoRows)

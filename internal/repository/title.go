@@ -484,26 +484,48 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, extern
 // FindByNameAndType looks up an existing title by exact (case-insensitive) name
 // match across all its title_names, filtered by title type. If year > 0, an exact
 // year match is required to prevent cross-matching adaptations or reboots across decades.
+// If year <= 0, returns sql.ErrNoRows if more than one distinct title matches to guard
+// against arbitrary LIMIT 1 selection when multiple local titles exist.
 func (r *TitleRepository) FindByNameAndType(name string, titleType model.TitleType, year int) (*model.Title, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, sql.ErrNoRows
 	}
 
-	query := `SELECT t.id FROM titles t
+	if year <= 0 {
+		rows, err := r.db.Query(`SELECT DISTINCT t.id FROM titles t
 JOIN title_names tn ON tn.title_id = t.id
-WHERE tn.name = ? COLLATE NOCASE AND t.type = ?`
-	args := []any{name, titleType}
+WHERE tn.name = ? COLLATE NOCASE AND t.type = ?
+LIMIT 2`, name, titleType)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
 
-	if year > 0 {
-		query += ` AND t.year = ?`
-		args = append(args, year)
+		var ids []int64
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		if len(ids) != 1 {
+			return nil, sql.ErrNoRows
+		}
+		return r.GetByID(ids[0])
 	}
 
-	query += ` ORDER BY t.id ASC LIMIT 1`
+	query := `SELECT t.id FROM titles t
+JOIN title_names tn ON tn.title_id = t.id
+WHERE tn.name = ? COLLATE NOCASE AND t.type = ? AND t.year = ?
+ORDER BY t.id ASC LIMIT 1`
 
 	var id int64
-	if err := r.db.QueryRow(query, args...).Scan(&id); err != nil {
+	if err := r.db.QueryRow(query, name, titleType, year).Scan(&id); err != nil {
 		return nil, err
 	}
 
