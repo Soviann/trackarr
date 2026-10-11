@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.10] — 2026-10-11
+
 ### Ajouté
 - **Désambiguïsation IA multi-candidats et transmission des indices d'épisode (`EpisodeHints`)** :
   - **Désambiguïsation multi-candidats dans la recherche TMDB (`DisambiguateCandidates`)** : Lorsque la recherche TMDB renvoie plusieurs résultats pertinents et que le moteur IA (Gemini) est actif, les 5 premiers candidats (titre, année, synopsis) sont soumis à l'IA pour sélectionner le candidat exact avec confiance élevée ou moyenne, évitant de retenir aveuglément le premier résultat.
