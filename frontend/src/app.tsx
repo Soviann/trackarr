@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks'
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks'
 import { route } from 'preact-router'
 import Router from 'preact-router'
 import clsx from 'clsx'
@@ -50,10 +50,13 @@ type StatusFilter = TitleStatus | 'up_to_date' | null
 type TypeFilter = TitleType | null
 type SeriesStatusFilter = SeriesStatus | null
 
+const isDetailPath = (path: string) => path.startsWith('/title/') || path.startsWith('/person/')
+
 export function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [vapidKey, setVapidKey] = useState<string>()
+  const fromSearchRef = useRef(false)
 
   useEffect(() => {
     fetch('/api/config').then(r => r.json()).then(cfg => {
@@ -77,8 +80,26 @@ export function App() {
     const prevIsMerge = new URLSearchParams(currentPath.split('?')[1] ?? '').has('mergeSourceId')
     const nextIsMerge = new URLSearchParams(e.url.split('?')[1] ?? '').has('mergeSourceId')
 
-    if ((prevPathname === ROUTE_PATHS.search && nextPathname !== ROUTE_PATHS.search) || (prevIsMerge && !nextIsMerge)) {
-      useSearchStore.getState().clear()
+    const prevWasSearch = prevPathname === ROUTE_PATHS.search
+    const nextIsSearch = nextPathname === ROUTE_PATHS.search
+    const prevWasDetail = isDetailPath(prevPathname)
+    const nextIsDetail = isDetailPath(nextPathname)
+
+    if (prevWasSearch && nextIsDetail) {
+      fromSearchRef.current = true
+    } else if (prevWasDetail && nextIsDetail) {
+      // Retain fromSearchRef across consecutive detail views (e.g. title -> person -> title)
+    } else if (prevWasDetail && nextIsSearch && fromSearchRef.current) {
+      fromSearchRef.current = false
+    } else {
+      const exitingSearch = (prevWasSearch && !nextIsSearch) || (fromSearchRef.current && !nextIsDetail && !nextIsSearch)
+      const enteringFreshSearch = !prevWasSearch && nextIsSearch && !fromSearchRef.current
+      const exitingMerge = prevIsMerge && !nextIsMerge
+
+      if (exitingSearch || enteringFreshSearch || exitingMerge) {
+        useSearchStore.getState().clear()
+      }
+      fromSearchRef.current = false
     }
 
     setCurrentPath(e.url)
@@ -92,8 +113,16 @@ export function App() {
   const setSort = useTitleStore(s => s.setSort)
 
   const navigate = useCallback((path: string) => {
+    if (path === ROUTE_PATHS.search) {
+      fromSearchRef.current = false
+      if (currentPath.split('?')[0] === ROUTE_PATHS.search) {
+        useSearchStore.getState().clear()
+        window.scrollTo(0, 0)
+        return
+      }
+    }
     route(path)
-  }, [])
+  }, [currentPath])
 
   const statusFilter: StatusFilter = filter.status === 'watching_behind'
     ? 'watching'
@@ -189,13 +218,13 @@ export function App() {
   useKeyboardShortcuts({
     onSearch: useCallback(() => {
       if (currentPath !== ROUTE_PATHS.search) {
-        route(ROUTE_PATHS.search)
+        navigate(ROUTE_PATHS.search)
       } else {
         const searchInput = document.getElementById('search') as HTMLInputElement | null
         searchInput?.focus()
         searchInput?.select()
       }
-    }, [currentPath]),
+    }, [currentPath, navigate]),
     onEscape: useCallback(() => {
       if (filterDrawerOpen) {
         setFilterDrawerOpen(false)

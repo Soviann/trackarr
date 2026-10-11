@@ -181,6 +181,114 @@ describe('App navigation & filter drawer', () => {
     expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
   })
 
+  it('preserves search store when navigating from /search to a title detail page and back', async () => {
+    window.history.pushState({}, '', '/search')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // Navigate to title detail
+    await act(async () => {
+      route('/title/42')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    // Navigate back to search (e.g. browser back button)
+    await act(async () => {
+      route('/search')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+  })
+
+  it('preserves search store across multiple nested detail pages and back to /search', async () => {
+    window.history.pushState({}, '', '/search')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // /search -> /title/42 -> /person/Nolan -> /title/43 -> /search
+    await act(async () => {
+      route('/title/42')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    await act(async () => {
+      route('/person/Christopher%20Nolan')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    await act(async () => {
+      route('/title/43')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    await act(async () => {
+      route('/search')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+  })
+
+  it('clears search store when navigating from a detail page that came from search to a main section', async () => {
+    window.history.pushState({}, '', '/search')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // /search -> /title/42
+    await act(async () => {
+      route('/title/42')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    // Navigate to /coming-up
+    await act(async () => {
+      route('/coming-up')
+    })
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears search store when entering /search freshly from another main page', async () => {
+    window.history.pushState({}, '', '/coming-up')
+    render(<App />)
+    mockSearchState.clear.mockClear()
+
+    await act(async () => {
+      route('/search')
+    })
+
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears search store and filters when clicking the Explore navbar button from a detail view', async () => {
+    window.history.pushState({}, '', '/search')
+    const { getAllByRole } = render(<App />)
+    mockSearchState.clear.mockClear()
+
+    // Browse to detail view from search
+    await act(async () => {
+      route('/title/42')
+    })
+    expect(mockSearchState.clear).not.toHaveBeenCalled()
+
+    // Click the Explore tab in the navbar to start another search
+    const exploreBtn = getAllByRole('button', { name: 'Explore' })[0]
+    await act(async () => {
+      fireEvent.click(exploreBtn)
+    })
+
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears search store and filters when clicking the Explore navbar button while already on /search', async () => {
+    window.history.pushState({}, '', '/search')
+    const { getAllByRole } = render(<App />)
+    mockSearchState.clear.mockClear()
+
+    const exploreBtn = getAllByRole('button', { name: 'Explore' })[0]
+    await act(async () => {
+      fireEvent.click(exploreBtn)
+    })
+
+    expect(mockSearchState.clear).toHaveBeenCalledTimes(1)
+  })
+
   it('clears search store when exiting merge mode on /search', async () => {
     window.history.pushState({}, '', '/search?mergeSourceId=12&mergeSourceName=Frieren')
     render(<App />)
