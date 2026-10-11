@@ -17,7 +17,7 @@
 ---
 
 ## 2. Invariants & Critical Gotchas
-1. **SQLite Concurrency**: `MaxOpenConns = 1` for write safety. Always close `rows.Close()` before issuing nested queries. Never run transactions across unbuffered row iterators.
+1. **SQLite Concurrency & WAL Performance**: `MaxOpenConns = 1` for write safety (`readDB` has `MaxOpenConns = 4`, `mode=ro`). DSN configured with `_synchronous=NORMAL` (eliminates blocking `fsync` per transaction on NAS spinning disks while preserving 100% WAL crash safety), `_cache_size=-32000` (32MB cache), and `_temp_store=MEMORY`. Automated daily maintenance cron at 04:30 purges dead tasks (`TaskWriter.PurgeCompletedTasks`, 14-day retention) and runs `PRAGMA wal_checkpoint(PASSIVE)`. Always close `rows.Close()` before issuing nested queries. Never run transactions across unbuffered row iterators.
 2. **Matching Status State Machine**:
    `titles.match_status` ∈ `{'confirmed', 'pending_review', 'unconfirmed'}`.
    - `confirmed`: Fully identified, safe for auto-sync and Arr queueing.
@@ -93,6 +93,9 @@
     - `searchTMDB` multi-candidate AI disambiguation: when a search returns multiple results and Gemini is configured, `DisambiguateCandidates` evaluates up to 5 candidates against source name, year, and episode clues. If confidence is high or medium, the disambiguated candidate's TMDB ID is selected.
     - Webhook episode clues: Jellyfin and Plex scrobbles for episodes forward `EpisodeHints` (episode name, season number, episode number, IMDb ID) through `CreateFromScrobble` to `VerifyMatch` and `DisambiguateCandidates`, confirming the exact series adaptation.
     - Title ambiguity guard: `FindByNameAndType(name, type, year)` enforces exact year matching when `year > 0`. When `year <= 0`, it queries with `LIMIT 2` and returns `sql.ErrNoRows` if `count > 1` to prevent arbitrary series hijacking across distinct adaptations.
+20. **Code Splitting & SPA HTTP Cache Strategy**:
+    - `App.tsx` lazy-loads secondary routes (`Admin*`, `Stats`, `Wrapped`, `MatchReview`, `Help`, `Validate`) via `lazy()` with `<Suspense fallback={null}>`, keeping initial bundle lean (~191 kB) for mobile devices. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `ContinueWatching`, `Add`) remain synchronous for instant first render.
+    - `SPAHandler` in `internal/handler/spa.go` serves immutable cache headers (`public, max-age=31536000, immutable`) for hashed assets under `/assets/*`, and `no-cache, no-store, must-revalidate` for `index.html` and SPA fallback routes, avoiding stale service worker/browser caches.
 
 ---
 

@@ -54,6 +54,7 @@ func TestScheduler_NilSafe(t *testing.T) {
 	s.SetShutdownWG(&sync.WaitGroup{})
 	s.Start(context.Background(), time.Second)
 	s.CheckAnnualWrapped(context.Background())
+	s.RunMaintenance(context.Background())
 }
 
 func TestScheduler_StartContextCancellation(t *testing.T) {
@@ -128,4 +129,62 @@ func TestScheduler_CheckAnnualWrapped(t *testing.T) {
 	tasks2, err := taskRepo.ListPending()
 	require.NoError(t, err)
 	assert.Len(t, tasks2, 1)
+}
+
+func TestScheduler_RunMaintenance(t *testing.T) {
+	db := setupSchedulerTestDB(t)
+	sched := NewScheduler(db, nil, nil, nil, nil)
+
+	// Insert an old dead task (> 14 days) and a recent dead task (< 14 days)
+	idOld := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 1}`, nil)
+	idRecent := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 2}`, nil)
+
+	twentyDaysAgo := time.Now().Add(-20 * 24 * time.Hour)
+	fiveDaysAgo := time.Now().Add(-5 * 24 * time.Hour)
+
+	_, err := db.Exec(`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`, twentyDaysAgo, idOld)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`, fiveDaysAgo, idRecent)
+	require.NoError(t, err)
+
+	sched.RunMaintenance(context.Background())
+
+	taskRepo := repository.NewTaskRepository(db)
+	_, err = taskRepo.GetByID(idOld)
+	assert.ErrorIs(t, err, sql.ErrNoRows, "old dead task must be purged by RunMaintenance")
+
+	alive, err := taskRepo.GetByID(idRecent)
+	require.NoError(t, err)
+	assert.Equal(t, idRecent, alive.ID)
+}
+
+func TestScheduler_NextDailyMaintenance(t *testing.T) {
+	tests := []struct {
+		name     string
+		now      time.Time
+		expected time.Duration
+	}{
+		{
+			name:     "before 04:30 same day",
+			now:      time.Date(2026, 10, 11, 2, 30, 0, 0, time.UTC),
+			expected: 2 * time.Hour,
+		},
+		{
+			name:     "exactly 04:30 schedules tomorrow",
+			now:      time.Date(2026, 10, 11, 4, 30, 0, 0, time.UTC),
+			expected: 24 * time.Hour,
+		},
+		{
+			name:     "after 04:30 schedules tomorrow",
+			now:      time.Date(2026, 10, 11, 6, 30, 0, 0, time.UTC),
+			expected: 22 * time.Hour,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := nextDailyMaintenance(tt.now)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
 }

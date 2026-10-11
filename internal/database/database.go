@@ -54,13 +54,17 @@ var _ WriteDBTX = (*sql.Tx)(nil)
 // readers alongside a single writer, so separating connections prevents the
 // background refresh from blocking HTTP list queries.
 func Open(dsn string) (writeDB, readDB *sql.DB, err error) {
-	base := dsn + "?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000"
+	base := dsn + "?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-32000&_temp_store=MEMORY"
 
 	writeDB, err = sql.Open("sqlite3", base)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open write database: %w", err)
 	}
 	writeDB.SetMaxOpenConns(1)
+	if _, err = writeDB.Exec("PRAGMA temp_store = 2"); err != nil {
+		writeDB.Close()
+		return nil, nil, fmt.Errorf("set temp_store pragma: %w", err)
+	}
 	if err = writeDB.Ping(); err != nil {
 		writeDB.Close()
 		return nil, nil, fmt.Errorf("ping write database: %w", err)

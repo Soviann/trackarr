@@ -69,6 +69,11 @@ gunzip -c /path/to/backup.db.gz > ./data/trackarr.db
 docker compose up -d
 ```
 
+### Automated Background Maintenance & WAL Checkpoint:
+Trackarr runs an automatic daily maintenance cycle at 04:30 (and during scheduled passes):
+- **Dead Tasks Pruning**: Purges dead tasks from `task_queue` whose `updated_at` is older than 14 days, preventing queue table bloating.
+- **Passive WAL Checkpoint**: Executes `PRAGMA wal_checkpoint(PASSIVE)` to fold committed WAL pages back into the main database file without blocking in-flight reads or transactions.
+
 ---
 
 ## 4. Built-in CLI Maintenance Commands

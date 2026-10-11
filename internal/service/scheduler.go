@@ -74,6 +74,8 @@ func (s *Scheduler) Start(ctx context.Context, interval time.Duration) {
 		return
 	}
 
+	s.startDailyMaintenance(ctx)
+
 	if s.shutdownWG != nil {
 		s.shutdownWG.Add(1)
 	}
@@ -120,6 +122,62 @@ func (s *Scheduler) Start(ctx context.Context, interval time.Duration) {
 	}()
 }
 
+func (s *Scheduler) startDailyMaintenance(ctx context.Context) {
+	if s.shutdownWG != nil {
+		s.shutdownWG.Add(1)
+	}
+	go func() {
+		if s.shutdownWG != nil {
+			defer s.shutdownWG.Done()
+		}
+		for {
+			delay := nextDailyMaintenance(time.Now())
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+				s.RunMaintenance(ctx)
+			}
+		}
+	}()
+}
+
+// nextDailyMaintenance returns the duration until the next 04:30.
+func nextDailyMaintenance(now time.Time) time.Duration {
+	next := time.Date(now.Year(), now.Month(), now.Day(), 4, 30, 0, 0, now.Location())
+	if !next.After(now) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next.Sub(now)
+}
+
+// RunMaintenance purges dead/completed tasks older than 14 days and triggers a PASSIVE WAL checkpoint.
+func (s *Scheduler) RunMaintenance(ctx context.Context) {
+	if s == nil || s.writeDB == nil {
+		return
+	}
+
+	var purged int64
+	err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		var txErr error
+		purged, txErr = repository.NewTaskWriter(tx).PurgeCompletedTasks(ctx, 14*24*time.Hour)
+		return txErr
+	})
+	if err != nil {
+		log.Printf("scheduler: purge completed tasks failed: %v", err)
+	} else if purged > 0 {
+		log.Printf("scheduler: purged %d old tasks", purged)
+	}
+
+	if _, err := s.writeDB.ExecContext(ctx, "PRAGMA wal_checkpoint(PASSIVE)"); err != nil {
+		log.Printf("scheduler: wal_checkpoint failed: %v", err)
+	} else {
+		log.Println("scheduler: wal_checkpoint(PASSIVE) completed")
+	}
+}
+
 func (s *Scheduler) runInitialPass(ctx context.Context) {
 	if s.covers != nil {
 		log.Println("scheduler: fetching missing covers")
@@ -146,6 +204,8 @@ func (s *Scheduler) runScheduledPass(ctx context.Context) {
 		log.Printf("scheduler: starting unused covers cleanup for %s", day.String())
 		s.covers.CleanupUnusedCovers(ctx, day)
 	}
+
+	s.RunMaintenance(ctx)
 }
 
 // CheckAnnualWrapped checks if the previous calendar year has concluded and needs

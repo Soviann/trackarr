@@ -7,6 +7,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Ajouté
+- **Optimisation I/O SQLite WAL et maintenance automatique du serveur (`ARCH-1`)** :
+  - **Pragmas DSN SQLite haute performance** : Paramétrage du DSN avec `_synchronous=NORMAL`, `_cache_size=-32000` (32 Mo de cache en RAM) et `_temp_store=MEMORY` (`PRAGMA temp_store = 2`), éliminant les `fsync` bloquants à chaque commit de transaction sur les disques durs de NAS (Synology DS920+) tout en garantissant une résilience totale aux pannes.
+  - **Purge automatique de la file de tâches (`PurgeCompletedTasks`)** : Implémentation du nettoyage des tâches au statut `dead` avec rétention de 14 jours dans `TaskWriter`.
+  - **Cron de maintenance quotidienne et checkpoint WAL** : Planification automatique chaque jour à 04:30 (et lors des cycles périodiques de fond) exécutant la purge des tâches suivie d'un `PRAGMA wal_checkpoint(PASSIVE)` pour recycler les pages WAL sur disque sans interruption de service.
+- **Découpage de code frontend (Code Splitting) et gestion de cache HTTP SPA (`ARCH-2`)** :
+  - **Lazy loading des routes secondaires** : Découpage asynchrone via `lazy()` et `<Suspense>` pour l'ensemble des pages d'administration (`Admin*`, `AdminSettings`, `AdminAuth`, `AdminTasks`, `AdminNotifications`, `AdminJellyfin`, `AdminAniList`, `AdminArr`, `AdminSeasonAudit`, `Help`, `Validate`), les statistiques (`Stats`), le rétrospectif (`Wrapped`) et la révision de correspondance (`MatchReview`). Le bundle initial téléchargé au premier affichage est réduit à ~191 Ko.
+  - **En-têtes HTTP de cache pour la SPA** : Injection d'en-têtes `Cache-Control: public, max-age=31536000, immutable` pour les assets statiques hachés (`/assets/*`), et `Cache-Control: no-cache, no-store, must-revalidate` pour `index.html` et les routes SPA clientes.
 - **Workflow GitHub Actions hebdomadaire de propositions d'améliorations et d'idées audacieuses (`weekly-improvements-proposal.yml`)** :
   - Déclenchement automatique chaque vendredi matin à 04:00 UTC (ou via `workflow_dispatch`).
   - Création automatique d'une issue avec labels `antigravity` et `proposal` invitant à l'exploration via 4 sous-agents spécialisés : UX/UI & design émotionnel (mobile-first et grand écran desktop), fonctionnalités & écosystème média, architecture & performance, et concepts décalés/audacieux (*out-of-the-box*).
