@@ -48,15 +48,29 @@ func (f *fakePlexProcessor) ProcessPlexWebhook(_ context.Context, p *model.PlexP
 	return f.err
 }
 
+// fakeArrProcessor stubs the Arr processor seam for handler tests.
+type fakeArrProcessor struct {
+	err        error
+	gotPayload *model.ArrWebhookPayload
+	calls      int
+}
+
+func (f *fakeArrProcessor) ProcessArrWebhook(_ context.Context, p *model.ArrWebhookPayload) error {
+	f.calls++
+	f.gotPayload = p
+	return f.err
+}
+
 func newWebhookRouter(h *handler.WebhookHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(h.HandleJellyfin))
 	r.Post("/webhook/plex/{secret}", httputil.WrapHandler(h.HandlePlex))
+	r.Post("/webhook/arr/{secret}", httputil.WrapHandler(h.HandleArr))
 	return r
 }
 
 func TestJellyfinHandler_WrongSecret(t *testing.T) {
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/wrong", nil)
 	rr := httptest.NewRecorder()
 	newWebhookRouter(h).ServeHTTP(rr, req)
@@ -64,7 +78,7 @@ func TestJellyfinHandler_WrongSecret(t *testing.T) {
 }
 
 func TestJellyfinHandler_EmptyConfigSecret(t *testing.T) {
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, "", "")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, &fakeArrProcessor{}, "", "", "")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/anything", nil)
 	rr := httptest.NewRecorder()
 	newWebhookRouter(h).ServeHTTP(rr, req)
@@ -73,7 +87,7 @@ func TestJellyfinHandler_EmptyConfigSecret(t *testing.T) {
 
 func TestJellyfinHandler_FallbackSecret(t *testing.T) {
 	fake := &fakeJellyfinProcessor{}
-	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, "primary_secret", "plex_secret", "fallback_secret")
+	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, &fakeArrProcessor{}, "primary_secret", "plex_secret", "arr_secret", "fallback_secret")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/fallback_secret", strings.NewReader(`{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -85,7 +99,7 @@ func TestJellyfinHandler_FallbackSecret(t *testing.T) {
 func TestJellyfinHandler_Valid(t *testing.T) {
 	const raw = `{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True","provider_tmdb":"438631"}`
 	fake := &fakeJellyfinProcessor{}
-	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/jfsecret", strings.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -101,7 +115,7 @@ func TestJellyfinHandler_Valid(t *testing.T) {
 
 func TestJellyfinHandler_InvalidJSON(t *testing.T) {
 	fake := &fakeJellyfinProcessor{}
-	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/jfsecret", strings.NewReader("{not json"))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -114,7 +128,7 @@ func TestJellyfinHandler_InvalidJSON(t *testing.T) {
 func TestJellyfinHandler_ProcessorError(t *testing.T) {
 	const raw = `{"notification_type":"PlaybackStop","item_type":"Movie","name":"Dune","played_to_completion":"True"}`
 	fake := &fakeJellyfinProcessor{err: errors.New("downstream error")}
-	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(fake, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 	req := httptest.NewRequest("POST", "/webhook/jellyfin/jfsecret", strings.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -127,7 +141,7 @@ func TestJellyfinHandler_ProcessorError(t *testing.T) {
 // Plex webhook tests
 
 func TestPlexHandler_WrongSecret(t *testing.T) {
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 	req := httptest.NewRequest("POST", "/webhook/plex/wrong", nil)
 	rr := httptest.NewRecorder()
 	newWebhookRouter(h).ServeHTTP(rr, req)
@@ -136,7 +150,7 @@ func TestPlexHandler_WrongSecret(t *testing.T) {
 
 func TestPlexHandler_MultipartValid(t *testing.T) {
 	fake := &fakePlexProcessor{}
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 
 	const payloadJSON = `{"event":"media.scrobble","Metadata":{"type":"movie","title":"Inception","year":2010,"ratingKey":"1234","Guid":[{"id":"imdb://tt1375666"},{"id":"tmdb://27205"}]}}`
 
@@ -164,7 +178,7 @@ func TestPlexHandler_MultipartValid(t *testing.T) {
 
 func TestPlexHandler_DirectJSON(t *testing.T) {
 	fake := &fakePlexProcessor{}
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 
 	const payloadJSON = `{"event":"media.scrobble","Metadata":{"type":"episode","title":"Episode 1","grandparentTitle":"Show","year":2022,"parentIndex":1,"index":1,"ratingKey":"555","grandparentRatingKey":"500"}}`
 
@@ -185,7 +199,7 @@ func TestPlexHandler_DirectJSON(t *testing.T) {
 
 func TestPlexHandler_RealProdPayload(t *testing.T) {
 	fake := &fakePlexProcessor{}
-	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, "jfsecret", "plexsecret")
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 
 	// Real raw payload sample from production SQLite watch_events
 	const prodPayload = `{"Rating":0,"event":"media.scrobble","user":true,"owner":true,"Account":{"id":2765005,"title":"Sovian"},"Server":{"title":"GITS","uuid":"214b579771792f56ebd4af54b9c3eb4d8000b68e"},"Player":{"local":true,"PublicAddress":"109.9.244.233","title":"LG OLED55C25LB","uuid":"0u61ssozchvtm5z6btqevq11"},"Metadata":{"addedAt":"2026-03-03T18:56:50Z","grandparentRatingKey":"65538","grandparentTitle":"Dr. Globule","Guid":[{"Scheme":"tvdb","Host":"5228295"}],"index":23,"key":"/library/metadata/65562","parentIndex":1,"parentRatingKey":"65539","parentTitle":"Season 1","ratingKey":"65562","title":"Ronchons et dragons","type":"episode","year":1994}}`
@@ -210,4 +224,79 @@ func TestPlexHandler_RealProdPayload(t *testing.T) {
 	assert.Equal(t, 23, fake.gotPayload.Metadata.Index)
 	_, _, tvdb := fake.gotPayload.Metadata.ExtractExternalIDs()
 	assert.Equal(t, int64(5228295), tvdb)
+}
+
+// Arr webhook tests
+
+func TestArrHandler_WrongSecret(t *testing.T) {
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
+	req := httptest.NewRequest("POST", "/webhook/arr/wrong", nil)
+	rr := httptest.NewRecorder()
+	newWebhookRouter(h).ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestArrHandler_Valid_Radarr(t *testing.T) {
+	fake := &fakeArrProcessor{}
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, fake, "jfsecret", "plexsecret", "arrsecret")
+
+	const raw = `{"eventType":"Download","movie":{"id":12,"title":"Inception","year":2010,"tmdbId":27205,"imdbId":"tt1375666"}}`
+	req := httptest.NewRequest("POST", "/webhook/arr/arrsecret", strings.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newWebhookRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, 1, fake.calls)
+	require.NotNil(t, fake.gotPayload)
+	assert.Equal(t, "Download", fake.gotPayload.EventType)
+	require.NotNil(t, fake.gotPayload.Movie)
+	assert.Equal(t, int64(27205), fake.gotPayload.Movie.TMDBID)
+}
+
+func TestArrHandler_Valid_Sonarr(t *testing.T) {
+	fake := &fakeArrProcessor{}
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, fake, "jfsecret", "plexsecret", "arrsecret")
+
+	const raw = `{"eventType":"Download","series":{"id":42,"title":"Arcane","tvdbId":376045},"episodes":[{"id":1,"episodeNumber":1,"seasonNumber":1,"title":"Pilot"}]}`
+	req := httptest.NewRequest("POST", "/webhook/arr/arrsecret", strings.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newWebhookRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, 1, fake.calls)
+	require.NotNil(t, fake.gotPayload)
+	assert.Equal(t, "Download", fake.gotPayload.EventType)
+	require.NotNil(t, fake.gotPayload.Series)
+	assert.Equal(t, int64(376045), fake.gotPayload.Series.TVDBID)
+	require.Len(t, fake.gotPayload.Episodes, 1)
+	assert.Equal(t, 1, fake.gotPayload.Episodes[0].EpisodeNumber)
+}
+
+func TestArrHandler_TestEvent(t *testing.T) {
+	fake := &fakeArrProcessor{}
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, fake, "jfsecret", "plexsecret", "arrsecret")
+
+	const raw = `{"eventType":"Test"}`
+	req := httptest.NewRequest("POST", "/webhook/arr/arrsecret", strings.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newWebhookRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, 1, fake.calls)
+}
+
+func TestArrHandler_InvalidJSON(t *testing.T) {
+	fake := &fakeArrProcessor{}
+	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, &fakePlexProcessor{}, fake, "jfsecret", "plexsecret", "arrsecret")
+
+	req := httptest.NewRequest("POST", "/webhook/arr/arrsecret", strings.NewReader(`{invalid json`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	newWebhookRouter(h).ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, 0, fake.calls)
 }

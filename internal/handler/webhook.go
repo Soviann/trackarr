@@ -26,6 +26,10 @@ type plexProcessor interface {
 	ProcessPlexWebhook(ctx context.Context, payload *model.PlexPayload, rawPayload string) error
 }
 
+type arrProcessor interface {
+	ProcessArrWebhook(ctx context.Context, payload *model.ArrWebhookPayload) error
+}
+
 const webhookProcessingTimeout = 30 * time.Second
 const webhookMaxBodyBytes int64 = 10 << 20 // 10 MiB to accommodate multipart Plex requests with poster thumbs
 
@@ -35,10 +39,18 @@ type WebhookHandler struct {
 	jellyfinSecret string
 	plex           plexProcessor
 	plexSecret     string
+	arr            arrProcessor
+	arrSecret      string
 	fallbackSecret string
 }
 
-func NewWebhookHandler(jellyfin jellyfinProcessor, plex plexProcessor, jellyfinSecret, plexSecret string, fallbackSecret ...string) *WebhookHandler {
+func NewWebhookHandler(
+	jellyfin jellyfinProcessor,
+	plex plexProcessor,
+	arr arrProcessor,
+	jellyfinSecret, plexSecret, arrSecret string,
+	fallbackSecret ...string,
+) *WebhookHandler {
 	var fallback string
 	if len(fallbackSecret) > 0 {
 		fallback = fallbackSecret[0]
@@ -48,16 +60,19 @@ func NewWebhookHandler(jellyfin jellyfinProcessor, plex plexProcessor, jellyfinS
 		jellyfinSecret: jellyfinSecret,
 		plex:           plex,
 		plexSecret:     plexSecret,
+		arr:            arr,
+		arrSecret:      arrSecret,
 		fallbackSecret: fallback,
 	}
 }
 
 // SetSecrets updates webhook secret tokens dynamically at runtime.
-func (h *WebhookHandler) SetSecrets(jellyfinSecret, plexSecret string, fallbackSecret ...string) {
+func (h *WebhookHandler) SetSecrets(jellyfinSecret, plexSecret, arrSecret string, fallbackSecret ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.jellyfinSecret = jellyfinSecret
 	h.plexSecret = plexSecret
+	h.arrSecret = arrSecret
 	if len(fallbackSecret) > 0 {
 		h.fallbackSecret = fallbackSecret[0]
 	}
@@ -88,6 +103,65 @@ func (h *WebhookHandler) isPlexAuthorized(token string) bool {
 		return true
 	}
 	return false
+}
+
+func (h *WebhookHandler) isArrAuthorized(token string) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if h.arrSecret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(h.arrSecret)) == 1 {
+		return true
+	}
+	if h.fallbackSecret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(h.fallbackSecret)) == 1 {
+		return true
+	}
+	if h.jellyfinSecret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(h.jellyfinSecret)) == 1 {
+		return true
+	}
+	return false
+}
+
+// HandleArr ingests a webhook from Radarr or Sonarr (Download, Upgrade, Test).
+func (h *WebhookHandler) HandleArr(w http.ResponseWriter, r *http.Request) error {
+	token := chi.URLParam(r, "secret")
+	if h.arr == nil || !h.isArrAuthorized(token) {
+		if h.arrSecret == "" && h.fallbackSecret == "" && h.jellyfinSecret == "" {
+			log.Printf("arr webhook: rejected request from %s — webhook secret is not configured", r.RemoteAddr)
+		} else {
+			log.Printf("arr webhook: rejected unauthorized request from %s — secret token mismatch", r.RemoteAddr)
+		}
+		return httputil.NewAPIError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, webhookMaxBodyBytes)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		var mbErr *http.MaxBytesError
+		if errors.As(err, &mbErr) {
+			log.Printf("arr webhook: payload exceeds %d bytes", mbErr.Limit)
+			return httputil.BadRequest(fmt.Sprintf("request payload exceeds %d bytes limit", mbErr.Limit))
+		}
+		log.Printf("arr webhook: %v", err)
+		return httputil.BadRequest(fmt.Sprintf("read request body: %v", err))
+	}
+
+	var payload model.ArrWebhookPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		log.Printf("arr webhook: invalid JSON: %v", err)
+		return httputil.BadRequest("invalid JSON payload")
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), webhookProcessingTimeout)
+	defer cancel()
+
+	if err := h.arr.ProcessArrWebhook(ctx, &payload); err != nil {
+		log.Printf("arr webhook: %v", err)
+		return httputil.InternalError("failed to process arr webhook", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+	return nil
 }
 
 // HandleJellyfin ingests a notification from the Jellyfin Webhook plugin's

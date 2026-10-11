@@ -71,8 +71,13 @@ Manage your media library and track availability seamlessly:
 - **Yellow Top Border**: Movie is managed and monitored in **Radarr**.
 - **Cyan Top Border**: Series is managed and monitored in **Sonarr**.
 - **Arr Icon Badges**: 18px indicator pills on search and list cards.
-- **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**).
+- **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), or directly from unowned cards in the **Saga & Franchise Hub**.
 - **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, and add media directly to Trackarr with 1-click **+ Add**.
+
+### Webhook Notifications & Download Availability (`/api/webhook/arr/{secret}`):
+- **Real-Time Availability**: Configure Trackarr's Arr webhook URL in Radarr & Sonarr (**Settings ➔ Connect ➔ Webhook**, trigger on *On Download* and *On Upgrade*).
+- **Available Badge**: When a media file finishes downloading/importing, Trackarr updates `downloaded_at` on movies and individual episodes. The **Next Episode Hero** and **Episode Rows** display an emerald **Disponible** / **Available** badge.
+- **Push Alerts**: If enabled in **Admin ➔ Notifications**, a Web Push alert is dispatched immediately when media is ready to watch.
 
 ### Deletion & Import List Exclusions (Dropped Series):
 - **Sonarr Deletion on Drop**: When marking a series as *Dropped* in the edit sheet, an optional checkbox allows deleting the series from Sonarr.

@@ -24,7 +24,7 @@ type DynamicConfigReloader struct {
 	coverSvc       *CoverService
 	worker         *TaskQueueWorker
 	pushSvc        *PushService
-	webhookSecrets func(jellyfin, plex, fallback string)
+	webhookSecrets func(jellyfin, plex, arr, fallback string)
 }
 
 func NewDynamicConfigReloader(
@@ -36,7 +36,7 @@ func NewDynamicConfigReloader(
 	coverSvc *CoverService,
 	worker *TaskQueueWorker,
 	pushSvc *PushService,
-	webhookSecrets func(jellyfin, plex, fallback string),
+	webhookSecrets func(jellyfin, plex, arr, fallback string),
 ) *DynamicConfigReloader {
 	return &DynamicConfigReloader{
 		cfg:            cfg,
@@ -116,6 +116,7 @@ func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
 	geminiKeysRaw := d.getUnsafe("gemini_api_keys")
 	jellyfinSecret := d.getUnsafe("jellyfin_webhook_secret")
 	plexSecret := d.getUnsafe("plex_webhook_secret")
+	arrSecret := d.getUnsafe("arr_webhook_secret")
 	fallbackSecret := d.getUnsafe("webhook_secret")
 	vapidPub := d.getUnsafe("vapid_public_key")
 	vapidPriv := d.getUnsafe("vapid_private_key")
@@ -181,7 +182,7 @@ func (d *DynamicConfigReloader) Reload(ctx context.Context) error {
 
 	// 8. Update Webhook Secrets
 	if d.webhookSecrets != nil {
-		d.webhookSecrets(jellyfinSecret, plexSecret, fallbackSecret)
+		d.webhookSecrets(jellyfinSecret, plexSecret, arrSecret, fallbackSecret)
 	}
 
 	// 9. Update PushService Keys
@@ -217,6 +218,8 @@ func (d *DynamicConfigReloader) getUnsafe(key string) string {
 		return d.cfg.JellyfinWebhookSecret
 	case "plex_webhook_secret":
 		return d.cfg.PlexWebhookSecret
+	case "arr_webhook_secret":
+		return d.cfg.ArrWebhookSecret
 	case "webhook_secret":
 		return d.cfg.WebhookSecret
 	case "radarr_url":

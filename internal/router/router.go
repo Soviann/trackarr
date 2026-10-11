@@ -23,7 +23,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP) //nolint:staticcheck // Chi deprecated RealIP in v5.3
-	r.Use(mw.RedactingLogger("/api/webhook/jellyfin/"))
+	r.Use(mw.RedactingLogger("/api/webhook/jellyfin/", "/api/webhook/plex/", "/api/webhook/arr/"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(mw.SecurityHeaders)
@@ -98,7 +98,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	prowlarrSvc := service.NewProwlarrService(cfg, settingRepo, titleReadRepo, tmdbClient)
 	releasesHandler := handler.NewReleasesHandler(writeDB, prowlarrSvc, titleRepo, taskRepo)
 	covers := handler.NewCoverHandler(cfg.DataDir)
-	webhooks := handler.NewWebhookHandler(jellyfinSvc, plexSvc, cfg.JellyfinWebhookSecret, cfg.PlexWebhookSecret, cfg.WebhookSecret)
+	arrWebhookSvc := service.NewArrWebhookService(writeDB, titleRepo, settingRepo, realPushSvc)
+	webhooks := handler.NewWebhookHandler(jellyfinSvc, plexSvc, arrWebhookSvc, cfg.JellyfinWebhookSecret, cfg.PlexWebhookSecret, cfg.ArrWebhookSecret, cfg.WebhookSecret)
 	push := handler.NewPushHandler(pushSvc)
 	anilistAuth := handler.NewAniListAuthHandler(writeDB, settingRepo, cfg.AniListClientID)
 	tvdbReady := pipeline != nil && pipeline.TVDB() != nil
@@ -118,8 +119,8 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	reloader := service.NewDynamicConfigReloader(
 		cfg, writeDB, settingRepo, pipeline, bgSvc, nil, nil, realPushSvc,
-		func(jellyfin, plex, fallback string) {
-			webhooks.SetSecrets(jellyfin, plex, fallback)
+		func(jellyfin, plex, arr, fallback string) {
+			webhooks.SetSecrets(jellyfin, plex, arr, fallback)
 		},
 	)
 	adminSettings := handler.NewAdminSettingsHandler(writeDB, settingRepo, reloader)
@@ -147,6 +148,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 		webhookRateLimit := mw.RateLimit(ctx, 60, time.Minute)
 		r.With(webhookRateLimit).Post("/webhook/jellyfin/{secret}", httputil.WrapHandler(webhooks.HandleJellyfin))
 		r.With(webhookRateLimit).Post("/webhook/plex/{secret}", httputil.WrapHandler(webhooks.HandlePlex))
+		r.With(webhookRateLimit).Post("/webhook/arr/{secret}", httputil.WrapHandler(webhooks.HandleArr))
 
 		// Calendar iCal feed (unauthenticated, secured by secret token query parameter, rate-limited)
 		calendarRateLimit := mw.RateLimit(ctx, 60, time.Minute)

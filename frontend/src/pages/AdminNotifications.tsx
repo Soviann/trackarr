@@ -11,6 +11,7 @@ interface NotifPrefs {
   notif_rating_prompt: boolean
   notif_dead_task: boolean
   notif_series_ended: boolean
+  notif_media_downloaded: boolean
 }
 
 interface VapidSettingsResponse {
@@ -155,6 +156,11 @@ export function AdminNotifications({ path }: { path?: string }): JSX.Element {
       key: 'notif_series_ended' as const,
       label: t('notificationsSettings.seriesEndedLabel'),
       description: t('notificationsSettings.seriesEndedDesc'),
+    },
+    {
+      key: 'notif_media_downloaded' as const,
+      label: t('notificationsSettings.mediaDownloadedLabel'),
+      description: t('notificationsSettings.mediaDownloadedDesc'),
     },
   ]
 

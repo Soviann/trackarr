@@ -221,6 +221,15 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `sonarr_deleted_at = ?`)
 		args = append(args, *update.SonarrDeletedAt)
 	}
+	switch {
+	case update.SetDownloadedAt:
+		sets = append(sets, `downloaded_at = CURRENT_TIMESTAMP`)
+	case update.ClearDownloadedAt:
+		sets = append(sets, `downloaded_at = NULL`)
+	case update.DownloadedAt != nil:
+		sets = append(sets, `downloaded_at = ?`)
+		args = append(args, *update.DownloadedAt)
+	}
 	if update.ArrIgnored != nil {
 		sets = append(sets, `arr_ignored = ?`)
 		args = append(args, *update.ArrIgnored)
@@ -707,6 +716,15 @@ func (w *TitleWriter) EnsureAnimeAndAniListIDBySeason(ctx context.Context, seaso
 	query := `UPDATE titles SET is_anime = 1, anilist_id = COALESCE(anilist_id, ?) WHERE id = (SELECT title_id FROM seasons WHERE id = ?)`
 	if _, err := w.tx.ExecContext(ctx, query, aniListID, seasonID); err != nil {
 		return fmt.Errorf("ensure anime and anilist id by season: %w", err)
+	}
+	return nil
+}
+
+// MarkDownloaded updates the downloaded_at timestamp of a title.
+func (w *TitleWriter) MarkDownloaded(ctx context.Context, id int64, downloadedAt time.Time) error {
+	query := `UPDATE titles SET downloaded_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	if _, err := w.tx.ExecContext(ctx, query, downloadedAt.Format("2006-01-02 15:04:05"), id); err != nil {
+		return fmt.Errorf("mark title downloaded: %w", err)
 	}
 	return nil
 }

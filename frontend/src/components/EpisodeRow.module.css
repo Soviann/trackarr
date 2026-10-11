@@ -104,6 +104,14 @@
   margin-left: auto;
 }
 
+.downloadedIndicator {
+  display: inline-flex;
+  align-items: center;
+  color: #10b981;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
 .toggle {
   cursor: pointer;
   flex-shrink: 0;

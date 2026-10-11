@@ -23,6 +23,7 @@ type Config struct {
 	VAPIDSubject           string
 	JellyfinWebhookSecret  string
 	PlexWebhookSecret      string
+	ArrWebhookSecret       string
 	WebhookSecret          string
 	RadarrURL              string
 	RadarrAPIKey           string
@@ -51,6 +52,7 @@ func Load() (*Config, error) {
 		VAPIDSubject:           os.Getenv("VAPID_SUBJECT"),
 		JellyfinWebhookSecret:  os.Getenv("JELLYFIN_WEBHOOK_SECRET"),
 		PlexWebhookSecret:      os.Getenv("PLEX_WEBHOOK_SECRET"),
+		ArrWebhookSecret:       os.Getenv("ARR_WEBHOOK_SECRET"),
 		WebhookSecret:          os.Getenv("WEBHOOK_SECRET"),
 		RadarrURL:              os.Getenv("RADARR_URL"),
 		RadarrAPIKey:           os.Getenv("RADARR_API_KEY"),

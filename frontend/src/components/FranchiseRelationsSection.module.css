@@ -512,23 +512,60 @@
   border-radius: 4px;
 }
 
-.statusBadgeAdd {
-  font-size: 9px;
+.actionBtnAdd {
+  font-size: 10px;
   font-weight: 600;
   color: var(--accent);
   background: rgba(99, 102, 241, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  transition: background-color 0.15s, color 0.15s;
+  transition: all 0.15s ease;
 }
 
-.itemCard:hover .statusBadgeAdd {
+.actionBtnAdd:hover:not(:disabled) {
   background: var(--accent);
   color: #ffffff;
+}
+
+.actionBtnAdd:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.actionBtnArr {
+  font-size: 10px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.actionBtnArr:hover:not(:disabled) {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.actionBtnArr:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .extLink {

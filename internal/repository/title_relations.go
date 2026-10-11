@@ -86,13 +86,13 @@ func (r *TitleRepository) loadTitleRelations(titles []model.Title) ([]model.Titl
 	// 3. Bulk load episodes
 	if len(seasonIDs) > 0 {
 		epInClause := strings.Join(seasonPlaceholders, ",")
-		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, external_source_id FROM episodes WHERE season_id IN (`+epInClause+`) ORDER BY season_id, episode`, seasonArgs...)
+		epRows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, downloaded_at, external_source_id FROM episodes WHERE season_id IN (`+epInClause+`) ORDER BY season_id, episode`, seasonArgs...)
 		if err != nil {
 			return nil, fmt.Errorf("get episodes bulk: %w", err)
 		}
 		for epRows.Next() {
 			var e model.Episode
-			if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.ExternalSourceID); err != nil {
+			if err := epRows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.DownloadedAt, &e.ExternalSourceID); err != nil {
 				epRows.Close()
 				return nil, fmt.Errorf("scan episode: %w", err)
 			}
@@ -202,10 +202,10 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 
 	// 3. Bulk load next unwatched episode using window function (SQLite 3.25+)
 	nextEpRows, err := r.db.Query(`
-		SELECT title_id, ep_id, season_id, episode_number, season_number, ep_name, ep_air_date
+		SELECT title_id, ep_id, season_id, episode_number, season_number, ep_name, ep_air_date, ep_downloaded_at
 		FROM (
 			SELECT s.title_id, e.id AS ep_id, e.season_id, e.episode AS episode_number, s.season_number,
-			       e.name AS ep_name, e.air_date AS ep_air_date,
+			       e.name AS ep_name, e.air_date AS ep_air_date, e.downloaded_at AS ep_downloaded_at,
 				   ROW_NUMBER() OVER (PARTITION BY s.title_id ORDER BY s.season_number, e.episode) as rn
 			FROM episodes e
 			JOIN seasons s ON s.id = e.season_id
@@ -217,7 +217,9 @@ func (r *TitleRepository) loadTitleRelationsLight(titles []model.Title) ([]model
 		for nextEpRows.Next() {
 			var titleID int64
 			var ne model.NextEpisode
-			if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate); err == nil {
+			var downloadedAtStr *string
+			if err := nextEpRows.Scan(&titleID, &ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate, &downloadedAtStr); err == nil {
+				ne.DownloadedAt = parseSQLiteTime(downloadedAtStr)
 				if isUnairedOrTBA(ne.Name, ne.AirDate, today) {
 					ne.IsTBA = true
 				}
