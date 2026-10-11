@@ -9,6 +9,7 @@ import (
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
+	"github.com/Soviann/trackarr/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -174,4 +175,44 @@ func TestProcessJellyfinWebhook_EpisodeProviderIDsNotSetAsSeriesIDs(t *testing.T
 	assert.Equal(t, "The Appraiser Series", show.PrimaryName())
 	assert.Nil(t, show.IMDBID, "Episode IMDb ID must not be assigned to series row")
 	assert.Nil(t, show.TVDBID, "Episode TVDB ID must not be assigned to series row")
+}
+
+func TestProcessJellyfinWebhook_EpisodeDifferentYearDoesNotHijackExistingSeries(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	// Pre-existing series from 1965 in plan_to_watch
+	existing1965ID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        1965,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{
+		{Name: "Sherlock Holmes", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType:   "PlaybackStop",
+		ItemType:           "Episode",
+		Name:               "A Scandal in Bohemia",
+		Year:               "1984",
+		PlayedToCompletion: "True",
+		SeriesName:         "Sherlock Holmes",
+		SeriesID:           "jf-series-1984-guid",
+		Season:             "1",
+		Episode:            "1",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	// Check 1965 series: must NOT be hijacked
+	t1965, err := env.titleRepo.GetByID(existing1965ID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusPlanToWatch, t1965.Status, "1965 series must remain plan_to_watch")
+	assert.Nil(t, t1965.ExternalSourceID, "1965 series must not receive 1984 series external source ID")
+
+	// Total titles must now be 2 (the 1965 series + a separate 1984 series)
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	assert.Len(t, res.Titles, 2, "must create a distinct series for 1984 rather than hijacking 1965")
 }
