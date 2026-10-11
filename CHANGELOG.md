@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.13] — 2026-10-11
+
 ### Ajouté
 - **Hover Card Desktop au survol des jaquettes (`UX-1` / Lot 3)** :
   - **Aperçu contextuel instantané (`PosterHoverCard`)** : Bulle contextuelle flottante déclenchée au survol des cartes jaquettes sur grand écran (`@media (hover: hover)`) après une temporisation de 280ms pour éviter les apparitions intempestives lors d'un défilement rapide.
