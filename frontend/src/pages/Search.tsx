@@ -15,6 +15,7 @@ import { ArrBadge } from '../components/ArrBadge'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { BottomSheet } from '../components/BottomSheet'
 import { CoverImage } from '../components/CoverImage'
+import { ExternalLinks } from '../components/ExternalLinks'
 import { PosterCard } from '../components/PosterCard'
 import { SearchBar } from '../components/SearchBar'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -220,7 +221,7 @@ export function Search({
           (getName(t).toLowerCase() === item.title.toLowerCase() && (!item.year || !t.year || t.year === item.year))
       )
       if (localHit) {
-        return { ...item, localTitleId: localHit.id }
+        return { ...item, localTitleId: localHit.id, imdbId: localHit.imdb_id ?? undefined }
       }
       return item
     })
@@ -493,7 +494,12 @@ export function Search({
                     <div className={s.discoveryInfo}>
                       <div className={s.discoveryHeader}>
                         <span className={s.discoveryTitle}>{r.title}</span>
-                        <span className={s.discoveryBadge}>{r.source}</span>
+                        <ExternalLinks
+                          tmdbId={r.tmdbId}
+                          anilistId={r.anilistId}
+                          imdbId={r.imdbId}
+                          type={r.type}
+                        />
                       </div>
                       <div className={s.discoveryMeta}>
                         {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}

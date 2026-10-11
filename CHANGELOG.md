@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Liens d'inspection externes directs sans perte de contexte (`SEARCH-1` / Lot 2)** :
+  - **Puces d'inspection externes discrètes (`ExternalLinks`)** : Ajout de liens cliquables (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) sur chaque carte de résultat de recherche et de découverte (`Add.tsx` et `Search.tsx`).
+  - **Attributs stricts et préservation de l'état** : Les liens s'ouvrent en nouvel onglet (`target="_blank" rel="noopener noreferrer"`) avec arrêt de propagation d'événement (`e.stopPropagation()`), garantissant la conservation intégrale de la saisie utilisateur, des filtres actifs et du défilement dans l'onglet Trackarr.
+  - **Stylisation harmonieuse et conformité i18n** : Puces stylisées selon les tokens de couleur officiels (`--brand-tmdb`, `--brand-anilist`, `--brand-imdb`) avec labels ARIA et tooltips localisés en anglais et français.
+
 ## [v1.26.11] — 2026-10-11
 
 ### Ajouté

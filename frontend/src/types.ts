@@ -88,6 +88,7 @@ export interface DiscoveryItem {
   source: 'TMDB' | 'AniList'
   tmdbId?: number
   anilistId?: number
+  imdbId?: string | null
   localTitleId?: number
   adding?: boolean
 }

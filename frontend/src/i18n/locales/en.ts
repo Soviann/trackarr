@@ -60,6 +60,7 @@ export const en = {
     notFound: 'Not found',
     retry: 'Retry',
     select: 'Select',
+    openExternal: 'Open on {source}',
   },
   add: {
     title: 'Add Title',

@@ -182,17 +182,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.sourceBadge {
-  font-size: 9px;
-  font-family: monospace;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--bg-elev2);
-  color: var(--accent);
-  font-weight: 600;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .subRow {
