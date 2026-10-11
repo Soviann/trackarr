@@ -577,7 +577,7 @@ func TestTitleRepository_FindByNameAndType(t *testing.T) {
 		assert.Equal(t, "Commando", got.PrimaryName())
 	})
 
-	t.Run("prioritizes exact year match", func(t *testing.T) {
+	t.Run("matches exact year when multiple titles exist", func(t *testing.T) {
 		got1990, err := repo.FindByNameAndType("The Flash", model.TitleTypeSeries, 1990)
 		require.NoError(t, err)
 		assert.Equal(t, 1990, got1990.Year)
@@ -585,6 +585,17 @@ func TestTitleRepository_FindByNameAndType(t *testing.T) {
 		got2024, err := repo.FindByNameAndType("The Flash", model.TitleTypeSeries, 2024)
 		require.NoError(t, err)
 		assert.Equal(t, 2024, got2024.Year)
+	})
+
+	t.Run("matches by name and type when year is 0 (unspecified)", func(t *testing.T) {
+		got, err := repo.FindByNameAndType("WildC.A.T.S: Covert Action Teams", model.TitleTypeSeries, 0)
+		require.NoError(t, err)
+		assert.Equal(t, "WildC.A.T.S: Covert Action Teams", got.PrimaryName())
+	})
+
+	t.Run("does not match title with different year when year is specified", func(t *testing.T) {
+		_, err := repo.FindByNameAndType("The Flash", model.TitleTypeSeries, 2014)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
 	})
 
 	t.Run("returns ErrNoRows on empty name or non-existing title", func(t *testing.T) {

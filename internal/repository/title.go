@@ -482,8 +482,8 @@ func (r *TitleRepository) FindByExternalID(imdbID *string, tmdbID *int64, extern
 }
 
 // FindByNameAndType looks up an existing title by exact (case-insensitive) name
-// match across all its title_names, filtered by title type. If year > 0, exact
-// year matches are prioritized over other years.
+// match across all its title_names, filtered by title type. If year > 0, an exact
+// year match is required to prevent cross-matching adaptations or reboots across decades.
 func (r *TitleRepository) FindByNameAndType(name string, titleType model.TitleType, year int) (*model.Title, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -492,12 +492,18 @@ func (r *TitleRepository) FindByNameAndType(name string, titleType model.TitleTy
 
 	query := `SELECT t.id FROM titles t
 JOIN title_names tn ON tn.title_id = t.id
-WHERE tn.name = ? COLLATE NOCASE AND t.type = ?
-ORDER BY (CASE WHEN t.year = ? THEN 0 ELSE 1 END), t.id ASC
-LIMIT 1`
+WHERE tn.name = ? COLLATE NOCASE AND t.type = ?`
+	args := []any{name, titleType}
+
+	if year > 0 {
+		query += ` AND t.year = ?`
+		args = append(args, year)
+	}
+
+	query += ` ORDER BY t.id ASC LIMIT 1`
 
 	var id int64
-	if err := r.db.QueryRow(query, name, titleType, year).Scan(&id); err != nil {
+	if err := r.db.QueryRow(query, args...).Scan(&id); err != nil {
 		return nil, err
 	}
 
