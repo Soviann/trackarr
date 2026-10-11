@@ -313,7 +313,12 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  clear: () =>
+  clear: () => {
+    useTitleStore.setState({
+      filter: {},
+      titles: [],
+      _fetchGen: useTitleStore.getState()._fetchGen + 1,
+    })
     set({
       query: '',
       results: [],
@@ -323,5 +328,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       hasMore: false,
       error: null,
       searchOnTMDB: false,
-    }),
+    })
+  },
 }))

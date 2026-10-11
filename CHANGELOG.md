@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.9] — 2026-10-11
+
+### Corrigé
+- **Préservation de la recherche lors de la consultation d'un titre et réinitialisation conjointe des filtres** :
+  - **Conservation de l'état de recherche lors de l'accès aux fiches détaillées** : Le champ de recherche, ses résultats, les découvertes externes et les filtres actifs ne sont plus effacés lors de la consultation d'un titre (`/title/:id`) ou d'une personne (`/person/:name`) depuis la recherche. L'utilisation du bouton précédent du navigateur ou du bouton retour de l'interface restaure fidèlement la recherche et sa position de défilement.
+  - **Réinitialisation synchronisée des filtres et de la recherche** : Lors de la sortie explicite de la recherche vers une autre section principale (Collection, Calendrier, En cours, etc.), lors de l'effacement volontaire du champ ou lors de l'ouverture d'une nouvelle recherche (notamment via le bouton Explorer de la barre de navigation ou de la barre latérale), les filtres du tiroir sont désormais remis à zéro en même temps que le texte de recherche pour débuter systématiquement sur une page vierge.
+
 ## [v1.26.8] — 2026-10-11
 
 ### Corrigé
