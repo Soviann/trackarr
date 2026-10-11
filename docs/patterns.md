@@ -21,6 +21,7 @@
 - Deployment & Updates (3 Options): `docs/deployment.md`
 - Maintenance & Operations: `docs/maintenance.md`
 - Design Revamp Roadmap: `docs/roadmap-design-revamp.md`
+- Evolution & Performance Roadmap (Q4 2026): `docs/roadmap-2026-q4.md`
 - LLM Context Reference: `docs/llm.md`
 
 ---
