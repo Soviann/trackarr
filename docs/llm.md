@@ -89,6 +89,10 @@
     - Search cards render as semantic `<a>` links for native middle-click, `Cmd/Ctrl+click` new tab navigation, and `:hover` elevation.
     - 150ms debounce on local query dispatches prevents SQLite FTS5 spam.
     - Multi-source external discovery (TMDB & AniList) persists in `useSearchStore` (`discoveryResults`, `loadingDiscovery`) across route transitions.
+19. **AI Candidate Disambiguation & Episode-Aware Matching**:
+    - `searchTMDB` multi-candidate AI disambiguation: when a search returns multiple results and Gemini is configured, `DisambiguateCandidates` evaluates up to 5 candidates against source name, year, and episode clues. If confidence is high or medium, the disambiguated candidate's TMDB ID is selected.
+    - Webhook episode clues: Jellyfin and Plex scrobbles for episodes forward `EpisodeHints` (episode name, season number, episode number, IMDb ID) through `CreateFromScrobble` to `VerifyMatch` and `DisambiguateCandidates`, confirming the exact series adaptation.
+    - Title ambiguity guard: `FindByNameAndType(name, type, year)` enforces exact year matching when `year > 0`. When `year <= 0`, it queries with `LIMIT 2` and returns `sql.ErrNoRows` if `count > 1` to prevent arbitrary series hijacking across distinct adaptations.
 
 ---
 

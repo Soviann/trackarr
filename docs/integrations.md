@@ -43,6 +43,9 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 2. Set URL to `https://<your-trackarr-url>/api/webhook/plex/<secret>` (where `<secret>` matches `PLEX_WEBHOOK_SECRET` or your configured token, also visible and copyable in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
 3. Scrobble events (`media.scrobble`) will be parsed automatically.
 
+### Automatic Series Disambiguation via Episode Clues:
+When an incoming episode scrobble belongs to a series that does not yet exist in your library, Trackarr extracts episode metadata (`Name`, `SeasonNumber`, `EpisodeNumber`, and IMDb ID). If TMDB search returns multiple candidate series (e.g. multiple adaptations sharing the same name from different decades), Trackarr invokes Gemini AI with these episode clues to select and verify the exact series before adding it to your library.
+
 ---
 
 ## 2. AniList Synchronization
