@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.12] — 2026-10-11
+
 ### Ajouté
 - **Liens d'inspection externes directs sans perte de contexte (`SEARCH-1` / Lot 2)** :
   - **Puces d'inspection externes discrètes (`ExternalLinks`)** : Ajout de liens cliquables (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) sur chaque carte de résultat de recherche et de découverte (`Add.tsx` et `Search.tsx`).
