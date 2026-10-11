@@ -190,7 +190,13 @@ func (s *JellyfinService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, jf
 		// For an episode scrobble, ids contains episode-level provider IDs.
 		// Pass empty ExternalIDs so CreateFromScrobble uses seriesName + year in the
 		// matching pipeline to resolve true series-level external IDs.
-		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching)
+		epHints := matching.EpisodeHints{
+			EpisodeName:   jf.Name,
+			SeasonNumber:  seasonNum,
+			EpisodeNumber: episodeNum,
+			EpisodeIMDBID: ids.IMDB,
+		}
+		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching, epHints)
 		if createErr != nil {
 			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}

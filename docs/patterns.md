@@ -66,7 +66,7 @@
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `FindByNameAndType`, `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -88,6 +88,7 @@
 | Service | File | Purpose | Deep Spec |
 |---|---|---|---|
 | `TitleService` | `internal/service/title.go` | Title CRUD, matching orchestration, rematching, merges | `docs/dev/matching-pipeline.md` |
+| `Pipeline` | `internal/service/matching/pipeline.go` | Multi-source media matching pipeline with AI candidate disambiguation and verification | `docs/dev/matching-pipeline.md` |
 | `LibraryService` | `internal/service/library.go` | User scrobbles, auto-completion, rating prompts, notifications | `docs/dev/database-model.md` |
 | `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` + `PlayedToCompletion`) | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, multipart + JSON fallback) | `docs/integrations.md` |

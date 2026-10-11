@@ -41,6 +41,26 @@ func NewGeminiClient(apiKeys []string) *GeminiClient {
 // SetBaseURL overrides the Gemini base URL (for tests).
 func (c *GeminiClient) SetBaseURL(u string) { c.apiURL = u }
 
+type EpisodeHints struct {
+	EpisodeName   string
+	SeasonNumber  int
+	EpisodeNumber int
+	EpisodeIMDBID string
+}
+
+type DisambiguationCandidate struct {
+	TMDBID   int64  `json:"tmdb_id"`
+	Title    string `json:"title"`
+	Year     int    `json:"year"`
+	Overview string `json:"overview"`
+}
+
+type DisambiguationResult struct {
+	MatchedTMDBID int64  `json:"matched_tmdb_id"`
+	Confidence    string `json:"confidence"` // "high", "medium", "low", "none"
+	Reason        string `json:"reason"`
+}
+
 type MatchVerification struct {
 	Confirmed  bool   `json:"confirmed"`
 	Confidence string `json:"confidence"` // "high", "medium", "low"
@@ -68,17 +88,38 @@ type MatchCandidate struct {
 }
 
 // VerifyMatch asks Gemini to verify whether a candidate match is correct for the source.
-func (c *GeminiClient) VerifyMatch(ctx context.Context, source PlexInfo, candidate MatchCandidate) (*MatchVerification, error) {
+func (c *GeminiClient) VerifyMatch(ctx context.Context, source PlexInfo, candidate MatchCandidate, hints ...EpisodeHints) (*MatchVerification, error) {
 	if c == nil {
 		return nil, nil
 	}
+
+	var episodeSection string
+	if len(hints) > 0 {
+		h := hints[0]
+		if h.EpisodeName != "" || h.SeasonNumber > 0 || h.EpisodeNumber > 0 || h.EpisodeIMDBID != "" {
+			var sb strings.Builder
+			sb.WriteString("\nEpisode clues (from scrobble):\n")
+			if h.EpisodeName != "" {
+				fmt.Fprintf(&sb, "- Episode Name: %q\n", h.EpisodeName)
+			}
+			if h.SeasonNumber > 0 || h.EpisodeNumber > 0 {
+				fmt.Fprintf(&sb, "- Season: %d, Episode: %d\n", h.SeasonNumber, h.EpisodeNumber)
+			}
+			if h.EpisodeIMDBID != "" {
+				fmt.Fprintf(&sb, "- Episode IMDb ID: %s\n", h.EpisodeIMDBID)
+			}
+			sb.WriteString("Use these episode clues to confirm if this specific episode belongs to the candidate's catalog.\n")
+			episodeSection = sb.String()
+		}
+	}
+
 	prompt := fmt.Sprintf(`You are a media matching verification system. Determine if the candidate match is correct for the source title.
 
 Source (from Plex):
 - Title: %q
 - Year: %d
 - Type: %s
-
+%s
 Candidate match:
 - Title: %q
 - Year: %d
@@ -88,6 +129,7 @@ Candidate match:
 Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 {"confirmed": true/false, "confidence": "high"/"medium"/"low", "reason": "brief explanation"}`,
 		source.Title, source.Year, source.Type,
+		episodeSection,
 		candidate.Title, candidate.Year, candidate.TMDBID, candidate.IMDBID)
 
 	body, err := c.generate(ctx, prompt)
@@ -98,6 +140,68 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 	var result MatchVerification
 	if err := parseJSONFromResponse(body, &result); err != nil {
 		return nil, fmt.Errorf("parse verify response: %w", err)
+	}
+	return &result, nil
+}
+
+// DisambiguateCandidates asks Gemini to select the best match among multiple candidate search results.
+func (c *GeminiClient) DisambiguateCandidates(ctx context.Context, source PlexInfo, candidates []DisambiguationCandidate, hints EpisodeHints) (*DisambiguationResult, error) {
+	if c == nil || len(candidates) == 0 {
+		return nil, nil
+	}
+
+	var sb strings.Builder
+	sb.WriteString("You are a media matching disambiguation system. Determine which candidate from TMDB is the exact correct match for the source title.\n\n")
+	sb.WriteString("Source title:\n")
+	fmt.Fprintf(&sb, "- Title: %q\n", source.Title)
+	if source.Year > 0 {
+		fmt.Fprintf(&sb, "- Year: %d\n", source.Year)
+	}
+	if source.Type != "" {
+		fmt.Fprintf(&sb, "- Type: %s\n", source.Type)
+	}
+
+	if hints.EpisodeName != "" || hints.SeasonNumber > 0 || hints.EpisodeNumber > 0 || hints.EpisodeIMDBID != "" {
+		sb.WriteString("\nEpisode clues (from scrobble):\n")
+		if hints.EpisodeName != "" {
+			fmt.Fprintf(&sb, "- Episode Title: %q\n", hints.EpisodeName)
+		}
+		if hints.SeasonNumber > 0 || hints.EpisodeNumber > 0 {
+			fmt.Fprintf(&sb, "- Season: %d, Episode: %d\n", hints.SeasonNumber, hints.EpisodeNumber)
+		}
+		if hints.EpisodeIMDBID != "" {
+			fmt.Fprintf(&sb, "- Episode IMDb ID: %s\n", hints.EpisodeIMDBID)
+		}
+		sb.WriteString("Use these episode clues to determine which candidate series this specific episode belongs to (e.g. check which candidate series has this episode name, episode number, or episode IMDb ID in its catalog).\n")
+	}
+
+	sb.WriteString("\nCandidate matches:\n")
+	for i, cand := range candidates {
+		fmt.Fprintf(&sb, "Candidate %d:\n", i+1)
+		fmt.Fprintf(&sb, "- TMDB ID: %d\n", cand.TMDBID)
+		fmt.Fprintf(&sb, "- Title: %q\n", cand.Title)
+		fmt.Fprintf(&sb, "- Year: %d\n", cand.Year)
+		if cand.Overview != "" {
+			fmt.Fprintf(&sb, "- Overview: %s\n", cand.Overview)
+		}
+	}
+
+	sb.WriteString(`
+Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
+{
+  "matched_tmdb_id": <tmdb_id integer of best candidate, or 0 if none match>,
+  "confidence": "high"/"medium"/"low"/"none",
+  "reason": "brief explanation"
+}`)
+
+	body, err := c.generate(ctx, sb.String())
+	if err != nil {
+		return nil, fmt.Errorf("disambiguate candidates: %w", err)
+	}
+
+	var result DisambiguationResult
+	if err := parseJSONFromResponse(body, &result); err != nil {
+		return nil, fmt.Errorf("parse disambiguation response: %w", err)
 	}
 	return &result, nil
 }

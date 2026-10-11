@@ -32,9 +32,19 @@ graph TD
 |---|---|---|---|
 | 1 | `strategy_plexids.go` | Extracts TMDB/IMDb IDs provided in Jellyfin webhook metadata. | `MatchSourcePlexIDs` (`plex_ids`) |
 | 2 | `strategy_crossref.go` | Queries `anime-offline-database` by title/slug. | `MatchSourceCrossRef` (`crossref`) |
-| 3 | `strategy_tmdb.go` | Textual search against TMDB by title and release year. | `MatchSourceTMDBSearch` (`tmdb_search`) |
+| 3 | `strategy_tmdb.go` | Textual search against TMDB by title and release year. Disambiguates with AI when multiple candidates exist. | `MatchSourceTMDBSearch` (`tmdb_search`) |
 | 4 | `strategy_anilist.go` | GraphQL search against AniList (anime only). | `MatchSourceAniListSearch` (`anilist_search`) |
 | 5 | `strategy_gemini_fuzzy.go` | AI fuzzy resolution and verification when search results are ambiguous. | `MatchSourceGeminiFuzzy` (`gemini_fuzzy`) |
+
+## Multi-Candidate AI Disambiguation & Episode Hints
+
+When scrobbling an episode for a series not yet matched in Trackarr:
+- Webhooks transmit `EpisodeHints` (Episode name, season number, episode number, episode IMDb ID).
+- In TMDB search (`searchTMDB`), when `len(searchResults) > 1` and `p.gemini != nil`:
+  - `p.gemini.DisambiguateCandidates` is called with the top candidates (up to 5) alongside the source title, year, and `EpisodeHints`.
+  - If Gemini selects a candidate with `ConfidenceHigh` or `ConfidenceMedium`, that candidate's TMDB ID is selected. Otherwise, falls back to `searchResults[0]`.
+- In `verifyAndEnrich`: `input.EpisodeHints` are forwarded to `gemini.VerifyMatch` to evaluate whether the scrobbled episode belongs to the candidate series catalog.
+- In `repository.TitleRepository.FindByNameAndType`: when `year <= 0`, counts distinct matching titles. If `count > 1`, returns `sql.ErrNoRows` to guard against arbitrary `LIMIT 1` selection when multiple local titles exist, allowing online matching with episode hints to disambiguate.
 
 ## Verification & Auto-Confirm Rules
 

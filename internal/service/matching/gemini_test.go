@@ -187,3 +187,120 @@ func TestParseJSONFromResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestDisambiguateCandidates_SelectsCorrectCandidate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req geminiRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NotEmpty(t, req.Contents)
+		require.NotEmpty(t, req.Contents[0].Parts)
+		prompt := req.Contents[0].Parts[0].Text
+
+		assert.Contains(t, prompt, "Sherlock Holmes")
+		assert.Contains(t, prompt, "Candidate 1")
+		assert.Contains(t, prompt, "Candidate 2")
+		assert.Contains(t, prompt, "100")
+		assert.Contains(t, prompt, "200")
+
+		_, _ = w.Write(geminiOKResponse(`{"matched_tmdb_id": 200, "confidence": "high", "reason": "Jeremy Brett 1984 series is the exact match"}`))
+	}))
+	defer server.Close()
+
+	client := NewGeminiClient([]string{"test-key-1"})
+	client.apiURL = server.URL
+
+	candidates := []DisambiguationCandidate{
+		{TMDBID: 100, Title: "Sherlock Holmes", Year: 1965, Overview: "1965 BBC series"},
+		{TMDBID: 200, Title: "The Adventures of Sherlock Holmes", Year: 1984, Overview: "1984 Granada series"},
+	}
+
+	result, err := client.DisambiguateCandidates(
+		context.Background(),
+		PlexInfo{Title: "Sherlock Holmes", Year: 1984, Type: "series"},
+		candidates,
+		EpisodeHints{},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, int64(200), result.MatchedTMDBID)
+	assert.Equal(t, "high", result.Confidence)
+	assert.Contains(t, result.Reason, "1984")
+}
+
+func TestDisambiguateCandidates_WithEpisodeHints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req geminiRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NotEmpty(t, req.Contents)
+		prompt := req.Contents[0].Parts[0].Text
+
+		assert.Contains(t, prompt, "Un scandale en Bohême")
+		assert.Contains(t, prompt, "Season: 1, Episode: 1")
+		assert.Contains(t, prompt, "tt0506445")
+
+		_, _ = w.Write(geminiOKResponse(`{"matched_tmdb_id": 200, "confidence": "high", "reason": "S01E01 Un scandale en Bohême belongs to Granada 1984"}`))
+	}))
+	defer server.Close()
+
+	client := NewGeminiClient([]string{"test-key-1"})
+	client.apiURL = server.URL
+
+	candidates := []DisambiguationCandidate{
+		{TMDBID: 100, Title: "Sherlock Holmes", Year: 1965, Overview: "1965 BBC series"},
+		{TMDBID: 200, Title: "The Adventures of Sherlock Holmes", Year: 1984, Overview: "1984 Granada series"},
+	}
+	hints := EpisodeHints{
+		EpisodeName:   "Un scandale en Bohême",
+		SeasonNumber:  1,
+		EpisodeNumber: 1,
+		EpisodeIMDBID: "tt0506445",
+	}
+
+	result, err := client.DisambiguateCandidates(
+		context.Background(),
+		PlexInfo{Title: "Sherlock Holmes", Year: 0, Type: "series"},
+		candidates,
+		hints,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, int64(200), result.MatchedTMDBID)
+	assert.Equal(t, "high", result.Confidence)
+}
+
+func TestVerifyMatch_WithEpisodeHints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req geminiRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NotEmpty(t, req.Contents)
+		prompt := req.Contents[0].Parts[0].Text
+
+		assert.Contains(t, prompt, "A Scandal in Bohemia")
+		assert.Contains(t, prompt, "Season: 1, Episode: 1")
+		assert.Contains(t, prompt, "tt0506445")
+
+		_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "Episode confirms Granada series"}`))
+	}))
+	defer server.Close()
+
+	client := NewGeminiClient([]string{"test-key-1"})
+	client.apiURL = server.URL
+
+	hints := EpisodeHints{
+		EpisodeName:   "A Scandal in Bohemia",
+		SeasonNumber:  1,
+		EpisodeNumber: 1,
+		EpisodeIMDBID: "tt0506445",
+	}
+
+	result, err := client.VerifyMatch(
+		context.Background(),
+		PlexInfo{Title: "Sherlock Holmes", Year: 1984, Type: "series"},
+		MatchCandidate{Title: "The Adventures of Sherlock Holmes", Year: 1984, TMDBID: 200},
+		hints,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Confirmed)
+	assert.Equal(t, "high", result.Confidence)
+}

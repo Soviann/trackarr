@@ -36,9 +36,14 @@ func (s *TitleService) SetArrService(arrSvc *ArrService) {
 // CreateFromScrobble constructs a new title from scrobble metadata and starts matching.
 // Caller owns the transaction so the create (or the "existing title found"
 // update-in-place branch) shares atomicity with the surrounding webhook work.
-func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title string, year int, ids ExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus) (int64, error) {
+func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title string, year int, ids ExternalIDs, titleType model.TitleType, ratingKey string, guids []*url.URL, status model.TitleStatus, hints ...matching.EpisodeHints) (int64, error) {
 	titles := repository.NewTitleRepository(tx)
 	writer := repository.NewTitleWriter(tx)
+
+	var epHints matching.EpisodeHints
+	if len(hints) > 0 {
+		epHints = hints[0]
+	}
 
 	// Step 0: Check if an existing title in our database matches by external IDs
 	// or exact name and type before making online external API/LLM calls.
@@ -88,12 +93,13 @@ func (s *TitleService) CreateFromScrobble(ctx context.Context, tx *sql.Tx, title
 
 	if s.pipeline != nil {
 		result, err := s.pipeline.Run(ctx, matching.MatchInput{
-			Title:  title,
-			Year:   year,
-			Type:   titleType,
-			IMDBID: ids.IMDB,
-			TMDBID: ids.TMDB,
-			TVDBID: ids.TVDB,
+			Title:        title,
+			Year:         year,
+			Type:         titleType,
+			IMDBID:       ids.IMDB,
+			TMDBID:       ids.TMDB,
+			TVDBID:       ids.TVDB,
+			EpisodeHints: epHints,
 		})
 		if err == nil {
 			t.MatchStatus = result.MatchStatus

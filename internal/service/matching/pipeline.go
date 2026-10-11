@@ -150,6 +150,8 @@ type MatchInput struct {
 	AniListID int64
 	// Force anime detection (e.g. from Simkl section)
 	IsAnime bool
+	// Episode hints from scrobble webhook
+	EpisodeHints EpisodeHints
 }
 
 // Run executes the matching pipeline by iterating over p.strategies in order.
@@ -270,9 +272,41 @@ func (p *Pipeline) searchTMDB(ctx context.Context, input MatchInput, result *Mat
 		return false
 	}
 
-	// Take the first result
-	best := searchResults[0]
-	result.TMDBID = best.ID
+	bestID := searchResults[0].ID
+	if len(searchResults) > 1 && p.gemini != nil {
+		maxCandidates := 5
+		if len(searchResults) < maxCandidates {
+			maxCandidates = len(searchResults)
+		}
+		candidates := make([]DisambiguationCandidate, 0, maxCandidates)
+		for i := 0; i < maxCandidates; i++ {
+			c := searchResults[i]
+			candidates = append(candidates, DisambiguationCandidate{
+				TMDBID:   c.ID,
+				Title:    c.DisplayTitle(),
+				Year:     c.Year(),
+				Overview: c.Overview,
+			})
+		}
+		sourceInfo := PlexInfo{
+			Title: input.Title,
+			Year:  input.Year,
+			Type:  string(input.Type),
+		}
+		disambig, err := p.gemini.DisambiguateCandidates(ctx, sourceInfo, candidates, input.EpisodeHints)
+		if err != nil {
+			log.Printf("TMDB disambiguation failed: %v", err)
+		} else if disambig != nil && (strings.EqualFold(disambig.Confidence, ConfidenceHigh) || strings.EqualFold(disambig.Confidence, ConfidenceMedium)) && disambig.MatchedTMDBID != 0 {
+			for _, cand := range candidates {
+				if cand.TMDBID == disambig.MatchedTMDBID {
+					bestID = cand.TMDBID
+					break
+				}
+			}
+		}
+	}
+
+	result.TMDBID = bestID
 	return true
 }
 
@@ -366,6 +400,7 @@ func (p *Pipeline) verifyAndEnrich(ctx context.Context, input MatchInput, result
 			ctx,
 			PlexInfo{Title: input.Title, Year: input.Year, Type: string(input.Type)},
 			MatchCandidate{Title: candidateTitle, Year: candidateYear, TMDBID: result.TMDBID, IMDBID: result.IMDBID},
+			input.EpisodeHints,
 		)
 		switch {
 		case err != nil:

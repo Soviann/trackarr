@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Soviann/trackarr/internal/model"
@@ -648,4 +649,86 @@ func TestResolvePlaceholderPrimary(t *testing.T) {
 		require.Len(t, names, 1)
 		assert.True(t, names[0].IsPrimary)
 	})
+}
+
+func TestPipeline_MultiCandidateDisambiguation(t *testing.T) {
+	dataDir := t.TempDir()
+
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbSearchResponse{
+			Results: []TMDBSearchResult{
+				{ID: 100, Name: "Sherlock Holmes", FirstAirDate: "1965-01-01"},
+				{ID: 200, Name: "The Adventures of Sherlock Holmes", FirstAirDate: "1984-04-24"},
+			},
+		})
+	})
+	tmdbMux.HandleFunc("/tv/200", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(TMDBTVDetails{
+			ID: 200, Name: "The Adventures of Sherlock Holmes", FirstAirDate: "1984-04-24",
+			ExternalIDs: &struct {
+				IMDBID string `json:"imdb_id"`
+				TVDBID int64  `json:"tvdb_id"`
+			}{IMDBID: "tt0086705", TVDBID: 77800},
+		})
+	})
+	tmdbMux.HandleFunc("/tv/200/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{
+			Translations: []TMDBTranslation{
+				{ISO639: "en", Data: struct {
+					Title string `json:"title"`
+					Name  string `json:"name"`
+				}{Name: "The Adventures of Sherlock Holmes"}},
+			},
+		})
+	})
+	tmdbMux.HandleFunc("/tv/100", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(TMDBTVDetails{
+			ID: 100, Name: "Sherlock Holmes", FirstAirDate: "1965-01-01",
+		})
+	})
+	tmdbMux.HandleFunc("/tv/100/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(tmdbTranslationsResponse{})
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	t.Cleanup(tmdbServer.Close)
+
+	tmdbClient := NewTMDBClient("test-key")
+	tmdbClient.baseURL = tmdbServer.URL
+
+	geminiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req geminiRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		prompt := ""
+		if len(req.Contents) > 0 && len(req.Contents[0].Parts) > 0 {
+			prompt = req.Contents[0].Parts[0].Text
+		}
+
+		if strings.Contains(prompt, "disambiguation") {
+			assert.Contains(t, prompt, "Un scandale en Bohême")
+			_, _ = w.Write(geminiOKResponse(`{"matched_tmdb_id": 200, "confidence": "high", "reason": "1984 series is the exact match"}`))
+		} else {
+			_, _ = w.Write(geminiOKResponse(`{"confirmed": true, "confidence": "high", "reason": "matches"}`))
+		}
+	}))
+	t.Cleanup(geminiServer.Close)
+
+	geminiClient := NewGeminiClient([]string{"test-key"})
+	geminiClient.apiURL = geminiServer.URL
+
+	pipeline := NewPipeline(tmdbClient, nil, geminiClient, nil, dataDir)
+
+	result, err := pipeline.Run(context.Background(), MatchInput{
+		Title: "Sherlock Holmes",
+		Type:  model.TitleTypeSeries,
+		EpisodeHints: EpisodeHints{
+			EpisodeName:   "Un scandale en Bohême",
+			SeasonNumber:  1,
+			EpisodeNumber: 1,
+			EpisodeIMDBID: "tt0506445",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(200), result.TMDBID)
+	assert.Equal(t, model.MatchStatusConfirmed, result.MatchStatus)
 }

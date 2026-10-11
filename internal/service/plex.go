@@ -172,7 +172,13 @@ func (s *PlexService) processEpisodeInTx(ctx context.Context, tx *sql.Tx, p *mod
 	seriesType := model.TitleTypeSeries
 	title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil, &seriesType)
 	if err != nil {
-		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, p.Metadata.Year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching)
+		epHints := matching.EpisodeHints{
+			EpisodeName:   p.Metadata.Title,
+			SeasonNumber:  seasonNum,
+			EpisodeNumber: episodeNum,
+			EpisodeIMDBID: ids.IMDB,
+		}
+		titleID, createErr := s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, p.Metadata.Year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching, epHints)
 		if createErr != nil {
 			return nil, nil, fmt.Errorf("create series: %w", createErr)
 		}
