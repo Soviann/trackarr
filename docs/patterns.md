@@ -237,7 +237,8 @@
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
-| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1 (44×44px touch target, event isolation), and Arr availability badge |
+| `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1 (44×44px touch target, event isolation), Arr availability badge, and Desktop Hover Card (`UX-1`) preview on fine pointers |
+| `PosterHoverCard` | `components/PosterHoverCard.tsx` | Desktop contextual hover popover (280ms delay, `@media (hover: hover)`) with overview, ratings, next episode +1, watch providers, and ambient accent glow |
 | `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids with quick mark +1 (44×44px touch target, event isolation) |
 | `PosterStrip` | `components/PosterStrip.tsx` | Horizontal scrolling strip of poster thumbnails |
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
@@ -251,7 +252,7 @@
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |
-| `EpisodeRow` | `components/EpisodeRow.tsx` | Episode listing row with title, air date, and interactive toggle checkmark |
+| `EpisodeRow` | `components/EpisodeRow.tsx` | Episode listing row with title, air date, interactive toggle checkmark, and mobile horizontal Swipe-to-Complete gesture (`UX-3`) with haptic feedback |
 | `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Combined Hub Bar & slide-up BottomSheet drawer for Sagas & Franchise tracking (progress bar, next chronological title, category filters, timeline/release sort toggle) and unified Watch History glance row |
 | `TitleHistory` | `components/TitleHistory.tsx` | Slide-up BottomSheet drawer displaying episode watch dates, season breakdowns, and rewatch badges |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |
@@ -301,7 +302,7 @@
 | `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, external discovery persistence, and discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
-| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |
+| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Bento (`UX-2`): full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar & Bento Box on desktop (>=1024px) with synchronized seasons rail, internal episodes scroll (max-height 520px), and keyboard shortcuts (`W` for next episode, `1..9` for seasons) |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |
 | `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
 | `/login` | `Login` | `pages/Login.tsx` | Local password login and Google OAuth authentication |

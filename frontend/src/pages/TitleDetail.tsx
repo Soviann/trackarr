@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useState, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { CSSProperties } from 'preact'
 import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { Title, TitleRelation } from '../types'
 import { useApi } from '../hooks/useApi'
-import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba } from '../utils'
+import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba, isUnairedOrTBA } from '../utils'
 import { apiFetch } from '../api'
 import { colors } from '../theme'
 import { SeasonTab } from '../components/SeasonTab'
@@ -238,6 +238,62 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
       mutate()
     }
   }
+
+  const handleEpisodeToggleRef = useRef(handleEpisodeToggle)
+  handleEpisodeToggleRef.current = handleEpisodeToggle
+
+  const isAnyModalOpen =
+    showRating ||
+    showEdit ||
+    showRematch ||
+    showArrPush ||
+    showSonarrReaddConfirm ||
+    showHistory ||
+    drawerOpen ||
+    showDeleteConfirm
+
+  useEffect(() => {
+    if (!title || title.type === 'movie' || isAnyModalOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+
+      if (isEditable) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      // Key 'w' or 'W': mark next unwatched episode
+      if (e.key.toLowerCase() === 'w') {
+        const targetEp =
+          title.next_episode ??
+          current?.episodes?.find((ep) => !ep.watched) ??
+          sortedSeasons.flatMap((s) => s.episodes ?? []).find((ep) => !ep.watched)
+        if (targetEp && !isUnairedOrTBA(targetEp)) {
+          e.preventDefault()
+          handleEpisodeToggleRef.current(targetEp.id)
+        }
+        return
+      }
+
+      // Keys '1'..'9': switch active season
+      if (e.key >= '1' && e.key <= '9') {
+        const seasonNum = parseInt(e.key, 10)
+        const targetSeason = sortedSeasons.find((s) => s.season_number === seasonNum)
+        if (targetSeason) {
+          e.preventDefault()
+          setActiveSeason(targetSeason.season_number)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [title, isAnyModalOpen, current, sortedSeasons])
 
   const handleToggleSideStoryWatched = async (rel: TitleRelation) => {
     if (!rel.matched_title_id) return
@@ -787,59 +843,139 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             </div>
           )}
 
-          {/* Hub Saisons & Épisodes (Elevated on desktop right after synopsis) */}
-          {/* Progress bar (series/anime) */}
-          {current && title.type !== 'movie' && (
-            <div className={s.progressWrap}>
-              <div className={s.progressTrack}>
-                <div className={s.progressBar} style={{ width: `${pct}%` }} />
-              </div>
-              <div className={s.progressHeaderRow}>
-                <div className={s.progressLabel}>
-                  {t('details.seasonProgress', { season: current.season_number, watched, total })}
+          {/* Hub Saisons & Épisodes: Studio Bento */}
+          {title.type !== 'movie' && sortedSeasons.length > 0 && (
+            <div className={s.bentoStudio}>
+              {/* Left Bento Rail: Seasons & Progress */}
+              <div className={s.bentoSeasonsCol}>
+                <div className={s.bentoSeasonsHeader}>
+                  <span className={s.bentoSectionTitle}>{t('details.bentoSeasonHeader')}</span>
+                  <span className={s.bentoShortcutsBadge} title={t('details.bentoShortcutsHint')}>
+                    {t('details.bentoShortcutsHint')}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  className={clsx(s.seasonBatchToggle, isAllSeasonWatched && s.seasonBatchToggleWatched)}
-                  onClick={handleSeasonToggleAll}
-                  title={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
-                  aria-label={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
-                >
-                  <span className={s.seasonBatchLabel}>
-                    {isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+
+                {/* Season tabs / rail items */}
+                <div className={s.bentoSeasonsList}>
+                  {sortedSeasons.map((ss) => {
+                    const eps = ss.episodes ?? []
+                    const sWatched = eps.filter((e) => e.watched).length
+                    const sTotal = ss.total_episodes ?? eps.length
+                    const isAllW = sTotal > 0 && sWatched >= sTotal
+                    const isActive = ss.id === current?.id
+                    return (
+                      <button
+                        key={ss.id}
+                        type="button"
+                        className={clsx(s.bentoSeasonItem, isActive && s.bentoSeasonItemActive)}
+                        onClick={() => setActiveSeason(ss.season_number)}
+                        aria-label={t('details.seasonProgress', { season: ss.season_number, watched: sWatched, total: sTotal })}
+                      >
+                        <div className={s.bentoSeasonItemInfo}>
+                          <span className={s.bentoSeasonNum}>S{ss.season_number}</span>
+                          <span className={s.bentoSeasonCount}>{sWatched}/{sTotal}</span>
+                        </div>
+                        {isAllW && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                          </svg>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Active season progress & bulk watch toggle */}
+                {current && (
+                  <div className={s.bentoActiveSeasonMeta}>
+                    <div className={s.progressTrack}>
+                      <div className={s.progressBar} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className={s.progressHeaderRow}>
+                      <div className={s.progressLabel}>
+                        {t('details.seasonProgress', { season: current.season_number, watched, total })}
+                      </div>
+                      <button
+                        type="button"
+                        className={clsx(s.seasonBatchToggle, isAllSeasonWatched && s.seasonBatchToggleWatched)}
+                        onClick={handleSeasonToggleAll}
+                        title={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                        aria-label={isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                      >
+                        <span className={s.seasonBatchLabel}>
+                          {isAllSeasonWatched ? t('details.markSeasonUnwatched') : t('details.markSeasonWatched')}
+                        </span>
+                        <span className={s.seasonBatchBox}>
+                          {isAllSeasonWatched ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                              <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
+                            </svg>
+                          ) : (
+                            <div className={s.seasonBatchEmpty} />
+                          )}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Bento Pane: Episode listing */}
+              <div className={s.bentoEpisodesCol}>
+                <div className={s.bentoEpisodesHeader}>
+                  <span className={s.bentoSectionTitle}>
+                    {t('details.bentoEpisodesHeader')} {current ? `— S${current.season_number}` : ''}
                   </span>
-                  <span className={s.seasonBatchBox}>
-                    {isAllSeasonWatched ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
-                        <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.58z" />
-                      </svg>
-                    ) : (
-                      <div className={s.seasonBatchEmpty} />
+                  <span className={s.bentoEpisodeCountPill}>
+                    {watched} / {total}
+                  </span>
+                </div>
+
+                {/* AniList strip for the active season or unmapped anime series */}
+                {title.is_anime && (
+                  <SeasonAniListStrip
+                    season={current ?? {
+                      id: 0,
+                      title_id: title.id,
+                      season_number: 1,
+                      total_episodes: null,
+                      episode_count: 0,
+                      watched_count: 0,
+                      anilist_id: title.anilist_id != null ? String(title.anilist_id) : null,
+                      anilist_parts: [],
+                      episodes: [],
+                    }}
+                    onEdit={() => setRematchSeasonID(current?.id ?? 0)}
+                  />
+                )}
+
+                {/* Scrollable episode list */}
+                {current && ((current.episodes ?? []).length > 0 || activeSeasonSideStories.length > 0) && (
+                  <div className={s.bentoEpisodeScroll}>
+                    {[...(current.episodes ?? [])]
+                      .sort((a, b) => a.episode - b.episode)
+                      .map((ep) => (
+                        <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
+                      ))}
+
+                    {/* Side stories for the active season */}
+                    {activeSeasonSideStories.length > 0 && (
+                      <SeasonSideStories
+                        seasonNumber={current.season_number}
+                        sideStories={activeSeasonSideStories}
+                        onToggleWatched={handleToggleSideStoryWatched}
+                      />
                     )}
-                  </span>
-                </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Season tabs */}
-          {sortedSeasons.length > 1 && (
-            <div className={s.seasonTabs}>
-              {sortedSeasons.map((ss) => (
-                <SeasonTab
-                  key={ss.id}
-                  season={ss}
-                  active={ss.id === current?.id}
-                  onClick={() => setActiveSeason(ss.season_number)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* AniList strip for the active season or unmapped anime series */}
-          {title.type !== 'movie' && title.is_anime && (
+          {/* AniList strip for anime series without seasons */}
+          {title.type !== 'movie' && sortedSeasons.length === 0 && title.is_anime && (
             <SeasonAniListStrip
-              season={current ?? {
+              season={{
                 id: 0,
                 title_id: title.id,
                 season_number: 1,
@@ -850,28 +986,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 anilist_parts: [],
                 episodes: [],
               }}
-              onEdit={() => setRematchSeasonID(current?.id ?? 0)}
+              onEdit={() => setRematchSeasonID(0)}
             />
-          )}
-
-          {/* Episode list */}
-          {current && ((current.episodes ?? []).length > 0 || activeSeasonSideStories.length > 0) && (
-            <div className={s.episodeList}>
-              {[...(current.episodes ?? [])]
-                .sort((a, b) => a.episode - b.episode)
-                .map((ep) => (
-                  <EpisodeRow key={ep.id} episode={ep} onToggle={handleEpisodeToggle} />
-                ))}
-
-              {/* Side stories for the active season */}
-              {activeSeasonSideStories.length > 0 && (
-                <SeasonSideStories
-                  seasonNumber={current.season_number}
-                  sideStories={activeSeasonSideStories}
-                  onToggleWatched={handleToggleSideStoryWatched}
-                />
-              )}
-            </div>
           )}
 
           {/* Empty state for series without seasons/episodes */}

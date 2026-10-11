@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat'
-import { useRef, useState } from 'preact/hooks'
+import { useRef, useState, useEffect } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import clsx from 'clsx'
 import type { Title } from '../types'
@@ -11,6 +11,7 @@ import { routeTo } from '../routes'
 import { CoverImage } from './CoverImage'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
+import { PosterHoverCard } from './PosterHoverCard'
 import { useLongPress } from '../hooks/useLongPress'
 import { haptic } from '../utils/haptic'
 import { useUndo } from '../context/UndoContext'
@@ -64,6 +65,68 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
     }
   }
 
+  const cardRef = useRef<HTMLAnchorElement>(null)
+  const [hoverCardOpen, setHoverCardOpen] = useState(false)
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (openTimerRef.current) clearTimeout(openTimerRef.current)
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selecting && hoverCardOpen) {
+      setHoverCardOpen(false)
+    }
+  }, [selecting, hoverCardOpen])
+
+  const handlePointerEnter = () => {
+    if (selecting) return
+    if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return
+    }
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    if (hoverCardOpen) return
+    openTimerRef.current = setTimeout(() => {
+      if (cardRef.current) {
+        setAnchorRect(cardRef.current.getBoundingClientRect())
+        setHoverCardOpen(true)
+      }
+    }, 280)
+  }
+
+  const handlePointerLeave = () => {
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current)
+      openTimerRef.current = null
+    }
+    if (hoverCardOpen) {
+      closeTimerRef.current = setTimeout(() => {
+        setHoverCardOpen(false)
+      }, 150)
+    }
+  }
+
+  const handleHoverCardPointerEnter = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }
+
+  const handleHoverCardPointerLeave = () => {
+    closeTimerRef.current = setTimeout(() => {
+      setHoverCardOpen(false)
+    }, 150)
+  }
+
   // Track whether a long-press just fired so we can swallow the
   // synthetic click that the browser dispatches after pointer-up.
   const justFiredRef = useRef(false)
@@ -102,13 +165,17 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
   const hasQuickAction = title.status === 'watching' && ne != null && !selecting && !isUnaired
 
   return (
-    <a
-      href={routeTo.title(title.id)}
-      className={cardClass}
-      {...longPressHandlers}
-      onPointerDown={handlePointerDown}
-      onClick={handleClick}
-    >
+    <>
+      <a
+        ref={cardRef}
+        href={routeTo.title(title.id)}
+        className={cardClass}
+        {...longPressHandlers}
+        onPointerDown={handlePointerDown}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onClick={handleClick}
+      >
       <div className={s.poster}>
         <CoverImage
           coverUrl={title.cover_url}
@@ -163,5 +230,17 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
         {overlay}
       </div>
     </a>
+    {hoverCardOpen && anchorRect && (
+      <PosterHoverCard
+        title={title}
+        anchorRect={anchorRect}
+        onClose={() => setHoverCardOpen(false)}
+        onPointerEnter={handleHoverCardPointerEnter}
+        onPointerLeave={handleHoverCardPointerLeave}
+        onQuickMark={handleQuickMark}
+        quickMarkLoading={toggling}
+      />
+    )}
+  </>
   )
 })

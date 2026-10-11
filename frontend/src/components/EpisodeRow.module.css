@@ -1,4 +1,58 @@
+.swipeContainer {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.swipeBackdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  pointer-events: none;
+}
+
+.swipeBackdropLeft {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.swipeBackdropRight {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.swipeBackdropMark {
+  background: color-mix(in srgb, var(--accent) 25%, var(--bg-elev));
+  color: var(--accent);
+}
+
+.swipeBackdropMarkActive {
+  background: var(--accent);
+  color: var(--accent-fg, #000);
+}
+
+.swipeBackdropUnmark {
+  background: color-mix(in srgb, var(--danger, #ef4444) 22%, var(--bg-elev));
+  color: var(--danger, #ef4444);
+}
+
+.swipeBackdropUnmarkActive {
+  background: var(--danger, #ef4444);
+  color: #fff;
+}
+
 .row {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6,6 +60,15 @@
   background: var(--bg-elev);
   border-radius: 8px;
   border: 1px solid var(--bg-elev2);
+  will-change: transform;
+}
+
+.rowDragging {
+  transition: none !important;
+}
+
+.rowResting {
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 .watched {

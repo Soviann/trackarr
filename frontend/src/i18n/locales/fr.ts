@@ -247,6 +247,11 @@ export const fr: TranslationSchema = {
     failedSaveChanges: 'Échec de l’enregistrement des modifications',
     readdSonarrConfirmAction: 'Réajouter à Sonarr',
     noEpisodesYet: 'Aucun épisode annoncé pour le moment',
+    bentoSeasonHeader: 'Saisons',
+    bentoEpisodesHeader: 'Épisodes',
+    bentoShortcutsHint: 'Raccourcis : [W] Épisode suivant · [1..9] Saisons',
+    swipeToMark: 'Marquer comme vu',
+    swipeToUnmark: 'Marquer comme non vu',
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',

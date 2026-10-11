@@ -245,6 +245,11 @@ export const en = {
     failedSaveChanges: 'Failed to save changes',
     readdSonarrConfirmAction: 'Re-add to Sonarr',
     noEpisodesYet: 'No episodes announced yet',
+    bentoSeasonHeader: 'Seasons',
+    bentoEpisodesHeader: 'Episodes',
+    bentoShortcutsHint: 'Shortcuts: [W] Next ep · [1..9] Seasons',
+    swipeToMark: 'Mark watched',
+    swipeToUnmark: 'Mark unwatched',
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',
