@@ -53,6 +53,9 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 ### 8. [Design Revamp Roadmap](roadmap-design-revamp.md)
 - Complete UI/UX revamp plan, Android one-handed mobile ergonomic priorities, zero-reflow animations, and adaptive desktop layout.
 
+### 9. [Evolution & Performance Roadmap (Q4 2026)](roadmap-2026-q4.md)
+- Multi-session feature roadmap: SQLite WAL I/O tuning, frontend code splitting, external search links, studio bento detail layout, and saga hub.
+
 ---
 
 ## 🛠️ Developer Architecture Guides
