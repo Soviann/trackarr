@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.15] — 2026-10-11
+
 ### Ajouté
 - **Déduplication & Filtrage des Résultats TMDB Déjà en Collection (Lot 5 / Roadmap Q4 2026)** :
   - **Exclusion automatique des doublons (`Search.tsx`)** : Les titres découverts via TMDB/AniList déjà indexés dans la bibliothèque locale sont automatiquement filtrés de la section des résultats externes afin d'éviter la redondance avec la section supérieure des résultats locaux.
