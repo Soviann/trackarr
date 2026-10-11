@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useState, useMemo, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
-import type { TitleRelation } from '../types'
+import type { TitleRelation, Title } from '../types'
 import { routeTo } from '../routes'
 import { aniListMediaUrl, getCoverUrl } from '../utils'
+import { apiFetch } from '../api'
 import { useTranslation } from '../i18n'
+import { useUndo } from '../context/UndoContext'
 import { BottomSheet } from './BottomSheet'
+import { ArrPushSheet } from './ArrPushSheet'
 import s from './FranchiseRelationsSection.module.css'
 
 interface FranchiseRelationsSectionProps {
@@ -19,11 +22,21 @@ type SortOrderType = 'timeline' | 'release'
 const DEFAULT_VISIBLE_COUNT = 3
 
 export function FranchiseRelationsSection({
-  relations = [],
+  relations: initialRelations = [],
   onOpenHistory,
   initialOpenDrawer = false,
 }: FranchiseRelationsSectionProps) {
   const { t } = useTranslation()
+  const { showUndo } = useUndo()
+  const [relations, setRelations] = useState<TitleRelation[]>(initialRelations)
+  const [addingId, setAddingId] = useState<number | null>(null)
+  const [arrPushTitle, setArrPushTitle] = useState<Title | null>(null)
+  const [showArrPush, setShowArrPush] = useState(false)
+
+  useEffect(() => {
+    setRelations(initialRelations)
+  }, [initialRelations])
+
   const [filter, setFilter] = useState<FilterCategory>('all')
   const [sortOrder, setSortOrder] = useState<SortOrderType>('timeline')
   const [isExpanded, setIsExpanded] = useState(false)
@@ -145,9 +158,115 @@ export function FranchiseRelationsSection({
   const handleCardClick = (rel: TitleRelation) => {
     if (rel.matched_title_id != null) {
       route(routeTo.title(rel.matched_title_id))
-    } else {
-      const extUrl = getExternalUrl(rel)
-      route(`/admin/validate?q=${encodeURIComponent(extUrl)}&name=${encodeURIComponent(rel.title)}`)
+    }
+  }
+
+  const handleAddWatchlist = async (rel: TitleRelation, e: Event) => {
+    e.stopPropagation()
+    if (rel.matched_title_id != null || addingId === rel.id) return
+    setAddingId(rel.id)
+
+    const isMovie = rel.format === 'MOVIE'
+    const payload = {
+      type: isMovie ? 'movie' : 'series',
+      is_anime: rel.provider === 'anilist',
+      year: rel.year,
+      status: 'plan_to_watch',
+      match_status: 'confirmed',
+      names: [{ name: rel.title, language: 'en', is_primary: true }],
+      cover_url: rel.cover_url,
+      tmdb_id: rel.provider === 'tmdb' ? rel.external_id : undefined,
+      anilist_id: rel.provider === 'anilist' ? rel.external_id : undefined,
+    }
+
+    try {
+      const created = await apiFetch<Title>('/titles', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+
+      setRelations((prev) =>
+        prev.map((r) =>
+          r.id === rel.id
+            ? { ...r, matched_title_id: created.id, matched_status: 'plan_to_watch', matched_type: created.type }
+            : r
+        )
+      )
+
+      showUndo({
+        message: t('franchise.addedToWatchlist', { title: rel.title }),
+        onUndo: async () => {
+          try {
+            await apiFetch(`/titles/${created.id}`, { method: 'DELETE' })
+            setRelations((prev) =>
+              prev.map((r) =>
+                r.id === rel.id
+                  ? { ...r, matched_title_id: null, matched_status: null, matched_type: null }
+                  : r
+              )
+            )
+          } catch (err) {
+            console.error('Failed to undo title creation:', err)
+          }
+        },
+      })
+    } catch (err) {
+      console.error('Failed to add title to watchlist:', err)
+    } finally {
+      setAddingId(null)
+    }
+  }
+
+  const handleOpenArrPush = async (rel: TitleRelation, e: Event) => {
+    e.stopPropagation()
+    if (addingId === rel.id) return
+
+    if (rel.matched_title_id != null) {
+      try {
+        const fullTitle = await apiFetch<Title>(`/titles/${rel.matched_title_id}`)
+        setArrPushTitle(fullTitle)
+        setShowArrPush(true)
+      } catch (err) {
+        console.error('Failed to fetch matched title for Arr:', err)
+      }
+      return
+    }
+
+    // If not in library, create it first as plan_to_watch, then open sheet
+    setAddingId(rel.id)
+    const isMovie = rel.format === 'MOVIE'
+    const payload = {
+      type: isMovie ? 'movie' : 'series',
+      is_anime: rel.provider === 'anilist',
+      year: rel.year,
+      status: 'plan_to_watch',
+      match_status: 'confirmed',
+      names: [{ name: rel.title, language: 'en', is_primary: true }],
+      cover_url: rel.cover_url,
+      tmdb_id: rel.provider === 'tmdb' ? rel.external_id : undefined,
+      anilist_id: rel.provider === 'anilist' ? rel.external_id : undefined,
+    }
+
+    try {
+      const created = await apiFetch<Title>('/titles', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+
+      setRelations((prev) =>
+        prev.map((r) =>
+          r.id === rel.id
+            ? { ...r, matched_title_id: created.id, matched_status: 'plan_to_watch', matched_type: created.type }
+            : r
+        )
+      )
+
+      setArrPushTitle(created)
+      setShowArrPush(true)
+    } catch (err) {
+      console.error('Failed to create title for Arr push:', err)
+    } finally {
+      setAddingId(null)
     }
   }
 
@@ -465,11 +584,43 @@ export function FranchiseRelationsSection({
                         <div className={s.itemTop}>
                           <span className={s.relTag}>{positionLabel}</span>
                           {isMatched ? (
-                            <span className={isWatched ? s.statusBadgeWatched : s.statusBadgeUnwatched}>
-                              {isWatched ? `✓ ${t('franchise.watchedTrackarr')}` : t('franchise.planToWatch')}
-                            </span>
+                            <div className={s.cardActions}>
+                              <span className={isWatched ? s.statusBadgeWatched : s.statusBadgeUnwatched}>
+                                {isWatched ? `✓ ${t('franchise.watchedTrackarr')}` : t('franchise.planToWatch')}
+                              </span>
+                              <button
+                                type="button"
+                                className={s.actionBtnArr}
+                                onClick={(e) => handleOpenArrPush(rel, e)}
+                                title={t('franchise.pushToArr')}
+                                aria-label={t('franchise.pushToArr')}
+                              >
+                                Arr
+                              </button>
+                            </div>
                           ) : (
-                            <span className={s.statusBadgeAdd}>{t('franchise.addMissing')}</span>
+                            <div className={s.cardActions}>
+                              <button
+                                type="button"
+                                className={s.actionBtnAdd}
+                                onClick={(e) => handleAddWatchlist(rel, e)}
+                                disabled={addingId === rel.id}
+                                title={t('franchise.addToWatchlist')}
+                                aria-label={t('franchise.addToWatchlist')}
+                              >
+                                {addingId === rel.id ? '...' : t('franchise.addToWatchlist')}
+                              </button>
+                              <button
+                                type="button"
+                                className={s.actionBtnArr}
+                                onClick={(e) => handleOpenArrPush(rel, e)}
+                                disabled={addingId === rel.id}
+                                title={t('franchise.pushToArr')}
+                                aria-label={t('franchise.pushToArr')}
+                              >
+                                Arr
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -515,6 +666,22 @@ export function FranchiseRelationsSection({
             </div>
           </div>
         </BottomSheet>
+      )}
+
+      {/* Arr Push Sheet */}
+      {showArrPush && arrPushTitle && (
+        <ArrPushSheet
+          open={showArrPush}
+          onClose={() => {
+            setShowArrPush(false)
+            setArrPushTitle(null)
+          }}
+          title={arrPushTitle}
+          onSuccess={() => {
+            setShowArrPush(false)
+            setArrPushTitle(null)
+          }}
+        />
       )}
     </>
   )

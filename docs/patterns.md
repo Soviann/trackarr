@@ -50,10 +50,10 @@
 
 | Model | File | Description & Key Fields |
 |---|---|---|
-| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `SonarrDeletedAt`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`. |
+| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `SonarrDeletedAt`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`, `DownloadedAt`. |
 | `TitleName` | `internal/model/title.go` | Multi-language and alternative alias names (`TitleID`, `Language`, `Name`). |
 | `Season` | `internal/model/season.go` | `ID`, `TitleID`, `SeasonNumber`, `EpisodeCount`, `WatchedCount`, `AirDate`. |
-| `Episode` | `internal/model/episode.go` | `ID`, `SeasonID`, `EpisodeNumber`, `Name`, `Watched`, `LastWatchedAt`. |
+| `Episode` | `internal/model/episode.go` | `ID`, `SeasonID`, `EpisodeNumber`, `Name`, `Watched`, `LastWatchedAt`, `DownloadedAt`. |
 | `WatchEvent`| `internal/model/watch_event.go` | Scrobble log (`ID`, `TitleID`, `EpisodeID`, `Source`, `WatchedAt`). |
 | `Task` | `internal/model/task.go` | Background queue item (`ID`, `Type`, `Payload`, `Status`, `Attempts`, `RunAt`, `DedupKey`). |
 | `MatchEvent`| `internal/model/match_event.go` | Match audit trail (`ID`, `TitleID`, `Kind`, `Detail`, `CreatedAt`). |
@@ -127,6 +127,7 @@
 | DELETE | `/api/admin/api-keys/{id}` | `adminAPIKeys.Delete` | Permanently remove API key |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
+| POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/import events from Radarr & Sonarr, mark media downloaded, and push alerts |
 | GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |
 | GET | `/api/calendar/events` | `calendarHandler.GetEvents` | In-app calendar events for interactive multi-view calendar |
 | GET | `/api/calendar/token` | `calendarHandler.GetToken` | Retrieve active iCal subscription token & webcal URLs |
@@ -253,7 +254,7 @@
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |
 | `EpisodeRow` | `components/EpisodeRow.tsx` | Episode listing row with title, air date, interactive toggle checkmark, and mobile horizontal Swipe-to-Complete gesture (`UX-3`) with haptic feedback |
-| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Combined Hub Bar & slide-up BottomSheet drawer for Sagas & Franchise tracking (progress bar, next chronological title, category filters, timeline/release sort toggle) and unified Watch History glance row |
+| `FranchiseRelationsSection` | `components/FranchiseRelationsSection.tsx` | Combined Hub Bar & slide-up BottomSheet drawer for Sagas & Franchise tracking (progress bar, next chronological title, category filters, timeline/release sort toggle, 1-tap `+ À voir` creation with undo, direct `ArrPushSheet` modal) and unified Watch History glance row |
 | `TitleHistory` | `components/TitleHistory.tsx` | Slide-up BottomSheet drawer displaying episode watch dates, season breakdowns, and rewatch badges |
 | `RematchSheet`| `components/RematchSheet.tsx` | TMDB search & manual ID fixer for titles or season AniList parts |
 | `AniListSheet`| `components/AniListSheet.tsx` | Slide-up modal sheet for editing AniList multi-part season associations |

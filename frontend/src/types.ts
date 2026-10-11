@@ -47,6 +47,7 @@ export interface Title {
   radarr_id?: number | null
   sonarr_id?: number | null
   sonarr_deleted_at?: string | null
+  downloaded_at?: string | null
   my_rating: number | null
   status: TitleStatus
   series_status: SeriesStatus | null
@@ -139,6 +140,7 @@ export interface NextEpisode {
   season_number: number
   name?: string | null
   air_date?: string | null
+  downloaded_at?: string | null
   is_tba?: boolean
 }
 
@@ -223,6 +225,7 @@ export interface Episode {
   watched: boolean
   first_watched_at: string | null
   last_watched_at: string | null
+  downloaded_at?: string | null
 }
 
 // Stats

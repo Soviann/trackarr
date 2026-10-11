@@ -100,15 +100,20 @@
     - `PosterHoverCard`: desktop hover card on poster cards with 280ms debounced reveal (`@media (hover: hover)`), portal positioning clamped to viewport, ambient glow (`accent_hex`), ratings, short synopsis, watch providers, and direct `+1` next episode button.
     - `TitleDetail` Studio Bento: 2-column synchronized layout on viewports ≥ 1024px with dedicated seasons rail on the left (completion gauges, total counts, batch toggle) and internally scrollable episode list on the right (`max-height: 520px`). Keyboard shortcuts: `W` marks next episode, `1..9` switches active season.
     - `EpisodeRow` Swipe-to-Complete: mobile horizontal touch swipe with direction locking, haptic feedback (`HAPTIC_SHORT`), and 64px threshold for thumb-friendly episode validation.
+22. **Saga & Franchise Hub & Arr Webhooks (Lot 4)**:
+    - `FranchiseRelationsSection`: replaces redirect to `/admin/validate` with 1-tap `+ À voir` button (creates title as `plan_to_watch` with universal `UndoSnackbar` cancellation) and `Arr` push action (opens `ArrPushSheet` directly).
+    - Arr Webhooks (`POST /api/webhook/arr/{secret}`): ingests Radarr & Sonarr `On Download` / `On Upgrade` events, persisting `downloaded_at` timestamp in SQLite on titles and episodes.
+    - Media Availability Badges: emerald `Disponible` / `Available` badge displayed on `NextEpisodeHero` and `EpisodeRow` checkmark when `downloaded_at` is set.
+    - Configurable Push Notification: optional `notif_media_downloaded` toggle in **Admin ➔ Notifications** dispatches Web Push alerts upon Arr download completion.
 
 ---
 
 ## 3. Database Schema Overview
-- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`).
+- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`, `downloaded_at`).
 - `title_names`: Multilingual title aliases (`title_id`, `name`, `language`, `is_primary`).
 - `title_genres`: Associated genres per title (`title_id`, `genre`).
 - `seasons`: Season entries (`title_id`, `season_number`, `total_episodes`).
-- `episodes`: Episode entries (`season_id`, `episode`, `name`, `air_date`, `watched`, `watched_at`, `external_source_id`).
+- `episodes`: Episode entries (`season_id`, `episode`, `name`, `air_date`, `watched`, `watched_at`, `external_source_id`, `downloaded_at`).
 - `watch_events`: Watch history logs (`title_id`, `episode_id`, `source: 'manual'|'jellyfin'|'plex'|'emby'|'simkl'|'backfill'`, `raw_payload`, `created_at`).
 - `task_queue`: Asynchronous background jobs (`task_type`, `payload`, `status: 'pending'|'running'|'completed'|'failed'|'dead'`, `attempts`, `run_at`, `dedup_key`).
 - `match_events`: Match audit trail (`title_id`, `kind`, `detail`, `created_at`).

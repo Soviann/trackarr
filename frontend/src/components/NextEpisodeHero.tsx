@@ -40,7 +40,14 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
             <span className={s.label}>
               {isPlanToWatch ? t('hero.movieToWatch') : t('hero.movieWatching')}
             </span>
-            <span className={s.bingeEstimate}>⏱️ {formatBingeTime(movieDuration)}</span>
+            <div className={s.metaRight}>
+              {title.downloaded_at && (
+                <span className={s.availableBadge}>
+                  ✓ {t('details.available')}
+                </span>
+              )}
+              <span className={s.bingeEstimate}>⏱️ {formatBingeTime(movieDuration)}</span>
+            </div>
           </div>
           <button
             type="button"
@@ -131,11 +138,18 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
               </svg>
               {t('hero.nextEpisode')}
             </span>
-            {unwatchedCount > 0 && (
-              <span className={s.bingeEstimate}>
-                ⏱️ {t('hero.bingeRemaining')}{formatBingeTime(remainingMinutes)} ({unwatchedCount} ep.)
-              </span>
-            )}
+            <div className={s.metaRight}>
+              {nextEp.downloaded_at && (
+                <span className={s.availableBadge}>
+                  ✓ {t('details.available')}
+                </span>
+              )}
+              {unwatchedCount > 0 && (
+                <span className={s.bingeEstimate}>
+                  ⏱️ {t('hero.bingeRemaining')}{formatBingeTime(remainingMinutes)} ({unwatchedCount} ep.)
+                </span>
+              )}
+            </div>
           </div>
 
           <div className={s.episodeInfo}>

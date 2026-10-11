@@ -68,6 +68,9 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
     prowlarr: {},
   })
 
+  const [arrWebhookUrl, setArrWebhookUrl] = useState<string>('')
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+
   const fetchOptions = () => {
     apiFetch<RootFolder[]>('/arr/radarr/rootfolder')
       .then(data => setRadarrRootFolders(data))
@@ -87,6 +90,11 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
     apiFetch<ArrSettings>('/admin/arr')
       .then(data => setSettings(data))
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load Arr settings'))
+    apiFetch<{ arr_webhook_url?: string }>('/admin/system-settings')
+      .then(data => {
+        if (data.arr_webhook_url) setArrWebhookUrl(data.arr_webhook_url)
+      })
+      .catch(err => console.error('Failed to load Arr webhook URL:', err))
     fetchOptions()
   }, [])
 
@@ -457,6 +465,45 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* ARR WEBHOOK CARD */}
+      {arrWebhookUrl && (
+        <div className={s.section}>
+          <div className={s.sectionHeader}>
+            <h2 className={s.sectionTitle}>🔗 {t('arrSettings.webhookTitle')}</h2>
+            <p className={s.sectionDesc}>{t('arrSettings.webhookDesc')}</p>
+          </div>
+          <div className={s.connectionBody}>
+            <div className={s.connGroup}>
+              <div className={s.connInputRow}>
+                <input
+                  id="arr_webhook_url"
+                  name="arr_webhook_url"
+                  type="text"
+                  readOnly
+                  aria-label={t('arrSettings.webhookTitle')}
+                  value={arrWebhookUrl}
+                  className={`${s.inputUrl} ${s.inputCode}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!arrWebhookUrl || !navigator.clipboard) return
+                    navigator.clipboard.writeText(arrWebhookUrl).then(() => {
+                      setCopiedWebhook(true)
+                      setTimeout(() => setCopiedWebhook(false), 3000)
+                    })
+                  }}
+                  className={s.testBtn}
+                  aria-label={copiedWebhook ? t('arrSettings.webhookCopied') : t('common.copy')}
+                >
+                  {copiedWebhook ? t('arrSettings.webhookCopied') : t('common.copy')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TWO-COLUMN DESKTOP GRID FOR DEFAULTS */}
       <div className={s.defaultsGrid}>

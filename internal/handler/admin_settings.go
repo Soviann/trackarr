@@ -51,6 +51,8 @@ type SystemSettingsResponse struct {
 	JellyfinWebhookURL    string `json:"jellyfin_webhook_url"`
 	PlexWebhookSecret     string `json:"plex_webhook_secret"`
 	PlexWebhookURL        string `json:"plex_webhook_url"`
+	ArrWebhookSecret      string `json:"arr_webhook_secret"`
+	ArrWebhookURL         string `json:"arr_webhook_url"`
 	RadarrURL             string `json:"radarr_url"`
 	RadarrAPIKey          string `json:"radarr_api_key"`
 	RadarrConfigured      bool   `json:"radarr_configured"`
@@ -101,6 +103,10 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 
 	jellyfinSecret := get("jellyfin_webhook_secret")
 	plexSecret := get("plex_webhook_secret")
+	arrSecret := get("arr_webhook_secret")
+	if arrSecret == "" {
+		arrSecret = get("webhook_secret")
+	}
 
 	jellyfinURL := ""
 	if jellyfinSecret != "" {
@@ -110,6 +116,11 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 	plexURL := ""
 	if plexSecret != "" {
 		plexURL = fmt.Sprintf("%s://%s/api/webhook/plex/%s", scheme, host, plexSecret)
+	}
+
+	arrURL := ""
+	if arrSecret != "" {
+		arrURL = fmt.Sprintf("%s://%s/api/webhook/arr/%s", scheme, host, arrSecret)
 	}
 
 	metadataLang := get("metadata_language")
@@ -137,6 +148,8 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		JellyfinWebhookURL:    jellyfinURL,
 		PlexWebhookSecret:     plexSecret,
 		PlexWebhookURL:        plexURL,
+		ArrWebhookSecret:      arrSecret,
+		ArrWebhookURL:         arrURL,
 		RadarrURL:             get("radarr_url"),
 		RadarrAPIKey:          maskSecret(get("radarr_api_key")),
 		RadarrConfigured:      get("radarr_url") != "" && get("radarr_api_key") != "",
@@ -176,6 +189,7 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 		"anilist_client_secret":   true,
 		"jellyfin_webhook_secret": true,
 		"plex_webhook_secret":     true,
+		"arr_webhook_secret":      true,
 		"webhook_secret":          true,
 		"radarr_url":              true,
 		"radarr_api_key":          true,

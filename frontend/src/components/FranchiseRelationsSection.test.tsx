@@ -117,7 +117,7 @@ describe('FranchiseRelationsSection', () => {
 
     expect(getByText('✓ Watched (Trackarr)')).toBeTruthy()
     expect(getByText('Plan to Watch')).toBeTruthy()
-    expect(getByText('+ Add')).toBeTruthy()
+    expect(getByText('+ To Watch')).toBeTruthy()
   })
 
   it('renders TMDB movie saga collection with Saga & Collection title', () => {

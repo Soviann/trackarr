@@ -250,6 +250,7 @@ export const en = {
     bentoShortcutsHint: 'Shortcuts: [W] Next ep · [1..9] Seasons',
     swipeToMark: 'Mark watched',
     swipeToUnmark: 'Mark unwatched',
+    available: 'Available',
   },
   admin: {
     dashboardTitle: 'Admin Dashboard',
@@ -625,6 +626,9 @@ export const en = {
     nextToWatch: 'Next:',
     explore: 'Explore',
     allTitlesSeen: 'All titles completed!',
+    addToWatchlist: '+ To Watch',
+    pushToArr: 'Send to Arr',
+    addedToWatchlist: 'Added "{title}" to Plan to Watch',
   },
   sideStories: {
     recommendedAfterSeason: 'Recommended Side Story after Season {season}',
@@ -894,6 +898,9 @@ export const en = {
     selectQualityProfile: 'Select Quality Profile...',
     yes: 'Yes',
     no: 'No',
+    webhookTitle: 'Arr Webhook (On Download / Upgrade)',
+    webhookDesc: 'Configure this webhook URL in Radarr & Sonarr (Settings → Connect → Webhook) to immediately mark media as available upon download.',
+    webhookCopied: '✅ Copied!',
   },
   notificationsSettings: {
     title: 'Notifications',
@@ -919,6 +926,8 @@ export const en = {
     failedTaskDesc: 'When an enrichment task permanently fails',
     seriesEndedLabel: 'Series ended',
     seriesEndedDesc: 'When a series status changes to ended or cancelled',
+    mediaDownloadedLabel: 'Media downloaded',
+    mediaDownloadedDesc: 'When a movie or episode is imported by Radarr or Sonarr',
   },
   mediaServers: {
     title: 'Media Servers & Webhooks',

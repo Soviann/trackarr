@@ -252,6 +252,7 @@ export const fr: TranslationSchema = {
     bentoShortcutsHint: 'Raccourcis : [W] Épisode suivant · [1..9] Saisons',
     swipeToMark: 'Marquer comme vu',
     swipeToUnmark: 'Marquer comme non vu',
+    available: 'Disponible',
   },
   admin: {
     dashboardTitle: 'Tableau de bord Admin',
@@ -627,6 +628,9 @@ export const fr: TranslationSchema = {
     nextToWatch: 'Suivant :',
     explore: 'Explorer',
     allTitlesSeen: 'Tous les titres sont vus !',
+    addToWatchlist: '+ À voir',
+    pushToArr: 'Envoyer vers Arr',
+    addedToWatchlist: '"{title}" ajouté à la liste À voir',
   },
   sideStories: {
     recommendedAfterSeason: 'Side Story recommandée après la Saison {season}',
@@ -896,6 +900,9 @@ export const fr: TranslationSchema = {
     selectQualityProfile: 'Sélectionner un profil de qualité...',
     yes: 'Oui',
     no: 'Non',
+    webhookTitle: 'Webhook Arr (Téléchargement / Mise à niveau)',
+    webhookDesc: 'Configurez cette URL de webhook dans Radarr & Sonarr (Paramètres → Connexions → Webhook) pour marquer automatiquement vos médias comme disponibles dès leur téléchargement.',
+    webhookCopied: '✅ Copié !',
   },
   notificationsSettings: {
     title: 'Notifications',
@@ -921,6 +928,8 @@ export const fr: TranslationSchema = {
     failedTaskDesc: 'Lorsqu’une tâche d’enrichissement échoue définitivement',
     seriesEndedLabel: 'Série terminée',
     seriesEndedDesc: 'Lorsque le statut d’une série passe à terminée ou annulée',
+    mediaDownloadedLabel: 'Média téléchargé',
+    mediaDownloadedDesc: 'Lorsqu’un film ou un épisode est importé par Radarr ou Sonarr',
   },
   mediaServers: {
     title: 'Serveurs multimédia & Webhooks',

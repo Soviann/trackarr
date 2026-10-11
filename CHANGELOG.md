@@ -6,6 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Hub de Sagas & Franchises avec actions 1-tap (`MED-1` / Lot 4)** :
+  - **Suppression de la redirection perturbante** : Clic sur une œuvre non présente dans la bibliothèque ne redirige plus vers `/admin/validate`.
+  - **Action 1-tap `+ À voir`** : Bouton immédiat sur chaque œuvre absente pour l'ajouter à la liste *À voir* en un clic, avec toast d'annulation `UndoSnackbar`.
+  - **Action directe `Arr`** : Bouton d'envoi immédiat vers Radarr ou Sonarr via la feuille modale `ArrPushSheet` sans quitter la fiche média.
+- **Webhooks descendants Arr temps réel & Badge Disponible (`MED-2` / Lot 4)** :
+  - **Point de terminaison Webhook sécurisé (`POST /api/webhook/arr/{secret}`)** : Réception automatique des événements *On Download* et *On Upgrade* de Radarr et Sonarr avec masquage automatique du jeton dans les journaux Docker.
+  - **Badge « Disponible » immédiat** : Horodatage `downloaded_at` persisté dans SQLite, affichant un badge vert émeraude *Disponible* / *Available* sur le `NextEpisodeHero` (film et prochain épisode d'une série) et un indicateur sur les lignes d'épisodes (`EpisodeRow`).
+  - **Configuration guidée dans l'interface admin** : Affichage de l'URL du webhook avec bouton de copie en 1 clic dans **Admin ➔ Arr Stack** (`/admin/arr`).
+  - **Notification Web Push optionnelle** : Nouveau déclencheur paramétrable `notif_media_downloaded` dans **Admin ➔ Notifications** (`/admin/notifications`) alertant dès qu'un média est prêt à être visionné.
+
 ## [v1.26.13] — 2026-10-11
 
 ### Ajouté

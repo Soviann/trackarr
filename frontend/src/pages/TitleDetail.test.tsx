@@ -29,6 +29,10 @@ vi.mock('../context/UndoContext', () => ({
   }),
 }))
 
+vi.mock('../components/FranchiseRelationsSection', () => ({
+  FranchiseRelationsSection: () => null,
+}))
+
 const mockNormalSeries: Title = {
   id: 10,
   type: 'series',

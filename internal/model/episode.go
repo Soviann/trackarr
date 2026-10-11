@@ -11,5 +11,6 @@ type Episode struct {
 	Watched          bool       `json:"watched"`
 	FirstWatchedAt   *time.Time `json:"first_watched_at"`
 	LastWatchedAt    *time.Time `json:"last_watched_at"`
+	DownloadedAt     *time.Time `json:"downloaded_at,omitempty"`
 	ExternalSourceID *string    `json:"external_source_id"`
 }

@@ -165,6 +165,17 @@ export function EpisodeRow({ episode, onToggle }: EpisodeRowProps) {
           {episode.air_date && (
             <span className={s.airDate}>{episode.air_date}</span>
           )}
+          {episode.downloaded_at && (
+            <span
+              className={s.downloadedIndicator}
+              title={t('details.available')}
+              aria-label={t('details.available')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+          )}
         </div>
 
         <button

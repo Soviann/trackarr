@@ -23,7 +23,7 @@ type EpisodeUpsert struct {
 }
 
 func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, error) {
-	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, external_source_id FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
+	rows, err := r.db.Query(`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, downloaded_at, external_source_id FROM episodes WHERE season_id = ? ORDER BY episode`, seasonID)
 	if err != nil {
 		return nil, fmt.Errorf("get episodes: %w", err)
 	}
@@ -32,7 +32,7 @@ func (r *EpisodeRepository) GetBySeasonID(seasonID int64) ([]model.Episode, erro
 	var episodes []model.Episode
 	for rows.Next() {
 		var e model.Episode
-		if err := rows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.ExternalSourceID); err != nil {
+		if err := rows.Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.DownloadedAt, &e.ExternalSourceID); err != nil {
 			return nil, fmt.Errorf("scan episode: %w", err)
 		}
 		episodes = append(episodes, e)

@@ -108,6 +108,7 @@ type Title struct {
 	SonarrID          *int64          `json:"sonarr_id,omitempty"`
 	ArrIgnored        bool            `json:"arr_ignored"`
 	SonarrDeletedAt   *time.Time      `json:"sonarr_deleted_at,omitempty"`
+	DownloadedAt      *time.Time      `json:"downloaded_at,omitempty"`
 	PersonalNotes     *string         `json:"personal_notes,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
@@ -150,8 +151,9 @@ type NextEpisode struct {
 	Episode      int     `json:"episode"`
 	SeasonNumber int     `json:"season_number"`
 	Name         *string `json:"name,omitempty"`
-	AirDate      *string `json:"air_date,omitempty"`
-	IsTBA        bool    `json:"is_tba,omitempty"`
+	AirDate      *string    `json:"air_date,omitempty"`
+	DownloadedAt *time.Time `json:"downloaded_at,omitempty"`
+	IsTBA        bool       `json:"is_tba,omitempty"`
 }
 
 type TitleName struct {

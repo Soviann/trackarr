@@ -29,9 +29,9 @@ func NewEpisodeWriter(tx *sql.Tx) *EpisodeWriter {
 func (w *EpisodeWriter) GetOrCreate(ctx context.Context, seasonID int64, episodeNumber int) (*model.Episode, error) {
 	var e model.Episode
 	err := w.tx.QueryRowContext(ctx,
-		`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, external_source_id FROM episodes WHERE season_id = ? AND episode = ?`,
+		`SELECT id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, downloaded_at, external_source_id FROM episodes WHERE season_id = ? AND episode = ?`,
 		seasonID, episodeNumber,
-	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.ExternalSourceID)
+	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.DownloadedAt, &e.ExternalSourceID)
 	if err == nil {
 		return &e, nil
 	}
@@ -56,13 +56,40 @@ func (w *EpisodeWriter) ToggleWatched(ctx context.Context, id int64) (*model.Epi
 		     first_watched_at = CASE WHEN watched = 1 THEN NULL ELSE COALESCE(first_watched_at, ?) END,
 		     last_watched_at  = CASE WHEN watched = 1 THEN NULL ELSE ? END
 		 WHERE id = ?
-		 RETURNING id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, external_source_id`,
+		 RETURNING id, season_id, episode, name, air_date, watched, first_watched_at, last_watched_at, downloaded_at, external_source_id`,
 		time.Now().UTC(), time.Now().UTC(), id,
-	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.ExternalSourceID)
+	).Scan(&e.ID, &e.SeasonID, &e.Episode, &e.Name, &e.AirDate, &e.Watched, &e.FirstWatchedAt, &e.LastWatchedAt, &e.DownloadedAt, &e.ExternalSourceID)
 	if err != nil {
 		return nil, fmt.Errorf("toggle episode: %w", err)
 	}
 	return &e, nil
+}
+
+// MarkDownloaded updates the downloaded_at timestamp of an episode.
+func (w *EpisodeWriter) MarkDownloaded(ctx context.Context, id int64, downloadedAt time.Time) error {
+	_, err := w.tx.ExecContext(ctx, `UPDATE episodes SET downloaded_at = ? WHERE id = ?`, downloadedAt.Format("2006-01-02 15:04:05"), id)
+	if err != nil {
+		return fmt.Errorf("mark episode downloaded: %w", err)
+	}
+	return nil
+}
+
+// MarkDownloadedBySeasonAndEpisode marks an episode downloaded given a title ID, season number, and episode number.
+func (w *EpisodeWriter) MarkDownloadedBySeasonAndEpisode(ctx context.Context, titleID int64, seasonNumber int, episodeNumber int, downloadedAt time.Time) (*model.Episode, error) {
+	var seasonID int64
+	err := w.tx.QueryRowContext(ctx, `SELECT id FROM seasons WHERE title_id = ? AND season_number = ?`, titleID, seasonNumber).Scan(&seasonID)
+	if err != nil {
+		return nil, fmt.Errorf("find season for title %d s%d: %w", titleID, seasonNumber, err)
+	}
+	ep, err := w.GetOrCreate(ctx, seasonID, episodeNumber)
+	if err != nil {
+		return nil, fmt.Errorf("get or create episode s%de%d: %w", seasonNumber, episodeNumber, err)
+	}
+	if err := w.MarkDownloaded(ctx, ep.ID, downloadedAt); err != nil {
+		return nil, err
+	}
+	ep.DownloadedAt = &downloadedAt
+	return ep, nil
 }
 
 func (w *EpisodeWriter) BatchMarkWatched(ctx context.Context, ids []int64, watchedAt time.Time) error {
