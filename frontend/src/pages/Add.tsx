@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
+import clsx from 'clsx'
 import type { Title, TitleStatus } from '../types'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
@@ -61,7 +62,10 @@ export function Add({ path: _ }: { path?: string }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [hideInLibrary, setHideInLibrary] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const displayedResults = hideInLibrary ? results.filter((r) => !r.localTitleId) : results
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -330,75 +334,113 @@ export function Add({ path: _ }: { path?: string }) {
 
       {/* Search Results List */}
       {!urlType && results.length > 0 && (
-        <div className={s.resultsList}>
-          {results.map((r) => (
-            <div key={r.id} className={s.resultCard}>
-              <div className={s.posterWrap}>
-                <CoverImage
-                  coverUrl={r.posterUrl}
-                  type={r.type}
-                  is_anime={r.isAnime}
-                  className={s.poster}
-                  alt={r.title}
-                />
-              </div>
-
-              <div className={s.resultInfo}>
-                <div className={s.titleRow}>
-                  <span className={s.titleName} title={r.title}>{r.title}</span>
-                  <ExternalLinks
-                    tmdbId={r.tmdbId}
-                    anilistId={r.anilistId}
-                    imdbId={r.imdbId}
-                    type={r.type}
-                  />
-                </div>
-
-                <div className={s.subRow}>
-                  {r.type === 'movie' ? t('add.movie') : r.isAnime ? t('add.anime') : t('add.series')} {r.year > 0 ? `• ${r.year}` : ''}
-                </div>
-
-                {r.overview && (
-                  <p className={s.overview}>{r.overview}</p>
-                )}
-
-                <div className={s.actionsRow}>
-                  {r.localTitleId ? (
-                    <a
-                      href={routeTo.title(r.localTitleId)}
-                      className={s.inLibraryLink}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        route(routeTo.title(r.localTitleId!))
-                      }}
-                    >
-                      {t('add.inLibrary')} ↗
-                    </a>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={r.adding}
-                        onClick={() => handleAdd(r, 'plan_to_watch')}
-                        className={s.btnAction}
-                      >
-                        {r.adding ? '...' : t('add.planToWatch')}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={r.adding}
-                        onClick={() => handleAdd(r, 'watching')}
-                        className={`${s.btnAction} ${s.btnActionPrimary}`}
-                      >
-                        {r.adding ? '...' : t('add.watching')}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+        <>
+          {results.some((r) => r.localTitleId) && (
+            <div className={s.resultsHeader}>
+              <button
+                type="button"
+                aria-pressed={hideInLibrary}
+                className={clsx(s.filterChip, hideInLibrary && s.filterChipActive)}
+                onClick={() => setHideInLibrary((prev) => !prev)}
+              >
+                {t('add.hideInLibrary')}
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+
+          {displayedResults.length === 0 ? (
+            <div className={s.allHiddenNotice}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span>{t('add.allExternalInLibrary')}</span>
+            </div>
+          ) : (
+            <div className={s.resultsList}>
+              {displayedResults.map((r) => {
+                const cardContent = (
+                  <>
+                    <div className={s.posterWrap}>
+                      <CoverImage
+                        coverUrl={r.posterUrl}
+                        type={r.type}
+                        is_anime={r.isAnime}
+                        className={s.poster}
+                        alt={r.title}
+                      />
+                    </div>
+
+                    <div className={s.resultInfo}>
+                      <div className={s.titleRow}>
+                        <span className={s.titleName} title={r.title}>{r.title}</span>
+                        <ExternalLinks
+                          tmdbId={r.tmdbId}
+                          anilistId={r.anilistId}
+                          imdbId={r.imdbId}
+                          type={r.type}
+                        />
+                      </div>
+
+                      <div className={s.subRow}>
+                        {r.type === 'movie' ? t('add.movie') : r.isAnime ? t('add.anime') : t('add.series')} {r.year > 0 ? `• ${r.year}` : ''}
+                      </div>
+
+                      {r.overview && (
+                        <p className={s.overview}>{r.overview}</p>
+                      )}
+
+                      <div className={s.actionsRow}>
+                        {r.localTitleId ? (
+                          <span className={s.inLibraryLink}>
+                            {t('add.inLibrary')} ↗
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={r.adding}
+                              onClick={() => handleAdd(r, 'plan_to_watch')}
+                              className={s.btnAction}
+                            >
+                              {r.adding ? '...' : t('add.planToWatch')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={r.adding}
+                              onClick={() => handleAdd(r, 'watching')}
+                              className={clsx(s.btnAction, s.btnActionPrimary)}
+                            >
+                              {r.adding ? '...' : t('add.watching')}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )
+
+                return (
+                  <div key={r.id} className={clsx(s.resultCard, r.localTitleId && s.cardInLibrary)}>
+                    {r.localTitleId && (
+                      <a
+                        href={routeTo.title(r.localTitleId)}
+                        className={s.stretchedLink}
+                        aria-label={r.title}
+                        onClick={(e) => {
+                          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                          e.preventDefault()
+                          route(routeTo.title(r.localTitleId!))
+                        }}
+                      />
+                    )}
+                    {cardContent}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* No results message */}

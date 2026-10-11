@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Déduplication & Filtrage des Résultats TMDB Déjà en Collection (Lot 5 / Roadmap Q4 2026)** :
+  - **Exclusion automatique des doublons (`Search.tsx`)** : Les titres découverts via TMDB/AniList déjà indexés dans la bibliothèque locale sont automatiquement filtrés de la section des résultats externes afin d'éviter la redondance avec la section supérieure des résultats locaux.
+  - **Indicateur discret d'éléments masqués** : Affichage d'une puce sobre dans l'en-tête de section (`X déjà en collection`) et d'un message d'information épuré lorsque l'intégralité des résultats externes est déjà présente en collection.
+  - **Stabilité de session lors de l'ajout** : Les titres ajoutés en 1-tap (`+ À voir` / `+ En cours`) restent visibles durant la recherche active pour préserver l'accès immédiat à l'action d'annulation `UndoSnackbar`.
+  - **Cartes entières cliquables (`Search.tsx` & `Add.tsx`)** : Rendu des jaquettes et cartes d'œuvres en collection sous forme de liens sémantiques complets navigables vers `/title/:id` (curseur pointer, surélévation au survol, raccourcis nouvel onglet), tout en maintenant l'isolation stricte des liens d'inspection externes (`TMDB ↗`, `AniList ↗`, `IMDb ↗`).
+  - **Harmonisation de la page `/add` (`Add.tsx`)** : Cartes entières cliquables vers `/title/:id` pour les titres possédés et puce filtre interactive optionnelle permettant de masquer à la volée les titres déjà en bibliothèque.
+
 ## [v1.26.14] — 2026-10-11
 
 ### Ajouté

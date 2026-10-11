@@ -173,6 +173,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .titleName {
@@ -208,6 +210,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .btnAction {
@@ -256,4 +260,74 @@
 
 .inLibraryLink:hover {
   text-decoration: underline;
+}
+
+.cardInLibrary {
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.stretchedLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  color: transparent;
+}
+
+.cardInLibrary:hover {
+  border-color: var(--accent);
+  background: var(--bg-elev2);
+  transform: translateY(-1px);
+}
+
+.resultsHeader {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.filterChip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterChip:hover {
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+.filterChipActive {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.allHiddenNotice {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px dashed var(--border);
+  color: var(--ink-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-size-sm, 13px);
+  margin-bottom: 24px;
+}
+
+.allHiddenNotice svg {
+  color: var(--accent);
+  flex-shrink: 0;
 }
