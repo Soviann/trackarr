@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.8] — 2026-10-11
+
 ### Corrigé
 - **Scrobble et correspondance locale de séries homonymes à travers différentes années** :
   - **Filtrage strict sur l'année de sortie dans `FindByNameAndType`** : exigence d'une correspondance exacte sur `year` lorsque l'année est spécifiée (> 0), empêchant un scrobble entrant (ex. Jellyfin/Plex) ou un import de détourner par erreur une adaptation ou un reboot plus ancien partageant le même nom exact (ex. Sherlock Holmes de 1984 détourné vers la version de 1965).
