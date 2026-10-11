@@ -621,6 +621,12 @@
   display: none;
 }
 
+.bentoEpisodesHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .bentoEpisodeCountPill {
   font-size: 10px;
   font-family: var(--font-mono);

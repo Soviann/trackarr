@@ -548,6 +548,9 @@
   .cardList {
     max-width: 1040px;
     margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: var(--space-md);
     padding: 0 var(--space-xl);
   }
 
@@ -571,10 +574,23 @@
     padding: 0 var(--space-xl);
   }
 
+  .discoveryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-md);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-sm) var(--space-xl) var(--space-md);
+  }
+
   .sectionDivider {
     max-width: 1040px;
     margin: 0 auto;
     padding: 16px var(--space-xl) 8px;
+  }
+
+  .sectionDividerGrid {
+    max-width: 1400px;
   }
 
   .loadMoreWrap {
@@ -584,8 +600,142 @@
 }
 
 @media (min-width: 1440px) {
-  .posterGrid {
+  .posterGrid,
+  .discoveryGrid {
     grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
     max-width: 1600px;
   }
+
+  .sectionDividerGrid {
+    max-width: 1600px;
+  }
+}
+
+/* Discovery Grid Card */
+.discoveryGridCard {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.discoveryGridCard:hover {
+  border-color: var(--border-strong, #334155);
+  transform: translateY(-2px);
+}
+
+.discoveryGridPosterWrap {
+  aspect-ratio: 2/3;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-elev2);
+}
+
+.discoveryGridCover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.discoveryGridTopBadges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.discoveryGridTopBadges > * {
+  pointer-events: auto;
+}
+
+.discoveryGridBody {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.discoveryGridTitle {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+}
+
+.discoveryGridMeta {
+  font-size: 10px;
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.discoveryGridActions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btnGridAction {
+  padding: 5px 8px;
+  border-radius: var(--radius-button, 6px);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev2);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.btnGridAction:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btnGridActionPrimary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg, #000);
+}
+
+.btnGridActionPrimary:hover {
+  filter: brightness(1.1);
+  color: var(--accent-fg, #000);
+}
+
+.gridInLibraryLink {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 5px 8px;
+  border-radius: var(--radius-button, 6px);
+  background: var(--accent-wash);
+  text-align: center;
+  display: block;
+  box-sizing: border-box;
+}
+
+.gridInLibraryLink:hover {
+  text-decoration: underline;
 }

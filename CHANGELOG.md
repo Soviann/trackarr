@@ -16,6 +16,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 - **Geste tactile de glissement horizontal Swipe-to-Complete sur mobile (`UX-3` / Lot 3)** :
   - **Validation d'épisode au pouce (`EpisodeRow`)** : Glissement horizontal fluide d'une ligne d'épisode révélant un fond d'action vert/accentué avec retour haptique instantané (`HAPTIC_SHORT`) au franchissement du seuil (64px) pour valider un épisode sans viser la case 18px.
 
+### Corrigé
+- **Alignement Bento Studio et recherche Desktop** :
+  - **Badge des raccourcis clavier repositionné** : Déplacement de l'indicateur ergonomique de raccourcis (`[W] Épisode suivant · [1..9] Saisons`) depuis l'en-tête étroit du rail des saisons vers l'en-tête spacieux du panneau des épisodes, éliminant tout retour à la ligne et désalignement.
+  - **Conformité du mode Grille pour la découverte TMDB** : En mode grille (`viewMode = 'grid'`), les résultats TMDB adoptent désormais l'affichage en jaquettes posters (`discoveryGridCard`) aligné avec la grille de la bibliothèque locale, avec jaquette 2:3, puces externes et boutons d'ajout direct.
+  - **Symétrie 2 colonnes en mode Liste sur grand écran** : En mode liste (`viewMode = 'list'`), les résultats locaux de la bibliothèque s'affichent en deux colonnes équilibrées (50% de largeur) identiques aux résultats TMDB, supprimant l'étirement excessif sur 1040px.
+
 ## [v1.26.12] — 2026-10-11
 
 ### Ajouté

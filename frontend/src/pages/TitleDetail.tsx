@@ -850,9 +850,6 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
               <div className={s.bentoSeasonsCol}>
                 <div className={s.bentoSeasonsHeader}>
                   <span className={s.bentoSectionTitle}>{t('details.bentoSeasonHeader')}</span>
-                  <span className={s.bentoShortcutsBadge} title={t('details.bentoShortcutsHint')}>
-                    {t('details.bentoShortcutsHint')}
-                  </span>
                 </div>
 
                 {/* Season tabs / rail items */}
@@ -926,9 +923,14 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   <span className={s.bentoSectionTitle}>
                     {t('details.bentoEpisodesHeader')} {current ? `— S${current.season_number}` : ''}
                   </span>
-                  <span className={s.bentoEpisodeCountPill}>
-                    {watched} / {total}
-                  </span>
+                  <div className={s.bentoEpisodesHeaderRight}>
+                    <span className={s.bentoShortcutsBadge} title={t('details.bentoShortcutsHint')}>
+                      {t('details.bentoShortcutsHint')}
+                    </span>
+                    <span className={s.bentoEpisodeCountPill}>
+                      {watched} / {total}
+                    </span>
+                  </div>
                 </div>
 
                 {/* AniList strip for the active season or unmapped anime series */}
