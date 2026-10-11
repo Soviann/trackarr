@@ -114,4 +114,6 @@ Cette roadmap rassemble les arbitrages issus de l'analyse multi-agents et des re
      - Si tous les résultats TMDB sont déjà dans la collection, éviter d'afficher une section vide sans explication ou afficher une puce sobre signalant que les titres trouvés sont déjà dans la collection locale.
   3. *Harmonisation avec `Add.tsx`* :
      - Évaluer si sur `/add`, la séparation ou le filtrage doit également être appliqué pour préserver une expérience fluide et prévisible lors de l'exploration de médias.
-- **Validation** : `make test-front`, vérification que la recherche (ex. « survivor ») n'affiche aucun doublon entre la première section locale et la section TMDB.
+  4. *Carte entière cliquable pour les médias en collection* :
+     - Dès qu'un résultat de découverte externe est identifié comme étant en collection (ou vient d'y être ajouté via `+ À voir` / `+ En cours`), rendre **l'intégralité de la carte cliquable** (lien sémantique `<a>` vers `/title/:id`, curseur pointer et survol interactif, identique aux cartes de la collection locale), au lieu de contraindre l'utilisateur à viser spécifiquement le petit bouton / lien `En collection ↗`. Les liens d'inspection externes (`TMDB ↗`, etc.) conservent leur isolation d'événement (`e.stopPropagation()`).
+- **Validation** : `make test-front`, vérification que la recherche (ex. « survivor ») n'affiche aucun doublon entre la première section locale et la section TMDB, et qu'un titre en collection est immédiatement navigable en cliquant n'importe où sur sa carte.
