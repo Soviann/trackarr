@@ -479,69 +479,139 @@ export function Search({
           {/* Discovery results when TMDB is active */}
           {searchOnTMDB && discoveryItems.length > 0 && (
             <>
-              <div className={s.sectionDivider}>{t('search.tmdbResults')}</div>
-              <div className={s.discoveryList}>
-                {discoveryItems.map((r) => (
-                  <div key={r.id} className={s.discoveryCard}>
-                    <CoverImage
-                      coverUrl={r.posterUrl}
-                      type={r.type}
-                      is_anime={r.isAnime}
-                      alt={r.title}
-                      className={s.cardCover}
-                      iconSize="18px"
-                    />
-                    <div className={s.discoveryInfo}>
-                      <div className={s.discoveryHeader}>
-                        <span className={s.discoveryTitle}>{r.title}</span>
-                        <ExternalLinks
-                          tmdbId={r.tmdbId}
-                          anilistId={r.anilistId}
-                          imdbId={r.imdbId}
-                          type={r.type}
-                        />
-                      </div>
-                      <div className={s.discoveryMeta}>
-                        {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
-                      </div>
-                    </div>
-                    <div className={s.discoveryActions}>
-                      {r.localTitleId ? (
-                        <a
-                          href={routeTo.title(r.localTitleId)}
-                          className={s.inLibraryLink}
-                          onClick={(e) => {
-                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
-                            e.preventDefault()
-                            if (r.localTitleId) route(routeTo.title(r.localTitleId))
-                          }}
-                        >
-                          {t('search.inLibrary')} ↗
-                        </a>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            disabled={r.adding}
-                            onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
-                            className={s.btnAction}
-                          >
-                            {r.adding ? '...' : t('search.addToPlan')}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={r.adding}
-                            onClick={() => handleAddDiscovery(r, 'watching')}
-                            className={clsx(s.btnAction, s.btnActionPrimary)}
-                          >
-                            {r.adding ? '...' : t('search.addToWatching')}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className={clsx(s.sectionDivider, isDesktop && viewMode === 'grid' && !mergeSourceId && s.sectionDividerGrid)}>
+                {t('search.tmdbResults')}
               </div>
+              {isDesktop && viewMode === 'grid' && !mergeSourceId ? (
+                <div className={s.discoveryGrid}>
+                  {discoveryItems.map((r) => (
+                    <div key={r.id} className={s.discoveryGridCard}>
+                      <div className={s.discoveryGridPosterWrap}>
+                        <CoverImage
+                          coverUrl={r.posterUrl}
+                          type={r.type}
+                          is_anime={r.isAnime}
+                          alt={r.title}
+                          className={s.discoveryGridCover}
+                          iconSize="24px"
+                        />
+                        <div className={s.discoveryGridTopBadges}>
+                          <TypeBadge type={r.type} size="sm" />
+                          <ExternalLinks
+                            tmdbId={r.tmdbId}
+                            anilistId={r.anilistId}
+                            imdbId={r.imdbId}
+                            type={r.type}
+                          />
+                        </div>
+                      </div>
+                      <div className={s.discoveryGridBody}>
+                        <span className={s.discoveryGridTitle} title={r.title}>{r.title}</span>
+                        <span className={s.discoveryGridMeta}>
+                          {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
+                        </span>
+                        <div className={s.discoveryGridActions}>
+                          {r.localTitleId ? (
+                            <a
+                              href={routeTo.title(r.localTitleId)}
+                              className={s.gridInLibraryLink}
+                              onClick={(e) => {
+                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                                e.preventDefault()
+                                if (r.localTitleId) route(routeTo.title(r.localTitleId))
+                              }}
+                            >
+                              {t('search.inLibrary')} ↗
+                            </a>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                disabled={r.adding}
+                                onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
+                                className={s.btnGridAction}
+                              >
+                                {r.adding ? '...' : t('search.addToPlan')}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={r.adding}
+                                onClick={() => handleAddDiscovery(r, 'watching')}
+                                className={clsx(s.btnGridAction, s.btnActionPrimary)}
+                              >
+                                {r.adding ? '...' : t('search.addToWatching')}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={s.discoveryList}>
+                  {discoveryItems.map((r) => (
+                    <div key={r.id} className={s.discoveryCard}>
+                      <CoverImage
+                        coverUrl={r.posterUrl}
+                        type={r.type}
+                        is_anime={r.isAnime}
+                        alt={r.title}
+                        className={s.cardCover}
+                        iconSize="18px"
+                      />
+                      <div className={s.discoveryInfo}>
+                        <div className={s.discoveryHeader}>
+                          <span className={s.discoveryTitle}>{r.title}</span>
+                          <ExternalLinks
+                            tmdbId={r.tmdbId}
+                            anilistId={r.anilistId}
+                            imdbId={r.imdbId}
+                            type={r.type}
+                          />
+                        </div>
+                        <div className={s.discoveryMeta}>
+                          {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
+                        </div>
+                      </div>
+                      <div className={s.discoveryActions}>
+                        {r.localTitleId ? (
+                          <a
+                            href={routeTo.title(r.localTitleId)}
+                            className={s.inLibraryLink}
+                            onClick={(e) => {
+                              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                              e.preventDefault()
+                              if (r.localTitleId) route(routeTo.title(r.localTitleId))
+                            }}
+                          >
+                            {t('search.inLibrary')} ↗
+                          </a>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={r.adding}
+                              onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
+                              className={s.btnAction}
+                            >
+                              {r.adding ? '...' : t('search.addToPlan')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={r.adding}
+                              onClick={() => handleAddDiscovery(r, 'watching')}
+                              className={clsx(s.btnAction, s.btnActionPrimary)}
+                            >
+                              {r.adding ? '...' : t('search.addToWatching')}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
