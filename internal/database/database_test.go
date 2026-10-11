@@ -21,6 +21,25 @@ func TestOpen_CreatesDatabase(t *testing.T) {
 	assert.NotNil(t, db)
 }
 
+func TestOpen_AppliesPerformancePragmas(t *testing.T) {
+	writeDB, readDB, err := database.Open(":memory:")
+	require.NoError(t, err)
+	defer writeDB.Close()
+	defer readDB.Close()
+
+	var syncMode int
+	require.NoError(t, writeDB.QueryRow("PRAGMA synchronous").Scan(&syncMode))
+	assert.Equal(t, 1, syncMode, "synchronous must be 1 (NORMAL)")
+
+	var cacheSize int
+	require.NoError(t, writeDB.QueryRow("PRAGMA cache_size").Scan(&cacheSize))
+	assert.Equal(t, -32000, cacheSize, "cache_size must be -32000 (32MB)")
+
+	var tempStore int
+	require.NoError(t, writeDB.QueryRow("PRAGMA temp_store").Scan(&tempStore))
+	assert.Equal(t, 2, tempStore, "temp_store must be 2 (MEMORY)")
+}
+
 func TestMigrate_CreatesAllTables(t *testing.T) {
 	db, _, err := database.Open(":memory:")
 	require.NoError(t, err)

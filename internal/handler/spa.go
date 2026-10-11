@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"embed"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -13,21 +12,35 @@ import (
 
 // SPAHandler serves the embedded Preact SPA.
 // For any path not starting with /api, it serves static files or falls back to index.html.
-func SPAHandler(distFS embed.FS) http.Handler {
+func SPAHandler(distFS fs.FS) http.Handler {
 	sub, _ := fs.Sub(distFS, "frontend/dist")
 	fileServer := http.FileServer(http.FS(sub))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 
+		// Explicit index.html or root is served as root to avoid http.FileServer 301 canonicalization
+		if path == "" || path == "index.html" {
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			r.URL.Path = "/"
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
 		// Try serving the file directly
 		if f, err := sub.Open(path); err == nil {
 			f.Close()
+			if strings.HasPrefix(path, "assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
 
 		// Fallback to index.html for client-side routing
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		r.URL.Path = "/"
 		fileServer.ServeHTTP(w, r)
 	})

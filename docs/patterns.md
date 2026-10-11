@@ -73,7 +73,7 @@
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
 | `Episode` | `GetBySeasonID`, `GetByID` | `GetOrCreate`, `ToggleWatched`, `BatchMarkWatched`, `UpdateMetadata`, `UpsertBatch`, `MarkWatched`, `MarkAllWatchedForTitle` |
 | `WatchEvent` | `CountByTitleID`, `ListByTitle` | `Create`, `BatchCreate` |
-| `Task` | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch` |
+| `Task` | `GetByID`, `ListPending`, `ListDead`, `ListPaginated`, `CountByStatus` | `Enqueue`, `EnqueueWithDelay`, `FetchDue`, `Complete`, `Fail`, `RetryDead`, `ResetRunning`, `Delete`, `DeleteBatch`, `PurgeCompletedTasks` |
 | `SeasonExternalID` | `Get`, `ListParts`, `ListPartsForTitle` | `Add`, `Delete`, `DeletePart`, `Reorder`, `UpdatePartMeta` (Multi-part season support) |
 | `Genre` | `ListWithCounts` | `ReplaceForTitle` |
 | `Setting` | `Get` | `Set`, `Delete` |
@@ -218,6 +218,8 @@
 - **API URL Rule**: `apiFetch` and `useApi` automatically prepend `/api`. Never write `apiFetch('/api/...')`.
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
 - **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` maps to `/` (`Collection`), `/releases` maps to `/coming-up` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
+- **Code Splitting & Lazy Loading (`App.tsx`)**: Secondary sections (all Admin subpages, Stats, Wrapped, MatchReview, Help, Validate) are lazy-loaded via `lazy()` and wrapped in `<Suspense fallback={null}>`. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `ContinueWatching`, `Add`) remain synchronous for instant mobile first-load.
+- **SPA HTTP Cache Headers (`internal/handler/spa.go`)**: Hashed assets under `/assets/*` serve `Cache-Control: public, max-age=31536000, immutable`. HTML documents (`index.html`) and client-side fallback routes serve `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ### State Management (`frontend/src/store.ts`)
 - `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and session-persistent filters (`status`, `type`, `is_anime`, `series_status`, `decade`, `release_from`, `release_to`, `genres`, `origin_country`, `my_rating_min`, `tmdb_rating_min`). Filters persist across title details and navigation, resetting only on explicit user action or reload.

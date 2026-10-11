@@ -1,6 +1,8 @@
 package repository_test
 
 import (
+	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -150,3 +152,97 @@ func TestTaskWriter_FetchDue_Priority(t *testing.T) {
 	assert.Equal(t, idRefresh, tasks[3].ID)
 }
 
+func TestTaskWriter_PurgeCompletedTasks(t *testing.T) {
+	t.Run("nominal_purges_only_old_dead_tasks", func(t *testing.T) {
+		db, _, err := database.Open(":memory:")
+		require.NoError(t, err)
+		require.NoError(t, database.Migrate(db))
+
+		idDeadOld := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 1}`, nil)
+		idDeadRecent := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 2}`, nil)
+		idPendingOld := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 3}`, nil)
+		idSleepingOld := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 4}`, nil)
+
+		now := time.Now()
+		twentyDaysAgo := now.Add(-20 * 24 * time.Hour)
+		fiveDaysAgo := now.Add(-5 * 24 * time.Hour)
+
+		_, err = db.Exec(`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`, twentyDaysAgo, idDeadOld)
+		require.NoError(t, err)
+		_, err = db.Exec(`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`, fiveDaysAgo, idDeadRecent)
+		require.NoError(t, err)
+		_, err = db.Exec(`UPDATE task_queue SET status = 'pending', updated_at = ? WHERE id = ?`, twentyDaysAgo, idPendingOld)
+		require.NoError(t, err)
+		_, err = db.Exec(`UPDATE task_queue SET status = 'sleeping', updated_at = ? WHERE id = ?`, twentyDaysAgo, idSleepingOld)
+		require.NoError(t, err)
+
+		var purged int64
+		err = database.WithTx(db, func(tx *sql.Tx) error {
+			var txErr error
+			purged, txErr = repository.NewTaskWriter(tx).PurgeCompletedTasks(context.Background(), 14*24*time.Hour)
+			return txErr
+		})
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), purged)
+
+		repo := repository.NewTaskRepository(db)
+		_, err = repo.GetByID(idDeadOld)
+		assert.ErrorIs(t, err, sql.ErrNoRows, "old dead task must be purged")
+
+		aliveRecent, err := repo.GetByID(idDeadRecent)
+		require.NoError(t, err)
+		assert.Equal(t, idDeadRecent, aliveRecent.ID)
+
+		alivePending, err := repo.GetByID(idPendingOld)
+		require.NoError(t, err)
+		assert.Equal(t, idPendingOld, alivePending.ID)
+
+		aliveSleeping, err := repo.GetByID(idSleepingOld)
+		require.NoError(t, err)
+		assert.Equal(t, idSleepingOld, aliveSleeping.ID)
+	})
+
+	t.Run("boundary_empty_and_zero_duration", func(t *testing.T) {
+		db, _, err := database.Open(":memory:")
+		require.NoError(t, err)
+		require.NoError(t, database.Migrate(db))
+
+		// 1. Purging an empty queue returns 0
+		var purged int64
+		err = database.WithTx(db, func(tx *sql.Tx) error {
+			var txErr error
+			purged, txErr = repository.NewTaskWriter(tx).PurgeCompletedTasks(context.Background(), 14*24*time.Hour)
+			return txErr
+		})
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), purged)
+
+		// 2. olderThan = 0 purges all dead tasks up to now
+		idDead := testutil.EnqueueTask(t, db, model.TaskTypeEnrichment, `{"title_id": 10}`, nil)
+		_, err = db.Exec(`UPDATE task_queue SET status = 'dead', updated_at = ? WHERE id = ?`, time.Now().Add(-time.Minute), idDead)
+		require.NoError(t, err)
+
+		err = database.WithTx(db, func(tx *sql.Tx) error {
+			var txErr error
+			purged, txErr = repository.NewTaskWriter(tx).PurgeCompletedTasks(context.Background(), 0)
+			return txErr
+		})
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), purged)
+	})
+
+	t.Run("error_canceled_context", func(t *testing.T) {
+		db, _, err := database.Open(":memory:")
+		require.NoError(t, err)
+		require.NoError(t, database.Migrate(db))
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			_, txErr := repository.NewTaskWriter(tx).PurgeCompletedTasks(ctx, 14*24*time.Hour)
+			return txErr
+		})
+		assert.Error(t, err, "canceled context must return error")
+	})
+}

@@ -12,27 +12,29 @@ import { ComingUp } from './pages/ComingUp'
 import { ContinueWatching } from './pages/ContinueWatching'
 import { Releases } from './pages/Releases'
 import { TitleDetail } from './pages/TitleDetail'
+import { lazy, Suspense } from 'preact/compat'
 import { Search } from './pages/Search'
 import { Add } from './pages/Add'
-import { Validate } from './pages/Validate'
-import { MatchReview } from './pages/MatchReview'
 import { Login } from './pages/Login'
 import { Setup } from './pages/Setup'
-import { Stats } from './pages/Stats'
-import { Wrapped } from './pages/Wrapped'
-import { Admin } from './pages/Admin'
-import { AdminSettings } from './pages/AdminSettings'
-import { AdminAuth } from './pages/AdminAuth'
-import { AdminTasks } from './pages/AdminTasks'
-import { AdminNotifications } from './pages/AdminNotifications'
-import { AdminJellyfin } from './pages/AdminJellyfin'
-import { AdminAniList } from './pages/AdminAniList'
-import { AdminArr } from './pages/AdminArr'
-import { AdminSeasonAudit } from './pages/AdminSeasonAudit'
 import { AnilistCallback } from './pages/AnilistCallback'
-import { Help } from './pages/Help'
 import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
+
+const Stats = lazy(() => import('./pages/Stats').then((m) => ({ default: m.Stats })))
+const Wrapped = lazy(() => import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })))
+const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })))
+const AdminSettings = lazy(() => import('./pages/AdminSettings').then((m) => ({ default: m.AdminSettings })))
+const AdminAuth = lazy(() => import('./pages/AdminAuth').then((m) => ({ default: m.AdminAuth })))
+const AdminTasks = lazy(() => import('./pages/AdminTasks').then((m) => ({ default: m.AdminTasks })))
+const AdminNotifications = lazy(() => import('./pages/AdminNotifications').then((m) => ({ default: m.AdminNotifications })))
+const AdminJellyfin = lazy(() => import('./pages/AdminJellyfin').then((m) => ({ default: m.AdminJellyfin })))
+const AdminAniList = lazy(() => import('./pages/AdminAniList').then((m) => ({ default: m.AdminAniList })))
+const AdminArr = lazy(() => import('./pages/AdminArr').then((m) => ({ default: m.AdminArr })))
+const AdminSeasonAudit = lazy(() => import('./pages/AdminSeasonAudit').then((m) => ({ default: m.AdminSeasonAudit })))
+const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })))
+const Validate = lazy(() => import('./pages/Validate').then((m) => ({ default: m.Validate })))
+const MatchReview = lazy(() => import('./pages/MatchReview').then((m) => ({ default: m.MatchReview })))
 import { useServiceWorker } from './hooks/useServiceWorker'
 import { useIsDesktop } from './hooks/useIsDesktop'
 import { updateBadge } from './utils/badge'
@@ -345,40 +347,42 @@ export function App() {
             />
           )}
           <main className={s.main} id="main-content">
-            <Router onChange={handleRoute}>
-              <Library path={ROUTE_PATHS.home} filterOpen={filterDrawerOpen} />
-              <ComingUp path={ROUTE_PATHS.comingUp} />
-              <ContinueWatching path={ROUTE_PATHS.continueWatching} />
-              <Releases path={ROUTE_PATHS.releases} />
-              <Search
-                path={ROUTE_PATHS.search}
-                filterOpen={filterDrawerOpen}
-                onToggleFilters={handleToggleFilterDrawer}
-                desktopFilterDrawer={isDesktop ? filterDrawer : undefined}
-                activeFilterCount={activeFilterCount}
-              />
-              <Add path={ROUTE_PATHS.add} />
-              <Stats path={ROUTE_PATHS.stats} />
-              <Wrapped path={ROUTE_PATHS.wrapped} />
-              <Wrapped path={ROUTE_PATHS.wrappedYear} />
-              <Login path={ROUTE_PATHS.login} />
-              <Setup path={ROUTE_PATHS.setup} />
-              <TitleDetail path={ROUTE_PATHS.title} />
-              <PersonTitles path={ROUTE_PATHS.person} />
-              <Admin path={ROUTE_PATHS.admin} />
-              <AdminSettings path={ROUTE_PATHS.adminSettings} />
-              <AdminAuth path={ROUTE_PATHS.adminAuth} />
-              <Validate path={ROUTE_PATHS.adminValidate} />
-              <AdminTasks path={ROUTE_PATHS.adminTasks} />
-              <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
-              <AdminJellyfin path={ROUTE_PATHS.adminJellyfin} />
-              <AdminAniList path={ROUTE_PATHS.adminAniList} />
-              <AdminArr path={ROUTE_PATHS.adminArr} />
-              <AdminSeasonAudit path={ROUTE_PATHS.adminSeasonAudit} />
-              <Help path={ROUTE_PATHS.adminHelp} />
-              <AnilistCallback path={ROUTE_PATHS.anilistCallback} />
-              <MatchReview path={ROUTE_PATHS.matchReview} />
-            </Router>
+            <Suspense fallback={null}>
+              <Router onChange={handleRoute}>
+                <Library path={ROUTE_PATHS.home} filterOpen={filterDrawerOpen} />
+                <ComingUp path={ROUTE_PATHS.comingUp} />
+                <ContinueWatching path={ROUTE_PATHS.continueWatching} />
+                <Releases path={ROUTE_PATHS.releases} />
+                <Search
+                  path={ROUTE_PATHS.search}
+                  filterOpen={filterDrawerOpen}
+                  onToggleFilters={handleToggleFilterDrawer}
+                  desktopFilterDrawer={isDesktop ? filterDrawer : undefined}
+                  activeFilterCount={activeFilterCount}
+                />
+                <Add path={ROUTE_PATHS.add} />
+                <Stats path={ROUTE_PATHS.stats} />
+                <Wrapped path={ROUTE_PATHS.wrapped} />
+                <Wrapped path={ROUTE_PATHS.wrappedYear} />
+                <Login path={ROUTE_PATHS.login} />
+                <Setup path={ROUTE_PATHS.setup} />
+                <TitleDetail path={ROUTE_PATHS.title} />
+                <PersonTitles path={ROUTE_PATHS.person} />
+                <Admin path={ROUTE_PATHS.admin} />
+                <AdminSettings path={ROUTE_PATHS.adminSettings} />
+                <AdminAuth path={ROUTE_PATHS.adminAuth} />
+                <Validate path={ROUTE_PATHS.adminValidate} />
+                <AdminTasks path={ROUTE_PATHS.adminTasks} />
+                <AdminNotifications path={ROUTE_PATHS.adminNotifications} />
+                <AdminJellyfin path={ROUTE_PATHS.adminJellyfin} />
+                <AdminAniList path={ROUTE_PATHS.adminAniList} />
+                <AdminArr path={ROUTE_PATHS.adminArr} />
+                <AdminSeasonAudit path={ROUTE_PATHS.adminSeasonAudit} />
+                <Help path={ROUTE_PATHS.adminHelp} />
+                <AnilistCallback path={ROUTE_PATHS.anilistCallback} />
+                <MatchReview path={ROUTE_PATHS.matchReview} />
+              </Router>
+            </Suspense>
           </main>
           <UndoSnackbar hideNavbar={hideNavbar} />
           {!hideNavbar && (

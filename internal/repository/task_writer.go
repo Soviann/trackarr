@@ -223,6 +223,24 @@ func (w *TaskWriter) DeleteBatch(ctx context.Context, ids []int64) error {
 	return nil
 }
 
+// PurgeCompletedTasks deletes tasks in status 'dead' (or 'completed') whose
+// updated_at is older than olderThan. Returns the count of deleted rows.
+func (w *TaskWriter) PurgeCompletedTasks(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoff := time.Now().Add(-olderThan)
+	res, err := w.tx.ExecContext(ctx,
+		`DELETE FROM task_queue WHERE status IN ('dead', 'completed') AND updated_at < ?`,
+		cutoff,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("purge completed tasks: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("purge completed tasks rows affected: %w", err)
+	}
+	return n, nil
+}
+
 // nextDayMorning returns tomorrow at 06:00 UTC.
 func nextDayMorning() time.Time {
 	now := time.Now()

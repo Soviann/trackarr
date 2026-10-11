@@ -8,7 +8,13 @@
 - Engine: SQLite 3 with Write-Ahead Logging (`WAL`).
 - Driver: `github.com/mattn/go-sqlite3` with build tag `sqlite_fts5`.
 - Path: `data/trackarr.db` (or `data/plextracker.db` on existing installs) (+ `-wal` and `-shm` sidecars).
-- Connection Limits: `MaxOpenConns = 1` (strict single-writer serialization).
+- Connection Limits: `MaxOpenConns = 1` for `writeDB` (strict single-writer serialization); `MaxOpenConns = 4` for `readDB` (`mode=ro`).
+- Performance Pragmas:
+  - `_synchronous=NORMAL`: Eliminates blocking `fsync` calls on every transaction commit, drastically cutting I/O latency on NAS spinning disks while preserving 100% crash and OS corruption safety in WAL mode.
+  - `_cache_size=-32000`: 32 MB page cache for accelerated FTS5 searches and multi-table joins.
+  - `_temp_store=MEMORY` (`PRAGMA temp_store = 2`): Keeps temporary tables and sorting operations entirely in RAM.
+- Maintenance & Checkpointing:
+  - Daily maintenance cron at 04:30 (and on scheduled passes) runs `TaskWriter.PurgeCompletedTasks` (14-day retention for `dead` tasks) followed by `PRAGMA wal_checkpoint(PASSIVE)` to fold committed WAL pages back into the main database file without blocking concurrent operations.
 
 ## Core Architecture Rule: Reader vs Writer Pattern
 To enforce compile-time write safety:
