@@ -243,6 +243,7 @@
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
 | `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
 | `TypeBadge` | `components/TypeBadge.tsx` | Movie/Series badge with optional colored Arr top accent border |
+| `ExternalLinks` | `components/ExternalLinks.tsx` | Discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) with strict `target="_blank" rel="noopener noreferrer"` and click event isolation |
 | `StatusBadge` | `components/StatusBadge.tsx` | Localized pill badge indicating watch and release statuses (*Watching*, *Completed*, *Plan to Watch* / *À voir*, *Dropped*, *Caught Up* / *À jour*) |
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, overscroll containment, and automatic close on page navigation |
@@ -297,8 +298,8 @@
 | `/releases` | `Releases` | `pages/Releases.tsx` | Prowlarr releases feed with multi-indexer filters and 1-click addition |
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` | In-progress titles, quick watch buttons, and unwatched episodes tracking |
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
-| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, and external discovery persistence |
-| `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
+| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, external discovery persistence, and discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) |
+| `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), local library cross-checking (`In Library ↗`), 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Sidebar: full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar (sticky 290px poster + quick actions + fiche technique, right column hero, ratings, elevated seasons & episodes hub) on desktop (>=1024px) |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |

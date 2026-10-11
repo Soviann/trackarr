@@ -428,15 +428,6 @@
   text-overflow: ellipsis;
 }
 
-.discoveryBadge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink-dim);
-}
-
 .discoveryMeta {
   font-size: var(--font-size-xs);
   color: var(--ink-dim);

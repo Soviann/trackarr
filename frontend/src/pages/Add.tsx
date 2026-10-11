@@ -9,6 +9,7 @@ import { useTranslation } from '../i18n'
 import { useUndo } from '../context/UndoContext'
 import { useSearchStore } from '../store'
 import { CoverImage } from '../components/CoverImage'
+import { ExternalLinks } from '../components/ExternalLinks'
 import s from './Add.module.css'
 
 interface SearchItem {
@@ -22,6 +23,7 @@ interface SearchItem {
   source: 'TMDB' | 'AniList'
   tmdbId?: number
   anilistId?: number
+  imdbId?: string | null
   localTitleId?: number
   adding?: boolean
 }
@@ -137,7 +139,10 @@ export function Add({ path: _ }: { path?: string }) {
               const searchName = tmdb.title.toLowerCase()
               return localName === searchName && (!tmdb.year || !t.year || t.year === tmdb.year)
             })
-            if (localHit) item.localTitleId = localHit.id
+            if (localHit) {
+              item.localTitleId = localHit.id
+              if (localHit.imdb_id) item.imdbId = localHit.imdb_id
+            }
 
             items.push(item)
           }
@@ -174,7 +179,10 @@ export function Add({ path: _ }: { path?: string }) {
               const searchName = itemTitle.toLowerCase()
               return localName === searchName && (!al.year || !t.year || t.year === al.year)
             })
-            if (localHit) item.localTitleId = localHit.id
+            if (localHit) {
+              item.localTitleId = localHit.id
+              if (localHit.imdb_id) item.imdbId = localHit.imdb_id
+            }
 
             items.push(item)
           }
@@ -338,7 +346,12 @@ export function Add({ path: _ }: { path?: string }) {
               <div className={s.resultInfo}>
                 <div className={s.titleRow}>
                   <span className={s.titleName} title={r.title}>{r.title}</span>
-                  <span className={s.sourceBadge}>{r.source}</span>
+                  <ExternalLinks
+                    tmdbId={r.tmdbId}
+                    anilistId={r.anilistId}
+                    imdbId={r.imdbId}
+                    type={r.type}
+                  />
                 </div>
 
                 <div className={s.subRow}>

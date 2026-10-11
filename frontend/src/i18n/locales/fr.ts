@@ -62,6 +62,7 @@ export const fr: TranslationSchema = {
     notFound: 'Introuvable',
     retry: 'Réessayer',
     select: 'Sélectionner',
+    openExternal: 'Ouvrir sur {source}',
   },
   add: {
     title: 'Ajouter un média',
