@@ -211,6 +211,12 @@ export function Search({
     return () => { cancelled = true; clearTimeout(timer) }
   }, [searchOnTMDB, query, setDiscoveryResults, setLoadingDiscovery])
 
+  const [justAddedIds, setJustAddedIds] = useState<Set<string>>(() => new Set())
+
+  useEffect(() => {
+    setJustAddedIds(new Set())
+  }, [query])
+
   const discoveryItems = useMemo(() => {
     return discoveryResults.map((item) => {
       if (item.localTitleId) return item
@@ -226,6 +232,19 @@ export function Search({
       return item
     })
   }, [discoveryResults, results])
+
+  const { availableDiscoveryItems, hiddenInLibraryCount } = useMemo(() => {
+    let hidden = 0
+    const available: DiscoveryItem[] = []
+    for (const item of discoveryItems) {
+      if (item.localTitleId && !justAddedIds.has(item.id)) {
+        hidden++
+      } else {
+        available.push(item)
+      }
+    }
+    return { availableDiscoveryItems: available, hiddenInLibraryCount: hidden }
+  }, [discoveryItems, justAddedIds])
 
   const handleAddDiscovery = async (item: DiscoveryItem, status: TitleStatus) => {
     if (item.localTitleId || item.adding) return
@@ -246,6 +265,7 @@ export function Search({
         }),
       })
 
+      setJustAddedIds((prev) => new Set(prev).add(item.id))
       setDiscoveryResults((prev) =>
         prev.map((r) => (r.id === item.id ? { ...r, localTitleId: created.id, adding: false } : r))
       )
@@ -254,6 +274,11 @@ export function Search({
       showUndo({
         message: t('undo.titleAdded', { title: item.title }),
         onUndo: async () => {
+          setJustAddedIds((prev) => {
+            const next = new Set(prev)
+            next.delete(item.id)
+            return next
+          })
           setDiscoveryResults((prev) =>
             prev.map((r) => (r.id === item.id ? { ...r, localTitleId: undefined } : r))
           )
@@ -477,59 +502,141 @@ export function Search({
           )}
 
           {/* Discovery results when TMDB is active */}
-          {searchOnTMDB && discoveryItems.length > 0 && (
+          {searchOnTMDB && (availableDiscoveryItems.length > 0 || hiddenInLibraryCount > 0) && (
             <>
               <div className={clsx(s.sectionDivider, isDesktop && viewMode === 'grid' && !mergeSourceId && s.sectionDividerGrid)}>
-                {t('search.tmdbResults')}
+                <span>{t('search.tmdbResults')}</span>
+                {hiddenInLibraryCount > 0 && availableDiscoveryItems.length > 0 && (
+                  <span className={s.hiddenBadge}>
+                    {t('search.hiddenInLibrary', { count: hiddenInLibraryCount })}
+                  </span>
+                )}
               </div>
-              {isDesktop && viewMode === 'grid' && !mergeSourceId ? (
+              {availableDiscoveryItems.length === 0 ? (
+                <div className={clsx(s.allHiddenNotice, isDesktop && viewMode === 'grid' && !mergeSourceId && s.allHiddenNoticeGrid)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <span>{t('search.allExternalInLibrary')}</span>
+                </div>
+              ) : isDesktop && viewMode === 'grid' && !mergeSourceId ? (
                 <div className={s.discoveryGrid}>
-                  {discoveryItems.map((r) => (
-                    <div key={r.id} className={s.discoveryGridCard}>
-                      <div className={s.discoveryGridPosterWrap}>
+                  {availableDiscoveryItems.map((r) => {
+                    const cardContent = (
+                      <>
+                        <div className={s.discoveryGridPosterWrap}>
+                          <CoverImage
+                            coverUrl={r.posterUrl}
+                            type={r.type}
+                            is_anime={r.isAnime}
+                            alt={r.title}
+                            className={s.discoveryGridCover}
+                            iconSize="24px"
+                          />
+                          <div className={s.discoveryGridTopBadges}>
+                            <TypeBadge type={r.type} size="sm" />
+                            <ExternalLinks
+                              tmdbId={r.tmdbId}
+                              anilistId={r.anilistId}
+                              imdbId={r.imdbId}
+                              type={r.type}
+                            />
+                          </div>
+                        </div>
+                        <div className={s.discoveryGridBody}>
+                          <span className={s.discoveryGridTitle} title={r.title}>{r.title}</span>
+                          <span className={s.discoveryGridMeta}>
+                            {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
+                          </span>
+                          <div className={s.discoveryGridActions}>
+                            {r.localTitleId ? (
+                              <span className={s.gridInLibraryLink}>
+                                {t('search.inLibrary')} ↗
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={r.adding}
+                                  onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
+                                  className={s.btnGridAction}
+                                >
+                                  {r.adding ? '...' : t('search.addToPlan')}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={r.adding}
+                                  onClick={() => handleAddDiscovery(r, 'watching')}
+                                  className={clsx(s.btnGridAction, s.btnActionPrimary)}
+                                >
+                                  {r.adding ? '...' : t('search.addToWatching')}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )
+
+                    return (
+                      <div key={r.id} className={clsx(s.discoveryGridCard, r.localTitleId && s.cardInLibrary)}>
+                        {r.localTitleId && (
+                          <a
+                            href={routeTo.title(r.localTitleId)}
+                            className={s.stretchedLink}
+                            aria-label={r.title}
+                            onClick={(e) => {
+                              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                              e.preventDefault()
+                              route(routeTo.title(r.localTitleId!))
+                            }}
+                          />
+                        )}
+                        {cardContent}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className={s.discoveryList}>
+                  {availableDiscoveryItems.map((r) => {
+                    const cardContent = (
+                      <>
                         <CoverImage
                           coverUrl={r.posterUrl}
                           type={r.type}
                           is_anime={r.isAnime}
                           alt={r.title}
-                          className={s.discoveryGridCover}
-                          iconSize="24px"
+                          className={s.cardCover}
+                          iconSize="18px"
                         />
-                        <div className={s.discoveryGridTopBadges}>
-                          <TypeBadge type={r.type} size="sm" />
-                          <ExternalLinks
-                            tmdbId={r.tmdbId}
-                            anilistId={r.anilistId}
-                            imdbId={r.imdbId}
-                            type={r.type}
-                          />
+                        <div className={s.discoveryInfo}>
+                          <div className={s.discoveryHeader}>
+                            <span className={s.discoveryTitle}>{r.title}</span>
+                            <ExternalLinks
+                              tmdbId={r.tmdbId}
+                              anilistId={r.anilistId}
+                              imdbId={r.imdbId}
+                              type={r.type}
+                            />
+                          </div>
+                          <div className={s.discoveryMeta}>
+                            {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
+                          </div>
                         </div>
-                      </div>
-                      <div className={s.discoveryGridBody}>
-                        <span className={s.discoveryGridTitle} title={r.title}>{r.title}</span>
-                        <span className={s.discoveryGridMeta}>
-                          {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
-                        </span>
-                        <div className={s.discoveryGridActions}>
+                        <div className={s.discoveryActions}>
                           {r.localTitleId ? (
-                            <a
-                              href={routeTo.title(r.localTitleId)}
-                              className={s.gridInLibraryLink}
-                              onClick={(e) => {
-                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
-                                e.preventDefault()
-                                if (r.localTitleId) route(routeTo.title(r.localTitleId))
-                              }}
-                            >
+                            <span className={s.inLibraryLink}>
                               {t('search.inLibrary')} ↗
-                            </a>
+                            </span>
                           ) : (
                             <>
                               <button
                                 type="button"
                                 disabled={r.adding}
                                 onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
-                                className={s.btnGridAction}
+                                className={s.btnAction}
                               >
                                 {r.adding ? '...' : t('search.addToPlan')}
                               </button>
@@ -537,79 +644,34 @@ export function Search({
                                 type="button"
                                 disabled={r.adding}
                                 onClick={() => handleAddDiscovery(r, 'watching')}
-                                className={clsx(s.btnGridAction, s.btnActionPrimary)}
+                                className={clsx(s.btnAction, s.btnActionPrimary)}
                               >
                                 {r.adding ? '...' : t('search.addToWatching')}
                               </button>
                             </>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={s.discoveryList}>
-                  {discoveryItems.map((r) => (
-                    <div key={r.id} className={s.discoveryCard}>
-                      <CoverImage
-                        coverUrl={r.posterUrl}
-                        type={r.type}
-                        is_anime={r.isAnime}
-                        alt={r.title}
-                        className={s.cardCover}
-                        iconSize="18px"
-                      />
-                      <div className={s.discoveryInfo}>
-                        <div className={s.discoveryHeader}>
-                          <span className={s.discoveryTitle}>{r.title}</span>
-                          <ExternalLinks
-                            tmdbId={r.tmdbId}
-                            anilistId={r.anilistId}
-                            imdbId={r.imdbId}
-                            type={r.type}
-                          />
-                        </div>
-                        <div className={s.discoveryMeta}>
-                          {getTypeLabel(r.type)} {r.year > 0 ? `· ${r.year}` : ''}
-                        </div>
-                      </div>
-                      <div className={s.discoveryActions}>
-                        {r.localTitleId ? (
+                      </>
+                    )
+
+                    return (
+                      <div key={r.id} className={clsx(s.discoveryCard, r.localTitleId && s.cardInLibrary)}>
+                        {r.localTitleId && (
                           <a
                             href={routeTo.title(r.localTitleId)}
-                            className={s.inLibraryLink}
+                            className={s.stretchedLink}
+                            aria-label={r.title}
                             onClick={(e) => {
                               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
                               e.preventDefault()
-                              if (r.localTitleId) route(routeTo.title(r.localTitleId))
+                              route(routeTo.title(r.localTitleId!))
                             }}
-                          >
-                            {t('search.inLibrary')} ↗
-                          </a>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              disabled={r.adding}
-                              onClick={() => handleAddDiscovery(r, 'plan_to_watch')}
-                              className={s.btnAction}
-                            >
-                              {r.adding ? '...' : t('search.addToPlan')}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={r.adding}
-                              onClick={() => handleAddDiscovery(r, 'watching')}
-                              className={clsx(s.btnAction, s.btnActionPrimary)}
-                            >
-                              {r.adding ? '...' : t('search.addToWatching')}
-                            </button>
-                          </>
+                          />
                         )}
+                        {cardContent}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </>

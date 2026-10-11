@@ -417,6 +417,8 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
 }
 
 .discoveryTitle {
@@ -437,6 +439,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative;
+  z-index: 2;
 }
 
 .btnAction {
@@ -650,7 +654,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 4px;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -690,6 +694,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  z-index: 2;
 }
 
 .btnGridAction {
@@ -738,4 +744,71 @@
 
 .gridInLibraryLink:hover {
   text-decoration: underline;
+}
+
+.cardInLibrary {
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.stretchedLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  color: transparent;
+}
+
+.discoveryGridCard.cardInLibrary:hover {
+  border-color: var(--accent);
+}
+
+.discoveryCard.cardInLibrary {
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.discoveryCard.cardInLibrary:hover {
+  border-color: var(--accent);
+  background: var(--bg-elev2);
+}
+
+.hiddenBadge {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--ink-dim);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-left: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  vertical-align: middle;
+}
+
+.allHiddenNotice {
+  margin: 12px var(--space-lg);
+  padding: 14px 16px;
+  border-radius: var(--radius-card, 12px);
+  background: var(--bg-elev);
+  border: 1px dashed var(--border);
+  color: var(--ink-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-size-sm, 13px);
+}
+
+.allHiddenNotice svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.allHiddenNoticeGrid {
+  max-width: 1600px;
+  margin: 12px 0;
 }

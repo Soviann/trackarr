@@ -85,12 +85,25 @@ describe('Add Page', () => {
       expect(screen.getByText('Attack on Titan')).not.toBeNull()
     })
 
-    // Inception has localTitleId: 55, so it should display In Library link
-    expect(screen.getByText(/In Library/i)).not.toBeNull()
+    // Inception has localTitleId: 55, so it should display In Library link and full card stretched link
+    expect(screen.getByText('In Library ↗')).not.toBeNull()
+    const inceptionCard = screen.getByText('Inception').closest('.resultCard')
+    expect(inceptionCard).not.toBeNull()
+    const cardLink = inceptionCard?.querySelector('a.stretchedLink')
+    expect(cardLink?.getAttribute('href')).toBe('/title/55')
 
     // Attack on Titan is not in local library, so buttons + Plan to Watch & + Watching should appear
     expect(screen.getByText('+ Plan to Watch')).not.toBeNull()
     expect(screen.getByText('+ Watching')).not.toBeNull()
+
+    // Filter chip should toggle hiding library items
+    const hideBtn = screen.getByText('Hide items in library')
+    expect(hideBtn.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(hideBtn)
+    expect(hideBtn.getAttribute('aria-pressed')).toBe('true')
+
+    expect(screen.queryByText('Inception')).toBeNull()
+    expect(screen.getByText('Attack on Titan')).not.toBeNull()
   })
 
   it('adds title to library with 1-tap and triggers undo snackbar', async () => {
@@ -145,8 +158,12 @@ describe('Add Page', () => {
           message: expect.stringContaining('Interstellar'),
         })
       )
-      // Once added, the card shows In Library
-      expect(screen.getByText(/In Library/i)).not.toBeNull()
+      // Once added, the card shows In Library and renders stretchedLink
+      expect(screen.getByText('In Library ↗')).not.toBeNull()
+      const card = screen.getByText('Interstellar').closest('.resultCard')
+      expect(card).not.toBeNull()
+      const link = card?.querySelector('a.stretchedLink')
+      expect(link?.getAttribute('href')).toBe('/title/777')
     })
   })
 })
