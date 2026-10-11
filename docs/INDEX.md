@@ -43,6 +43,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - 1-Click Web UI Export & Import (JSON, CSV, Trakt.tv sync) with dry-run preview.
 - Automated dependency management via Dependabot.
 - Weekly documentation, i18n & hardcoded text audit workflow (`weekly-docs-audit.yml`).
+- Weekly innovation & improvements proposals workflow (`weekly-improvements-proposal.yml`).
 - Online SQLite WAL backup and restoration procedures.
 - Emergency CLI maintenance commands (`reset-password`, `backfill-accents`, `version`, `import`).
 

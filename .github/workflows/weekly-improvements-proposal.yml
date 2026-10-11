@@ -1,0 +1,97 @@
+name: Weekly Improvements & Innovation Proposals
+
+on:
+  schedule:
+    # Every Friday at 04:00 UTC (early morning before the working day)
+    - cron: '0 4 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  propose-improvements:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check existing issues and create proposals issue
+        run: |
+          # 1. Check if an open proposal issue already exists to avoid duplicates
+          EXISTING_ISSUE=$(gh issue list --repo "${{ github.repository }}" --state open --search "Propositions hebdomadaires in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING_ISSUE" ] && [ "$EXISTING_ISSUE" != "null" ]; then
+            echo "An open proposals issue (#$EXISTING_ISSUE) already exists. Skipping creation to avoid duplicates."
+            exit 0
+          fi
+
+          # 2. Collect recent commit history for contextual inspiration (last 14 days, max 25 commits)
+          RECENT_COMMITS=$(git log --since="14 days ago" --oneline -n 25)
+          if [ -z "$RECENT_COMMITS" ]; then
+            RECENT_COMMITS="Aucun commit récent au cours des 14 derniers jours (codebase stable)."
+          fi
+
+          # 3. Compose Issue body
+          ISSUE_TITLE="[Idées & Améliorations]: Propositions hebdomadaires d'évolutions, UX/UI, refactor et concepts audacieux"
+
+          cat << 'BODY_EOF' > issue_body.md
+          🔔 cc @${{ github.repository_owner }}
+
+          ### 💡 Contexte & Inspirations Récentes
+          Ce rituel hebdomadaire du vendredi matin explore la base de code pour proposer de nouvelles pistes d'évolution, de la finition ergonomique aux idées les plus audacieuses.
+
+          #### Commits récents (14 derniers jours) :
+          ```text
+          BODY_EOF
+          echo "$RECENT_COMMITS" >> issue_body.md
+          cat << 'BODY_EOF' >> issue_body.md
+          ```
+
+          ---
+
+          ### 🚀 Instructions d'Exploration pour l'Agent IA
+
+          Pour maximiser la créativité et éviter les propositions génériques, **délègue l'exploration à 4 sous-agents spécialisés en parallèle**, chacun couvrant un angle dédié :
+
+          #### 1. 🎨 Sous-Agent « UX, UI & Design Émotionnel (Mobile & Desktop) »
+          * **Objectif** : Améliorer le plaisir d'usage et le confort visuel sur tous les appareils : ergonomie mobile/PWA (navigation à une main, gestes tactiles) sans jamais oublier l'expérience desktop sur grand écran (agencements bento/multi-colonnes, navigation au clavier, confort de survol et utilisation optimale de l'espace ≥ 1024px), hiérarchie visuelle, micro-interactions, animations zéro-reflow, états vides (*empty states*), contrastes en mode sombre et utilisation des couleurs d'accent (`dominant_color`).
+          * **Livrable attendu** : 1 à 2 propositions concrètes et visuelles, ancrées dans les composants du frontend (`frontend/src/...`).
+
+          #### 2. ⚡ Sous-Agent « Fonctionnalités & Écosystème Média »
+          * **Objectif** : Explorer de nouveaux cas d'usage autour du catalogue, du calendrier, des scrobbles, des séries animées (saisons/AniList), des intégrations Arr/Jellyfin/Plex, des statistiques de visionnage, ou des filtres de découverte.
+          * **Livrable attendu** : 1 à 2 propositions fonctionnelles à forte valeur ajoutée, précisant la logique métier et l'impact sur l'expérience utilisateur.
+
+          #### 3. 🛠️ Sous-Agent « Architecture, Performance & Dette Technique »
+          * **Objectif** : Déceler les optimisations de performance (Go, requêtes SQLite FTS5 / WAL, taille du bundle Preact, cache PWA), la simplification de patterns complexes, ou le renforcement de la résilience (gestion des erreurs, tests de cas limites).
+          * **Livrable attendu** : 1 proposition ciblée de refactoring ou de durcissement technique avec justification coût / bénéfice.
+
+          #### 4. 🔮 Sous-Agent « Idées Audacieuses & Out-of-the-Box » (Scope Sans Filtre)
+          * **Objectif** : Penser complètement en dehors des sentiers battus ! Explorer des concepts originaux, surprenants ou expérimentaux (ex. rétrospective interactive de visionnage, gamification bien dosée, visualisations de données atypiques, mode cinéma immersif, interactions innovantes ou intégrations décalées). Même si l'idée paraît trop ambitieuse ou décalée au départ, elle doit pouvoir servir de tremplin vers des concepts raffinés.
+          * **Livrable attendu** : 1 à 2 concepts audacieux avec leur « pitch », leur grain de folie, et comment on pourrait les décliner de manière pragmatique.
+
+          ---
+
+          ### 📋 Format de Synthèse Attendu
+          Après consultation des 4 sous-agents, synthétise les meilleures idées sous forme de fiches claires :
+          - **Titre & Pitch** : Résumé percutant en 2 phrases.
+          - **Pourquoi c'est stimulant / Valeur ajoutée** : Bénéfice pour l'utilisateur ou le développeur.
+          - **Faisabilité & Pistes techniques** : Fichiers/modules pressentis, complexité estimée (*Facile* / *Moyen* / *Ambitieux*).
+          - **Questions d'orientation** : Choix de conception à trancher pour affiner l'idée.
+
+          ---
+          /antigravity lance l'analyse multi-agents et génère les propositions hebdomadaires d'améliorations et d'idées audacieuses.
+          BODY_EOF
+
+          # 4. Create GitHub Issue with labels 'antigravity' and 'proposal' and assign repository owner
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$ISSUE_TITLE" \
+            --body-file issue_body.md \
+            --label "antigravity" \
+            --label "proposal" \
+            --assignee "${{ github.repository_owner }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
