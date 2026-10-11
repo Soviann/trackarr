@@ -14,6 +14,7 @@ Cette roadmap rassemble les arbitrages issus de l'analyse multi-agents et des re
 3. **Sécuriser la recherche et l'ajout de titres** en fournissant des liens d'inspection externes (`TMDB`, `IMDb`, `AniList`) en nouvel onglet sans jamais perdre la recherche en cours.
 4. **Sublimer l'expérience utilisateur sur tous les formats** : aperçu instantané au survol sur Desktop (Hover Card), studio Bento équilibré sur la fiche média (Saisons/Épisodes), et gestuelle tactile au pouce sur mobile (Swipe-to-Complete).
 5. **Boucler la boucle de l'écosystème média** : tracker de sagas/franchises avec ordre chronologique et actions 1-tap, et intégration des webhooks descendants Radarr/Sonarr avec notification dédiée optionnelle.
+6. **Clarifier la recherche externe** : déduplication automatique des résultats TMDB/AniList pour exclure les titres déjà indexés dans la collection locale, supprimant la redondance entre les sections.
 
 ---
 
@@ -38,6 +39,11 @@ Cette roadmap rassemble les arbitrages issus de l'analyse multi-agents et des re
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │ LOT 4 : Hub de Sagas Chronologique & Webhooks Arr Temps Réel           │
 │ Plan : docs/plans/2026-10-11-lot-4-saga-hub-and-arr-webhooks.md        │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│ LOT 5 : Déduplication & Filtrage des Résultats TMDB en Collection      │
+│ Plan : docs/plans/2026-10-11-lot-5-search-deduplication.md             │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,3 +100,18 @@ Cette roadmap rassemble les arbitrages issus de l'analyse multi-agents et des re
      - Puce visuelle verte « Disponible » sur le héros `NextEpisodeHero`.
      - **Déclencheur de notification dédié** dans `frontend/src/pages/AdminNotifications.tsx` (`notif_media_downloaded`) activable/désactivable à volonté par l'utilisateur.
 - **Validation** : `make test`, `make test-front`, tests d'ingestion de payloads webhook Radarr/Sonarr.
+
+---
+
+### 📦 LOT 5 : Déduplication & Filtrage des Résultats TMDB Déjà en Collection
+- **Objectif** : Éliminer les doublons et la confusion dans la recherche lorsque des titres retournés par TMDB sont déjà présents dans la bibliothèque (et donc déjà affichés dans la section supérieure des résultats locaux).
+- **Plan dédié** : `docs/plans/2026-10-11-lot-5-search-deduplication.md`
+- **Périmètre & Livrables** :
+  1. *Filtrage des résultats de découverte (`Search.tsx` / Store)* :
+     - Filtrer la liste `discoveryItems` pour exclure automatiquement les éléments ayant un `localTitleId` associé (ou correspondant à un titre local par `tmdb_id`, `anilist_id` ou nom normalisé + année).
+     - La section « RÉSULTATS TMDB » ne propose ainsi que des titres réellement nouveaux et non encore suivis dans la collection.
+  2. *Indicateur d'éléments masqués (optionnel / discret)* :
+     - Si tous les résultats TMDB sont déjà dans la collection, éviter d'afficher une section vide sans explication ou afficher une puce sobre signalant que les titres trouvés sont déjà dans la collection locale.
+  3. *Harmonisation avec `Add.tsx`* :
+     - Évaluer si sur `/add`, la séparation ou le filtrage doit également être appliqué pour préserver une expérience fluide et prévisible lors de l'exploration de médias.
+- **Validation** : `make test-front`, vérification que la recherche (ex. « survivor ») n'affiche aucun doublon entre la première section locale et la section TMDB.
