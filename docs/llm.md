@@ -96,6 +96,10 @@
 20. **Code Splitting & SPA HTTP Cache Strategy**:
     - `App.tsx` lazy-loads secondary routes (`Admin*`, `Stats`, `Wrapped`, `MatchReview`, `Help`, `Validate`) via `lazy()` with `<Suspense fallback={null}>`, keeping initial bundle lean (~191 kB) for mobile devices. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `ContinueWatching`, `Add`) remain synchronous for instant first render.
     - `SPAHandler` in `internal/handler/spa.go` serves immutable cache headers (`public, max-age=31536000, immutable`) for hashed assets under `/assets/*`, and `no-cache, no-store, must-revalidate` for `index.html` and SPA fallback routes, avoiding stale service worker/browser caches.
+21. **Studio Bento & Desktop/Mobile Micro-Interactions (Lot 3)**:
+    - `PosterHoverCard`: desktop hover card on poster cards with 280ms debounced reveal (`@media (hover: hover)`), portal positioning clamped to viewport, ambient glow (`accent_hex`), ratings, short synopsis, watch providers, and direct `+1` next episode button.
+    - `TitleDetail` Studio Bento: 2-column synchronized layout on viewports ≥ 1024px with dedicated seasons rail on the left (completion gauges, total counts, batch toggle) and internally scrollable episode list on the right (`max-height: 520px`). Keyboard shortcuts: `W` marks next episode, `1..9` switches active season.
+    - `EpisodeRow` Swipe-to-Complete: mobile horizontal touch swipe with direction locking, haptic feedback (`HAPTIC_SHORT`), and 64px threshold for thumb-friendly episode validation.
 
 ---
 

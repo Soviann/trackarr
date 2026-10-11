@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Hover Card Desktop au survol des jaquettes (`UX-1` / Lot 3)** :
+  - **Aperçu contextuel instantané (`PosterHoverCard`)** : Bulle contextuelle flottante déclenchée au survol des cartes jaquettes sur grand écran (`@media (hover: hover)`) après une temporisation de 280ms pour éviter les apparitions intempestives lors d'un défilement rapide.
+  - **Détails enrichis et actions directes** : Affiche le synopsis court, les notes (TMDB, AniList, note personnelle), les badges de plateformes de streaming (`WatchProviderBadges`), le prochain épisode avec bouton `+1` réactif, et une lueur ambiante douce de la couleur dominante (`accent_hex`).
+- **Studio Bento sur la fiche média et raccourcis clavier (`UX-2` / Lot 3)** :
+  - **Organisation Bento synchronisée 2 colonnes** : Sur grand écran (≥ 1024px), le bloc Saisons & Épisodes se restructure en deux colonnes équilibrées : rail vertical des saisons à gauche avec jauges de complétion et action de validation globale, et panneau scrollable indépendant des épisodes à droite (`max-height: 520px`), éliminant le défilement asymétrique de 2000px sur les séries longues.
+  - **Raccourcis clavier ergonomiques** : Raccourci `W` pour valider instantanément le prochain épisode non vu, et touches `1` à `9` pour changer immédiatement de saison active (sécurisés contre les éléments éditables).
+- **Geste tactile de glissement horizontal Swipe-to-Complete sur mobile (`UX-3` / Lot 3)** :
+  - **Validation d'épisode au pouce (`EpisodeRow`)** : Glissement horizontal fluide d'une ligne d'épisode révélant un fond d'action vert/accentué avec retour haptique instantané (`HAPTIC_SHORT`) au franchissement du seuil (64px) pour valider un épisode sans viser la case 18px.
+
 ## [v1.26.12] — 2026-10-11
 
 ### Ajouté

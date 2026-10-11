@@ -1,0 +1,229 @@
+.portal {
+  position: fixed;
+  z-index: 1000;
+  width: 300px;
+  background: var(--bg-elev, #161a23);
+  border-radius: 12px;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.7),
+    0 0 24px color-mix(in srgb, var(--hover-accent, var(--accent)) 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--hover-accent, var(--accent)) 35%, var(--border));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.16s ease-out;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hover-accent, var(--accent)) 10%, transparent) 0%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border);
+}
+
+.thumbWrap {
+  width: 54px;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleText {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+}
+
+.badgesRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ratingsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.ratingItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ratingTmdb {
+  color: var(--brand-tmdb, #01b4e4);
+  font-weight: 700;
+}
+
+.ratingAnilist {
+  color: var(--brand-anilist, #02a9ff);
+  font-weight: 700;
+}
+
+.ratingMy {
+  color: var(--hover-accent, var(--accent));
+  font-weight: 700;
+}
+
+.synopsis {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.synopsisEmpty {
+  font-size: 11px;
+  color: var(--ink-mute);
+  font-style: italic;
+  margin: 0;
+}
+
+.nextEpisodeCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-elev2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.nextEpisodeInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nextEpisodeLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+}
+
+.nextEpisodeCode {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickPlusBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--hover-accent, var(--accent));
+  color: var(--accent-fg, #000);
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+.quickPlusBtn:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: scale(1.04);
+}
+
+.quickPlusBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.quickMarkSpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.providersWrap {
+  padding-top: 2px;
+}

@@ -71,11 +71,15 @@ The **Library** screen is your media command center:
 - **Sorting Options**: 6 sort criteria (Last updated, Title, Release date, Rating, Date added, Last watched). Tap to activate; tap again to invert ascending/descending.
 
 ### Gestures & Shortcuts:
+- **Desktop Hover Card (`UX-1`)**: On desktop devices with fine pointers (`@media (hover: hover)`), hovering over any poster card for 280ms reveals an interactive floating hover card displaying the title synopsis, TMDB/AniList ratings, watch providers, ambient accent glow (`accent_hex`), and a direct `+1` button for the next episode.
 - **Power User Keyboard Shortcuts**:
   - `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux): Instantly trigger universal search from anywhere.
   - `/`: Quick search trigger (when focus is not inside an active editable field).
-  - `Escape`: Dismiss open drawers (Filters, Actions) or exit multi-selection mode.
+  - `W`: On title detail, validate and mark the next unwatched episode as watched.
+  - `1..9`: On title detail, switch directly to the corresponding season number.
+  - `Escape`: Dismiss open drawers (Filters, Actions, Hover Card) or exit multi-selection mode.
   - `Shift+Click`: Contiguous range multi-selection across library cards.
+- **Mobile Swipe-to-Complete Gesture (`UX-3`)**: On smartphones and touch screens, horizontally swipe any episode row with your thumb past the 64px threshold to mark it watched (or unwatched) with instantaneous haptic vibration feedback (`HAPTIC_SHORT`), avoiding the need to tap the small 18px checkbox.
 - **Universal Undo Toast (`UndoSnackbar`)**: Any state-changing progression (`+1` quick mark, episode/movie watch mark, title deletion) triggers a floating snackbar with a 5-second perimeter radial countdown and haptic feedback (`[15, 30, 15]`), allowing 1-tap instant rollback.
 - **One-Tap Quick Progress**: In the *Watching* list view or poster cards, tap the circular glassmorphic `+1` episode button (with generous 44×44px touch target) to immediately mark the next episode as watched without opening the title.
 - **Multi-Selection Mode**: Long-press (~500ms) on any card to enter multi-selection mode with haptic feedback. Tap additional cards or `Shift+Click` a range to select them, then use the bottom action bar for bulk status changes or deletion.
@@ -147,7 +151,7 @@ Opening a title displays its rich details:
   - **Rated Title**: Displays a clean, prominent rating (`MY RATING: 8/10`) alongside community ratings (TMDB, AniList) and an *« Edit »* button to open the rating bottom sheet for modifications or IMDb sync.
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
-- **Seasons & Episodes**: Expand seasons, toggle episodes with one click, view air dates and episode synopses.
+- **Studio Bento Seasons & Episodes (`UX-2`)**: On widescreen monitors (≥ 1024px), seasons and episodes are structured as a 2-column Studio Bento Box: the left column provides a dedicated season rail with completion gauges, total counts, and the batch toggle, while the right column hosts an internally scrollable episode list (max-height 520px). This eliminates asymmetric vertical scrolling on long multi-season series and is paired with keyboard shortcuts (`W` for next episode, `1..9` for seasons). On touch screens, horizontal thumb swipe on episode rows (`UX-3`) instantly toggles watch state with haptic feedback.
   - **Season Batch Watched Toggle**: A dedicated batch checkbox header aligned with the episode checkbox column (`18px`) allows toggling an entire season as watched or unwatched in a single tap, supported by optimistic UI updates and universal undo notification.
   - **Immediate Metadata Refresh**: Tapping **Actions ➔ More ➔ Refresh Metadata** performs a synchronous update (`?sync=true`), immediately refreshing the cover art, season trees, and air dates in place without needing a manual page reload.
 - **Sagas, Universes & Franchise Hub**: Compact glance row within the unified Hub Bar (~100px) alongside Watch History, preserving vertical space for immediate season visibility:

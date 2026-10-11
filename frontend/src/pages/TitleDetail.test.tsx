@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/preact'
 import { TitleDetail } from './TitleDetail'
 import { useApi } from '../hooks/useApi'
+import { apiFetch } from '../api'
 import type { Title } from '../types'
 
 vi.mock('../hooks/useApi', () => ({
@@ -229,6 +230,127 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
     render(<TitleDetail id="10" />)
 
     expect(screen.getByText('No episodes announced yet')).toBeTruthy()
+  })
+
+  describe('Studio Bento & Keyboard Shortcuts', () => {
+    const multiSeasonSeries: Title = {
+      ...mockNormalSeries,
+      seasons: [
+        {
+          id: 1,
+          title_id: 10,
+          season_number: 1,
+          total_episodes: 2,
+          episode_count: 2,
+          watched_count: 1,
+          episodes: [
+            { id: 101, season_id: 1, episode: 1, name: 'Pilot', watched: true, air_date: null, first_watched_at: null, last_watched_at: null },
+            { id: 102, season_id: 1, episode: 2, name: 'Second', watched: false, air_date: null, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+        {
+          id: 2,
+          title_id: 10,
+          season_number: 2,
+          total_episodes: 2,
+          episode_count: 2,
+          watched_count: 0,
+          episodes: [
+            { id: 201, season_id: 2, episode: 1, name: 'S2 Premiere', watched: false, air_date: null, first_watched_at: null, last_watched_at: null },
+            { id: 202, season_id: 2, episode: 2, name: 'S2 Finale', watched: false, air_date: null, first_watched_at: null, last_watched_at: null },
+          ],
+        },
+      ],
+      next_episode: {
+        id: 102,
+        season_id: 1,
+        season_number: 1,
+        episode: 2,
+        name: 'Second',
+        air_date: '2024-01-08',
+        is_tba: false,
+      },
+    }
+
+    it('renders Bento Studio with season items and episodes', () => {
+      vi.mocked(useApi).mockReturnValue({
+        data: multiSeasonSeries,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="10" />)
+
+      // Season items in Bento rail
+      expect(screen.getByRole('button', { name: /S1 ·/ })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /S2 ·/ })).toBeTruthy()
+
+      // Current season episodes
+      expect(screen.getByText('— Pilot')).toBeTruthy()
+      expect(screen.getByText('— Second')).toBeTruthy()
+    })
+
+    it('triggers next episode toggle when W key is pressed', () => {
+      vi.mocked(apiFetch).mockClear()
+      vi.mocked(useApi).mockReturnValue({
+        data: multiSeasonSeries,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="10" />)
+
+      fireEvent.keyDown(window, { key: 'w' })
+      expect(apiFetch).toHaveBeenCalledWith('/titles/10/episodes/102', { method: 'PATCH' })
+    })
+
+    it('switches active season when number key 2 is pressed', () => {
+      vi.mocked(useApi).mockReturnValue({
+        data: multiSeasonSeries,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="10" />)
+
+      // Initially on Season 1
+      expect(screen.getByText('— Pilot')).toBeTruthy()
+
+      // Press '2'
+      fireEvent.keyDown(window, { key: '2' })
+
+      // Now showing Season 2 episodes
+      expect(screen.getByText('— S2 Premiere')).toBeTruthy()
+      expect(screen.getByText('— S2 Finale')).toBeTruthy()
+    })
+
+    it('ignores shortcuts when user is focused inside an input element', () => {
+      vi.mocked(useApi).mockReturnValue({
+        data: multiSeasonSeries,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="10" />)
+      vi.mocked(apiFetch).mockClear()
+
+      const input = document.createElement('input')
+      document.body.appendChild(input)
+      input.focus()
+
+      fireEvent.keyDown(input, { key: 'w' })
+      expect(apiFetch).not.toHaveBeenCalled()
+
+      document.body.removeChild(input)
+    })
   })
 })
 
