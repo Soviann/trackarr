@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Workflow GitHub Actions hebdomadaire de propositions d'améliorations et d'idées audacieuses (`weekly-improvements-proposal.yml`)** :
+  - Déclenchement automatique chaque vendredi matin à 04:00 UTC (ou via `workflow_dispatch`).
+  - Création automatique d'une issue avec labels `antigravity` et `proposal` invitant à l'exploration via 4 sous-agents spécialisés : UX/UI & design émotionnel (mobile-first et grand écran desktop), fonctionnalités & écosystème média, architecture & performance, et concepts décalés/audacieux (*out-of-the-box*).
+  - Prévention des doublons si une issue précédente est toujours ouverte, et inclusion du contexte des commits récents des 14 derniers jours.
+
 ## [v1.26.10] — 2026-10-11
 
 ### Ajouté
