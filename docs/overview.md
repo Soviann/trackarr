@@ -15,7 +15,7 @@
 - **Ratings & AniList Sync**: Native 1–10 scoring with automatic background synchronization to AniList (including multi-part season chaining).
 - ***arr Stack Integration**: Live checks with Radarr and Sonarr, colored status borders, and direct queue management.
 - **Prowlarr Releases Feed**: 1-click addition from your indexer releases into Trackarr.
-- **Smart Matching Engine**: Resolves external IDs across TMDB, TVDB, IMDb, and AniList with Gemini AI verification.
+- **Smart Matching Engine**: Resolves external IDs across TMDB, TVDB, IMDb, and AniList with multi-candidate AI disambiguation and Gemini episode verification.
 - **Multi-View Calendar & iCal Export**: Monthly grid, weekly timeline, and chronological lists (`/coming-up`) with token-secured RFC 5545 calendar subscription feed.
 - **Sagas & Franchise Hub**: Chronological timeline ordering for movie collections, TV universes, and anime side stories with completion gauges and 1-click missing title additions.
 - **Configurable Streaming Providers**: Availability badges for active streaming subscriptions (Netflix, Prime Video, Disney+, Apple TV+, Max, etc.).

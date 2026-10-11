@@ -195,8 +195,9 @@ Adding media to Trackarr is fast and versatile:
 ## 4. Match Review & Rematching
 
 When Trackarr ingests a scrobble from Jellyfin/Plex or an imported title:
+- **Automatic Disambiguation & Verification**: When multiple candidates exist (e.g. distinct series or adaptations sharing the same name), Gemini AI evaluates up to 5 candidates using episode clues (name, season, episode number, IMDb ID) to pick the correct series and verify catalog belonging.
 - **High-Confidence Matches**: Auto-confirmed by AI (Gemini) or exact cross-reference IDs, bypassing manual review.
-- **Unconfirmed / Pending Review**: Placed in the **Match Review** queue (`/match-review`) for quick human verification.
+- **Unconfirmed / Pending Review**: Placed in the **Match Review** queue (`/match-review`) for quick human verification when confidence is medium or low.
 - **Mass Action Protection (`ConfirmationDrawer`)**: Bulk operations like *« Confirm all matches »* are secured by a slide-up confirmation sheet with affirmative/cancel actions before execution.
 - **Rematch**: Open any title ➔ **Actions (Bottom Bar) ➔ More ➔ Rematch** to re-link or paste a new URL.
 

@@ -43,7 +43,7 @@ TMDB_API_KEY=your_32_character_tmdb_api_key_here
 
 ## 2. Google Gemini AI API
 
-Trackarr uses Google Gemini AI for smart fuzzy matching, auto-validating ambiguous titles, and resolving multi-season anime prequels without manual review. Free tier keys are sufficient for personal usage.
+Trackarr uses Google Gemini AI for smart fuzzy matching, multi-candidate disambiguation using episode clues, auto-validating ambiguous titles, and resolving multi-season anime prequels without manual review. Free tier keys are sufficient for personal usage.
 
 ### Steps to get your API Key:
 1. Go to [Google AI Studio (aistudio.google.com)](https://aistudio.google.com/app/apikey).
