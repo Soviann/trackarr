@@ -94,6 +94,7 @@
 | `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` + `PlayedToCompletion`) | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, multipart + JSON fallback) | `docs/integrations.md` |
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, and deletion enqueuing | `docs/dev/arr-integration.md` |
+| `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download/upgrade events, update `downloaded_at`, push alerts | `docs/integrations.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
 | `BackupService` | `internal/service/backup.go` | 1-Click JSON/CSV/Trakt exports and transactional archive import with dry-run | `docs/maintenance.md` |
@@ -158,7 +159,7 @@
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched or unwatched (`watched: false`) |
 | POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season (provisions Season 1 on demand if seasonID <= 0) |
-| DELETE| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
+| DELETE\| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` \| `seasonExternal.RemoveAniListID` \| Detach AniList part |
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
 | DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |

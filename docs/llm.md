@@ -105,6 +105,11 @@
     - Arr Webhooks (`POST /api/webhook/arr/{secret}`): ingests Radarr & Sonarr `On Download` / `On Upgrade` events, persisting `downloaded_at` timestamp in SQLite on titles and episodes.
     - Media Availability Badges: emerald `Disponible` / `Available` badge displayed on `NextEpisodeHero` and `EpisodeRow` checkmark when `downloaded_at` is set.
     - Configurable Push Notification: optional `notif_media_downloaded` toggle in **Admin ➔ Notifications** dispatches Web Push alerts upon Arr download completion.
+23. **Search Deduplication & Semantic Card Links (Lot 5 / Roadmap Q4 2026)**:
+    - Client-side deduplication of external discovery results (TMDB & AniList) that already exist in `useTitleStore` or local database to prevent visual clutter between local and external search sections.
+    - Header notice badge (`X already in library`) or friendly info message when all external discovery hits are present in collection.
+    - State stability: titles added during active search session (`+ Plan to Watch`, `+ Watching`) remain visible to preserve access to `UndoSnackbar` cancellation.
+    - Semantic clickable cards: owned discovery and library cards render as full `<a>` links to `/title/:id` (pointer cursor, elevation, new tab shortcuts) while isolating click propagation on action buttons and external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`).
 
 ---
 
@@ -199,6 +204,7 @@
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
 - `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` webhook.
 - `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` webhook.
+- `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.
 - `GET /api/arr/{app}/rootfolder` & `GET /api/arr/{app}/qualityprofile` : Proxy Radarr/Sonarr root folders and quality profiles.
 - `GET /api/arr/title/{id}` & `PUT /api/arr/title/{id}` : Check Arr library status and edit quality profile / root folder.
 - `POST /api/arr/push/{id}` : Push title to Radarr/Sonarr download queue.
