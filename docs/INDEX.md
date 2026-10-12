@@ -18,8 +18,9 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Filterable Stats insights, decomposed watch time, Year/Media filters, Top Cast & interactive filmography drawer (`/stats`).
 - Trackarr Wrapped annual retrospective story player and immutable archives gallery (`/wrapped`).
 - Unified Franchise & History Hub Bar with slide-up bottom sheets, Next Episode Hero, and Binge Estimator.
+- Search deduplication, full-card navigation, external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), and desktop sticky top header.
 - Single-line closed filter handle, scrolling dismissible chips, and compact filter drawer with selects.
-- Gestures & shortcuts: Power user shortcuts (`Cmd+K`, `/`, `Escape`, `Shift+Click`), Universal Undo snackbar, circular `+1` quick mark, multi-select mode, swipe actions, pull-to-refresh.
+- Gestures & shortcuts: Power user shortcuts (`Cmd+K`, `/`, `W`, `1..9`, `Escape`, `Shift+Click`), Universal Undo snackbar, circular `+1` quick mark, multi-select mode, mobile swipe actions, pull-to-refresh.
 - Match Review, Rematching, and Season Audit.
 - Comprehensive Q&A and troubleshooting based on real-world edge cases.
 
@@ -29,6 +30,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 
 ### 4. [Integrations & Webhooks](integrations.md)
 - Real-time scrobbling via **Jellyfin** & **Plex** webhooks (template and deduplication).
+- Downstream **Radarr & Sonarr** download webhooks (`POST /api/webhook/arr/{secret}`) with emerald availability badges and Web Push notifications.
 - **AniList** bidirectional sync (progress, scores, multi-part season chaining).
 - **Radarr & Sonarr** (*arr) integration, Arr Queue, and Prowlarr releases.
 - Configurable streaming watch providers (Netflix, Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN).
@@ -44,7 +46,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Automated dependency management via Dependabot.
 - Weekly documentation, i18n & hardcoded text audit workflow (`weekly-docs-audit.yml`).
 - Weekly innovation & improvements proposals workflow (`weekly-improvements-proposal.yml`).
-- Online SQLite WAL backup and restoration procedures.
+- Online SQLite WAL backup, daily pragma maintenance cron (04:30), and restoration procedures.
 - Emergency CLI maintenance commands (`reset-password`, `backfill-accents`, `version`, `import`).
 
 ### 7. [LLM Context Reference](llm.md)
@@ -54,7 +56,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Complete UI/UX revamp plan, Android one-handed mobile ergonomic priorities, zero-reflow animations, and adaptive desktop layout.
 
 ### 9. [Evolution & Performance Roadmap (Q4 2026)](roadmap-2026-q4.md)
-- Multi-session feature roadmap: SQLite WAL I/O tuning, frontend code splitting, external search links, studio bento detail layout, and saga hub.
+- Multi-session feature roadmap: SQLite WAL I/O tuning, frontend code splitting, external search links, studio bento detail layout, saga hub, and search deduplication.
 
 ---
 
