@@ -13,7 +13,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /app/frontend/dist ./frontend/dist
-RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -o trackarr .
+ARG APP_VERSION=dev
+ARG COMMIT=none
+ARG BUILD_DATE=unknown
+RUN CGO_ENABLED=1 go build -tags sqlite_fts5 \
+    -ldflags "-X github.com/Soviann/trackarr/internal/version.Version=${APP_VERSION} -X github.com/Soviann/trackarr/internal/version.Commit=${COMMIT} -X github.com/Soviann/trackarr/internal/version.BuildDate=${BUILD_DATE} -s -w" \
+    -o trackarr .
 
 # Runtime
 FROM debian:bookworm-slim

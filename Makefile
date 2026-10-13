@@ -43,11 +43,16 @@ fmt: ## Format Go source code
 dev-frontend: ## Start Vite dev server (inside container with HMR)
 	$(EXEC) bash -c "cd frontend && npx vite --host 0.0.0.0"
 
+GIT_TAG ?= $(shell git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "dev")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+LDFLAGS = -X github.com/Soviann/trackarr/internal/version.Version=$(GIT_TAG) -X github.com/Soviann/trackarr/internal/version.Commit=$(GIT_COMMIT) -X github.com/Soviann/trackarr/internal/version.BuildDate=$(BUILD_DATE) -s -w
+
 build: ## Build production binary
-	$(EXEC) go build -tags sqlite_fts5 -o ./tmp/trackarr .
+	$(EXEC) go build -tags sqlite_fts5 -ldflags "$(LDFLAGS)" -o ./tmp/trackarr .
 
 build-mcp: ## Build MCP server binary
-	$(EXEC) go build -tags sqlite_fts5 -o ./tmp/trackarr-mcp ./cmd/trackarr-mcp
+	$(EXEC) go build -tags sqlite_fts5 -ldflags "$(LDFLAGS)" -o ./tmp/trackarr-mcp ./cmd/trackarr-mcp
 
 version: ## Show application version
 	$(EXEC) ./tmp/trackarr version

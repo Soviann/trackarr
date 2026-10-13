@@ -39,7 +39,8 @@
 | `reset-password` | `cmd/reset_password.go` | Reset admin password and output a fresh emergency recovery key (`--password`, `--username`). |
 | `trackarr-mcp` | `cmd/trackarr-mcp/` | Standalone native Go Model Context Protocol (MCP) server for AI agents. |
 | `make version` | `Makefile` | Print Trackarr version (`Trackarr vX.Y.Z`). |
-| `make build-mcp` | `Makefile` | Build standalone MCP server binary (`./tmp/trackarr-mcp`). |
+| `make build` | `Makefile` | Build standalone production binary with dynamic `-ldflags` (`./tmp/trackarr`). |
+| `make build-mcp` | `Makefile` | Build standalone MCP server binary with dynamic `-ldflags` (`./tmp/trackarr-mcp`). |
 | `make reset-password` | `Makefile` | CLI wrapper to reset admin password locally (`PASSWORD=...`, `USERNAME=...`). |
 | `make ssh-db-pull` | `Makefile.local` | Pull prod DB (`trackarr.db` + WAL/SHM) from NAS to local `data/`. |
 | `make ssh-logs` | `Makefile.local` | Dump prod container logs to `data/trackarr.log` (`LINES=...` optional). |

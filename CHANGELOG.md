@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Injection dynamique de la version au build (`Dockerfile`, `release.yml`, `Makefile`)** :
+  - Remplacement de la constante de version figée dans `internal/version/version.go` par une valeur fallback `dev`.
+  - Injection dynamique de la version (`Version`), du SHA (`Commit`) et de la date (`BuildDate`) au moment de la compilation via `-ldflags` dans le `Dockerfile` (`ARG APP_VERSION`), le workflow GitHub Actions `release.yml` et le `Makefile`.
+
 ## [v1.26.15] — 2026-10-11
 
 ### Ajouté
