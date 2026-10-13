@@ -242,8 +242,8 @@ cd trackarr
 # 2. Build frontend
 cd frontend && npm install && npm run build && cd ..
 
-# 3. Compile standalone Go binary with embedded frontend
-go build -tags sqlite_fts5 -o trackarr .
+# 3. Compile standalone Go binary with embedded frontend (and injected version)
+go build -tags sqlite_fts5 -ldflags "-X github.com/Soviann/trackarr/internal/version.Version=$(git describe --tags 2>/dev/null || echo dev) -s -w" -o trackarr .
 ```
 
 ### Systemd Service Unit (`/etc/systemd/system/trackarr.service`):
