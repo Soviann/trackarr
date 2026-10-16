@@ -17,7 +17,7 @@
 - **Prowlarr Releases Feed**: 1-click addition from your indexer releases into Trackarr.
 - **Smart Matching Engine**: Resolves external IDs across TMDB, TVDB, IMDb, and AniList with multi-candidate AI disambiguation and Gemini episode verification.
 - **Multi-View Calendar & iCal Export**: Monthly grid, weekly timeline, and chronological lists (`/coming-up`) with token-secured RFC 5545 calendar subscription feed.
-- **Sagas & Franchise Hub**: Chronological timeline ordering for movie collections, TV universes, and anime side stories with completion gauges and 1-click missing title additions.
+- **Sagas & Franchise Hub**: Chronological timeline ordering for movie collections, TV universes, and anime side stories with completion gauges, 1-click missing title additions, and Saga Smart Next-Up continuity across Continue Watching and hero cards.
 - **Configurable Streaming Providers**: Availability badges for active streaming subscriptions (Netflix, Prime Video, Disney+, Apple TV+, Max, etc.).
 - **Universal Undo & Haptics**: 5-second perimeter radial timer countdown allowing instant rollback of progress changes and deletions.
 - **1-Click Backup & Restore**: Full JSON, spreadsheet CSV, and Trakt.tv archive exports plus drag-and-drop backup import with dry-run verification.

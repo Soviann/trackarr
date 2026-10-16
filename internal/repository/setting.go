@@ -39,6 +39,7 @@ const (
 	SettingKeyEnabledWatchProviders = "enabled_watch_providers"
 	SettingKeyCalendarToken         = "calendar_token"
 	SettingKeyRefreshJobProgress    = "refresh_job_progress"
+	SettingKeySagaChronologicalNextUp = "saga_chronological_next_up"
 )
 
 // SettingRepository reads the settings key-value store. Writes live on

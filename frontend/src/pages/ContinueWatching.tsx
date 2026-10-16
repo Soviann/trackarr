@@ -9,25 +9,35 @@ import { useUndo } from '../context/UndoContext'
 import s from './PresetLibrary.module.css'
 
 function toTile(
-  t: ContinueWatchingTitle,
+  tItem: ContinueWatchingTitle,
+  t: ReturnType<typeof useTranslation>['t'],
   onQuickMark?: (item: PosterTileItem, e: MouseEvent) => void,
   isMarking?: boolean
 ): PosterTileItem {
-  const sublabel = t.next_episode
-    ? `S${t.next_episode.season_number} E${t.next_episode.episode}`
-    : (t.next_air_episode ?? '')
+  let sublabel = tItem.next_episode
+    ? `S${tItem.next_episode.season_number} E${tItem.next_episode.episode}`
+    : (tItem.next_air_episode ?? '')
+  if (tItem.is_saga_next_up) {
+    if (tItem.next_episode) {
+      sublabel = `S${tItem.next_episode.season_number} E${tItem.next_episode.episode} • ${t('continueWatching.saga')}`
+    } else {
+      sublabel = t('continueWatching.sagaNextUp')
+    }
+  }
   return {
-    id: t.id,
-    type: t.type,
-    is_anime: t.is_anime,
-    sonarr_id: t.sonarr_id,
-    radarr_id: t.radarr_id,
-    cover_url: t.cover_url,
-    name: t.name,
+    id: tItem.id,
+    type: tItem.type,
+    is_anime: tItem.is_anime,
+    sonarr_id: tItem.sonarr_id,
+    radarr_id: tItem.radarr_id,
+    cover_url: tItem.cover_url,
+    name: tItem.name,
     sublabel,
-    progressRatio: t.total_episodes > 0 ? t.watched_episodes / t.total_episodes : 0,
-    watch_providers: t.watch_providers,
-    next_episode: t.next_episode,
+    progressRatio: tItem.total_episodes > 0 ? tItem.watched_episodes / tItem.total_episodes : 0,
+    watch_providers: tItem.watch_providers,
+    next_episode: tItem.next_episode,
+    is_saga_next_up: tItem.is_saga_next_up,
+    saga_source_title: tItem.saga_source_title,
     onQuickMark,
     isMarking,
   }
@@ -60,20 +70,48 @@ export function ContinueWatching(_props: { path?: string }) {
   }, [])
 
   const handleQuickMark = async (item: PosterTileItem) => {
-    if (!item.next_episode || markingIds.has(item.id)) return
-    const currentEp = item.next_episode
+    if (markingIds.has(item.id)) return
+    if (!item.next_episode && item.type !== 'movie') return
+
+    if (item.type === 'movie') {
+      setMarkingIds(prev => new Set(prev).add(item.id))
+      try {
+        await apiFetch(`/titles/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'completed' }) })
+        const data = await apiFetch<ContinueWatchingTitle[]>('/titles/continue-watching')
+        setItems(data)
+        showUndo({
+          message: t('undo.movieWatched', { title: item.name }),
+          onUndo: async () => {
+            await apiFetch(`/titles/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'plan_to_watch' }) })
+            loadTitles()
+          },
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to mark movie')
+        loadTitles()
+      } finally {
+        setMarkingIds(prev => {
+          const next = new Set(prev)
+          next.delete(item.id)
+          return next
+        })
+      }
+      return
+    }
+
+    const currentEp = item.next_episode!
 
     // Optimistic in-place update for immediate UI feedback
     setItems(prev => {
       if (!prev) return prev
-      return prev.map(t => {
-        if (t.id !== item.id) return t
-        const newWatched = Math.min(t.total_episodes, t.watched_episodes + 1)
-        const nextEp = t.next_episode
-          ? { ...t.next_episode, episode: t.next_episode.episode + 1 }
+      return prev.map(tItem => {
+        if (tItem.id !== item.id) return tItem
+        const newWatched = Math.min(tItem.total_episodes, tItem.watched_episodes + 1)
+        const nextEp = tItem.next_episode
+          ? { ...tItem.next_episode, episode: tItem.next_episode.episode + 1 }
           : null
         return {
-          ...t,
+          ...tItem,
           watched_episodes: newWatched,
           next_episode: nextEp,
         }
@@ -142,10 +180,10 @@ export function ContinueWatching(_props: { path?: string }) {
 
       {items && items.length > 0 && (
         <div className={s.grid}>
-          {items.map(t => (
+          {items.map(cwItem => (
             <PosterTile
-              key={t.id}
-              item={toTile(t, handleQuickMark, markingIds.has(t.id))}
+              key={cwItem.id}
+              item={toTile(cwItem, t, handleQuickMark, markingIds.has(cwItem.id))}
             />
           ))}
         </div>

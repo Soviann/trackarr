@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Sagas & Continuité Chronologique Smart Next-Up (Issue #92 - Lot 2 / Lot 7)** :
+  - **Préférence configurable (`saga_chronological_next_up`)** : Paramètre dans **Admin ➔ Préférences** (activé par défaut) contrôlant la proposition automatique du prochain volet chronologique d'une saga lorsqu'un titre est terminé.
+  - **Résolution intelligente dans Continuer à regarder (`TitleRepository.ListContinueWatching`)** : Lorsqu'un film ou une série d'une saga est marqué comme terminé (`completed`), Trackarr inspecte le graphe de relations (`title_relations`) et insère le premier volet chronologique non terminé présent en bibliothèque (`plan_to_watch` ou film `watching`) dans la file de lecture avec les métadonnées de source (`is_saga_next_up`, `saga_source_title`, `saga_source_id`).
+  - **Carte Hero « Poursuivre la saga » (`NextEpisodeHero.tsx`)** : Lorsqu'une série ou un film est terminé ou à jour, la bannière d'action principale se transforme automatiquement en carte d'invitation vers la suite de la saga, avec navigation directe vers l'œuvre locale ou bouton d'ajout en 1-tap (`+ À voir`).
+  - **Badge Saga & Marquage rapide 1-tap (`ContinueWatching.tsx`, `PosterTile.tsx`)** : Affichage d'un badge violet distinctif *Saga* sur les jaquettes de continuité et activation du bouton d'incrémentation rapide circulaire sur les films avec support du toast d'annulation `UndoSnackbar`.
+
 ## [v1.26.17] — 2026-10-16
 
 ### Ajouté

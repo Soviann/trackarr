@@ -65,8 +65,9 @@ type SystemSettingsResponse struct {
 	VAPIDPublicKey        string `json:"vapid_public_key"`
 	VAPIDSubject          string `json:"vapid_subject"`
 	VAPIDConfigured       bool   `json:"vapid_configured"`
-	MetadataLanguage      string `json:"metadata_language"`
-	EnabledWatchProviders string `json:"enabled_watch_providers"`
+	MetadataLanguage        string `json:"metadata_language"`
+	EnabledWatchProviders   string `json:"enabled_watch_providers"`
+	SagaChronologicalNextUp bool   `json:"saga_chronological_next_up"`
 }
 
 func maskSecret(s string) string {
@@ -162,8 +163,9 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		VAPIDPublicKey:        get("vapid_public_key"),
 		VAPIDSubject:          get("vapid_subject"),
 		VAPIDConfigured:       get("vapid_public_key") != "",
-		MetadataLanguage:      metadataLang,
-		EnabledWatchProviders: enabledWP,
+		MetadataLanguage:        metadataLang,
+		EnabledWatchProviders:   enabledWP,
+		SagaChronologicalNextUp: get("saga_chronological_next_up") != "false",
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
@@ -182,26 +184,27 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 	}
 
 	allowedKeys := map[string]bool{
-		"tmdb_api_key":            true,
-		"tvdb_api_key":            true,
-		"gemini_api_keys":         true,
-		"anilist_client_id":       true,
-		"anilist_client_secret":   true,
-		"jellyfin_webhook_secret": true,
-		"plex_webhook_secret":     true,
-		"arr_webhook_secret":      true,
-		"webhook_secret":          true,
-		"radarr_url":              true,
-		"radarr_api_key":          true,
-		"sonarr_url":              true,
-		"sonarr_api_key":          true,
-		"prowlarr_url":            true,
-		"prowlarr_api_key":        true,
-		"vapid_public_key":        true,
-		"vapid_private_key":       true,
-		"vapid_subject":           true,
-		"metadata_language":       true,
-		"enabled_watch_providers": true,
+		"tmdb_api_key":               true,
+		"tvdb_api_key":               true,
+		"gemini_api_keys":            true,
+		"anilist_client_id":          true,
+		"anilist_client_secret":      true,
+		"jellyfin_webhook_secret":    true,
+		"plex_webhook_secret":        true,
+		"arr_webhook_secret":         true,
+		"webhook_secret":             true,
+		"radarr_url":                 true,
+		"radarr_api_key":             true,
+		"sonarr_url":                 true,
+		"sonarr_api_key":             true,
+		"prowlarr_url":               true,
+		"prowlarr_api_key":           true,
+		"vapid_public_key":           true,
+		"vapid_private_key":          true,
+		"vapid_subject":              true,
+		"metadata_language":          true,
+		"enabled_watch_providers":    true,
+		"saga_chronological_next_up": true,
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {

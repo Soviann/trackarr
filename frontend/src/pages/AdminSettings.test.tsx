@@ -226,4 +226,32 @@ describe('AdminSettings Page', () => {
     const deselectAllBtn = screen.getByText('Deselect all')
     fireEvent.click(deselectAllBtn)
   })
+
+  it('allows toggling saga chronological next-up priority and saving', async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      saga_chronological_next_up: true,
+    })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('saga-chronological-toggle')).not.toBeNull()
+    })
+
+    const toggle = screen.getByTestId('saga-chronological-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    const saveBtn = screen.getByText('Save Settings')
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"saga_chronological_next_up":"false"'),
+      }))
+    })
+  })
 })

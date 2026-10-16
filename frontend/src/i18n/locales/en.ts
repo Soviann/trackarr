@@ -131,6 +131,8 @@ export const en = {
     title: 'Continue Watching',
     inProgressCount: '{count} in progress',
     empty: 'Nothing in progress.',
+    sagaNextUp: 'Saga Next-Up',
+    saga: 'Saga',
   },
   search: {
     title: 'Search',
@@ -381,6 +383,8 @@ export const en = {
     languageDesc: 'Language used across the Trackarr web interface.',
     metadataLanguage: 'Primary Metadata Language',
     metadataLanguageDesc: 'Preferred language used for title names and metadata display.',
+    sagaChronologicalNextUp: 'Saga chronological next-up priority',
+    sagaChronologicalNextUpDesc: 'Automatically surface the next uncompleted sequel or movie in franchise order when completing a title.',
     metadataAi: 'Metadata & Artificial Intelligence',
     metadataAiKeysDesc: 'These keys enable search, automatic enrichment, and intelligent title reconciliation for movies, TV shows, and anime.',
     watchProviders: 'Streaming Platforms & Watch Providers',
@@ -558,6 +562,9 @@ export const en = {
     bingeRemaining: 'Left ~',
     allWatched: 'All episodes watched!',
     planEstimatedDuration: 'Estimated total runtime: ~{time} ({count} episodes)',
+    continueSaga: 'Continue Saga',
+    viewNextInSaga: 'View Next in Saga',
+    addToWatchlist: 'Add to Watchlist',
   },
   notes: {
     title: 'Personal Notes',

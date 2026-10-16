@@ -2064,3 +2064,211 @@ func TestTitleWriter_EnsureAnimeAndAniListIDBySeason(t *testing.T) {
 	})
 }
 
+func TestListContinueWatching_SagaSmartNextUp(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("nominal movie sequel in plan_to_watch is surfaced", func(t *testing.T) {
+		db := setupTestDB(t)
+
+		srcID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2008,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Iron Man", Language: "en", IsPrimary: true}})
+
+		sequelID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2010,
+			Status:      model.TitleStatusPlanToWatch,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(200)),
+		}, []model.TitleName{{Name: "Iron Man 2", Language: "en", IsPrimary: true}})
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, srcID, []model.TitleRelation{
+				{
+					TitleID:      srcID,
+					ExternalID:   200,
+					Provider:     "tmdb",
+					RelationType: model.RelationSequel,
+					Format:       "MOVIE",
+					Title:        "Iron Man 2",
+					SortOrder:    1,
+				},
+			})
+		}))
+
+		items, err := repository.NewTitleRepository(db).ListContinueWatching()
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, sequelID, items[0].ID)
+		assert.True(t, items[0].IsSagaNextUp)
+		assert.Equal(t, "Iron Man", items[0].SagaSourceTitle)
+		assert.Equal(t, srcID, items[0].SagaSourceID)
+	})
+
+	t.Run("nominal series sequel in plan_to_watch with aired episode is surfaced", func(t *testing.T) {
+		db := setupTestDB(t)
+
+		srcID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2009,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Bakemonogatari", Language: "en", IsPrimary: true}})
+
+		sequelID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2012,
+			Status:      model.TitleStatusPlanToWatch,
+			MatchStatus: model.MatchStatusConfirmed,
+			AniListID:   ptr(int64(11597)),
+		}, []model.TitleName{{Name: "Nisemonogatari", Language: "en", IsPrimary: true}})
+
+		s1 := testutil.GetOrCreateSeason(t, db, sequelID, 1)
+		testutil.SeedEpisode(t, db, s1.ID, 1, "2012-01-08", false)
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, srcID, []model.TitleRelation{
+				{
+					TitleID:      srcID,
+					ExternalID:   11597,
+					Provider:     "anilist",
+					RelationType: model.RelationSequel,
+					Format:       "TV",
+					Title:        "Nisemonogatari",
+					SortOrder:    1,
+				},
+			})
+		}))
+
+		items, err := repository.NewTitleRepository(db).ListContinueWatching()
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, sequelID, items[0].ID)
+		assert.True(t, items[0].IsSagaNextUp)
+		assert.Equal(t, "Bakemonogatari", items[0].SagaSourceTitle)
+		assert.Equal(t, srcID, items[0].SagaSourceID)
+		require.NotNil(t, items[0].NextEpisode)
+		assert.Equal(t, 1, items[0].NextEpisode.Episode)
+	})
+
+	t.Run("disabled setting suppresses saga next up", func(t *testing.T) {
+		db := setupTestDB(t)
+		testutil.SetSetting(t, db, repository.SettingKeySagaChronologicalNextUp, "false")
+
+		srcID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2008,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Iron Man", Language: "en", IsPrimary: true}})
+
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2010,
+			Status:      model.TitleStatusPlanToWatch,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(200)),
+		}, []model.TitleName{{Name: "Iron Man 2", Language: "en", IsPrimary: true}})
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, srcID, []model.TitleRelation{
+				{
+					TitleID:      srcID,
+					ExternalID:   200,
+					Provider:     "tmdb",
+					RelationType: model.RelationSequel,
+					Format:       "MOVIE",
+					Title:        "Iron Man 2",
+					SortOrder:    1,
+				},
+			})
+		}))
+
+		items, err := repository.NewTitleRepository(db).ListContinueWatching()
+		require.NoError(t, err)
+		assert.Empty(t, items)
+	})
+
+	t.Run("deduplication when sequel is already in watching", func(t *testing.T) {
+		db := setupTestDB(t)
+
+		srcID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2008,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+		sequelID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2015,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(600)),
+		}, []model.TitleName{{Name: "Better Call Saul", Language: "en", IsPrimary: true}})
+
+		s1 := testutil.GetOrCreateSeason(t, db, sequelID, 1)
+		testutil.SeedEpisode(t, db, s1.ID, 1, "2015-02-08", false)
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, srcID, []model.TitleRelation{
+				{
+					TitleID:      srcID,
+					ExternalID:   600,
+					Provider:     "tmdb",
+					RelationType: model.RelationSpinOff,
+					Format:       "TV",
+					Title:        "Better Call Saul",
+					SortOrder:    1,
+				},
+			})
+		}))
+
+		items, err := repository.NewTitleRepository(db).ListContinueWatching()
+		require.NoError(t, err)
+		require.Len(t, items, 1, "sequel should appear only once (as standard watching)")
+		assert.Equal(t, sequelID, items[0].ID)
+		assert.False(t, items[0].IsSagaNextUp)
+	})
+
+	t.Run("already completed relation is excluded", func(t *testing.T) {
+		db := setupTestDB(t)
+
+		srcID := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2008,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Iron Man", Language: "en", IsPrimary: true}})
+
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2010,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(200)),
+		}, []model.TitleName{{Name: "Iron Man 2", Language: "en", IsPrimary: true}})
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleRelationWriter(tx).UpsertBatch(ctx, srcID, []model.TitleRelation{
+				{
+					TitleID:      srcID,
+					ExternalID:   200,
+					Provider:     "tmdb",
+					RelationType: model.RelationSequel,
+					Format:       "MOVIE",
+					Title:        "Iron Man 2",
+					SortOrder:    1,
+				},
+			})
+		}))
+
+		items, err := repository.NewTitleRepository(db).ListContinueWatching()
+		require.NoError(t, err)
+		assert.Empty(t, items)
+	})
+}
+
