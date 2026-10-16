@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.18] — 2026-10-16
+
 ### Ajouté
 - **Sagas & Continuité Chronologique Smart Next-Up (Issue #92 - Lot 2 / Lot 7)** :
   - **Préférence configurable (`saga_chronological_next_up`)** : Paramètre dans **Admin ➔ Préférences** (activé par défaut) contrôlant la proposition automatique du prochain volet chronologique d'une saga lorsqu'un titre est terminé.
