@@ -876,7 +876,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [v1.3.1] — 2026-08-24
 
 ### Modifié
-- **Carte Releases & Prowlarr** : Remplacement de l'intitulé 'Explore Indexer' par 'Explore Prowlarr' sur la carte d'accueil de la bibliothèque et neutralisation du nom d'indexeur par défaut dans la fiche de release et l'aide.
+- **Carte Releases & Prowlarr** : Remplacement de l'intitulé d'indexeur spécifique par 'Explore Prowlarr' sur la carte d'accueil de la bibliothèque et neutralisation du nom d'indexeur par défaut dans la fiche de release et l'aide.
 
 ## [v1.3.0] — 2026-08-24
 

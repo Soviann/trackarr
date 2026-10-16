@@ -201,7 +201,7 @@ func TestPlexHandler_RealProdPayload(t *testing.T) {
 	fake := &fakePlexProcessor{}
 	h := handler.NewWebhookHandler(&fakeJellyfinProcessor{}, fake, &fakeArrProcessor{}, "jfsecret", "plexsecret", "arrsecret")
 
-	// Real raw payload sample from production SQLite watch_events
+	// Raw payload sample for Plex webhook scrobble
 	const prodPayload = `{"Rating":0,"event":"media.scrobble","user":true,"owner":true,"Account":{"id":100001,"title":"TestUser"},"Server":{"title":"MediaServer","uuid":"0000000000000000000000000000000000000001"},"Player":{"local":true,"PublicAddress":"203.0.113.10","title":"Smart TV","uuid":"player-uuid-0001"},"Metadata":{"addedAt":"2026-03-03T18:56:50Z","grandparentRatingKey":"65538","grandparentTitle":"Dr. Globule","Guid":[{"Scheme":"tvdb","Host":"5228295"}],"index":23,"key":"/library/metadata/65562","parentIndex":1,"parentRatingKey":"65539","parentTitle":"Season 1","ratingKey":"65562","title":"Ronchons et dragons","type":"episode","year":1994}}`
 
 	var body bytes.Buffer

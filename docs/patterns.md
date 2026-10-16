@@ -42,9 +42,6 @@
 | `make build` | `Makefile` | Build standalone production binary with dynamic `-ldflags` (`./tmp/trackarr`). |
 | `make build-mcp` | `Makefile` | Build standalone MCP server binary with dynamic `-ldflags` (`./tmp/trackarr-mcp`). |
 | `make reset-password` | `Makefile` | CLI wrapper to reset admin password locally (`PASSWORD=...`, `USERNAME=...`). |
-| `make ssh-db-pull` | `Makefile.local` | Pull prod DB (`trackarr.db` + WAL/SHM) from NAS to local `data/`. |
-| `make ssh-logs` | `Makefile.local` | Dump prod container logs to `data/trackarr.log` (`LINES=...` optional). |
-| `make ssh-debug-pull`| `Makefile.local` | Combined target: downloads prod DB and logs for local-first debugging. |
 | `make reset-import` | `Makefile` | Resets local DB and imports a Simkl backup (`BACKUP_FILE=`). |
 
 ### Schema & Models (`internal/model/`)
@@ -328,11 +325,9 @@
 
 ## Core Invariants & Engineering Rules
 
-1. **Production Debugging (Local-First)**: Never run exploratory commands or grep logs live on production via SSH. Pull state locally with `make ssh-debug-pull` and debug against `data/trackarr.db` and `data/trackarr.log`.
-2. **SQLite Single Writer**: SQLite connection pool is locked to `MaxOpenConns=1`. Never open nested transactions.
-3. **Frontend Re-Embed**: `dist/` is embedded in the Go binary. After editing frontend and running `make test-front`, run `touch main.go` so `air` re-embeds the assets.
-4. **PWA Cache Busting**: The service worker caches aggressively. When validating UI changes in the browser, append `?t=$(date +%s)` to the test URL.
-5. **Antigravity NAS Daemon Environment**: The webhook daemon (`scripts/github-pr-daemon/server.py`) running on the NAS is equipped with Git, Make, Docker CLI, Docker Compose, and access to `/var/run/docker.sock` and `.env.local` secrets. It can execute test/lint suites and generate implementation plans directly on the NAS.
-6. **Title Merge Semantics (`TitleWriter.Merge`)**: Consolidating source into dest transfers missing external IDs and metadata (`sonarr_id`, `radarr_id`, `sonarr_deleted_at`, `my_rating`, `cover_url`, `overview`, etc.) via `COALESCE`, maintains `arr_ignored = 0` if either was queued, preserves watched state (`watched = 1`, `external_source_id`) on colliding season episodes without dropping history, re-parents `watch_events.episode_id`, copies `title_genres`, recalculates `total_watch_minutes`, and purges orphan tasks.
-7. **Frontend i18n & Hardcoded Text Prevention**: English is the source language for all code, components, tests, and comments. Hardcoded French strings or French comments outside `locales/fr.ts` are forbidden and systematically enforced by both `make test-front` (`src/i18n/i18n-audit.test.ts`) and `make lint-front` (`npm run lint:i18n`). Exclusions for legitimate proper names or specific test assertions require an explicit `// i18n-ignore` inline annotation.
-8. **Responsive Ergonomics & Desktop Navigation**: Viewports ≥ 1024px engage `Sidebar` (collapsible rail persisted in `localStorage`) and fluid shelf grid (`auto-fill, minmax(105px..160px, 1fr)`). Navigation state follows contextual highlighting (`getActiveTab`) where `/add` and `/admin/validate` preserve the `Explore` tab context.
+1. **SQLite Single Writer**: SQLite connection pool is locked to `MaxOpenConns=1`. Never open nested transactions.
+2. **Frontend Re-Embed**: `dist/` is embedded in the Go binary. After editing frontend and running `make test-front`, run `touch main.go` so `air` re-embeds the assets.
+3. **PWA Cache Busting**: The service worker caches aggressively. When validating UI changes in the browser, append `?t=$(date +%s)` to the test URL.
+4. **Title Merge Semantics (`TitleWriter.Merge`)**: Consolidating source into dest transfers missing external IDs and metadata (`sonarr_id`, `radarr_id`, `sonarr_deleted_at`, `my_rating`, `cover_url`, `overview`, etc.) via `COALESCE`, maintains `arr_ignored = 0` if either was queued, preserves watched state (`watched = 1`, `external_source_id`) on colliding season episodes without dropping history, re-parents `watch_events.episode_id`, copies `title_genres`, recalculates `total_watch_minutes`, and purges orphan tasks.
+5. **Frontend i18n & Hardcoded Text Prevention**: English is the source language for all code, components, tests, and comments. Hardcoded French strings or French comments outside `locales/fr.ts` are forbidden and systematically enforced by both `make test-front` (`src/i18n/i18n-audit.test.ts`) and `make lint-front` (`npm run lint:i18n`). Exclusions for legitimate proper names or specific test assertions require an explicit `// i18n-ignore` inline annotation.
+6. **Responsive Ergonomics & Desktop Navigation**: Viewports ≥ 1024px engage `Sidebar` (collapsible rail persisted in `localStorage`) and fluid shelf grid (`auto-fill, minmax(105px..160px, 1fr)`). Navigation state follows contextual highlighting (`getActiveTab`) where `/add` and `/admin/validate` preserve the `Explore` tab context.
