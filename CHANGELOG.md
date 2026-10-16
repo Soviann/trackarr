@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Mesh d'ambiance radial GPU & Vignettage dynamique du hero (`TitleDetail`, Issue #92 - Lot 3 / Lot 8)** :
+  - **Diffusion d'ambiance zéro-reflow (`TitleDetail.tsx`, `TitleDetail.module.css`)** : Projection d'un maillage radial fluide dérivé de la couleur dominante de l'affiche (`accent_hex`) via les variables CSS `--cover-accent-glow` (opacité 0.24) et `--cover-accent-wash` (opacité 0.12).
+  - **Optimisation GPU multi-écrans** : Dégradé radial doux au bas de l'affiche sur mobile (<640px) sans filtre lourd `blur()`, et doubles gradients radiaux profonds avec accélération matérielle (`transform: translateZ(0)`, `filter: blur(72px)`) ancrés derrière l'affiche et le bandeau d'identité sur tablette et bureau (>=1024px).
+  - **Immersion chromatique du Hub de Sagas & du tiroir (`FranchiseRelationsSection.tsx`, `.module.css`)** : Teinte dynamique de la barre de saga au survol (`.hubBar:hover`), fond de l'icône de franchise (`.iconWrapperFranchise`), jauge de progression et halo radial immersif dans l'en-tête du tiroir de saga `BottomSheet`.
+
 ## [v1.26.18] — 2026-10-16
 
 ### Ajouté

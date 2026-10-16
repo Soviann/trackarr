@@ -215,4 +215,23 @@ describe('FranchiseRelationsSection', () => {
     expect(getAllByText('2 / 2 Titles seen').length).toBeGreaterThanOrEqual(1)
     expect(getByText('All titles completed!')).toBeTruthy()
   })
+
+  it('applies accentHex custom CSS variables to hub bar and drawer container', () => {
+    const rels = [
+      makeRelation({ id: 1, external_id: 101, title: 'Iron Man', year: 2008 }),
+    ]
+    const { container } = render(
+      <FranchiseRelationsSection relations={rels} accentHex="#e11d48" initialOpenDrawer={true} />
+    )
+
+    const hubBar = container.querySelector('[class*="hubBar"]') as HTMLElement
+    expect(hubBar).toBeTruthy()
+    expect(hubBar.style.getPropertyValue('--cover-accent')).toBe('#e11d48')
+    expect(hubBar.style.getPropertyValue('--cover-accent-wash')).toBe('rgba(225, 29, 72, 0.12)')
+    expect(hubBar.style.getPropertyValue('--cover-accent-glow')).toBe('rgba(225, 29, 72, 0.24)')
+
+    const drawerContainer = document.querySelector('[class*="drawerContainer"]') as HTMLElement
+    expect(drawerContainer).toBeTruthy()
+    expect(drawerContainer.style.getPropertyValue('--cover-accent')).toBe('#e11d48')
+  })
 })

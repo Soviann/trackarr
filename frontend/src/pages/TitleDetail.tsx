@@ -394,7 +394,8 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     '--cover-bg': coverBg,
     ...(title.accent_hex && {
       '--cover-accent': title.accent_hex,
-      '--cover-accent-wash': hexToRgba(title.accent_hex, 0.10),
+      '--cover-accent-wash': hexToRgba(title.accent_hex, 0.12),
+      '--cover-accent-glow': hexToRgba(title.accent_hex, 0.24),
     }),
   } as CSSProperties
 
@@ -408,6 +409,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
 
       {/* Atmospheric backdrop for wide/desktop view */}
       <div className={s.backdrop} aria-hidden="true" />
+      <div className={s.ambientMesh} aria-hidden="true" />
 
       {/* Hero — spacer on mobile, holds back button */}
       <div className={s.hero}>
@@ -1025,6 +1027,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
           {/* Franchise & Watch History Hub Bar */}
           <FranchiseRelationsSection
             relations={title.relations}
+            accentHex={title.accent_hex}
             onOpenHistory={() => setShowHistory(true)}
           />
         </div>

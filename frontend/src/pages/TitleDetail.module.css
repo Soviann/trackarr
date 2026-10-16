@@ -34,6 +34,19 @@
   display: none;
 }
 
+/* Zero-reflow GPU ambient glow mesh */
+.ambientMesh {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 600px;
+  background: radial-gradient(ellipse 110% 55% at 50% 58%, var(--cover-accent-wash, transparent) 0%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+  contain: paint;
+}
+
 /* Hero — pure spacer that holds the back button; cover bg shows through .page */
 .hero {
   position: relative;
@@ -788,6 +801,24 @@
     z-index: 0;
   }
 
+  .ambientMesh {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    height: 460px;
+    background:
+      radial-gradient(circle at 22% 35%, var(--cover-accent-glow, transparent) 0%, transparent 55%),
+      radial-gradient(circle at 75% 20%, var(--cover-accent-wash, transparent) 0%, transparent 65%);
+    filter: blur(60px);
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 0;
+    transform: translateZ(0);
+    will-change: transform;
+    contain: paint;
+  }
+
   .hero {
     height: auto;
     padding: var(--space-lg) var(--space-lg) var(--space-sm);
@@ -884,6 +915,24 @@
     -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
     pointer-events: none;
     z-index: 0;
+  }
+
+  .ambientMesh {
+    position: absolute;
+    top: -80px;
+    left: 0;
+    right: 0;
+    height: 540px;
+    background:
+      radial-gradient(circle at 22% 35%, var(--cover-accent-glow, transparent) 0%, transparent 55%),
+      radial-gradient(circle at 75% 20%, var(--cover-accent-wash, transparent) 0%, transparent 65%);
+    filter: blur(72px);
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 0;
+    transform: translateZ(0);
+    will-change: transform;
+    contain: paint;
   }
 
   .hero {
