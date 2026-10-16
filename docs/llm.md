@@ -114,6 +114,13 @@
     - Thread-safe `internal/cache/cache.go` (`sync.RWMutex`) caches high-frequency read endpoints: `/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/countries`, `/api/titles/review-count`.
     - Domain tags (`TagTitles = "titles"`, `TagStats = "stats"`, `TagCalendar = "calendar"`) mapped to cache keys for $O(1)$ group invalidation.
     - Transactional write isolation: writers (`TitleWriter`, `EpisodeWriter`, `SeasonWriter`, `WatchEventWriter`, `TitleRelationWriter`, `GenreWriter`, `SettingWriter`, `SeasonExternalIDWriter`) mark transactions dirty with `database.MarkTxDirty(tx, ...)`. Cache keys are evicted strictly **post-commit** via `database.WithTxContext` / `CommitTx`. Failed or rolled-back transactions never evict cache keys, preventing stale reads and dropping passive read disk I/O to near zero.
+25. **Saga Smart Next-Up & Chronological Continuity (Lot 7)**:
+    - User preference: `saga_chronological_next_up` (boolean string in `settings` table, default `"true"`). Exposed in `/api/config`, `/api/settings`, and `/api/admin/system-settings`.
+    - Backend resolution (`TitleRepository.ListContinueWatching`): When enabled, queries completed titles with local relations (`title_relations` matched to local titles) in chronological order (`season_number`, `sort_order`, `year`, `title`). Resolves the first uncompleted sequel (in `plan_to_watch` or `watching`) with `is_saga_next_up = true`, `saga_source_title`, `saga_source_id`.
+    - SQLite cursor closure invariant: rows from saga query are scanned into in-memory slice and closed before nested episode queries to prevent SQLite lock under WAL mode.
+    - Frontend continuity:
+      - `NextEpisodeHero.tsx`: Renders a "Continue Saga" hero card when the active title is completed or caught-up and has an uncompleted saga relation.
+      - `ContinueWatching.tsx` & `PosterTile.tsx`: Displays violet saga next-up badge (`t('continueWatching.sagaNextUp')`) and allows 1-click quick-mark on movies with universal undo.
 
 ---
 
@@ -131,13 +138,13 @@
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
-- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
+- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
 
 ## 4. API Endpoints Map
 - `GET /api/health` : Health check endpoint.
-- `GET /api/config` : Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status, Metadata Language, Enabled Watch Providers).
+- `GET /api/config` : Pre-auth public configuration (Google Client ID, VAPID, Auth Mode, Setup status, Metadata Language, Enabled Watch Providers, Saga Chronological Next Up).
 - `POST /api/auth/setup` : Initial admin account setup & emergency recovery key generation.
 - `POST /api/auth/login` : Local password login (Bcrypt, constant-time, rate-limited).
 - `POST /api/auth/google` : OAuth Google authentication callback.
@@ -164,7 +171,7 @@
 - `GET /api/tmdb/search` : Search TMDB for movie or TV titles (supports `type=all` / `type=multi`).
 - `GET /api/anilist/search` : Search AniList for anime titles with posters and metadata.
 - `GET /api/titles/resolve` : Resolve external metadata from direct URL (IMDb, TMDB, TVDB, AniList).
-- `GET /api/titles/continue-watching` : List in-progress titles with progress ratios, streaming providers, and next unwatched episode.
+- `GET /api/titles/continue-watching` : List in-progress titles with progress ratios, streaming providers, next unwatched episode, and saga smart next-up sequel suggestions (`is_saga_next_up`, `saga_source_title`, `saga_source_id`).
 - `GET /api/titles/upcoming` : List series with upcoming air dates.
 - `GET /api/calendar.ics` : Public token-secured RFC 5545 iCalendar feed (`?token=...`).
 - `GET /api/calendar/events` : List calendar events for in-app month/week/list views.
@@ -180,12 +187,12 @@
 - `PUT /api/titles/{titleID}/seasons/{seasonID}/anilist/order` : Reorder multi-part AniList season mappings.
 - `GET /api/genres` : List genres with counts.
 - `GET /api/countries` : List origin countries with counts.
-- `GET /api/settings` : User and app settings.
+- `GET /api/settings` : User and app settings (including `saga_chronological_next_up`, `enabled_watch_providers`, AniList and push status).
 - `GET /api/anilist/auth` : Generate AniList OAuth authorize URL.
 - `POST /api/anilist/token` : Save AniList OAuth access token.
 - `DELETE /api/anilist/token` : Disconnect AniList integration.
 - `GET /api/admin/auth-settings` & `PUT /api/admin/auth-settings` : Get/update auth mode (`google`, `password`, `hybrid`).
-- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags) and trigger client hot-reload.
+- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags, `saga_chronological_next_up`) and trigger client hot-reload.
 - `POST /api/admin/system-settings/test/{service}` : Test connection for TMDB, TVDB, Gemini, Radarr, Sonarr, Prowlarr.
 - `POST /api/admin/system-settings/vapid/generate` : Auto-generate fresh NIST P-256 VAPID keypair.
 - `GET /api/admin/counts` : Total library titles and queued items for admin navbar badge.

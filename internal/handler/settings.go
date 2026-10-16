@@ -22,15 +22,16 @@ type prowlarrChecker interface {
 }
 
 type SettingsResponse struct {
-	AniListConnected      bool       `json:"anilist_connected"`
-	AniListTokenInvalid   bool       `json:"anilist_token_invalid"`
-	PushSubscribed        bool       `json:"push_subscribed"`
-	TVDBConnected         bool       `json:"tvdb_connected"`
-	JellyfinConfigured    bool       `json:"jellyfin_configured"`
-	ProwlarrConfigured    bool       `json:"prowlarr_configured"`
-	JellyfinLastScrobble  *time.Time `json:"jellyfin_last_scrobble_at"`
-	PlexLastScrobble      *time.Time `json:"plex_last_scrobble_at"`
-	EnabledWatchProviders string     `json:"enabled_watch_providers,omitempty"`
+	AniListConnected        bool       `json:"anilist_connected"`
+	AniListTokenInvalid     bool       `json:"anilist_token_invalid"`
+	PushSubscribed          bool       `json:"push_subscribed"`
+	TVDBConnected           bool       `json:"tvdb_connected"`
+	JellyfinConfigured      bool       `json:"jellyfin_configured"`
+	ProwlarrConfigured      bool       `json:"prowlarr_configured"`
+	JellyfinLastScrobble    *time.Time `json:"jellyfin_last_scrobble_at"`
+	PlexLastScrobble        *time.Time `json:"plex_last_scrobble_at"`
+	EnabledWatchProviders   string     `json:"enabled_watch_providers,omitempty"`
+	SagaChronologicalNextUp bool       `json:"saga_chronological_next_up"`
 }
 
 func NewSettingsHandler(settings *repository.SettingRepository, eventRepo *repository.WatchEventRepository, tvdbReady bool, jellyfinConfigured bool, prowlarrSvc ...prowlarrChecker) *SettingsHandler {
@@ -72,22 +73,27 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	enabledWP := "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn"
+	sagaNextUp := true
 	if h.settings != nil {
 		if wp, err := h.settings.Get(repository.SettingKeyEnabledWatchProviders); err == nil && wp != "" {
 			enabledWP = wp
 		}
+		if val, err := h.settings.Get(repository.SettingKeySagaChronologicalNextUp); err == nil && val == "false" {
+			sagaNextUp = false
+		}
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, SettingsResponse{
-		AniListConnected:      anilistErr == nil,
-		AniListTokenInvalid:   tokenInvalid == "true",
-		PushSubscribed:        pushErr == nil,
-		TVDBConnected:         h.tvdbReady,
-		JellyfinConfigured:    h.jellyfinConfigured,
-		ProwlarrConfigured:    prowlarrConfigured,
-		JellyfinLastScrobble:  lastScrobble,
-		PlexLastScrobble:      plexLastScrobble,
-		EnabledWatchProviders: enabledWP,
+		AniListConnected:        anilistErr == nil,
+		AniListTokenInvalid:     tokenInvalid == "true",
+		PushSubscribed:          pushErr == nil,
+		TVDBConnected:           h.tvdbReady,
+		JellyfinConfigured:      h.jellyfinConfigured,
+		ProwlarrConfigured:      prowlarrConfigured,
+		JellyfinLastScrobble:    lastScrobble,
+		PlexLastScrobble:        plexLastScrobble,
+		EnabledWatchProviders:   enabledWP,
+		SagaChronologicalNextUp: sagaNextUp,
 	})
 	return nil
 }

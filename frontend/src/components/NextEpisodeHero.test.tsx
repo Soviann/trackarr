@@ -1,9 +1,24 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup } from '@testing-library/preact'
 import { NextEpisodeHero } from './NextEpisodeHero'
-import type { Title } from '../types'
+import type { Title, TitleRelation } from '../types'
+
+const useApiMock = vi.fn()
+vi.mock('../hooks/useApi', () => ({
+  useApi: (path: string | null) => useApiMock(path),
+}))
+
+const routeMock = vi.fn()
+vi.mock('preact-router', () => ({
+  route: (url: string) => routeMock(url),
+}))
 
 describe('NextEpisodeHero', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    useApiMock.mockReturnValue({ data: { saga_chronological_next_up: true }, loading: false, error: null })
+  })
+
   afterEach(() => {
     cleanup()
   })
@@ -110,7 +125,7 @@ describe('NextEpisodeHero', () => {
     expect(onStatusChange).toHaveBeenCalledWith('completed')
   })
 
-  it('renders nothing when title status is completed or dropped', () => {
+  it('renders nothing when title status is completed or dropped with no relations', () => {
     const completedTitle: Title = { ...baseTitle, status: 'completed' }
     const { container: c1 } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
     expect(c1.firstChild).toBeNull()
@@ -118,6 +133,127 @@ describe('NextEpisodeHero', () => {
     const droppedTitle: Title = { ...baseTitle, status: 'dropped' }
     const { container: c2 } = render(<NextEpisodeHero title={droppedTitle} onEpisodeToggle={vi.fn()} />)
     expect(c2.firstChild).toBeNull()
+  })
+
+  it('renders continue saga hero when completed title has next chronological relation', () => {
+    const sequelRelation: TitleRelation = {
+      id: 50,
+      title_id: 1,
+      external_id: 200,
+      provider: 'anilist',
+      relation_type: 'SEQUEL',
+      format: 'TV',
+      title: 'Sequel Season 2',
+      year: 2025,
+      sort_order: 1,
+      matched_title_id: 2,
+      matched_status: 'plan_to_watch',
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    }
+
+    const completedTitle: Title = {
+      ...baseTitle,
+      status: 'completed',
+      relations: [sequelRelation],
+    }
+
+    const { getByText } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
+
+    expect(getByText('Continue Saga')).not.toBeNull()
+    expect(getByText('Sequel Season 2')).not.toBeNull()
+    expect(getByText('2025')).not.toBeNull()
+
+    const btn = getByText('View Next in Saga').closest('button')
+    expect(btn).not.toBeNull()
+    fireEvent.click(btn!)
+    expect(routeMock).toHaveBeenCalledWith('/title/2')
+  })
+
+  it('renders add to watchlist button when next saga title is not yet in library', () => {
+    const unimportedRelation: TitleRelation = {
+      id: 51,
+      title_id: 1,
+      external_id: 300,
+      provider: 'anilist',
+      relation_type: 'SEQUEL',
+      format: 'MOVIE',
+      title: 'Sequel Movie',
+      year: 2026,
+      sort_order: 2,
+      matched_title_id: null,
+      matched_status: null,
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    }
+
+    const completedTitle: Title = {
+      ...baseTitle,
+      status: 'completed',
+      relations: [unimportedRelation],
+    }
+
+    const { getByText } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
+
+    expect(getByText('Continue Saga')).not.toBeNull()
+    expect(getByText('Sequel Movie')).not.toBeNull()
+    expect(getByText('Add to Watchlist')).not.toBeNull()
+  })
+
+  it('does not render saga hero when saga_chronological_next_up is disabled in settings', () => {
+    useApiMock.mockReturnValue({ data: { saga_chronological_next_up: false }, loading: false, error: null })
+
+    const sequelRelation: TitleRelation = {
+      id: 50,
+      title_id: 1,
+      external_id: 200,
+      provider: 'anilist',
+      relation_type: 'SEQUEL',
+      format: 'TV',
+      title: 'Sequel Season 2',
+      year: 2025,
+      sort_order: 1,
+      matched_title_id: 2,
+      matched_status: 'plan_to_watch',
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    }
+
+    const completedTitle: Title = {
+      ...baseTitle,
+      status: 'completed',
+      relations: [sequelRelation],
+    }
+
+    const { container } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('does not render saga hero when all relations are already completed', () => {
+    const completedRelation: TitleRelation = {
+      id: 50,
+      title_id: 1,
+      external_id: 200,
+      provider: 'anilist',
+      relation_type: 'SEQUEL',
+      format: 'TV',
+      title: 'Sequel Season 2',
+      year: 2025,
+      sort_order: 1,
+      matched_title_id: 2,
+      matched_status: 'completed',
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    }
+
+    const completedTitle: Title = {
+      ...baseTitle,
+      status: 'completed',
+      relations: [completedRelation],
+    }
+
+    const { container } = render(<NextEpisodeHero title={completedTitle} onEpisodeToggle={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
   })
 
   it('renders nothing when the only unwatched episode is TBA', () => {

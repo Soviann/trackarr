@@ -27,6 +27,8 @@ export interface PosterTileItem {
   next_episode?: NextEpisode | null
   onQuickMark?: (item: PosterTileItem, e: MouseEvent) => void
   isMarking?: boolean
+  is_saga_next_up?: boolean
+  saga_source_title?: string
 }
 
 interface Props {
@@ -81,15 +83,22 @@ export function PosterTile({ item }: Props) {
           </span>
         )}
 
+        {/* Saga smart next-up badge */}
+        {item.is_saga_next_up && (
+          <span className={clsx(s.sagaBadge, hasArr && item.next_episode && item.status !== 'dropped' && !isUnaired && s.sagaBadgeStacked)}>
+            {t('continueWatching.sagaNextUp')}
+          </span>
+        )}
+
         {/* Symmetrical +1 Action Button: equal bottom & right offset (10px) */}
-        {item.onQuickMark && item.next_episode && item.status !== 'dropped' && !isUnaired && (
+        {item.onQuickMark && (item.next_episode || (item.is_saga_next_up && item.type === 'movie')) && item.status !== 'dropped' && !isUnaired && (
           <button
             type="button"
             className={clsx(s.quickPlusBtn, item.isMarking && s.quickPlusBtnLoading, popping && s.quickPlusBtnPopping)}
             onClick={handleQuickMarkClick}
             onPointerDown={(e) => e.stopPropagation()}
             disabled={item.isMarking}
-            aria-label={`Mark S${item.next_episode.season_number} E${item.next_episode.episode} as watched`}
+            aria-label={item.next_episode ? `Mark S${item.next_episode.season_number} E${item.next_episode.episode} as watched` : `Mark ${item.name} as watched`}
             title={t('common.markNextWatched')}
           >
             {item.isMarking ? (

@@ -65,7 +65,7 @@
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List`, `ListAll`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -254,7 +254,7 @@
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |
 | `PosterCard` | `components/PosterCard.tsx` | 2:3 vertical grid poster card with type badge, quick mark +1 (44×44px touch target, event isolation), Arr availability badge, and Desktop Hover Card (`UX-1`) preview on fine pointers |
 | `PosterHoverCard` | `components/PosterHoverCard.tsx` | Desktop contextual hover popover (280ms delay, `@media (hover: hover)`) with overview, ratings, next episode +1, watch providers, and ambient accent glow |
-| `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids with quick mark +1 (44×44px touch target, event isolation) |
+| `PosterTile` | `components/PosterTile.tsx` | Compact poster card for preset strips and grids with quick mark +1 (44×44px touch target, event isolation), Arr badge, and Saga Next-Up indicator badge with movie quick mark |
 | `PosterStrip` | `components/PosterStrip.tsx` | Horizontal scrolling strip of poster thumbnails |
 | `CoverImage` | `components/CoverImage.tsx` | Resilient image loader with fallback handling and caching |
 | `CoverPlaceholder` | `components/CoverPlaceholder.tsx` | Geometric stylized placeholder when cover art is unavailable |
@@ -277,7 +277,7 @@
 | `EditSheet` | `components/EditSheet.tsx` | Quick edit for status, type, and display title (with optional Sonarr deletion when marking series dropped) |
 | `ArrPushSheet` | `components/ArrPushSheet.tsx` | Slide-up modal sheet to configure options and push title directly to Radarr/Sonarr |
 | `ReleaseDetailSheet` | `components/ReleaseDetailSheet.tsx` | Slide-up modal sheet displaying torrent metadata, scene release name, external links and 1-click addition button |
-| `NextEpisodeHero` | `components/NextEpisodeHero.tsx` | Prominent call-to-action hero card with 1-click next episode mark & binge duration estimator |
+| `NextEpisodeHero` | `components/NextEpisodeHero.tsx` | Prominent call-to-action hero card with 1-click next episode mark, binge duration estimator, and Continue Saga chronological sequel card when caught up or completed |
 | `PersonalNotesCard` | `components/PersonalNotesCard.tsx` | Private memo/notes card on title detail with debounced auto-save |
 | `WatchProviderBadges` | `components/WatchProviderBadges.tsx` | Streaming provider badges (Netflix, Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) |
 | `CalendarMonthGrid` | `components/CalendarMonthGrid.tsx` | 7-column monthly interactive grid with today indicator & selected day release cards |

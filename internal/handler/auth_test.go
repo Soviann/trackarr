@@ -131,6 +131,14 @@ func TestPublicConfig(t *testing.T) {
 	assert.False(t, cfg3.GoogleAuthEnabled) // disabled because auth_mode = password
 	assert.True(t, cfg3.PasswordAuthEnabled)
 	assert.Equal(t, "password", cfg3.AuthMode)
+	assert.True(t, cfg1.SagaChronologicalNextUp)
+
+	setSetting(t, db, "saga_chronological_next_up", "false")
+	rr4 := httptest.NewRecorder()
+	require.NoError(t, h2.PublicConfig(rr4, httptest.NewRequest("GET", "/api/config", nil)))
+	var cfg4 handler.PublicConfigResponse
+	require.NoError(t, json.NewDecoder(rr4.Body).Decode(&cfg4))
+	assert.False(t, cfg4.SagaChronologicalNextUp)
 }
 
 func TestSetup_SuccessAndRecoveryKey(t *testing.T) {

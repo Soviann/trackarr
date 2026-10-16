@@ -13,6 +13,7 @@ export interface Settings {
   jellyfin_last_scrobble_at?: string | null
   plex_last_scrobble_at?: string | null
   enabled_watch_providers?: string
+  saga_chronological_next_up?: boolean
 }
 
 export interface PublicConfig {
@@ -24,6 +25,7 @@ export interface PublicConfig {
   vapid_public_key?: string
   metadata_language?: string
   enabled_watch_providers?: string
+  saga_chronological_next_up?: boolean
 }
 
 export type TitleType = 'movie' | 'series'
@@ -326,6 +328,9 @@ export interface ContinueWatchingTitle {
   sonarr_id?: number | null
   radarr_id?: number | null
   next_episode?: NextEpisode | null
+  is_saga_next_up?: boolean
+  saga_source_title?: string
+  saga_source_id?: number
 }
 
 export type MatchEventKind = 'auto_confirmed' | 'season_attached'

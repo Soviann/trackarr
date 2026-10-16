@@ -133,6 +133,8 @@ export const fr: TranslationSchema = {
     title: 'En cours',
     inProgressCount: '{count} en cours',
     empty: 'Rien en cours pour le moment.',
+    sagaNextUp: 'Suite de saga',
+    saga: 'Saga',
   },
   search: {
     title: 'Recherche',
@@ -383,6 +385,8 @@ export const fr: TranslationSchema = {
     languageDesc: 'Langue utilisée dans toute l’interface web de Trackarr.',
     metadataLanguage: 'Langue principale des métadonnées',
     metadataLanguageDesc: 'Langue préférée utilisée pour l’affichage des titres et métadonnées.',
+    sagaChronologicalNextUp: 'Priorité chronologique des sagas',
+    sagaChronologicalNextUpDesc: 'Affiche automatiquement la suite ou le film suivant dans l’ordre chronologique de la saga après avoir terminé un titre.',
     metadataAi: 'Métadonnées & Intelligence Artificielle',
     metadataAiKeysDesc: 'Ces clés activent la recherche, l’enrichissement automatique et la réconciliation intelligente des films, séries et animes.',
     watchProviders: 'Plateformes de streaming & Watch Providers',
@@ -560,6 +564,9 @@ export const fr: TranslationSchema = {
     bingeRemaining: 'Reste ~',
     allWatched: 'Tous les épisodes sont vus !',
     planEstimatedDuration: 'Durée totale estimée : ~{time} ({count} épisodes)',
+    continueSaga: 'Poursuivre la saga',
+    viewNextInSaga: 'Voir la suite',
+    addToWatchlist: 'Ajouter à voir',
   },
   notes: {
     title: 'Notes personnelles',

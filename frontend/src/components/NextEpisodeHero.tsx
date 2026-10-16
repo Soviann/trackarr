@@ -1,5 +1,9 @@
 import { useState } from 'preact/hooks'
-import type { Title, TitleStatus } from '../types'
+import { route } from 'preact-router'
+import type { Title, TitleStatus, Settings } from '../types'
+import { routeTo } from '../routes'
+import { useApi } from '../hooks/useApi'
+import { apiFetch } from '../api'
 import { formatBingeTime, unwatchedEpisodesCount, totalEpisodes, isUnairedOrTBA, getName } from '../utils'
 import { useTranslation } from '../i18n'
 import { useUndo } from '../context/UndoContext'
@@ -14,10 +18,120 @@ interface NextEpisodeHeroProps {
 export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: NextEpisodeHeroProps) {
   const { t } = useTranslation()
   const { showUndo } = useUndo()
+  const { data: settings } = useApi<Settings>('/settings')
   const [busy, setBusy] = useState(false)
 
-  if (title.status === 'completed' || title.status === 'dropped' || title.caught_up) {
+  if (title.status === 'dropped') {
     return null
+  }
+
+  // Saga smart next-up: if completed or caught up, check for next chronological relation
+  if (title.status === 'completed' || title.caught_up) {
+    const sagaEnabled = settings?.saga_chronological_next_up !== false
+    if (!sagaEnabled || !title.relations || title.relations.length === 0) {
+      return null
+    }
+
+    const sortedRelations = [...title.relations].sort((a, b) => {
+      const sA = a.season_number ?? 9999
+      const sB = b.season_number ?? 9999
+      if (sA !== sB) return sA - sB
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      const yA = a.year ?? 9999
+      const yB = b.year ?? 9999
+      if (yA !== yB) return yA - yB
+      return (a.title || '').localeCompare(b.title || '')
+    })
+
+    const nextRel = sortedRelations.find((r) => r.matched_status !== 'completed')
+    if (!nextRel) {
+      return null
+    }
+
+    const handleAddNextSaga = async () => {
+      if (busy) return
+      setBusy(true)
+      const isRelMovie = nextRel.format === 'MOVIE'
+      const payload = {
+        type: isRelMovie ? 'movie' : 'series',
+        is_anime: nextRel.provider === 'anilist',
+        year: nextRel.year,
+        status: 'plan_to_watch',
+        match_status: 'confirmed',
+        names: [{ name: nextRel.title, language: 'en', is_primary: true }],
+        cover_url: nextRel.cover_url,
+        tmdb_id: nextRel.provider === 'tmdb' ? nextRel.external_id : undefined,
+        anilist_id: nextRel.provider === 'anilist' ? nextRel.external_id : undefined,
+      }
+      try {
+        const created = await apiFetch<Title>('/titles', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+        route(routeTo.title(created.id))
+      } catch (err) {
+        console.error('Failed to add saga sequel to watchlist:', err)
+      } finally {
+        setBusy(false)
+      }
+    }
+
+    return (
+      <div className={s.container}>
+        <div className={s.heroCard}>
+          <div className={s.headerRow}>
+            <span className={s.label}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              {t('hero.continueSaga')}
+            </span>
+            <div className={s.metaRight}>
+              {nextRel.format && (
+                <span className={s.availableBadge}>
+                  {nextRel.format}
+                </span>
+              )}
+              {nextRel.year && (
+                <span className={s.bingeEstimate}>
+                  {nextRel.year}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className={s.episodeInfo}>
+            <div className={s.episodeCode}>{nextRel.title}</div>
+            {nextRel.romaji_title && nextRel.romaji_title !== nextRel.title && (
+              <div className={s.episodeName}>{nextRel.romaji_title}</div>
+            )}
+          </div>
+
+          {nextRel.matched_title_id != null ? (
+            <button
+              type="button"
+              className={s.markBtn}
+              onClick={() => route(routeTo.title(nextRel.matched_title_id!))}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              {t('hero.viewNextInSaga')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={s.markBtn}
+              disabled={busy}
+              onClick={handleAddNextSaga}
+            >
+              <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+              {t('hero.addToWatchlist')}
+            </button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   const isMovie = title.type === 'movie'

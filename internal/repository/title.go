@@ -28,6 +28,11 @@ type ContinueWatchingItem struct {
 	SonarrID        *int64                `json:"sonarr_id,omitempty"`
 	RadarrID        *int64                `json:"radarr_id,omitempty"`
 	NextEpisode     *model.NextEpisode    `json:"next_episode,omitempty"`
+
+	// Saga smart next-up (Lot 7)
+	IsSagaNextUp    bool                  `json:"is_saga_next_up,omitempty"`
+	SagaSourceTitle string                `json:"saga_source_title,omitempty"`
+	SagaSourceID    int64                 `json:"saga_source_id,omitempty"`
 }
 
 type UpcomingItem struct {
@@ -765,6 +770,119 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 					}
 					if it, ok := itemMap[titleID]; ok {
 						it.NextEpisode = &ne
+					}
+				}
+			}
+		}
+	}
+
+	// Saga smart next-up resolution (Lot 7)
+	var sagaSetting string
+	err = r.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, SettingKeySagaChronologicalNextUp).Scan(&sagaSetting)
+	sagaEnabled := err != nil || sagaSetting != "false"
+
+	if sagaEnabled {
+		seenTitleIDs := make(map[int64]bool, len(items))
+		for _, it := range items {
+			seenTitleIDs[it.ID] = true
+		}
+
+		type sagaCandidate struct {
+			srcID   int64
+			srcName string
+			item    ContinueWatchingItem
+		}
+
+		sagaQuery := `
+			SELECT
+				t_src.id AS src_id,
+				COALESCE(` + displayNameExprAlias("t_src") + `, '') AS src_name,
+				mt.id AS mt_id,
+				mt.type AS mt_type,
+				mt.is_anime AS mt_is_anime,
+				mt.cover_url AS mt_cover_url,
+				COALESCE(` + displayNameExprAlias("mt") + `, '') AS mt_name,
+				mt.next_air_episode AS mt_next_air_ep,
+				(SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = mt.id AND e.watched = 1) AS mt_watched_episodes,
+				(SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = mt.id) AS mt_total_episodes,
+				mt.last_watched_at AS mt_last_watched_at,
+				mt.watch_providers AS mt_watch_providers,
+				mt.sonarr_id AS mt_sonarr_id,
+				mt.radarr_id AS mt_radarr_id,
+				mt.status AS mt_status
+			FROM titles t_src
+			JOIN title_relations tr ON tr.title_id = t_src.id
+			LEFT JOIN seasons s ON s.id = tr.season_id
+			JOIN titles mt ON (
+				(tr.provider = 'anilist' AND mt.anilist_id = tr.external_id) OR
+				(tr.provider = 'tmdb' AND mt.tmdb_id = tr.external_id) OR
+				(tr.provider = 'tvdb' AND mt.tvdb_id = tr.external_id)
+			)
+			WHERE t_src.status = 'completed'
+			  AND (mt.status = 'plan_to_watch' OR (mt.status = 'watching' AND mt.type = 'movie'))
+			ORDER BY
+				t_src.last_watched_at DESC,
+				t_src.updated_at DESC,
+				t_src.id,
+				(s.season_number IS NULL),
+				s.season_number,
+				tr.sort_order,
+				tr.year,
+				tr.title`
+
+		sagaRows, err := r.db.Query(sagaQuery)
+		if err == nil {
+			var candidates []sagaCandidate
+			for sagaRows.Next() {
+				var sc sagaCandidate
+				var watchProvidersRaw *string
+				var mtStatus string
+				if err := sagaRows.Scan(
+					&sc.srcID, &sc.srcName,
+					&sc.item.ID, &sc.item.Type, &sc.item.IsAnime, &sc.item.CoverURL, &sc.item.Name,
+					&sc.item.NextAirEpisode, &sc.item.WatchedEpisodes, &sc.item.TotalEpisodes,
+					&sc.item.LastWatchedAt, &watchProvidersRaw,
+					&sc.item.SonarrID, &sc.item.RadarrID, &mtStatus,
+				); err == nil {
+					sc.item.WatchProviders = parseWatchProviders(watchProvidersRaw)
+					sc.item.IsSagaNextUp = true
+					sc.item.SagaSourceTitle = sc.srcName
+					sc.item.SagaSourceID = sc.srcID
+					candidates = append(candidates, sc)
+				}
+			}
+			sagaRows.Close()
+
+			completedSeen := make(map[int64]bool)
+			today := time.Now().Format("2006-01-02")
+			for _, cand := range candidates {
+				if completedSeen[cand.srcID] || seenTitleIDs[cand.item.ID] {
+					continue
+				}
+
+				if cand.item.Type == "movie" {
+					completedSeen[cand.srcID] = true
+					seenTitleIDs[cand.item.ID] = true
+					items = append(items, cand.item)
+				} else {
+					var ne model.NextEpisode
+					var downloadedAtStr *string
+					epErr := r.db.QueryRow(`
+						SELECT e.id, e.season_id, e.episode, s.season_number, e.name, e.air_date, e.downloaded_at
+						FROM episodes e
+						JOIN seasons s ON s.id = e.season_id
+						WHERE s.title_id = ? AND e.watched = 0 AND `+airedEpisode+`
+						ORDER BY s.season_number, e.episode
+						LIMIT 1`, cand.item.ID).Scan(&ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate, &downloadedAtStr)
+					if epErr == nil {
+						ne.DownloadedAt = parseSQLiteTime(downloadedAtStr)
+						if isUnairedOrTBA(ne.Name, ne.AirDate, today) {
+							ne.IsTBA = true
+						}
+						cand.item.NextEpisode = &ne
+						completedSeen[cand.srcID] = true
+						seenTitleIDs[cand.item.ID] = true
+						items = append(items, cand.item)
 					}
 				}
 			}

@@ -1,5 +1,7 @@
 package repository
 
+import "strings"
+
 // displayNameExpr is a SQL expression that resolves the display name for a title
 // aliased as `t` in the enclosing query. Priority: fr → en → (x-romaji → ja when
 // anime) → any. Callers interpolate it as a scalar column, e.g.
@@ -25,3 +27,9 @@ const displayNameExpr = `(
         tid
     LIMIT 1
 )`
+
+// displayNameExprAlias adapts displayNameExpr for a custom table alias.
+func displayNameExprAlias(alias string) string {
+	s := strings.ReplaceAll(displayNameExpr, "t.id", alias+".id")
+	return strings.ReplaceAll(s, "t.is_anime", alias+".is_anime")
+}

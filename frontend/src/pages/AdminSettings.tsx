@@ -31,6 +31,7 @@ interface SystemSettings {
   anilist_configured?: boolean
   metadata_language?: string
   enabled_watch_providers?: string
+  saga_chronological_next_up?: boolean
 }
 
 function ChevronIcon({ isOpen }: { isOpen: boolean }) {
@@ -105,6 +106,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
         anilist_client_secret: data.anilist_client_secret || '',
         metadata_language: data.metadata_language || 'fr',
         enabled_watch_providers: data.enabled_watch_providers !== undefined ? data.enabled_watch_providers : DEFAULT_ENABLED_PROVIDERS,
+        saga_chronological_next_up: data.saga_chronological_next_up !== false ? 'true' : 'false',
       })
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load configuration')
@@ -395,6 +397,29 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Saga Chronological Next-Up Priority */}
+          <div className={s.toggleRow}>
+            <div className={s.toggleInfo}>
+              <span className={s.toggleLabel}>{t('settings.sagaChronologicalNextUp')}</span>
+              <span className={s.toggleDesc}>{t('settings.sagaChronologicalNextUpDesc')}</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formValues.saga_chronological_next_up !== 'false'}
+              className={formValues.saga_chronological_next_up !== 'false' ? s.toggleOn : s.toggleOff}
+              onClick={() => {
+                const current = formValues.saga_chronological_next_up !== 'false'
+                handleChange('saga_chronological_next_up', current ? 'false' : 'true')
+              }}
+              disabled={saving}
+              aria-label={t('settings.sagaChronologicalNextUp')}
+              data-testid="saga-chronological-toggle"
+            >
+              <span className={s.toggleKnob} />
+            </button>
           </div>
         </div>
 
