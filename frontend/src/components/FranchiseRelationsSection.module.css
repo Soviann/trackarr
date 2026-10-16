@@ -8,6 +8,12 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hubBar:hover {
+  border-color: var(--cover-accent, var(--border));
+  box-shadow: 0 4px 16px var(--cover-accent-wash, rgba(0, 0, 0, 0.25));
 }
 
 .hubRow {
@@ -57,9 +63,9 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--accent-wash);
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  color: var(--accent);
+  background: var(--cover-accent-wash, var(--accent-wash));
+  border: 1px solid var(--cover-accent-glow, rgba(6, 182, 212, 0.25));
+  color: var(--cover-accent, var(--accent));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,7 +108,7 @@
 .countBadge {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--cover-accent, var(--accent));
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -153,7 +159,7 @@
   font-size: 10px;
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--cover-accent, var(--accent));
 }
 
 .hubProgressBar {
@@ -166,7 +172,7 @@
 
 .hubProgressFill {
   height: 100%;
-  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  background: linear-gradient(90deg, var(--cover-accent, #06b6d4), var(--accent, #3b82f6));
   border-radius: var(--radius-pill);
 }
 
@@ -193,7 +199,9 @@
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  background: var(--bg-elev);
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 0%, var(--cover-accent-wash, transparent) 0%, transparent 100%),
+    var(--bg-elev);
   z-index: 10;
 }
 
@@ -217,14 +225,14 @@
 }
 
 .drawerIcon {
-  color: var(--accent);
+  color: var(--cover-accent, var(--accent));
   flex-shrink: 0;
 }
 
 .drawerCountBadge {
   font-size: 12px;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--cover-accent, var(--accent));
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -280,7 +288,7 @@
 }
 
 .drawerProgressPct {
-  color: var(--accent);
+  color: var(--cover-accent, var(--accent));
   font-family: var(--font-mono);
   font-weight: 700;
 }
@@ -295,7 +303,7 @@
 
 .sagaProgressFill {
   height: 100%;
-  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  background: linear-gradient(90deg, var(--cover-accent, #06b6d4), var(--accent, #3b82f6));
   border-radius: var(--radius-pill);
 }
 

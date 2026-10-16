@@ -1,8 +1,9 @@
+import type { CSSProperties } from 'preact/compat'
 import { useState, useMemo, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
 import type { TitleRelation, Title } from '../types'
 import { routeTo } from '../routes'
-import { aniListMediaUrl, getCoverUrl } from '../utils'
+import { aniListMediaUrl, getCoverUrl, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
 import { useTranslation } from '../i18n'
 import { useUndo } from '../context/UndoContext'
@@ -12,6 +13,7 @@ import s from './FranchiseRelationsSection.module.css'
 
 interface FranchiseRelationsSectionProps {
   relations?: TitleRelation[]
+  accentHex?: string | null
   onOpenHistory?: () => void
   initialOpenDrawer?: boolean
 }
@@ -23,6 +25,7 @@ const DEFAULT_VISIBLE_COUNT = 3
 
 export function FranchiseRelationsSection({
   relations: initialRelations = [],
+  accentHex,
   onOpenHistory,
   initialOpenDrawer = false,
 }: FranchiseRelationsSectionProps) {
@@ -273,10 +276,19 @@ export function FranchiseRelationsSection({
   const remainingCount = filteredRelations.length - DEFAULT_VISIBLE_COUNT
   const hasRelations = relations && relations.length > 0
 
+  const franchiseStyle = useMemo(() => {
+    if (!accentHex) return undefined
+    return {
+      '--cover-accent': accentHex,
+      '--cover-accent-wash': hexToRgba(accentHex, 0.12),
+      '--cover-accent-glow': hexToRgba(accentHex, 0.24),
+    } as CSSProperties
+  }, [accentHex])
+
   return (
     <>
       {/* ── Proposal 3C: Combined Hub Bar ── */}
-      <div className={s.hubBar}>
+      <div className={s.hubBar} style={franchiseStyle}>
         {hasRelations && (
           <button
             type="button"
@@ -383,7 +395,7 @@ export function FranchiseRelationsSection({
           onClose={() => setShowDrawer(false)}
           ariaLabel={providerLabel}
         >
-          <div className={s.drawerContainer}>
+          <div className={s.drawerContainer} style={franchiseStyle}>
             <div className={s.drawerHeader}>
               <div className={s.drawerTitleGroup}>
                 <span className={s.drawerTitle}>

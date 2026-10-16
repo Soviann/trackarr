@@ -356,5 +356,32 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       document.body.removeChild(input)
     })
   })
+
+  describe('Ambient Glow Mesh & Dynamic Styling', () => {
+    it('sets --cover-accent, --cover-accent-wash, --cover-accent-glow and renders ambientMesh layer when accent_hex is present', () => {
+      const accentedSeries: Title = {
+        ...mockNormalSeries,
+        accent_hex: '#10b981',
+      }
+      vi.mocked(useApi).mockReturnValue({
+        data: accentedSeries,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      const { container } = render(<TitleDetail id="10" />)
+
+      const pageEl = container.querySelector('[class*="page"]') as HTMLElement
+      expect(pageEl).toBeTruthy()
+      expect(pageEl.style.getPropertyValue('--cover-accent')).toBe('#10b981')
+      expect(pageEl.style.getPropertyValue('--cover-accent-wash')).toBe('rgba(16, 185, 129, 0.12)')
+      expect(pageEl.style.getPropertyValue('--cover-accent-glow')).toBe('rgba(16, 185, 129, 0.24)')
+
+      const ambientMesh = container.querySelector('[class*="ambientMesh"]')
+      expect(ambientMesh).toBeTruthy()
+    })
+  })
 })
 
