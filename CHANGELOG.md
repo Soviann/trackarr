@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.19] — 2026-10-16
+
 ### Ajouté
 - **Mesh d'ambiance radial GPU & Vignettage dynamique du hero (`TitleDetail`, Issue #92 - Lot 3 / Lot 8)** :
   - **Diffusion d'ambiance zéro-reflow (`TitleDetail.tsx`, `TitleDetail.module.css`)** : Projection d'un maillage radial fluide dérivé de la couleur dominante de l'affiche (`accent_hex`) via les variables CSS `--cover-accent-glow` (opacité 0.24) et `--cover-accent-wash` (opacité 0.12).
