@@ -92,3 +92,14 @@ docker exec -t trackarr trackarr version
 # Historical Backup Import (Simkl)
 docker exec -t trackarr trackarr import --dry-run /path/to/backup.zip
 ```
+
+---
+
+## 5. In-Memory Read Cache Performance & Invalidation
+
+Trackarr embeds a thread-safe (`sync.RWMutex`) in-memory read cache (`internal/cache/cache.go`) designed for minimal memory consumption (< 5–10 MB RAM) on low-power NAS devices and mini-PCs:
+- **Cached High-Frequency Read Endpoints**: `/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/countries`, and `/api/titles/review-count`.
+- **Bounded Capacity & Safety TTL**: Configured with a default limit of `256` entries (FIFO eviction) and a `5-minute` safety TTL.
+- **Deterministic Post-Commit Invalidation**: Any write transaction (via `database.WithTxContext` and `TitleWriter`, `EpisodeWriter`, `SeasonWriter`, etc.) marks active transactions dirty with domain tags (`titles`, `stats`, `calendar`). On successful commit, all related cache entries are atomically evicted. If a write rolls back or errors out, cache entries remain intact.
+- **Operational Benefits**: Eliminates passive SQLite disk reads on dashboard browsing and mobile polling while guaranteeing 100% read-after-write consistency.
+

@@ -6,10 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/Soviann/trackarr/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -106,3 +108,59 @@ func TestStatsHandler_RegenerateWrapped(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
 	assert.Equal(t, 2025, resp.Year)
 }
+
+func TestStatsHandler_Get_CacheAndInvalidation(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	statsRepo := repository.NewStatsRepository(db)
+	wrappedRepo := repository.NewWrappedRepository(db)
+	h := handler.NewStatsHandler(db, statsRepo, wrappedRepo, nil)
+
+	c := cache.New(10, 0)
+	database.SetInvalidator(c)
+	defer database.SetInvalidator(nil)
+	h.SetCache(c)
+
+	// 1. Initial request: empty library stats, populates cache
+	req1 := httptest.NewRequest(http.MethodGet, "/api/stats?timeframe=all", nil)
+	rr1 := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr1, req1))
+	assert.Equal(t, http.StatusOK, rr1.Code)
+
+	var res1 model.StatsResponse
+	require.NoError(t, json.NewDecoder(rr1.Body).Decode(&res1))
+	assert.Equal(t, 0, res1.Overview.TotalTitles)
+
+	// Verify cache key exists
+	cached, ok := c.Get("stats:all:0:all")
+	assert.True(t, ok)
+	assert.NotNil(t, cached)
+
+	// 2. Second request hits cache
+	rr2 := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr2, req1))
+	assert.Equal(t, http.StatusOK, rr2.Code)
+
+	// 3. Mutate: add a watched title in WithTxContext
+	testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Stats Invalidation Movie", Language: "en", IsPrimary: true}},
+	)
+
+	// Verify cache key was purged post-commit
+	_, okAfter := c.Get("stats:all:0:all")
+	assert.False(t, okAfter, "cache must be invalidated when titles/stats change")
+
+	// 4. Third request: refreshed from DB, now TotalTitles == 1
+	rr3 := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr3, req1))
+	assert.Equal(t, http.StatusOK, rr3.Code)
+
+	var res3 model.StatsResponse
+	require.NoError(t, json.NewDecoder(rr3.Body).Decode(&res3))
+	assert.Equal(t, 1, res3.Overview.TotalTitles)
+}
+

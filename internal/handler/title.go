@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -32,6 +33,14 @@ type TitleHandler struct {
 	service    *service.TitleService
 	bgSvc      *service.BackgroundService
 	shutdownWG *sync.WaitGroup // optional — joined on shutdown so fire-and-forget refresh can finish
+	cache      *cache.Cache
+}
+
+// SetCache injects the in-memory read cache.
+func (h *TitleHandler) SetCache(c *cache.Cache) {
+	if h != nil {
+		h.cache = c
+	}
 }
 
 func NewTitleHandler(serverCtx context.Context, db *sql.DB, titles *repository.TitleRepository, titlesRead *repository.TitleRepository, seasons *repository.SeasonRepository, episodes *repository.EpisodeRepository, events *repository.WatchEventRepository, tasks *repository.TaskRepository, pipeline *matching.Pipeline, svc *service.TitleService, bgSvc *service.BackgroundService) *TitleHandler {
@@ -671,10 +680,25 @@ func (h *TitleHandler) BatchStatus(w http.ResponseWriter, r *http.Request) error
 // ReviewCount handles GET /api/titles/review-count.
 // Returns the number of titles needing match review (pending_review + unconfirmed).
 func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error {
+	const cacheKey = "titles:review_count"
+	if h.cache != nil {
+		if val, ok := h.cache.Get(cacheKey); ok {
+			if count, ok := val.(int); ok {
+				httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
+				return nil
+			}
+		}
+	}
+
 	count, err := h.titlesRead.ReviewCount(r.Context())
 	if err != nil {
 		return fmt.Errorf("review count: %w", err)
 	}
+
+	if h.cache != nil {
+		h.cache.Set(cacheKey, count, cache.TagTitles)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
 	return nil
 }
@@ -682,6 +706,16 @@ func (h *TitleHandler) ReviewCount(w http.ResponseWriter, r *http.Request) error
 // Countries returns the distinct origin countries in the library with counts,
 // for the country filter chip.
 func (h *TitleHandler) Countries(w http.ResponseWriter, r *http.Request) error {
+	cacheKey := "countries:list:" + r.URL.RawQuery
+	if h.cache != nil {
+		if val, ok := h.cache.Get(cacheKey); ok {
+			if countries, ok := val.([]repository.CountryCount); ok {
+				httputil.WriteJSON(w, http.StatusOK, countries)
+				return nil
+			}
+		}
+	}
+
 	countries, err := h.titlesRead.ListOriginCountries()
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
@@ -689,6 +723,11 @@ func (h *TitleHandler) Countries(w http.ResponseWriter, r *http.Request) error {
 	if countries == nil {
 		countries = []repository.CountryCount{}
 	}
+
+	if h.cache != nil {
+		h.cache.Set(cacheKey, countries, cache.TagTitles)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, countries)
 	return nil
 }

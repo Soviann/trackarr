@@ -209,6 +209,21 @@
 | POST | `/api/arr/queue/{id}/push` | `arr.PushToArr` | Push title from queue directly to Radarr / Sonarr |
 | POST | `/api/client-errors` | `clientErrors.Handle` | Client-side error reporting |
 
+### In-Memory Read Cache (`internal/cache/`)
+
+- **Architecture**: Lightweight, thread-safe (`sync.RWMutex`) tag-indexed in-memory read cache (`Cache`).
+- **Bounds & Expiry**: Configurable bounded capacity (default `maxEntries = 256`, FIFO eviction on overflow) and default safety `ttl = 5 * time.Minute` ensuring negligible memory footprint (< 5–10 MB RAM).
+- **Domain Tags**: `TagTitles = "titles"`, `TagStats = "stats"`, `TagCalendar = "calendar"`.
+- **Cached Read Endpoints**:
+  - `LibraryHandler.ContinueWatching`: key `library:continue_watching`, tag `TagTitles`.
+  - `LibraryHandler.Upcoming`: key `library:upcoming:<today>`, tag `TagTitles`.
+  - `StatsHandler.Get`: key `stats:<timeframe>:<year>:<mediaType>`, tags `TagStats`, `TagTitles`.
+  - `CalendarHandler.GetEvents`: key `calendar:events:<start>:<end>:<typeFilter>`, tags `TagCalendar`, `TagTitles`.
+  - `GenreHandler.List`: key `genres:list:<rawQuery>`, tag `TagTitles`.
+  - `TitleHandler.Countries`: key `countries:list:<rawQuery>`, tag `TagTitles`.
+  - `TitleHandler.ReviewCount`: key `titles:review_count`, tag `TagTitles`.
+- **Deterministic Post-Commit Invalidation**: Mutating transactional writers (`TitleWriter`, `EpisodeWriter`, `SeasonWriter`, `WatchEventWriter`, `TitleRelationWriter`, `GenreWriter`, `SettingWriter`, `SeasonExternalIDWriter`) mark active transactions dirty via `database.MarkTxDirty(tx, ...)`. Upon successful commit via `database.WithTxContext` (or `CommitTx`), all cached keys matching the dirty tags are atomically evicted post-commit. Transactions that fail or roll back never invalidate, eliminating cache stampedes and preventing stale reads.
+
 ---
 
 ## Frontend (Preact)

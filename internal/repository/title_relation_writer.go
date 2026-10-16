@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 )
 
@@ -13,6 +14,7 @@ type TitleRelationWriter struct {
 }
 
 func NewTitleRelationWriter(tx *sql.Tx) *TitleRelationWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &TitleRelationWriter{tx: tx}
 }
 

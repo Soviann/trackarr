@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/Soviann/trackarr/internal/database"
 )
 
 // SettingWriter performs write operations on the settings key-value store
@@ -15,6 +17,7 @@ type SettingWriter struct {
 }
 
 func NewSettingWriter(tx *sql.Tx) *SettingWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &SettingWriter{tx: tx}
 }
 

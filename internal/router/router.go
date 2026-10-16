@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/config"
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	mw "github.com/Soviann/trackarr/internal/middleware"
@@ -116,6 +118,15 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 
 	calendarSvc := service.NewCalendarService(writeDB, titleReadRepo, settingRepo)
 	calendarHandler := handler.NewCalendarHandler(calendarSvc)
+
+	// In-memory read cache with tag-based invalidation
+	readCache := cache.New(cache.DefaultMaxEntries, cache.DefaultTTL)
+	database.SetInvalidator(readCache)
+	titles.SetCache(readCache)
+	library.SetCache(readCache)
+	stats.SetCache(readCache)
+	calendarHandler.SetCache(readCache)
+	genres.SetCache(readCache)
 
 	reloader := service.NewDynamicConfigReloader(
 		cfg, writeDB, settingRepo, pipeline, bgSvc, nil, nil, realPushSvc,
