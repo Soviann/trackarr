@@ -110,6 +110,10 @@
     - Header notice badge (`X already in library`) or friendly info message when all external discovery hits are present in collection.
     - State stability: titles added during active search session (`+ Plan to Watch`, `+ Watching`) remain visible to preserve access to `UndoSnackbar` cancellation.
     - Semantic clickable cards: owned discovery and library cards render as full `<a>` links to `/title/:id` (pointer cursor, elevation, new tab shortcuts) while isolating click propagation on action buttons and external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`).
+24. **Tag-Based In-Memory Read Cache & Deterministic Post-Commit Invalidation (Lot 6)**:
+    - Thread-safe `internal/cache/cache.go` (`sync.RWMutex`) caches high-frequency read endpoints: `/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/countries`, `/api/titles/review-count`.
+    - Domain tags (`TagTitles = "titles"`, `TagStats = "stats"`, `TagCalendar = "calendar"`) mapped to cache keys for $O(1)$ group invalidation.
+    - Transactional write isolation: writers (`TitleWriter`, `EpisodeWriter`, `SeasonWriter`, `WatchEventWriter`, `TitleRelationWriter`, `GenreWriter`, `SettingWriter`, `SeasonExternalIDWriter`) mark transactions dirty with `database.MarkTxDirty(tx, ...)`. Cache keys are evicted strictly **post-commit** via `database.WithTxContext` / `CommitTx`. Failed or rolled-back transactions never evict cache keys, preventing stale reads and dropping passive read disk I/O to near zero.
 
 ---
 

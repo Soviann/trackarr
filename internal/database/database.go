@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -85,6 +86,88 @@ func Open(dsn string) (writeDB, readDB *sql.DB, err error) {
 	return writeDB, readDB, nil
 }
 
+const (
+	TagTitles   = "titles"
+	TagStats    = "stats"
+	TagCalendar = "calendar"
+)
+
+// Invalidator defines the contract for invalidating domain tags.
+type Invalidator interface {
+	Invalidate(tags ...string)
+}
+
+var (
+	txMu        sync.Mutex
+	txDirtyTags = make(map[*sql.Tx]map[string]bool)
+	invalidator Invalidator
+)
+
+// SetInvalidator registers the global invalidator to be notified on transaction commit.
+func SetInvalidator(inv Invalidator) {
+	txMu.Lock()
+	defer txMu.Unlock()
+	invalidator = inv
+}
+
+// GetInvalidator returns the currently registered Invalidator.
+func GetInvalidator() Invalidator {
+	txMu.Lock()
+	defer txMu.Unlock()
+	return invalidator
+}
+
+// MarkTxDirty associates one or more domain tags with an active transaction.
+// When the transaction commits, the registered Invalidator is notified.
+func MarkTxDirty(tx *sql.Tx, tags ...string) {
+	if tx == nil || len(tags) == 0 {
+		return
+	}
+	txMu.Lock()
+	defer txMu.Unlock()
+	m, ok := txDirtyTags[tx]
+	if !ok {
+		m = make(map[string]bool)
+		txDirtyTags[tx] = m
+	}
+	for _, t := range tags {
+		m[t] = true
+	}
+}
+
+// CommitTx commits tx and invokes the registered Invalidator with all dirty tags.
+func CommitTx(tx *sql.Tx) error {
+	if err := tx.Commit(); err != nil {
+		txMu.Lock()
+		delete(txDirtyTags, tx)
+		txMu.Unlock()
+		return err
+	}
+
+	txMu.Lock()
+	dirty := txDirtyTags[tx]
+	inv := invalidator
+	delete(txDirtyTags, tx)
+	txMu.Unlock()
+
+	if inv != nil && len(dirty) > 0 {
+		tags := make([]string, 0, len(dirty))
+		for tag := range dirty {
+			tags = append(tags, tag)
+		}
+		inv.Invalidate(tags...)
+	}
+	return nil
+}
+
+// RollbackTx rolls back tx and clears any pending dirty tags.
+func RollbackTx(tx *sql.Tx) error {
+	txMu.Lock()
+	delete(txDirtyTags, tx)
+	txMu.Unlock()
+	return tx.Rollback()
+}
+
 // WithTx executes fn within a transaction. If fn returns an error, the
 // transaction is rolled back; otherwise it is committed. Prefer
 // WithTxContext from new code paths so the transaction can be aborted when
@@ -104,6 +187,12 @@ func WithTxContext(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) e
 		return fmt.Errorf("begin tx: %w", err)
 	}
 
+	defer func() {
+		txMu.Lock()
+		delete(txDirtyTags, tx)
+		txMu.Unlock()
+	}()
+
 	if err := fn(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
 			log.Printf("database: rollback tx: %v", rbErr)
@@ -111,7 +200,25 @@ func WithTxContext(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) e
 		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	txMu.Lock()
+	dirty := txDirtyTags[tx]
+	inv := invalidator
+	delete(txDirtyTags, tx)
+	txMu.Unlock()
+
+	if inv != nil && len(dirty) > 0 {
+		tags := make([]string, 0, len(dirty))
+		for tag := range dirty {
+			tags = append(tags, tag)
+		}
+		inv.Invalidate(tags...)
+	}
+
+	return nil
 }
 
 // Migrate runs all pending migrations.

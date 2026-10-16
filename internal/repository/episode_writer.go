@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 )
 
@@ -20,6 +21,7 @@ type EpisodeWriter struct {
 }
 
 func NewEpisodeWriter(tx *sql.Tx) *EpisodeWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &EpisodeWriter{tx: tx}
 }
 

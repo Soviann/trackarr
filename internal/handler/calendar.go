@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
@@ -12,12 +13,22 @@ import (
 
 type CalendarHandler struct {
 	calendarSvc *service.CalendarService
+	cache       *cache.Cache
 }
 
-func NewCalendarHandler(calendarSvc *service.CalendarService) *CalendarHandler {
-	return &CalendarHandler{
+func NewCalendarHandler(calendarSvc *service.CalendarService, c ...*cache.Cache) *CalendarHandler {
+	h := &CalendarHandler{
 		calendarSvc: calendarSvc,
 	}
+	if len(c) > 0 {
+		h.cache = c[0]
+	}
+	return h
+}
+
+// SetCache injects the in-memory read cache.
+func (h *CalendarHandler) SetCache(c *cache.Cache) {
+	h.cache = c
 }
 
 type CalendarTokenResponse struct {
@@ -85,6 +96,16 @@ func (h *CalendarHandler) GetEvents(w http.ResponseWriter, r *http.Request) erro
 		end = time.Now().AddDate(0, 0, 90).Format("2006-01-02")
 	}
 
+	cacheKey := fmt.Sprintf("calendar:events:%s:%s:%s", start, end, typeFilter)
+	if h.cache != nil {
+		if val, ok := h.cache.Get(cacheKey); ok {
+			if events, ok := val.([]repository.CalendarEventItem); ok {
+				httputil.WriteJSON(w, http.StatusOK, events)
+				return nil
+			}
+		}
+	}
+
 	events, err := h.calendarSvc.GetCalendarEvents(r.Context(), start, end)
 	if err != nil {
 		return fmt.Errorf("calendar: get events: %w", err)
@@ -107,6 +128,10 @@ func (h *CalendarHandler) GetEvents(w http.ResponseWriter, r *http.Request) erro
 
 	if events == nil {
 		events = []repository.CalendarEventItem{}
+	}
+
+	if h.cache != nil {
+		h.cache.Set(cacheKey, events, cache.TagCalendar, cache.TagTitles)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, events)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Soviann/trackarr/internal/config"
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 )
@@ -79,38 +80,34 @@ type RadarrDeletePayload struct {
 
 // EnqueuePush enqueues an arr push task and saves the arr_ignored state if pushing is bypassed.
 func (s *ArrService) EnqueuePush(ctx context.Context, app string, payload PushPayload) error {
-	tx, err := s.writeDB.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if app == "ignore" {
-		arrIgnored := true
-		update := repository.TitleUpdate{
-			ArrIgnored: &arrIgnored,
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		if app == "ignore" {
+			arrIgnored := true
+			update := repository.TitleUpdate{
+				ArrIgnored: &arrIgnored,
+			}
+			if err := repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, update); err != nil {
+				return fmt.Errorf("update arr_ignored: %w", err)
+			}
+			return nil
 		}
-		if err := repository.NewTitleWriter(tx).Update(ctx, payload.TitleID, update); err != nil {
-			return fmt.Errorf("update arr_ignored: %w", err)
+
+		taskType := model.TaskTypeRadarrPush
+		if app == "sonarr" {
+			taskType = model.TaskTypeSonarrPush
+		} else if app != "radarr" {
+			return fmt.Errorf("unknown arr app: %s", app)
 		}
-		return tx.Commit()
-	}
 
-	taskType := model.TaskTypeRadarrPush
-	if app == "sonarr" {
-		taskType = model.TaskTypeSonarrPush
-	} else if app != "radarr" {
-		return fmt.Errorf("unknown arr app: %s", app)
-	}
+		b, _ := json.Marshal(payload)
+		dedup := strconv.FormatInt(payload.TitleID, 10)
+		_, err := repository.NewTaskWriter(tx).Enqueue(ctx, taskType, string(b), &dedup)
+		if err != nil {
+			return fmt.Errorf("enqueue push task: %w", err)
+		}
 
-	b, _ := json.Marshal(payload)
-	dedup := strconv.FormatInt(payload.TitleID, 10)
-	_, err = repository.NewTaskWriter(tx).Enqueue(ctx, taskType, string(b), &dedup)
-	if err != nil {
-		return fmt.Errorf("enqueue push task: %w", err)
-	}
-
-	return tx.Commit()
+		return nil
+	})
 }
 
 func (s *ArrService) getAppConfig(app string) (baseURL string, apiKey string) {
@@ -292,48 +289,46 @@ func (s *ArrService) PushTitle(ctx context.Context, titleID int64, payload PushP
 }
 
 func (s *ArrService) saveArrID(ctx context.Context, titleID int64, app string, arrID int64) error {
-	tx, err := s.writeDB.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		update := repository.TitleUpdate{}
+		switch app {
+		case "radarr":
+			update.RadarrID = &arrID
+		case "sonarr":
+			update.SonarrID = &arrID
+			update.ClearSonarrDeletedAt = true
+			falseVal := false
+			update.ArrIgnored = &falseVal
+		default:
+			return fmt.Errorf("unknown app %q", app)
+		}
 
-	update := repository.TitleUpdate{}
-	switch app {
-	case "radarr":
-		update.RadarrID = &arrID
-	case "sonarr":
-		update.SonarrID = &arrID
-		update.ClearSonarrDeletedAt = true
-		falseVal := false
-		update.ArrIgnored = &falseVal
-	default:
-		return fmt.Errorf("unknown app %q", app)
-	}
+		if err := repository.NewTitleWriter(tx).Update(ctx, titleID, update); err != nil {
+			return fmt.Errorf("update %s_id: %w", app, err)
+		}
 
-	if err := repository.NewTitleWriter(tx).Update(ctx, titleID, update); err != nil {
-		return fmt.Errorf("update %s_id: %w", app, err)
-	}
-
-	return tx.Commit()
+		return nil
+	})
 }
 
 func (s *ArrService) clearArrID(ctx context.Context, titleID int64, app string) error {
-	tx, err := s.writeDB.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		update := repository.TitleUpdate{}
+		switch app {
+		case "radarr":
+			update.ClearRadarrID = true
+		case "sonarr":
+			update.ClearSonarrID = true
+		default:
+			return fmt.Errorf("unknown app %q", app)
+		}
 
-	column := "radarr_id"
-	if app == "sonarr" {
-		column = "sonarr_id"
-	}
-	if _, err := tx.ExecContext(ctx, fmt.Sprintf("UPDATE titles SET %s = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?", column), titleID); err != nil {
-		return fmt.Errorf("clear %s: %w", column, err)
-	}
+		if err := repository.NewTitleWriter(tx).Update(ctx, titleID, update); err != nil {
+			return fmt.Errorf("clear %s: %w", app, err)
+		}
 
-	return tx.Commit()
+		return nil
+	})
 }
 
 // ArrTitleDetails contains live status and options of a title in Radarr or Sonarr.

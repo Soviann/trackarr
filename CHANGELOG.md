@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Cache de lecture en mémoire indexé par tags (`internal/cache`, Issue #92 - Lot 6)** :
+  - **Mise en cache passive bornée et thread-safe** : Réduction drastique des I/O disque SQLite sur les routes de consultation fréquentes (`/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/countries`, `/api/titles/review-count`) avec éviction FIFO (`maxEntries = 256`) et TTL de sécurité (5 min).
+  - **Invalidation transactionnelle post-commit déterministe** : Traçage des tags modifiés (`TagTitles`, `TagStats`, `TagCalendar`) au niveau des `*_writer.go` et invalidation automatique strictement post-commit dans `database.WithTxContext` / `database.CommitTx`, garantissant une cohérence read-after-write stricte sans risque d'invalidation prématurée ou lors d'un rollback.
+  - **Isolation du worker de tâches d'arrière-plan** : Le polling périodique de la file d'attente (`FetchDue`) n'invalide pas le cache de lecture.
+
 ### Modifié
 - **Injection dynamique de la version au build (`Dockerfile`, `release.yml`, `Makefile`)** :
   - Remplacement de la constante de version figée dans `internal/version/version.go` par une valeur fallback `dev`.

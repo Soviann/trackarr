@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 )
 
@@ -18,6 +19,7 @@ type WatchEventWriter struct {
 }
 
 func NewWatchEventWriter(tx *sql.Tx) *WatchEventWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &WatchEventWriter{tx: tx}
 }
 

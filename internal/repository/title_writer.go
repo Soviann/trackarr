@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 )
 
@@ -21,6 +22,7 @@ type TitleWriter struct {
 }
 
 func NewTitleWriter(tx *sql.Tx) *TitleWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &TitleWriter{tx: tx}
 }
 

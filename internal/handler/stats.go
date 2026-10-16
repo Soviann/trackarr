@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
@@ -20,15 +21,25 @@ type StatsHandler struct {
 	stats    *repository.StatsRepository
 	wrapped  *repository.WrappedRepository
 	pipeline *matching.Pipeline
+	cache    *cache.Cache
 }
 
-func NewStatsHandler(writeDB *sql.DB, stats *repository.StatsRepository, wrapped *repository.WrappedRepository, pipeline *matching.Pipeline) *StatsHandler {
-	return &StatsHandler{
+func NewStatsHandler(writeDB *sql.DB, stats *repository.StatsRepository, wrapped *repository.WrappedRepository, pipeline *matching.Pipeline, c ...*cache.Cache) *StatsHandler {
+	h := &StatsHandler{
 		writeDB:  writeDB,
 		stats:    stats,
 		wrapped:  wrapped,
 		pipeline: pipeline,
 	}
+	if len(c) > 0 {
+		h.cache = c[0]
+	}
+	return h
+}
+
+// SetCache injects the in-memory read cache.
+func (h *StatsHandler) SetCache(c *cache.Cache) {
+	h.cache = c
 }
 
 func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
@@ -56,9 +67,24 @@ func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		MediaType: mediaType,
 	}
 
+	cacheKey := fmt.Sprintf("stats:%s:%d:%s", timeframe, year, mediaType)
+	if h.cache != nil {
+		if val, ok := h.cache.Get(cacheKey); ok {
+			if resp, ok := val.(*model.StatsResponse); ok {
+				w.Header().Set("Cache-Control", "private, max-age=300")
+				httputil.WriteJSON(w, http.StatusOK, resp)
+				return nil
+			}
+		}
+	}
+
 	resp, err := h.stats.GetFiltered(r.Context(), filter)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
+	}
+
+	if h.cache != nil {
+		h.cache.Set(cacheKey, resp, cache.TagStats, cache.TagTitles)
 	}
 
 	w.Header().Set("Cache-Control", "private, max-age=300")

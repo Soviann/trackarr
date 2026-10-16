@@ -232,3 +232,77 @@ func TestMigrate_AutoRecoversFromDirtyState(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, dirty)
 }
+
+type testInvalidator struct {
+	mu            sync.Mutex
+	invalidations [][]string
+}
+
+func (i *testInvalidator) Invalidate(tags ...string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.invalidations = append(i.invalidations, tags)
+}
+
+func TestWithTxContext_Invalidator(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	require.NoError(t, database.Migrate(db))
+
+	inv := &testInvalidator{}
+	database.SetInvalidator(inv)
+	defer database.SetInvalidator(nil)
+
+	t.Run("nominal: commit invalidates marked tags", func(t *testing.T) {
+		inv.invalidations = nil
+		err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+			database.MarkTxDirty(tx, database.TagTitles, database.TagStats)
+			_, execErr := tx.Exec("INSERT INTO settings (key, value) VALUES (?, ?)", "k1", "v1")
+			return execErr
+		})
+		require.NoError(t, err)
+
+		require.Len(t, inv.invalidations, 1)
+		tags := inv.invalidations[0]
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats}, tags)
+	})
+
+	t.Run("boundary: rollback does not invalidate", func(t *testing.T) {
+		inv.invalidations = nil
+		err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+			database.MarkTxDirty(tx, database.TagTitles)
+			return errors.New("rollback intended")
+		})
+		require.Error(t, err)
+		assert.Empty(t, inv.invalidations, "invalidator must not be called on rollback")
+	})
+
+	t.Run("boundary: commit without dirty tags does not invalidate", func(t *testing.T) {
+		inv.invalidations = nil
+		err := database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+			_, execErr := tx.Exec("INSERT INTO settings (key, value) VALUES (?, ?)", "k2", "v2")
+			return execErr
+		})
+		require.NoError(t, err)
+		assert.Empty(t, inv.invalidations)
+	})
+
+	t.Run("manual CommitTx and RollbackTx", func(t *testing.T) {
+		inv.invalidations = nil
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		database.MarkTxDirty(tx, database.TagCalendar)
+		require.NoError(t, database.CommitTx(tx))
+		require.Len(t, inv.invalidations, 1)
+		assert.Equal(t, []string{database.TagCalendar}, inv.invalidations[0])
+
+		inv.invalidations = nil
+		txRollback, err := db.Begin()
+		require.NoError(t, err)
+		database.MarkTxDirty(txRollback, database.TagCalendar)
+		require.NoError(t, database.RollbackTx(txRollback))
+		assert.Empty(t, inv.invalidations)
+	})
+}
+

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 )
 
@@ -18,6 +19,7 @@ type SeasonWriter struct {
 }
 
 func NewSeasonWriter(tx *sql.Tx) *SeasonWriter {
+	database.MarkTxDirty(tx, database.TagTitles, database.TagStats, database.TagCalendar)
 	return &SeasonWriter{tx: tx}
 }
 
