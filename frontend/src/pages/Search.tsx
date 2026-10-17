@@ -38,6 +38,10 @@ function getMetadata(t: Title) {
 
 interface SearchProps {
   path?: string
+  url?: string
+  mergeSourceId?: string
+  mergeSourceName?: string
+  matches?: Record<string, string | undefined>
   filterOpen?: boolean
   onToggleFilters?: () => void
   desktopFilterDrawer?: ComponentChildren
@@ -46,6 +50,10 @@ interface SearchProps {
 
 export function Search({
   path: _,
+  url,
+  mergeSourceId: propsMergeSourceId,
+  mergeSourceName: propsMergeSourceName,
+  matches,
   filterOpen = false,
   onToggleFilters,
   desktopFilterDrawer,
@@ -90,9 +98,18 @@ export function Search({
     }
   }
 
-  const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
-  const mergeSourceId = params.get('mergeSourceId')
-  const mergeSourceName = params.get('mergeSourceName')
+  const params = useMemo(() => {
+    if (url && url.includes('?')) {
+      return new URLSearchParams(url.slice(url.indexOf('?')))
+    }
+    if (typeof window !== 'undefined' && window.location.search) {
+      return new URLSearchParams(window.location.search)
+    }
+    return new URLSearchParams()
+  }, [url])
+
+  const mergeSourceId = propsMergeSourceId ?? matches?.mergeSourceId ?? params.get('mergeSourceId')
+  const mergeSourceName = propsMergeSourceName ?? matches?.mergeSourceName ?? params.get('mergeSourceName')
 
   const filteredResults = useMemo(() => {
     if (!mergeSourceId) return results
@@ -106,8 +123,11 @@ export function Search({
   const [mergeError, setMergeError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (mergeSourceId && mergeSourceName) {
-      useSearchStore.getState().setQuery(mergeSourceName)
+    if (mergeSourceId) {
+      useSearchStore.getState().setSearchOnTMDB(false)
+      if (mergeSourceName) {
+        useSearchStore.getState().setQuery(mergeSourceName)
+      }
     }
   }, [mergeSourceId, mergeSourceName])
 
@@ -329,38 +349,40 @@ export function Search({
                 onToggleFilters={onToggleFilters}
                 activeFilterCount={activeFilterCount}
               >
-                <div className={s.viewSwitcher} role="group" aria-label={t('search.viewMode')}>
-                  <button
-                    type="button"
-                    className={clsx(s.viewBtn, viewMode === 'grid' && s.viewBtnActive)}
-                    onClick={() => handleSetViewMode('grid')}
-                    aria-label={t('search.viewGrid')}
-                    title={t('search.viewGrid')}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={clsx(s.viewBtn, viewMode === 'list' && s.viewBtnActive)}
-                    onClick={() => handleSetViewMode('list')}
-                    aria-label={t('search.viewList')}
-                    title={t('search.viewList')}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <line x1="8" y1="6" x2="21" y2="6" />
-                      <line x1="8" y1="12" x2="21" y2="12" />
-                      <line x1="8" y1="18" x2="21" y2="18" />
-                      <line x1="3" y1="6" x2="3.01" y2="6" />
-                      <line x1="3" y1="12" x2="3.01" y2="12" />
-                      <line x1="3" y1="18" x2="3.01" y2="18" />
-                    </svg>
-                  </button>
-                </div>
+                {!mergeSourceId && (
+                  <div className={s.viewSwitcher} role="group" aria-label={t('search.viewMode')}>
+                    <button
+                      type="button"
+                      className={clsx(s.viewBtn, viewMode === 'grid' && s.viewBtnActive)}
+                      onClick={() => handleSetViewMode('grid')}
+                      aria-label={t('search.viewGrid')}
+                      title={t('search.viewGrid')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={clsx(s.viewBtn, viewMode === 'list' && s.viewBtnActive)}
+                      onClick={() => handleSetViewMode('list')}
+                      aria-label={t('search.viewList')}
+                      title={t('search.viewList')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="8" y1="6" x2="21" y2="6" />
+                        <line x1="8" y1="12" x2="21" y2="12" />
+                        <line x1="8" y1="18" x2="21" y2="18" />
+                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </SearchBar>
             </div>
             {desktopFilterDrawer && filterOpen && (
@@ -416,10 +438,22 @@ export function Search({
                   {filteredResults.map((t) => (
                     <a
                       key={t.id}
-                      href={routeTo.title(t.id)}
+                      href={mergeSourceId ? undefined : routeTo.title(t.id)}
+                      data-native={mergeSourceId ? 'true' : undefined}
+                      role={mergeSourceId ? 'button' : undefined}
+                      tabIndex={mergeSourceId ? 0 : undefined}
                       onClick={(e) => {
                         if (mergeSourceId) {
                           e.preventDefault()
+                          e.stopPropagation()
+                          setMergeTarget(t)
+                          setTargetSeason(1)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (mergeSourceId && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          e.stopPropagation()
                           setMergeTarget(t)
                           setTargetSeason(1)
                         }
@@ -502,7 +536,7 @@ export function Search({
           )}
 
           {/* Discovery results when TMDB is active */}
-          {searchOnTMDB && (availableDiscoveryItems.length > 0 || hiddenInLibraryCount > 0) && (
+          {searchOnTMDB && !mergeSourceId && (availableDiscoveryItems.length > 0 || hiddenInLibraryCount > 0) && (
             <>
               <div className={clsx(s.sectionDivider, isDesktop && viewMode === 'grid' && !mergeSourceId && s.sectionDividerGrid)}>
                 <span>{t('search.tmdbResults')}</span>

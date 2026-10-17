@@ -141,6 +141,70 @@ describe('Search Page', () => {
     expect(cardLink?.getAttribute('href')).toBe('/title/42')
   })
 
+  it('renders merge target cards with role="button", data-native, without href, and opens merge sheet on click', () => {
+    window.history.pushState({}, '', '/search?mergeSourceId=10&mergeSourceName=Inception')
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = 'Interstellar'
+    mockSearchState.results = [
+      {
+        id: 20,
+        type: 'movie',
+        is_anime: false,
+        year: 2014,
+        status: 'watching',
+        names: [{ name: 'Interstellar', language: 'en', is_primary: true }],
+      } as unknown as Title,
+    ]
+
+    const { container, getByText } = render(<Search />)
+
+    const card = container.querySelector('.card') as HTMLAnchorElement | null
+    expect(card).not.toBeNull()
+    expect(card?.getAttribute('href')).toBeNull()
+    expect(card?.getAttribute('data-native')).toBe('true')
+    expect(card?.getAttribute('role')).toBe('button')
+    expect(card?.getAttribute('tabindex')).toBe('0')
+
+    // Click card to open merge sheet
+    fireEvent.click(card!)
+
+    expect(getByText('Merge titles?')).not.toBeNull()
+    expect(getByText('This will merge "Inception" into "Interstellar". Seasons, watch events and names will be moved. This action cannot be undone.')).not.toBeNull()
+  })
+
+  it('opens merge sheet on Enter key press on merge target card', () => {
+    window.history.pushState({}, '', '/search?mergeSourceId=10&mergeSourceName=Inception')
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = 'Interstellar'
+    mockSearchState.results = [
+      {
+        id: 20,
+        type: 'movie',
+        is_anime: false,
+        year: 2014,
+        status: 'watching',
+        names: [{ name: 'Interstellar', language: 'en', is_primary: true }],
+      } as unknown as Title,
+    ]
+
+    const { container, getByText } = render(<Search />)
+
+    const card = container.querySelector('.card') as HTMLAnchorElement | null
+    expect(card).not.toBeNull()
+
+    fireEvent.keyDown(card!, { key: 'Enter' })
+
+    expect(getByText('Merge titles?')).not.toBeNull()
+  })
+
+  it('hides desktop viewSwitcher and TMDB toggle in merge mode', () => {
+    window.history.pushState({}, '', '/search?mergeSourceId=10&mergeSourceName=Inception')
+    mockIsDesktop.mockReturnValue(true)
+    const { container } = render(<Search />)
+
+    expect(container.querySelector('.viewSwitcher')).toBeNull()
+  })
+
   it('deduplicates external discovery items matching local library results and displays badge', () => {
     mockIsDesktop.mockReturnValue(false)
     mockSearchState.query = 'Inception'

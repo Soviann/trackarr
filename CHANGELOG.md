@@ -6,6 +6,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.20] — 2026-10-17
+
+### Corrigé
+- **Sélection et fusion de titres dans la recherche (`Search.tsx`)** :
+  - **Résolution de la redirection intempestive en mode fusion** : Suppression de l'attribut `href` sur les cartes de résultats en mode fusion et ajout de l'attribut `data-native="true"`, empêchant l'intercepteur de navigation global de `preact-router` de rediriger vers la fiche titre `/title/:id` lors du clic sur le résultat cible.
+  - **Accessibilité clavier et sémantique WAI-ARIA** : Rendu des cartes de sélection avec `role="button"` et `tabIndex={0}`, supportant l'activation par les touches `Entrée` et `Espace` avec arrêt de la propagation de l'événement.
+  - **Flux de fusion dédié sur bureau** : Masquage du commutateur de vue grille/liste sur grand écran en mode fusion et maintien de la vue liste détaillée avec son icône de maillon de fusion.
+  - **Isolation de la découverte externe** : Désactivation et masquage automatique des résultats externes TMDB/AniList en mode fusion afin de garantir la sélection exclusive parmi les œuvres de la bibliothèque locale.
+  - **Extraction réactive des paramètres d'URL** : Prise en charge des propriétés `url` et `matches` injectées par `preact-router` en complément de `window.location.search`.
+
+### Sécurité & Infrastructure
+- **Mise à jour des dépendances Go (`go.mod`, `go.sum`)** : Mise à niveau groupée de `golang.org/x/crypto` (v0.58.0), `golang.org/x/image` (v0.47.0) et `golang.org/x/text` (v0.43.0).
+
 ## [v1.26.19] — 2026-10-16
 
 ### Ajouté

@@ -3,6 +3,7 @@ import { render, fireEvent, cleanup, act } from '@testing-library/preact'
 import { route } from 'preact-router'
 import { App } from './app'
 import { setLocale } from './i18n'
+import type { Title } from './types'
 
 const mockTitleState = {
   filter: {},
@@ -17,7 +18,7 @@ const mockTitleState = {
 
 const mockSearchState = {
   query: '',
-  results: [],
+  results: [] as Title[],
   total: 0,
   hasMore: false,
   loading: false,
@@ -313,4 +314,30 @@ describe('App navigation & filter drawer', () => {
 
     expect(mockSearchState.clear).not.toHaveBeenCalled()
   })
+
+  it('opens merge drawer and prevents redirection when clicking a search result in merge mode', async () => {
+    window.history.pushState({}, '', '/search?mergeSourceId=12&mergeSourceName=Frieren')
+    mockSearchState.query = 'Frieren'
+    mockSearchState.results = [
+      {
+        id: 99,
+        type: 'series',
+        is_anime: true,
+        year: 2023,
+        status: 'watching',
+        names: [{ name: 'Frieren Season 2', language: 'en', is_primary: true }],
+      } as unknown as Title,
+    ]
+
+    const { getByText, queryByText } = render(<App />)
+
+    const titleCard = getByText('Frieren Season 2')
+    await act(async () => {
+      fireEvent.click(titleCard)
+    })
+
+    expect(queryByText('Merge titles?')).not.toBeNull()
+    expect(window.location.pathname).not.toBe('/title/99')
+  })
 })
+
