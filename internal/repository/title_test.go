@@ -2152,6 +2152,8 @@ func TestListContinueWatching_SagaSmartNextUp(t *testing.T) {
 		assert.Equal(t, srcID, items[0].SagaSourceID)
 		require.NotNil(t, items[0].NextEpisode)
 		assert.Equal(t, 1, items[0].NextEpisode.Episode)
+		assert.Equal(t, 1, items[0].TotalEpisodes)
+		assert.Equal(t, 0, items[0].WatchedEpisodes)
 	})
 
 	t.Run("disabled setting suppresses saga next up", func(t *testing.T) {
@@ -2271,4 +2273,3 @@ func TestListContinueWatching_SagaSmartNextUp(t *testing.T) {
 		assert.Empty(t, items)
 	})
 }
-

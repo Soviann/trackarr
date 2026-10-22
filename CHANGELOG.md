@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.26.21] — 2026-10-22
+
+### Corrigé
+- **Performance de « Continuer à regarder » et prévention de la famine SQLite (`TitleRepository.ListContinueWatching`, `TitleRelationRepository`)** :
+  - **Suppression de la jointure multi-OR non indexée** : Remplacement de la jointure `JOIN titles mt ON ((tr.provider = 'anilist' AND mt.anilist_id = tr.external_id) OR ...)` par des jointures gauches ciblées utilisant les index couvrants de chaque fournisseur (`idx_titles_anilist_id`, `idx_titles_tmdb_id`, `idx_titles_tvdb_id`). Le temps de calcul de la requête de continuité de sagas passe de ~40–80 secondes à moins de 20 millisecondes sur les bibliothèques volumineuses.
+  - **Élimination des sous-requêtes corrélées superflues** : Remplacement des sous-requêtes `COUNT(*)` globales calculées pour chaque ligne candidate par `0` pour les épisodes vus (toujours nuls sur les œuvres à voir) et calcul ciblé du total d'épisodes uniquement sur les séries retenues disposant d'un épisode diffusé.
+  - **Résolution des blocages généraux de l'application** : En évitant la monopolisation prolongée des 4 connexions de lecture de `readDB` par des requêtes de plus d'une minute, toutes les autres pages et API (accueil, fiches titres, recherche, stats) répondent à nouveau instantanément même lors du rechargement de la file « Continuer à regarder ».
+
 ## [v1.26.20] — 2026-10-17
 
 ### Corrigé

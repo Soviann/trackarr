@@ -30,9 +30,9 @@ type ContinueWatchingItem struct {
 	NextEpisode     *model.NextEpisode    `json:"next_episode,omitempty"`
 
 	// Saga smart next-up (Lot 7)
-	IsSagaNextUp    bool                  `json:"is_saga_next_up,omitempty"`
-	SagaSourceTitle string                `json:"saga_source_title,omitempty"`
-	SagaSourceID    int64                 `json:"saga_source_id,omitempty"`
+	IsSagaNextUp    bool   `json:"is_saga_next_up,omitempty"`
+	SagaSourceTitle string `json:"saga_source_title,omitempty"`
+	SagaSourceID    int64  `json:"saga_source_id,omitempty"`
 }
 
 type UpcomingItem struct {
@@ -111,25 +111,25 @@ type TitleUpdate struct {
 	ClearTVDBID    bool
 	// ClearCoverURL resets the cover to NULL — used when the TMDB/TVDB poster
 	// source is removed so a later refresh re-derives it (e.g. from AniList).
-	ClearCoverURL      bool
-	ExternalSourceID   *string
-	MatchSource        *string
-	OriginalTitle      *string
-	Type               *model.TitleType
-	IsAnime            *bool
-	Overview           *string
-	Runtime            *int
-	TotalWatchMinutes  *int
-	TMDBRating         *float64
-	Credits            *string
-	AniListRating      *int
-	Year               *int
-	ReleaseDate        *string
-	NextAirDate        *string
-	NextAirEpisode     *string
-	AccentHex          *string
-	SimklID            *int64
-	SimklSlug          *string
+	ClearCoverURL        bool
+	ExternalSourceID     *string
+	MatchSource          *string
+	OriginalTitle        *string
+	Type                 *model.TitleType
+	IsAnime              *bool
+	Overview             *string
+	Runtime              *int
+	TotalWatchMinutes    *int
+	TMDBRating           *float64
+	Credits              *string
+	AniListRating        *int
+	Year                 *int
+	ReleaseDate          *string
+	NextAirDate          *string
+	NextAirEpisode       *string
+	AccentHex            *string
+	SimklID              *int64
+	SimklSlug            *string
 	RadarrID             *int64
 	ClearRadarrID        bool
 	SonarrID             *int64
@@ -803,8 +803,7 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 				mt.cover_url AS mt_cover_url,
 				COALESCE(` + displayNameExprAlias("mt") + `, '') AS mt_name,
 				mt.next_air_episode AS mt_next_air_ep,
-				(SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = mt.id AND e.watched = 1) AS mt_watched_episodes,
-				(SELECT COUNT(*) FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE s.title_id = mt.id) AS mt_total_episodes,
+				0 AS mt_watched_episodes,
 				mt.last_watched_at AS mt_last_watched_at,
 				mt.watch_providers AS mt_watch_providers,
 				mt.sonarr_id AS mt_sonarr_id,
@@ -813,11 +812,10 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 			FROM titles t_src
 			JOIN title_relations tr ON tr.title_id = t_src.id
 			LEFT JOIN seasons s ON s.id = tr.season_id
-			JOIN titles mt ON (
-				(tr.provider = 'anilist' AND mt.anilist_id = tr.external_id) OR
-				(tr.provider = 'tmdb' AND mt.tmdb_id = tr.external_id) OR
-				(tr.provider = 'tvdb' AND mt.tvdb_id = tr.external_id)
-			)
+			LEFT JOIN titles mt_ani ON tr.provider = 'anilist' AND mt_ani.anilist_id = tr.external_id
+			LEFT JOIN titles mt_tmdb ON tr.provider = 'tmdb' AND mt_tmdb.tmdb_id = tr.external_id
+			LEFT JOIN titles mt_tvdb ON tr.provider = 'tvdb' AND mt_tvdb.tvdb_id = tr.external_id
+			JOIN titles mt ON mt.id = COALESCE(mt_ani.id, mt_tmdb.id, mt_tvdb.id)
 			WHERE t_src.status = 'completed'
 			  AND (mt.status = 'plan_to_watch' OR (mt.status = 'watching' AND mt.type = 'movie'))
 			ORDER BY
@@ -840,7 +838,7 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 				if err := sagaRows.Scan(
 					&sc.srcID, &sc.srcName,
 					&sc.item.ID, &sc.item.Type, &sc.item.IsAnime, &sc.item.CoverURL, &sc.item.Name,
-					&sc.item.NextAirEpisode, &sc.item.WatchedEpisodes, &sc.item.TotalEpisodes,
+					&sc.item.NextAirEpisode, &sc.item.WatchedEpisodes,
 					&sc.item.LastWatchedAt, &watchProvidersRaw,
 					&sc.item.SonarrID, &sc.item.RadarrID, &mtStatus,
 				); err == nil {
@@ -867,19 +865,22 @@ func (r *TitleRepository) ListContinueWatching() ([]ContinueWatchingItem, error)
 				} else {
 					var ne model.NextEpisode
 					var downloadedAtStr *string
+					var totalEpisodes int
 					epErr := r.db.QueryRow(`
-						SELECT e.id, e.season_id, e.episode, s.season_number, e.name, e.air_date, e.downloaded_at
+						SELECT e.id, e.season_id, e.episode, s.season_number, e.name, e.air_date, e.downloaded_at,
+						       (SELECT COUNT(*) FROM episodes ep JOIN seasons se ON ep.season_id = se.id WHERE se.title_id = s.title_id) AS total_episodes
 						FROM episodes e
 						JOIN seasons s ON s.id = e.season_id
 						WHERE s.title_id = ? AND e.watched = 0 AND `+airedEpisode+`
 						ORDER BY s.season_number, e.episode
-						LIMIT 1`, cand.item.ID).Scan(&ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate, &downloadedAtStr)
+						LIMIT 1`, cand.item.ID).Scan(&ne.ID, &ne.SeasonID, &ne.Episode, &ne.SeasonNumber, &ne.Name, &ne.AirDate, &downloadedAtStr, &totalEpisodes)
 					if epErr == nil {
 						ne.DownloadedAt = parseSQLiteTime(downloadedAtStr)
 						if isUnairedOrTBA(ne.Name, ne.AirDate, today) {
 							ne.IsTBA = true
 						}
 						cand.item.NextEpisode = &ne
+						cand.item.TotalEpisodes = totalEpisodes
 						completedSeen[cand.srcID] = true
 						seenTitleIDs[cand.item.ID] = true
 						items = append(items, cand.item)
