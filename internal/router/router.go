@@ -63,8 +63,11 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, backfillSvc, pipeline)
 
-	jellyfinSvc := service.NewJellyfinService(writeDB, pipeline, titleSvc, libSvc)
-	plexSvc := service.NewPlexService(writeDB, pipeline, titleSvc, libSvc)
+	playbackHub := service.NewPlaybackHubService()
+	playbackHandler := handler.NewPlaybackHandler(playbackHub)
+
+	jellyfinSvc := service.NewJellyfinService(writeDB, pipeline, titleSvc, libSvc, playbackHub)
+	plexSvc := service.NewPlexService(writeDB, pipeline, titleSvc, libSvc, playbackHub)
 
 	// Stats repository (read-only)
 	statsRepo := repository.NewStatsRepository(readDB)
@@ -234,6 +237,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Group(func(r chi.Router) {
 				r.Use(mw.RequireScope(model.ScopeLibraryRead))
 
+				r.Get("/playback/active", httputil.WrapHandler(playbackHandler.GetActivePlayback))
 				r.Get("/calendar/events", httputil.WrapHandler(calendarHandler.GetEvents))
 
 				// Static sub-routes must come BEFORE /{id} to avoid chi matching them as ID params

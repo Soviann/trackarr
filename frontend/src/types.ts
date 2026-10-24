@@ -531,4 +531,24 @@ export interface CreateAPIKeyResponse {
   token: string
 }
 
+export interface ActivePlaybackSession {
+  source: 'plex' | 'jellyfin'
+  player?: string
+  user?: string
+  title_id: number
+  title_name: string
+  title_type: 'movie' | 'series'
+  year: number
+  cover_url?: string | null
+  accent_hex?: string | null
+  season_number?: number | null
+  episode_number?: number | null
+  episode_name?: string | null
+  overview?: string
+  duration_sec?: number
+  view_offset_sec?: number
+  started_at: string
+  updated_at: string
+}
+
 

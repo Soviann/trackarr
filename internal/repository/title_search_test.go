@@ -117,6 +117,101 @@ func TestTitleSearch_FuzzyFallbackOnTypo(t *testing.T) {
 	assert.Equal(t, bbID, res.Titles[0].ID)
 }
 
+// TestTitleSearch_TrigramFallback_Nominal verifies that a typo or substring search
+// leverages trigram FTS5 to find the target title with relevance ranking.
+func TestTitleSearch_TrigramFallback_Nominal(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	bbID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2016,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Stranger Things", Language: "en", IsPrimary: true}})
+
+	// 1-char typo "brakin" for "breaking"
+	q := "brakin"
+	res, err := repo.List(repository.TitleFilter{Search: &q})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.Titles)
+	assert.Equal(t, bbID, res.Titles[0].ID)
+	require.NotNil(t, res.Titles[0].MatchedName)
+	assert.Equal(t, "Breaking Bad", *res.Titles[0].MatchedName)
+
+	// Substring "ranger" for "Stranger Things"
+	q2 := "ranger"
+	res2, err := repo.List(repository.TitleFilter{Search: &q2})
+	require.NoError(t, err)
+	require.NotEmpty(t, res2.Titles)
+	assert.Equal(t, "Stranger Things", *res2.Titles[0].MatchedName)
+}
+
+// TestTitleSearch_TrigramFallback_Boundary covers boundary queries: short strings,
+// punctuation, and special characters.
+func TestTitleSearch_TrigramFallback_Boundary(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	bbID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	// Boundary 1: query with punctuation and quotes
+	qPunct := `brakin: "bad"*`
+	resPunct, err := repo.List(repository.TitleFilter{Search: &qPunct})
+	require.NoError(t, err)
+	require.NotEmpty(t, resPunct.Titles)
+	assert.Equal(t, bbID, resPunct.Titles[0].ID)
+
+	// Boundary 2: 2-character query (short query fallback)
+	qShort := "br"
+	resShort, err := repo.List(repository.TitleFilter{Search: &qShort})
+	require.NoError(t, err)
+	require.NotEmpty(t, resShort.Titles)
+	assert.Equal(t, bbID, resShort.Titles[0].ID)
+}
+
+// TestTitleSearch_TrigramFallback_Negative verifies that unmatchable queries or filter
+// mismatches correctly return empty results without error.
+func TestTitleSearch_TrigramFallback_Negative(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	// Negative 1: Typo matches title name, but filter restricts to movie
+	movieType := model.TitleTypeMovie
+	q := "brakin"
+	resFiltered, err := repo.List(repository.TitleFilter{
+		Search: &q,
+		Type:   &movieType,
+	})
+	require.NoError(t, err)
+	assert.Empty(t, resFiltered.Titles, "series title must not match when filter specifies movie")
+
+	// Negative 2: Completely unmatchable query
+	qNone := "xyz123nonsense"
+	resNone, err := repo.List(repository.TitleFilter{Search: &qNone})
+	require.NoError(t, err)
+	assert.Empty(t, resNone.Titles)
+}
+
 // TestTitleSearch_NoResult is the negative guard — a search term unlike any
 // title's name must come back empty, not throw and not surface unrelated rows.
 func TestTitleSearch_NoResult(t *testing.T) {

@@ -49,7 +49,7 @@ func TestMigrate_CreatesAllTables(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify all tables exist
-	tables := []string{"titles", "title_names", "seasons", "episodes", "watch_events", "settings"}
+	tables := []string{"titles", "title_names", "seasons", "episodes", "watch_events", "settings", "title_names_trigram_fts"}
 	for _, table := range tables {
 		var name string
 		err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&name)
@@ -305,4 +305,3 @@ func TestWithTxContext_Invalidator(t *testing.T) {
 		assert.Empty(t, inv.invalidations)
 	})
 }
-

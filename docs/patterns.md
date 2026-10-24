@@ -58,6 +58,7 @@
 | `Setting` | `internal/model/setting.go` | Key-value string pair (`Key`, `Value`). |
 | `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
 | `NextEpisode` | `internal/model/title.go` | First unwatched episode projection (`ID`, `SeasonID`, `Episode`, `SeasonNumber`, `Name`, `AirDate`, `IsTBA`). |
+| `ActivePlaybackSession` | `internal/model/playback.go` | In-memory active playback session (`Source`, `Player`, `TitleID`, `TitleName`, `TitleType`, `SeasonNumber`, `EpisodeNumber`, `DurationSec`, `ViewOffsetSec`). |
 | `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, actor/director rankings, and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
 | `APIKey` | `internal/model/api_key.go` | Machine-to-machine authentication credential (`ID`, `Name`, `KeyHash`, `KeyPrefix`, `Scopes`, `CreatedAt`, `LastUsedAt`, `RevokedAt`). |
 
@@ -65,7 +66,7 @@
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List`, `ListAll`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -89,8 +90,9 @@
 | `TitleService` | `internal/service/title.go` | Title CRUD, matching orchestration, rematching, merges | `docs/dev/matching-pipeline.md` |
 | `Pipeline` | `internal/service/matching/pipeline.go` | Multi-source media matching pipeline with AI candidate disambiguation and verification | `docs/dev/matching-pipeline.md` |
 | `LibraryService` | `internal/service/library.go` | User scrobbles, auto-completion, rating prompts, notifications | `docs/dev/database-model.md` |
-| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` + `PlayedToCompletion`) | `docs/integrations.md` |
-| `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, multipart + JSON fallback) | `docs/integrations.md` |
+| `PlaybackHubService` | `internal/service/playback_hub.go` | In-memory singleton managing active media playback sessions with thread-safe RWMutex and 4h TTL | `docs/patterns.md` |
+| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles & `PlaybackStart` live sessions) | `docs/integrations.md` |
+| `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, and deletion enqueuing | `docs/dev/arr-integration.md` |
 | `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download/upgrade events, update `downloaded_at`, push alerts | `docs/integrations.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
@@ -134,6 +136,7 @@
 | GET | `/api/covers/{filename}` | `covers.Serve` | Serve cached cover image |
 | GET | `/covers/{filename}` | `covers.Serve` | Legacy top-level cover route without `/api` prefix |
 | GET | `/api/titles` | `titles.List` | Paginated library list with filters and search |
+| GET | `/api/playback/active` | `playbackHandler.GetActivePlayback` | Active playback session (204 No Content if idle, 200 OK with session payload) |
 | POST | `/api/titles` | `titles.Create` | Manually create a new title |
 | POST | `/api/titles/batch` | `titles.BatchCreate` | Bulk ingest titles (up to 100) with local regex URL parsing, deduplication, and task prioritization |
 | GET | `/api/titles/review-count` | `titles.ReviewCount` | Badge count for review/unconfirmed titles |
@@ -264,6 +267,8 @@
 | `ArrBadge` | `components/ArrBadge.tsx` | State pill indicating Radarr/Sonarr status (*In Queue*, *Downloaded*, *Monitored*) |
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, overscroll containment, and automatic close on page navigation |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with media URL auto-detection (IMDb, TMDB, AniList), clear text `✕` button, and integrated filter trigger button with active count badge |
+| `LivePlaybackIndicator` | `components/LivePlaybackIndicator.tsx` | Pulsing live playback pill mounted above bottom navigation displaying active playing title and player |
+| `LivePlaybackDrawer` | `components/LivePlaybackDrawer.tsx` | Slide-up bottom sheet companion displaying active cover, title, season/episode, overview, and `+1 Marquer vu` action |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |

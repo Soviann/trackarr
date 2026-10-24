@@ -23,6 +23,8 @@ type jellyfinTestEnv struct {
 	db        *sql.DB
 	svc       *service.JellyfinService
 	titleRepo *repository.TitleRepository
+	eventRepo *repository.WatchEventRepository
+	hub       *service.PlaybackHubService
 }
 
 func setupJellyfinTest(t *testing.T) *jellyfinTestEnv {
@@ -45,13 +47,16 @@ func setupJellyfinTest(t *testing.T) *jellyfinTestEnv {
 	pushSvc := service.NewNoopNotifier()
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, nil)
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, nil, nil)
+	playbackHub := service.NewPlaybackHubService()
 
-	jfSvc := service.NewJellyfinService(writeDB, nil, titleSvc, libSvc)
+	jfSvc := service.NewJellyfinService(writeDB, nil, titleSvc, libSvc, playbackHub)
 
 	return &jellyfinTestEnv{
 		db:        writeDB,
 		svc:       jfSvc,
 		titleRepo: titleRepo,
+		eventRepo: eventRepo,
+		hub:       playbackHub,
 	}
 }
 
@@ -315,7 +320,7 @@ func TestProcessJellyfinWebhook_EpisodeWithDisambiguationHints(t *testing.T) {
 	pushSvc := service.NewNoopNotifier()
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, pipeline)
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, nil, nil)
-	jfSvc := service.NewJellyfinService(writeDB, nil, titleSvc, libSvc)
+	jfSvc := service.NewJellyfinService(writeDB, nil, titleSvc, libSvc, nil)
 
 	jf := &model.JellyfinPayload{
 		NotificationType:   "PlaybackStop",
@@ -340,4 +345,51 @@ func TestProcessJellyfinWebhook_EpisodeWithDisambiguationHints(t *testing.T) {
 	show := res.Titles[0]
 	require.NotNil(t, show.TMDBID)
 	assert.Equal(t, int64(200), *show.TMDBID)
+}
+
+func TestProcessJellyfinWebhook_PlayAndStop(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	// Pre-seed series in library
+	res, err := env.db.Exec(`INSERT INTO titles (type, year, status, match_status, external_source_id) VALUES ('series', 2016, 'watching', 'confirmed', 'jf-series-st')`)
+	require.NoError(t, err)
+	titleID, err := res.LastInsertId()
+	require.NoError(t, err)
+	_, err = env.db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, 'Stranger Things', 'en', 1)`, titleID)
+	require.NoError(t, err)
+
+	// 1. PlaybackStart: registers active session without inserting watch event
+	startPayload := &model.JellyfinPayload{
+		NotificationType: "PlaybackStart",
+		ItemType:         "Episode",
+		Name:             "Chapter One",
+		Year:             "2016",
+		SeriesName:       "Stranger Things",
+		SeriesID:         "jf-series-st",
+		Season:           "1",
+		Episode:          "1",
+		ItemID:           "jf-item-ep1",
+	}
+
+	err = env.svc.ProcessJellyfinWebhook(context.Background(), startPayload, "{}")
+	require.NoError(t, err)
+
+	active := env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, "Stranger Things", active.TitleName)
+	assert.Equal(t, "jf-item-ep1", active.Player)
+	require.NotNil(t, active.SeasonNumber)
+	assert.Equal(t, 1, *active.SeasonNumber)
+	require.NotNil(t, active.EpisodeNumber)
+	assert.Equal(t, 1, *active.EpisodeNumber)
+
+	// 2. PlaybackStop (not played to completion): clears active session
+	stopPayload := &model.JellyfinPayload{
+		NotificationType:   "PlaybackStop",
+		ItemID:             "jf-item-ep1",
+		PlayedToCompletion: "False",
+	}
+	err = env.svc.ProcessJellyfinWebhook(context.Background(), stopPayload, "{}")
+	require.NoError(t, err)
+	assert.Nil(t, env.hub.GetActiveSession())
 }

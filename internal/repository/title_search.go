@@ -75,62 +75,7 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 		args = append(args, "%"+searchTerm+"%")
 	}
 
-	if filter.Status != nil {
-		conditions = append(conditions, `t.status = ?`)
-		args = append(args, *filter.Status)
-	}
-	if filter.Type != nil {
-		conditions = append(conditions, `t.type = ?`)
-		args = append(args, *filter.Type)
-	}
-	if filter.MatchStatus != nil {
-		conditions = append(conditions, `t.match_status = ?`)
-		args = append(args, *filter.MatchStatus)
-	}
-	if filter.IsAnime != nil {
-		conditions = append(conditions, `t.is_anime = ?`)
-		if *filter.IsAnime {
-			args = append(args, 1)
-		} else {
-			args = append(args, 0)
-		}
-	}
-	if len(filter.Genres) > 0 {
-		op := filter.GenreOp
-		if op != "AND" {
-			op = "OR"
-		}
-		if op == "OR" {
-			placeholders := make([]string, len(filter.Genres))
-			for i, g := range filter.Genres {
-				placeholders[i] = "?"
-				args = append(args, g)
-			}
-			conditions = append(conditions, `EXISTS (SELECT 1 FROM title_genres tg WHERE tg.title_id = t.id AND tg.genre IN (`+strings.Join(placeholders, ",")+`))`)
-		} else { // AND
-			for _, g := range filter.Genres {
-				conditions = append(conditions, `EXISTS (SELECT 1 FROM title_genres tg WHERE tg.title_id = t.id AND tg.genre = ?)`)
-				args = append(args, g)
-			}
-		}
-	}
-
-	if len(filter.OriginCountries) > 0 {
-		placeholders := make([]string, len(filter.OriginCountries))
-		for i, c := range filter.OriginCountries {
-			placeholders[i] = "?"
-			args = append(args, c)
-		}
-		conditions = append(conditions, `t.origin_country IN (`+strings.Join(placeholders, ",")+`)`)
-	}
-	if filter.MyRatingMin != nil {
-		conditions = append(conditions, `t.my_rating >= ?`)
-		args = append(args, *filter.MyRatingMin)
-	}
-	if filter.TMDBRatingMin != nil {
-		conditions = append(conditions, `t.tmdb_rating >= ?`)
-		args = append(args, *filter.TMDBRatingMin)
-	}
+	conditions, args = appendFilterConditions(conditions, args, filter)
 
 	if len(conditions) > 0 {
 		query += ` WHERE ` + strings.Join(conditions, ` AND `)
@@ -171,10 +116,16 @@ func (r *TitleRepository) searchTitles(searchTerm string, filter TitleFilter) ([
 	}
 
 	if useFTS && len(bestByTitle) < 3 && len(searchTerm) >= 3 {
-		fuzzyResults, err := r.fuzzySearch(searchTerm, seen, filter)
+		triResults, err := r.trigramSearch(searchTerm, seen, filter)
 		if err == nil {
-			for _, ft := range fuzzyResults {
-				bestByTitle[ft.ID] = &searchResult{title: ft, relevance: relevanceFuzzy}
+			for _, ft := range triResults {
+				rel := relevanceFuzzy
+				if ft.MatchedName != nil {
+					if rScore := scoreRelevance(*ft.MatchedName, searchLower); rScore < relevanceFuzzy {
+						rel = rScore
+					}
+				}
+				bestByTitle[ft.ID] = &searchResult{title: ft, relevance: rel}
 			}
 		}
 	}
@@ -258,200 +209,174 @@ func buildFTSQuery(search string) string {
 	return strings.Join(words, " ")
 }
 
-// levenshtein computes the edit distance between two strings.
-func levenshtein(a, b string) int {
-	la, lb := len([]rune(a)), len([]rune(b))
-	if la == 0 {
-		return lb
-	}
-	if lb == 0 {
-		return la
-	}
-	ra, rb := []rune(a), []rune(b)
-	prev := make([]int, lb+1)
-	for j := range prev {
-		prev[j] = j
-	}
-	for i := 1; i <= la; i++ {
-		curr := make([]int, lb+1)
-		curr[0] = i
-		for j := 1; j <= lb; j++ {
-			cost := 1
-			if ra[i-1] == rb[j-1] {
-				cost = 0
-			}
-			curr[j] = min(curr[j-1]+1, min(prev[j]+1, prev[j-1]+cost))
+// buildTrigramQuery transforms a search string into an FTS5 trigram query.
+// It extracts quoted 3-grams and substrings from terms and joins them with OR.
+func buildTrigramQuery(search string) string {
+	clean := strings.Map(func(r rune) rune {
+		if r == '"' || r == '*' || r == ':' || r == '(' || r == ')' {
+			return -1
 		}
-		prev = curr
+		return r
+	}, strings.ToLower(search))
+
+	fields := strings.Fields(clean)
+	var tokens []string
+	seen := make(map[string]bool)
+
+	// If the entire clean phrase has >= 3 runes, add it as a quoted substring candidate
+	runesAll := []rune(clean)
+	if len(runesAll) >= 3 {
+		tokens = append(tokens, `"`+clean+`"`)
+		seen[clean] = true
 	}
-	return prev[lb]
+
+	for _, field := range fields {
+		runes := []rune(field)
+		if len(runes) >= 3 && !seen[field] {
+			tokens = append(tokens, `"`+field+`"`)
+			seen[field] = true
+		}
+		for i := 0; i <= len(runes)-3; i++ {
+			tri := string(runes[i : i+3])
+			if !seen[tri] {
+				seen[tri] = true
+				tokens = append(tokens, `"`+tri+`"`)
+			}
+		}
+	}
+
+	if len(tokens) == 0 {
+		return ""
+	}
+	return strings.Join(tokens, " OR ")
 }
 
-// fuzzySearch finds titles by Levenshtein distance when FTS5 returns few results.
-func (r *TitleRepository) fuzzySearch(search string, seen map[int64]bool, filter TitleFilter) ([]model.Title, error) {
-	query := `SELECT tn.id, tn.title_id, tn.name, tn.language FROM title_names tn JOIN titles t ON tn.title_id = t.id WHERE 1=1`
-	var qargs []any
-	if filter.Status != nil {
-		query += ` AND t.status = ?`
-		qargs = append(qargs, *filter.Status)
-	}
-	if filter.Type != nil {
-		query += ` AND t.type = ?`
-		qargs = append(qargs, *filter.Type)
-	}
-	if filter.IsAnime != nil {
-		query += ` AND t.is_anime = ?`
-		if *filter.IsAnime {
-			qargs = append(qargs, 1)
-		} else {
-			qargs = append(qargs, 0)
-		}
-	}
-	if filter.MatchStatus != nil {
-		query += ` AND t.match_status = ?`
-		qargs = append(qargs, *filter.MatchStatus)
-	}
-	rows, err := r.db.Query(query, qargs...)
-	if err != nil {
-		return nil, fmt.Errorf("fuzzy search names: %w", err)
-	}
-
-	type candidate struct {
-		titleID  int64
-		name     string
-		language string
-		dist     int
-	}
-	searchLower := strings.ToLower(search)
-	var candidates []candidate
-	for rows.Next() {
-		var id, titleID int64
-		var name, lang string
-		if err := rows.Scan(&id, &titleID, &name, &lang); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scan fuzzy name: %w", err)
-		}
-		if seen[titleID] {
-			continue
-		}
-		nameLower := strings.ToLower(name)
-		bestDist := levenshtein(searchLower, nameLower)
-		for _, word := range strings.Fields(nameLower) {
-			if d := levenshtein(searchLower, word); d < bestDist {
-				bestDist = d
-			}
-		}
-		maxDist := 2
-		if len(searchLower) > 6 {
-			maxDist = 3
-		}
-		if bestDist <= maxDist {
-			candidates = append(candidates, candidate{titleID, name, lang, bestDist})
-		}
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return nil, fmt.Errorf("iterate fuzzy names: %w", err)
-	}
-	rows.Close()
-
-	if len(candidates) == 0 {
+// trigramSearch finds titles using the SQLite FTS5 trigram table when standard FTS returns few results.
+func (r *TitleRepository) trigramSearch(search string, seen map[int64]bool, filter TitleFilter) ([]model.Title, error) {
+	triQuery := buildTrigramQuery(search)
+	if triQuery == "" {
 		return nil, nil
 	}
 
-	best := map[int64]candidate{}
-	for _, c := range candidates {
-		if existing, ok := best[c.titleID]; !ok || c.dist < existing.dist {
-			best[c.titleID] = c
+	query := `SELECT ` + titleSelectCols + `, tn.name, tn.language FROM titles t JOIN title_names tn ON tn.title_id = t.id JOIN title_names_trigram_fts fts ON fts.rowid = tn.id`
+	conditions := []string{`title_names_trigram_fts MATCH ?`}
+	args := []any{triQuery}
+
+	conditions, args = appendFilterConditions(conditions, args, filter)
+
+	query += ` WHERE ` + strings.Join(conditions, ` AND `)
+	query += ` ORDER BY bm25(title_names_trigram_fts) LIMIT 50`
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("trigram search titles: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.Title
+	for rows.Next() {
+		var t model.Title
+		var matchedName, matchedLang string
+		if err := scanTitleRow(rows, &t, &matchedName, &matchedLang); err != nil {
+			return nil, fmt.Errorf("scan trigram title: %w", err)
 		}
+		if seen[t.ID] {
+			continue
+		}
+		seen[t.ID] = true
+		t.MatchedName = &matchedName
+		t.MatchedLanguage = &matchedLang
+		results = append(results, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate trigram titles: %w", err)
 	}
 
-	var ids []any
-	matchInfo := map[int64]candidate{}
-	for _, c := range best {
-		ids = append(ids, c.titleID)
-		matchInfo[c.titleID] = c
-		seen[c.titleID] = true
-	}
+	return results, nil
+}
 
-	placeholders := strings.Repeat("?,", len(ids))
-	placeholders = placeholders[:len(placeholders)-1]
-
-	query = `SELECT ` + titleSelectCols + ` FROM titles t WHERE t.id IN (` + placeholders + `)`
-	var args []any
-	args = append(args, ids...)
-
+func appendFilterConditions(conditions []string, args []any, filter TitleFilter) ([]string, []any) {
 	if filter.Status != nil {
-		query += ` AND t.status = ?`
+		conditions = append(conditions, `t.status = ?`)
 		args = append(args, *filter.Status)
 	}
 	if filter.Type != nil {
-		query += ` AND t.type = ?`
+		conditions = append(conditions, `t.type = ?`)
 		args = append(args, *filter.Type)
 	}
 	if filter.MatchStatus != nil {
-		query += ` AND t.match_status = ?`
+		conditions = append(conditions, `t.match_status = ?`)
 		args = append(args, *filter.MatchStatus)
 	}
+	if filter.SeriesStatus != nil {
+		conditions = append(conditions, `t.series_status = ?`)
+		args = append(args, *filter.SeriesStatus)
+	}
 	if filter.IsAnime != nil {
-		query += ` AND t.is_anime = ?`
+		conditions = append(conditions, `t.is_anime = ?`)
 		if *filter.IsAnime {
 			args = append(args, 1)
 		} else {
 			args = append(args, 0)
 		}
 	}
-	if filter.SeriesStatus != nil {
-		query += ` AND t.series_status = ?`
-		args = append(args, *filter.SeriesStatus)
-	}
 	if filter.Decade != nil {
-		query += ` AND t.year BETWEEN ? AND ?`
+		conditions = append(conditions, `t.year BETWEEN ? AND ?`)
 		args = append(args, *filter.Decade, *filter.Decade+9)
 	}
 	if filter.ReleaseFrom != nil {
 		if filter.IncludeNoRelease {
-			query += ` AND (t.release_date >= ? OR t.release_date IS NULL)`
+			conditions = append(conditions, `(t.release_date >= ? OR t.release_date IS NULL)`)
 		} else {
-			query += ` AND t.release_date >= ?`
+			conditions = append(conditions, `t.release_date >= ?`)
 		}
 		args = append(args, *filter.ReleaseFrom)
 	}
 	if filter.ReleaseTo != nil {
 		if filter.IncludeNoRelease {
-			query += ` AND (t.release_date <= ? OR t.release_date IS NULL)`
+			conditions = append(conditions, `(t.release_date <= ? OR t.release_date IS NULL)`)
 		} else {
-			query += ` AND t.release_date <= ?`
+			conditions = append(conditions, `t.release_date <= ?`)
 		}
 		args = append(args, *filter.ReleaseTo)
 	}
 	if !filter.IncludeNoRelease && (filter.ReleaseFrom != nil || filter.ReleaseTo != nil) {
-		query += ` AND t.release_date IS NOT NULL`
+		conditions = append(conditions, `t.release_date IS NOT NULL`)
 	}
-
-	tRows, err := r.db.Query(query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("fuzzy search titles: %w", err)
-	}
-
-	var titles []model.Title
-	for tRows.Next() {
-		var t model.Title
-		if err := scanTitleRow(tRows, &t); err != nil {
-			tRows.Close()
-			return nil, fmt.Errorf("scan fuzzy title: %w", err)
+	if len(filter.Genres) > 0 {
+		op := filter.GenreOp
+		if op != "AND" {
+			op = "OR"
 		}
-		if c, ok := matchInfo[t.ID]; ok {
-			t.MatchedName = &c.name
-			t.MatchedLanguage = &c.language
+		if op == "OR" {
+			placeholders := make([]string, len(filter.Genres))
+			for i, g := range filter.Genres {
+				placeholders[i] = "?"
+				args = append(args, g)
+			}
+			conditions = append(conditions, `EXISTS (SELECT 1 FROM title_genres tg WHERE tg.title_id = t.id AND tg.genre IN (`+strings.Join(placeholders, ",")+`))`)
+		} else { // AND
+			for _, g := range filter.Genres {
+				conditions = append(conditions, `EXISTS (SELECT 1 FROM title_genres tg WHERE tg.title_id = t.id AND tg.genre = ?)`)
+				args = append(args, g)
+			}
 		}
-		titles = append(titles, t)
 	}
-	if err := tRows.Err(); err != nil {
-		tRows.Close()
-		return nil, fmt.Errorf("iterate fuzzy titles: %w", err)
+	if len(filter.OriginCountries) > 0 {
+		placeholders := make([]string, len(filter.OriginCountries))
+		for i, c := range filter.OriginCountries {
+			placeholders[i] = "?"
+			args = append(args, c)
+		}
+		conditions = append(conditions, `t.origin_country IN (`+strings.Join(placeholders, ",")+`)`)
 	}
-	tRows.Close()
-
-	return titles, nil
+	if filter.MyRatingMin != nil {
+		conditions = append(conditions, `t.my_rating >= ?`)
+		args = append(args, *filter.MyRatingMin)
+	}
+	if filter.TMDBRatingMin != nil {
+		conditions = append(conditions, `t.tmdb_rating >= ?`)
+		args = append(args, *filter.TMDBRatingMin)
+	}
+	return conditions, args
 }
