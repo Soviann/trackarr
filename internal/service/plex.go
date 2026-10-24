@@ -16,29 +16,43 @@ import (
 )
 
 type PlexService struct {
-	log      *slog.Logger
-	db       *sql.DB
-	pipeline *matching.Pipeline
-	titleSvc *TitleService
-	libSvc   *LibraryService
-	source   model.WatchEventSource
+	log         *slog.Logger
+	db          *sql.DB
+	pipeline    *matching.Pipeline
+	titleSvc    *TitleService
+	libSvc      *LibraryService
+	playbackHub *PlaybackHubService
+	source      model.WatchEventSource
 }
 
-func NewPlexService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *PlexService {
+func NewPlexService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService, playbackHub *PlaybackHubService) *PlexService {
 	return &PlexService{
-		log:      slog.With("subsystem", "plex"),
-		db:       db,
-		pipeline: pipeline,
-		titleSvc: titleSvc,
-		libSvc:   libSvc,
-		source:   model.WatchEventSourcePlex,
+		log:         slog.With("subsystem", "plex"),
+		db:          db,
+		pipeline:    pipeline,
+		titleSvc:    titleSvc,
+		libSvc:      libSvc,
+		playbackHub: playbackHub,
+		source:      model.WatchEventSourcePlex,
 	}
 }
 
 // ProcessPlexWebhook ingests a native Plex webhook payload.
-// Only media.scrobble events (triggered at 90%+ playback completion) are processed.
+// media.play and media.resume events update the active playback companion in memory.
+// media.stop clears the active playback session.
+// media.scrobble events (triggered at 90%+ playback completion) mark items watched.
 func (s *PlexService) ProcessPlexWebhook(ctx context.Context, p *model.PlexPayload, rawPayload string) error {
-	if !strings.EqualFold(p.Event, "media.scrobble") {
+	switch strings.ToLower(p.Event) {
+	case "media.play", "media.resume":
+		return s.processPlaybackStart(ctx, p)
+	case "media.stop":
+		if s.playbackHub != nil {
+			s.playbackHub.ClearSession("plex", p.Player.Title)
+		}
+		return nil
+	case "media.scrobble":
+		// proceed with watched processing below
+	default:
 		return nil
 	}
 
@@ -49,11 +63,128 @@ func (s *PlexService) ProcessPlexWebhook(ctx context.Context, p *model.PlexPaylo
 		TVDB: tvdb,
 	}
 
+	var err error
 	switch strings.ToLower(p.Metadata.Type) {
 	case "movie":
-		return s.processMovie(ctx, p, ids, rawPayload)
+		err = s.processMovie(ctx, p, ids, rawPayload)
 	case "episode":
-		return s.processEpisode(ctx, p, ids, rawPayload)
+		err = s.processEpisode(ctx, p, ids, rawPayload)
+	default:
+		return nil
+	}
+
+	if err == nil && s.playbackHub != nil {
+		s.playbackHub.ClearSession("plex", p.Player.Title)
+	}
+	return err
+}
+
+func (s *PlexService) processPlaybackStart(ctx context.Context, p *model.PlexPayload) error {
+	if s.playbackHub == nil {
+		return nil
+	}
+
+	imdb, tmdb, tvdb := p.Metadata.ExtractExternalIDs()
+	ids := ExternalIDs{
+		IMDB: imdb,
+		TMDB: tmdb,
+		TVDB: tvdb,
+	}
+
+	titles := repository.NewTitleRepository(s.db)
+
+	switch strings.ToLower(p.Metadata.Type) {
+	case "movie":
+		var imdbID *string
+		var tmdbID *int64
+		ratingKey := p.Metadata.RatingKey
+		if ids.IMDB != "" {
+			imdbID = &ids.IMDB
+		}
+		if ids.TMDB != 0 {
+			tmdbID = &ids.TMDB
+		}
+		movieType := model.TitleTypeMovie
+		title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, nil, &movieType)
+		if err != nil {
+			title, err = titles.FindByNameAndType(p.Metadata.Title, model.TitleTypeMovie, p.Metadata.Year)
+			if err != nil {
+				return nil
+			}
+		}
+
+		titleName := p.Metadata.Title
+		for _, n := range title.Names {
+			if n.IsPrimary {
+				titleName = n.Name
+				break
+			}
+		}
+
+		session := model.ActivePlaybackSession{
+			Source:        "plex",
+			Player:        p.Player.Title,
+			User:          p.Account.Title,
+			TitleID:       title.ID,
+			TitleName:     titleName,
+			TitleType:     model.TitleTypeMovie,
+			Year:          title.Year,
+			CoverURL:      title.CoverURL,
+			AccentHex:     title.AccentHex,
+			Overview:      p.Metadata.Summary,
+			DurationSec:   p.Metadata.Duration / 1000,
+			ViewOffsetSec: p.Metadata.ViewOffset / 1000,
+		}
+		s.playbackHub.SetSession(session)
+		return nil
+
+	case "episode":
+		seriesName := p.Metadata.GrandparentTitle
+		if seriesName == "" {
+			seriesName = p.Metadata.Title
+		}
+		grandparentKey := p.Metadata.GrandparentRatingKey
+		seriesType := model.TitleTypeSeries
+		title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil, &seriesType)
+		if err != nil {
+			title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, p.Metadata.Year)
+			if err != nil {
+				return nil
+			}
+		}
+
+		titleName := seriesName
+		for _, n := range title.Names {
+			if n.IsPrimary {
+				titleName = n.Name
+				break
+			}
+		}
+
+		seasonNum := p.Metadata.ParentIndex
+		epNum := p.Metadata.Index
+		epName := p.Metadata.Title
+
+		session := model.ActivePlaybackSession{
+			Source:        "plex",
+			Player:        p.Player.Title,
+			User:          p.Account.Title,
+			TitleID:       title.ID,
+			TitleName:     titleName,
+			TitleType:     model.TitleTypeSeries,
+			Year:          title.Year,
+			CoverURL:      title.CoverURL,
+			AccentHex:     title.AccentHex,
+			SeasonNumber:  &seasonNum,
+			EpisodeNumber: &epNum,
+			EpisodeName:   &epName,
+			Overview:      p.Metadata.Summary,
+			DurationSec:   p.Metadata.Duration / 1000,
+			ViewOffsetSec: p.Metadata.ViewOffset / 1000,
+		}
+		s.playbackHub.SetSession(session)
+		return nil
+
 	default:
 		return nil
 	}

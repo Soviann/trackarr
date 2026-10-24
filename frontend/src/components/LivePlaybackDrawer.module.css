@@ -1,0 +1,128 @@
+.content {
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.cover {
+  width: 72px;
+  height: 108px;
+  border-radius: var(--radius-sm, 6px);
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.titleLink {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
+}
+
+.subTitle {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent, #3b82f6);
+}
+
+.deviceInfo {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.liveBadge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.overview {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.markWatchedBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 8px);
+  border: none;
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+
+.markWatchedBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.markWatchedBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.successBtn {
+  background: #22c55e !important;
+  color: #fff !important;
+}
+
+.dismissBtn {
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dismissBtn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}

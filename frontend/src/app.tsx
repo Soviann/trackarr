@@ -20,6 +20,9 @@ import { Setup } from './pages/Setup'
 import { AnilistCallback } from './pages/AnilistCallback'
 import { PersonTitles } from './pages/PersonTitles'
 import { usePush } from './hooks/usePush'
+import { useActivePlayback } from './hooks/useActivePlayback'
+import { LivePlaybackIndicator } from './components/LivePlaybackIndicator'
+import { LivePlaybackDrawer } from './components/LivePlaybackDrawer'
 
 const Stats = lazy(() => import('./pages/Stats').then((m) => ({ default: m.Stats })))
 const Wrapped = lazy(() => import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })))
@@ -315,24 +318,38 @@ export function App() {
   ) : null
 
   const isDesktop = useIsDesktop()
+  const playback = useActivePlayback()
+  const [playbackDrawerOpen, setPlaybackDrawerOpen] = useState(false)
 
   const handleToggleFilterDrawer = useCallback(() => {
     setFilterDrawerOpen((prev) => !prev)
   }, [])
 
-  const above = isSearch
-    ? (isDesktop ? null : (
-        <>
-          {filterDrawer}
-          <SearchBar
-            showTMDBToggle={!mergeSourceId}
-            isFiltersOpen={filterDrawerOpen}
-            onToggleFilters={handleToggleFilterDrawer}
-            activeFilterCount={activeFilterCount}
-          />
-        </>
-      ))
-    : filterDrawer
+  const liveIndicator = playback.session ? (
+    <LivePlaybackIndicator
+      session={playback.session}
+      onClick={() => setPlaybackDrawerOpen(true)}
+    />
+  ) : null
+
+  const above = (
+    <>
+      {liveIndicator}
+      {isSearch
+        ? (isDesktop ? null : (
+            <>
+              {filterDrawer}
+              <SearchBar
+                showTMDBToggle={!mergeSourceId}
+                isFiltersOpen={filterDrawerOpen}
+                onToggleFilters={handleToggleFilterDrawer}
+                activeFilterCount={activeFilterCount}
+              />
+            </>
+          ))
+        : filterDrawer}
+    </>
+  )
 
   return (
     <ErrorBoundary>
@@ -385,6 +402,18 @@ export function App() {
             </Suspense>
           </main>
           <UndoSnackbar hideNavbar={hideNavbar} />
+          <LivePlaybackDrawer
+            session={playback.rawSession}
+            open={playbackDrawerOpen}
+            onClose={() => setPlaybackDrawerOpen(false)}
+            onDismiss={() => {
+              playback.dismiss()
+              setPlaybackDrawerOpen(false)
+            }}
+            onWatchedSuccess={() => {
+              playback.refresh()
+            }}
+          />
           {!hideNavbar && (
             <Navbar
               currentPath={currentPath}

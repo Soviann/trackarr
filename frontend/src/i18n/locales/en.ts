@@ -134,6 +134,16 @@ export const en = {
     sagaNextUp: 'Saga Next-Up',
     saga: 'Saga',
   },
+  playback: {
+    nowPlaying: 'Now Playing',
+    nowPlayingOn: 'Now playing on {player}',
+    markWatched: 'Mark Watched',
+    markingWatched: 'Marking watched...',
+    markedWatched: 'Marked as watched',
+    dismiss: 'Dismiss',
+    openCompanion: 'Open Live Companion',
+    seasonEpisode: 'S{season}E{episode}',
+  },
   search: {
     title: 'Search',
     placeholder: 'Search titles...',

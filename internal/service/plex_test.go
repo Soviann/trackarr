@@ -19,6 +19,7 @@ type plexTestEnv struct {
 	svc       *service.PlexService
 	titleRepo *repository.TitleRepository
 	eventRepo *repository.WatchEventRepository
+	hub       *service.PlaybackHubService
 }
 
 func setupPlexTest(t *testing.T) *plexTestEnv {
@@ -41,14 +42,16 @@ func setupPlexTest(t *testing.T) *plexTestEnv {
 	pushSvc := service.NewNoopNotifier()
 	titleSvc := service.NewTitleService(writeDB, titleRepo, taskRepo, nil)
 	libSvc := service.NewLibraryService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, settingRepo, pushSvc, nil, nil)
+	playbackHub := service.NewPlaybackHubService()
 
-	plexSvc := service.NewPlexService(writeDB, nil, titleSvc, libSvc)
+	plexSvc := service.NewPlexService(writeDB, nil, titleSvc, libSvc, playbackHub)
 
 	return &plexTestEnv{
 		db:        writeDB,
 		svc:       plexSvc,
 		titleRepo: titleRepo,
 		eventRepo: eventRepo,
+		hub:       playbackHub,
 	}
 }
 
@@ -196,4 +199,61 @@ func TestProcessPlexWebhook_RealProductionPayload(t *testing.T) {
 	err = env.db.QueryRow(`SELECT watched FROM episodes WHERE season_id = ? AND episode = 23`, seasonID).Scan(&watched)
 	require.NoError(t, err)
 	assert.True(t, watched)
+}
+
+func TestProcessPlexWebhook_PlayAndStop(t *testing.T) {
+	env := setupPlexTest(t)
+
+	// Pre-seed title in library
+	res, err := env.db.Exec(`INSERT INTO titles (type, year, status, match_status, external_source_id) VALUES ('movie', 2010, 'watching', 'confirmed', '99001')`)
+	require.NoError(t, err)
+	titleID, err := res.LastInsertId()
+	require.NoError(t, err)
+	_, err = env.db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, 'Inception', 'en', 1)`, titleID)
+	require.NoError(t, err)
+
+	// 1. media.play event: resolves title, puts active session in hub, but does NOT mark watched
+	playPayload := &model.PlexPayload{
+		Event: "media.play",
+		Player: model.PlexPlayer{
+			Title: "Living Room Shield",
+		},
+		Account: model.PlexAccount{
+			Title: "alice",
+		},
+		Metadata: model.PlexMetadata{
+			RatingKey:  "99001",
+			Type:       "movie",
+			Title:      "Inception",
+			Year:       2010,
+			Duration:   8880000,
+			ViewOffset: 120000,
+		},
+	}
+
+	err = env.svc.ProcessPlexWebhook(context.Background(), playPayload, "{}")
+	require.NoError(t, err)
+
+	active := env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, "Inception", active.TitleName)
+	assert.Equal(t, "Living Room Shield", active.Player)
+	assert.Equal(t, int64(8880), active.DurationSec)
+	assert.Equal(t, int64(120), active.ViewOffsetSec)
+
+	// Ensure no watch events exist in DB
+	count, err := env.eventRepo.CountByTitleID(active.TitleID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "media.play must NOT insert watch event")
+
+	// 2. media.stop event: clears the active session from hub
+	stopPayload := &model.PlexPayload{
+		Event: "media.stop",
+		Player: model.PlexPlayer{
+			Title: "Living Room Shield",
+		},
+	}
+	err = env.svc.ProcessPlexWebhook(context.Background(), stopPayload, "{}")
+	require.NoError(t, err)
+	assert.Nil(t, env.hub.GetActiveSession())
 }

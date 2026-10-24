@@ -136,6 +136,16 @@ export const fr: TranslationSchema = {
     sagaNextUp: 'Suite de saga',
     saga: 'Saga',
   },
+  playback: {
+    nowPlaying: 'En cours de lecture',
+    nowPlayingOn: 'En lecture sur {player}',
+    markWatched: 'Marquer vu',
+    markingWatched: 'Enregistrement...',
+    markedWatched: 'Marqué comme vu',
+    dismiss: 'Masquer',
+    openCompanion: 'Ouvrir le compagnon de lecture',
+    seasonEpisode: 'S{season}E{episode}',
+  },
   search: {
     title: 'Recherche',
     placeholder: 'Rechercher un titre...',

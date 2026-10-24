@@ -121,6 +121,14 @@
     - Frontend continuity:
       - `NextEpisodeHero.tsx`: Renders a "Continue Saga" hero card when the active title is completed or caught-up and has an uncompleted saga relation.
       - `ContinueWatching.tsx` & `PosterTile.tsx`: Displays violet saga next-up badge (`t('continueWatching.sagaNextUp')`) and allows 1-click quick-mark on movies with universal undo.
+26. **SQLite FTS5 Trigram Fuzzy Search (Lot 1 / Q4 2026)**:
+    - FTS5 virtual table `title_names_trigram_fts` (`tokenize='trigram'`, migration 051) replaces legacy in-memory Go Levenshtein scans when standard FTS5 returns < 3 results.
+    - Generates quoted trigram substrings joined with `OR` and ranks results natively via SQLite `bm25(title_names_trigram_fts)` without memory churn or full-table scans.
+27. **Live Playback Companion Mode (Lot 2 / Q4 2026)**:
+    - `PlaybackHubService` is an in-memory thread-safe singleton (`sync.RWMutex`, 4h TTL) tracking active playback without disk writes or lock contention on SQLite.
+    - Plex `media.play` / `media.resume` and Jellyfin `PlaybackStart` resolve existing library titles in read-only mode and register active sessions in RAM.
+    - `media.stop` and `PlaybackStop` clear active sessions. `GET /api/playback/active` returns 204 No Content when idle or 200 OK with session payload.
+    - Mobile frontend surfaces a pulsing `LivePlaybackIndicator` above navbar, opening `LivePlaybackDrawer` with quick `+1 Marquer vu` action.
 
 ---
 
@@ -138,6 +146,7 @@
 - `season_audit_dismissals`: Dismissed merge proposals (`source_title_id`, `target_title_id`).
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
+- `title_names_fts` & `title_names_trigram_fts`: FTS5 full-text search index tables on `title_names.name` (`unicode61 remove_diacritics 2` for prefix search, and `tokenize='trigram'` for fuzzy typo and substring matching, migration 051).
 - `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
@@ -213,8 +222,9 @@
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
-- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` webhook.
-- `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` webhook.
+- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble) & `PlaybackStart` (live companion).
+- `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` & `media.play` / `media.resume` / `media.stop`.
+- `GET /api/playback/active` : Active media playback session (204 No Content if idle, 200 OK with session payload).
 - `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.
 - `GET /api/arr/{app}/rootfolder` & `GET /api/arr/{app}/qualityprofile` : Proxy Radarr/Sonarr root folders and quality profiles.
 - `GET /api/arr/title/{id}` & `PUT /api/arr/title/{id}` : Check Arr library status and edit quality profile / root folder.

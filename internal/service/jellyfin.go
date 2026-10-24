@@ -23,30 +23,43 @@ type ExternalIDs struct {
 }
 
 type JellyfinService struct {
-	log      *slog.Logger
-	db       *sql.DB
-	pipeline *matching.Pipeline
-	titleSvc *TitleService
-	libSvc   *LibraryService
-	source   model.WatchEventSource
+	log         *slog.Logger
+	db          *sql.DB
+	pipeline    *matching.Pipeline
+	titleSvc    *TitleService
+	libSvc      *LibraryService
+	playbackHub *PlaybackHubService
+	source      model.WatchEventSource
 }
 
-func NewJellyfinService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService) *JellyfinService {
+func NewJellyfinService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *TitleService, libSvc *LibraryService, playbackHub *PlaybackHubService) *JellyfinService {
 	return &JellyfinService{
-		log:      slog.With("subsystem", "jellyfin"),
-		db:       db,
-		pipeline: pipeline,
-		titleSvc: titleSvc,
-		libSvc:   libSvc,
-		source:   model.WatchEventSourceJellyfin,
+		log:         slog.With("subsystem", "jellyfin"),
+		db:          db,
+		pipeline:    pipeline,
+		titleSvc:    titleSvc,
+		libSvc:      libSvc,
+		playbackHub: playbackHub,
+		source:      model.WatchEventSourceJellyfin,
 	}
 }
 
 // ProcessJellyfinWebhook ingests a Jellyfin Webhook-plugin notification.
-// It normalises the payload and, when the event represents a completed playback,
-// processes the scrobble into the database.
+// PlaybackStart events register the active playback session in memory.
+// PlaybackStop events clear the active session and, if played to completion, process the scrobble.
 func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.JellyfinPayload, rawPayload string) error {
-	if !strings.EqualFold(jf.NotificationType, "PlaybackStop") || !parseJellyfinBool(jf.PlayedToCompletion) {
+	switch strings.ToLower(jf.NotificationType) {
+	case "playbackstart":
+		return s.processPlaybackStart(ctx, jf)
+	case "playbackstop":
+		if s.playbackHub != nil {
+			s.playbackHub.ClearSession("jellyfin", jf.ItemID)
+		}
+		if !parseJellyfinBool(jf.PlayedToCompletion) {
+			return nil
+		}
+		// proceed with completion scrobble
+	default:
 		return nil
 	}
 
@@ -62,6 +75,109 @@ func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.
 		return s.processMovie(ctx, jf, year, ids, rawPayload)
 	case "episode":
 		return s.processEpisode(ctx, jf, year, ids, rawPayload)
+	default:
+		return nil
+	}
+}
+
+func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.JellyfinPayload) error {
+	if s.playbackHub == nil {
+		return nil
+	}
+
+	year := atoiSafe(jf.Year)
+	ids := ExternalIDs{
+		IMDB: strings.TrimSpace(jf.ProviderIMDB),
+		TMDB: int64(atoiSafe(jf.ProviderTMDB)),
+		TVDB: int64(atoiSafe(jf.ProviderTVDB)),
+	}
+
+	titles := repository.NewTitleRepository(s.db)
+
+	switch strings.ToLower(jf.ItemType) {
+	case "movie":
+		var imdbID *string
+		var tmdbID *int64
+		ratingKey := jf.ItemID
+		if ids.IMDB != "" {
+			imdbID = &ids.IMDB
+		}
+		if ids.TMDB != 0 {
+			tmdbID = &ids.TMDB
+		}
+		movieType := model.TitleTypeMovie
+		title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, nil, &movieType)
+		if err != nil {
+			title, err = titles.FindByNameAndType(jf.Name, model.TitleTypeMovie, year)
+			if err != nil {
+				return nil
+			}
+		}
+
+		titleName := jf.Name
+		for _, n := range title.Names {
+			if n.IsPrimary {
+				titleName = n.Name
+				break
+			}
+		}
+
+		session := model.ActivePlaybackSession{
+			Source:    "jellyfin",
+			Player:    jf.ItemID,
+			TitleID:   title.ID,
+			TitleName: titleName,
+			TitleType: model.TitleTypeMovie,
+			Year:      title.Year,
+			CoverURL:  title.CoverURL,
+			AccentHex: title.AccentHex,
+		}
+		s.playbackHub.SetSession(session)
+		return nil
+
+	case "episode":
+		seriesName := jf.SeriesName
+		if seriesName == "" {
+			seriesName = jf.Name
+		}
+		seriesID := jf.SeriesID
+		seasonNum := atoiSafe(jf.Season)
+		episodeNum := atoiSafe(jf.Episode)
+
+		seriesType := model.TitleTypeSeries
+		title, err := titles.FindByExternalID(nil, nil, &seriesID, nil, nil, &seriesType)
+		if err != nil {
+			title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, year)
+			if err != nil {
+				return nil
+			}
+		}
+
+		titleName := seriesName
+		for _, n := range title.Names {
+			if n.IsPrimary {
+				titleName = n.Name
+				break
+			}
+		}
+		epName := jf.Name
+
+		session := model.ActivePlaybackSession{
+			Source:        "jellyfin",
+			Player:        jf.ItemID,
+			TitleID:       title.ID,
+			TitleName:     titleName,
+			TitleType:     model.TitleTypeSeries,
+			Year:          title.Year,
+			CoverURL:      title.CoverURL,
+			AccentHex:     title.AccentHex,
+			SeasonNumber:  &seasonNum,
+			EpisodeNumber: &episodeNum,
+			EpisodeName:   &epName,
+		}
+		s.playbackHub.SetSession(session)
+		return nil
+
 	default:
 		return nil
 	}
