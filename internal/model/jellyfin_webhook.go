@@ -22,6 +22,8 @@ type JellyfinPayload struct {
 	ProviderTVDB string `json:"provider_tvdb"`
 
 	ItemID     string `json:"item_id"`     // Jellyfin GUID of the played item
+	DeviceName string `json:"device_name"` // client device name e.g. "Living Room TV"
+	ClientName string `json:"client_name"` // client app name e.g. "Jellyfin Web"
 	SeriesName string `json:"series_name"` // episode only
 	SeriesID   string `json:"series_id"`   // episode only — stable per-series Jellyfin GUID
 	Season     string `json:"season"`      // episode only

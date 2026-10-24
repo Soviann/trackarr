@@ -975,7 +975,7 @@ export const fr: TranslationSchema = {
     noneRecorded: 'Aucun enregistré',
     jellyfinHelpTitle: 'Configuration du Webhook dans Jellyfin',
     jellyfinHelpStep1: 'Dans votre serveur Jellyfin, naviguez dans Tableau de bord → Plugins → Webhook → Ajouter une destination générique :',
-    jellyfinNotificationType: 'Notification Type : Playback Stop',
+    jellyfinNotificationType: 'Types de notification : Playback Start, Playback Stop',
     jellyfinItemType: 'Item Type : Movies & Episodes',
     plexHelpTitle: 'Configuration du Webhook dans Plex',
     plexHelpStep1: 'Dans votre serveur Plex Media Server, naviguez dans Paramètres → Webhooks → Ajouter un webhook :',

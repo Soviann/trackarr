@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Modifié
+- **Webhook Jellyfin & Live Playback (`internal/service/jellyfin.go`, `docs/integrations.md`)** :
+  - Support des champs optionnels `device_name` (`{{{DeviceName}}}`) et `client_name` (`{{{Client}}}`) dans le payload Jellyfin pour afficher le nom convivial de l'appareil lecteur au lieu de l'UUID interne.
+  - Mise à jour de la documentation et des instructions dans l'interface (`/admin/jellyfin`) pour indiquer de cocher **Playback Start** et **Playback Stop** dans le plugin Webhook Jellyfin.
+
 ## [v1.27.0] — 2026-10-24
 
 ### Ajouté

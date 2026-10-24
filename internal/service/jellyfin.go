@@ -53,7 +53,7 @@ func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.
 		return s.processPlaybackStart(ctx, jf)
 	case "playbackstop":
 		if s.playbackHub != nil {
-			s.playbackHub.ClearSession("jellyfin", jf.ItemID)
+			s.playbackHub.ClearSession("jellyfin", resolveJellyfinPlayer(jf))
 		}
 		if !parseJellyfinBool(jf.PlayedToCompletion) {
 			return nil
@@ -124,7 +124,7 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 
 		session := model.ActivePlaybackSession{
 			Source:    "jellyfin",
-			Player:    jf.ItemID,
+			Player:    resolveJellyfinPlayer(jf),
 			TitleID:   title.ID,
 			TitleName: titleName,
 			TitleType: model.TitleTypeMovie,
@@ -164,7 +164,7 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 
 		session := model.ActivePlaybackSession{
 			Source:        "jellyfin",
-			Player:        jf.ItemID,
+			Player:        resolveJellyfinPlayer(jf),
 			TitleID:       title.ID,
 			TitleName:     titleName,
 			TitleType:     model.TitleTypeSeries,
@@ -410,4 +410,14 @@ func atoiSafe(s string) int {
 		return 0
 	}
 	return n
+}
+
+func resolveJellyfinPlayer(jf *model.JellyfinPayload) string {
+	if name := strings.TrimSpace(jf.DeviceName); name != "" {
+		return name
+	}
+	if client := strings.TrimSpace(jf.ClientName); client != "" {
+		return client
+	}
+	return "Jellyfin"
 }

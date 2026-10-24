@@ -369,6 +369,7 @@ func TestProcessJellyfinWebhook_PlayAndStop(t *testing.T) {
 		Season:           "1",
 		Episode:          "1",
 		ItemID:           "jf-item-ep1",
+		DeviceName:       "Living Room Shield",
 	}
 
 	err = env.svc.ProcessJellyfinWebhook(context.Background(), startPayload, "{}")
@@ -377,7 +378,7 @@ func TestProcessJellyfinWebhook_PlayAndStop(t *testing.T) {
 	active := env.hub.GetActiveSession()
 	require.NotNil(t, active)
 	assert.Equal(t, "Stranger Things", active.TitleName)
-	assert.Equal(t, "jf-item-ep1", active.Player)
+	assert.Equal(t, "Living Room Shield", active.Player)
 	require.NotNil(t, active.SeasonNumber)
 	assert.Equal(t, 1, *active.SeasonNumber)
 	require.NotNil(t, active.EpisodeNumber)
@@ -387,9 +388,33 @@ func TestProcessJellyfinWebhook_PlayAndStop(t *testing.T) {
 	stopPayload := &model.JellyfinPayload{
 		NotificationType:   "PlaybackStop",
 		ItemID:             "jf-item-ep1",
+		DeviceName:         "Living Room Shield",
 		PlayedToCompletion: "False",
 	}
 	err = env.svc.ProcessJellyfinWebhook(context.Background(), stopPayload, "{}")
 	require.NoError(t, err)
 	assert.Nil(t, env.hub.GetActiveSession())
+
+	// 3. Fallback resolution of Player: ClientName then "Jellyfin"
+	startFallbackClient := &model.JellyfinPayload{
+		NotificationType: "PlaybackStart",
+		ItemType:         "Episode",
+		SeriesID:         "jf-series-st",
+		ClientName:       "Jellyfin Web",
+	}
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), startFallbackClient, "{}"))
+	activeClient := env.hub.GetActiveSession()
+	require.NotNil(t, activeClient)
+	assert.Equal(t, "Jellyfin Web", activeClient.Player)
+	env.hub.ClearSession("jellyfin", "Jellyfin Web")
+
+	startFallbackDefault := &model.JellyfinPayload{
+		NotificationType: "PlaybackStart",
+		ItemType:         "Episode",
+		SeriesID:         "jf-series-st",
+	}
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), startFallbackDefault, "{}"))
+	activeDefault := env.hub.GetActiveSession()
+	require.NotNil(t, activeDefault)
+	assert.Equal(t, "Jellyfin", activeDefault.Player)
 }

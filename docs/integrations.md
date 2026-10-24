@@ -15,7 +15,7 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 2. Navigate to *Dashboard ➔ Plugins ➔ Webhook ➔ Add Generic Destination*.
 3. Configure the destination:
    - **Webhook URL**: `https://<your-trackarr-url>/api/webhook/jellyfin/<secret>` (where `<secret>` matches `JELLYFIN_WEBHOOK_SECRET` or your configured token, also visible and copyable with 1-click in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
-   - **Notification Type**: Check **Playback Stop** only.
+   - **Notification Type**: Check **Playback Start** and **Playback Stop** (required for the live playback companion and completion scrobbling).
    - **Item Type**: Check **Movies** and **Episodes**.
    - **Send All Properties**: Leave unchecked.
    - **Request Header**: `Content-Type: application/json`.
@@ -31,6 +31,8 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
        "provider_tmdb": "{{Provider_tmdb}}",
        "provider_tvdb": "{{Provider_tvdb}}",
        "item_id": "{{ItemId}}",
+       "device_name": "{{{DeviceName}}}",
+       "client_name": "{{{Client}}}",
        "series_name": "{{{SeriesName}}}",
        "series_id": "{{SeriesId}}",
        "season": "{{SeasonNumber}}",
