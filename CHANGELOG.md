@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.27.0] — 2026-10-24
+
+### Ajouté
+- **Recherche plein texte trigramme SQLite FTS5 (`internal/repository/title_search.go`, migration `051`)** :
+  - Création de la table virtuelle `title_names_trigram_fts` avec tokenizer `trigram` et triggers de synchronisation automatique sur `title_names`.
+  - Remplacement du scan lourd Levenshtein en mémoire Go par un fallback direct SQL `MATCH` pondéré par le scoring natif `bm25(title_names_trigram_fts)` lors de recherches avec fautes de frappe ou sous-chaînes.
+- **Mode compagnon de lecture en direct / Live Playback (`internal/service/playback_hub.go`, `LivePlaybackDrawer.tsx`)** :
+  - Service en mémoire singleton `PlaybackHubService` (thread-safe, RWMutex, expiration 4h) sans écriture disque continue sur SQLite pour préserver les disques NAS et éviter toute contention de verrou.
+  - Écoute des événements `media.play` / `media.resume` / `media.stop` (Plex) et `PlaybackStart` / `PlaybackStop` (Jellyfin).
+  - Exposition de la route `GET /api/playback/active` (`204 No Content` si inactif, `200 OK` avec session JSON si actif).
+  - Pastille visuelle pulsante `LivePlaybackIndicator` au-dessus de la barre de navigation mobile.
+  - Tiroir coulissant ergonomique `LivePlaybackDrawer` affichant la jaquette, le titre, la saison/épisode, le résumé et un bouton direct `[ +1 Marquer vu ]`.
+
+### Sécurité & Infrastructure
+- **Mise à jour des dépendances Go & Frontend** : Mise à niveau groupée des dépendances Go (`go.mod`, `go.sum`) et Frontend (`package.json`, `package-lock.json`).
+
 ## [v1.26.21] — 2026-10-22
 
 ### Corrigé
