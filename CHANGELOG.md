@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Documentation & Maintenance
+- **Audit de la documentation & synchronisation (`docs/INDEX.md`, `docs/maintenance.md`, `docs/llm.md`, `docs/patterns.md`)** :
+  - Mise à jour des références de navigation et des routes : séparation de `/calendar` (calendrier multi-vues) et `/coming-up` (sorties imminentes).
+  - Alignement de la section CI/CD avec la suppression des workflows publics d'audit hebdomadaire au profit du démon privé de monitoring.
+
 ## [v1.28.0] — 2026-10-25
 
 ### Ajouté

@@ -21,16 +21,14 @@ Trackarr uses GitHub Dependabot to keep Go modules, npm packages, Docker bases, 
   - Backend linting (`golangci-lint`).
   - Frontend unit tests and production Vite compilation (`make test-front`).
   - Frontend type checks (`tsc`).
-- **Weekly Documentation & i18n Audit (`.github/workflows/weekly-docs-audit.yml`)**:
-  - Scheduled weekly workflow (or manually triggered) checking recent commits on `main`.
-  - Automatically dispatches an audit task to Antigravity to verify documentation consistency, changelog updates, and detection of non-internationalized texts (hardcoded strings/comments or translation discrepancies).
-- **Weekly Improvements & Innovation Proposals (`.github/workflows/weekly-improvements-proposal.yml`)**:
-  - Scheduled weekly workflow (every Friday at 04:00 UTC or manually triggered).
-  - Automatically creates a proposals issue on GitHub with contextual commits and multi-agent delegation instructions (UX/UI, features, architecture/refactor, and out-of-the-box ideas) for end-of-week review.
 - **Multi-Arch GHCR Release (`.github/workflows/release.yml`)**:
   - Builds and publishes `linux/amd64` and `linux/arm64` Docker images to GitHub Container Registry on every Git tag push (`v*`).
 - **Dependabot Auto-Merge (`.github/workflows/dependabot-auto-merge.yml`)**:
   - Automatically merges green Dependabot PRs using squash merge.
+- **Dependabot Antigravity Fix (`.github/workflows/dependabot-antigravity-fix.yml`)**:
+  - Automated diagnostic and resolution workflow for failing dependency PRs.
+- **Private Daemon Routines**:
+  - Weekly documentation & i18n audits and feature proposal routines run via the private monitoring daemon (previously `.github/workflows/weekly-*.yml`), preserving repository privacy and dispatching directly into the agent workspace.
 
 ---
 

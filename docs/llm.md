@@ -63,8 +63,8 @@
     - `useKeyboardShortcuts` binds universal search activation (`Cmd+K`, `Ctrl+K`, `/`) focusing `SearchBar`, and modal/drawer dismissal via `Escape`.
     - `Library` grid supports contiguous range selection via `Shift+Click` across poster cards.
 13. **Unified 5-Tab Navigation & Contextual Highlighting**:
-    - Primary tabs: `Collection` (`/`), `Explore` (`/search`), `Calendar` (`/coming-up`), `Stats` (`/stats`), `Admin` (`/admin`).
-    - Sub-route context preservation: `/continue-watching` highlights `Collection`; `/releases` highlights `Calendar`; `/add` and `/admin/validate` highlight `Explore`.
+    - Primary tabs: `Collection` (`/`), `Explore` (`/search`), `Calendar` (`/calendar`), `Stats` (`/stats`), `Admin` (`/admin`).
+    - Sub-route context preservation: `/continue-watching` and `/coming-up` highlight `Collection`; `/releases` highlights `Calendar`; `/add` and `/admin/validate` highlight `Explore`.
 14. **Zero-Reflow Compositor Animations & Touch Containment**:
     - Drawer/card collapse avoids `offsetHeight` reflows, using GPU CSS Grid track transitions (`grid-template-rows: 1fr -> 0fr`) and composite `transform: translateY(...)`.
     - Touch containers enforce `overscroll-behavior-y: contain` and verify `scrollTop > 0` in `useSwipeDownToClose` to prevent mobile scroll hijacking.

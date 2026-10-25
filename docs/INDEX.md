@@ -14,7 +14,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 
 ### 2. [User Guide & Troubleshooting](user-guide.md)
 - Complete UI walkthrough: Library statuses (*Watching*, *Caught up*, *Completed*, *Plan*, *Dropped*), responsive fluid grid, and collapsible desktop sidebar.
-- Multi-View Calendar (Month, Week, List) and RFC 5545 iCal subscription feed (`/coming-up`).
+- Dedicated Upcoming Airing Page with at-a-glance next air dates and episode tags (`/coming-up`), and Multi-View Calendar (Month, Week, List) with RFC 5545 iCal subscription feed (`/calendar`).
 - Filterable Stats insights, decomposed watch time, Year/Media filters, Top Cast & interactive filmography drawer (`/stats`).
 - Trackarr Wrapped annual retrospective story player and immutable archives gallery (`/wrapped`).
 - Unified Franchise & History Hub Bar with slide-up bottom sheets, Next Episode Hero, and Binge Estimator.
@@ -44,8 +44,8 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 ### 6. [Maintenance & Operations](maintenance.md)
 - 1-Click Web UI Export & Import (JSON, CSV, Trakt.tv sync) with dry-run preview.
 - Automated dependency management via Dependabot.
-- Weekly documentation, i18n & hardcoded text audit workflow (`weekly-docs-audit.yml`).
-- Weekly innovation & improvements proposals workflow (`weekly-improvements-proposal.yml`).
+- Automated CI/CD pipelines (unit tests, linting, production Vite compilation, multi-arch GHCR releases, and Dependabot auto-merge).
+- Private daemon routines for weekly documentation/i18n audits and feature proposals.
 - Online SQLite WAL backup, daily pragma maintenance cron (04:30), and restoration procedures.
 - Emergency CLI maintenance commands (`reset-password`, `backfill-accents`, `version`, `import`).
 
