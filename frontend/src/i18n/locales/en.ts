@@ -583,6 +583,14 @@ export const en = {
     saved: 'Saved',
     error: 'Failed to save',
   },
+  upcoming: {
+    title: 'Coming Up',
+    airingSoon: '{count} airing soon',
+    openCalendar: 'Calendar',
+    empty: 'No upcoming releases',
+    emptyFiltered: 'No upcoming releases match your active filters',
+    loadError: 'Failed to load upcoming releases',
+  },
   calendar: {
     title: 'Calendar',
     comingUp: 'Coming Up',

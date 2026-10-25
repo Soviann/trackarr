@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Page dédiée « À venir » (`/coming-up`) et séparation de la route Calendrier (`/calendar`) (`frontend/src/pages/ComingUp.tsx`, `frontend/src/pages/Calendar.tsx`, `frontend/src/routes.ts`)** :
+  - Transformation de `/coming-up` en page dédiée aux sorties imminentes affichant l'intégralité des titres à venir directement depuis `/api/titles/upcoming`.
+  - Visualisation immédiate sur chaque tuile de la date de diffusion et de l'épisode suivant (`S2 E4 · 25 oct.`).
+  - Filtrage rapide par catégorie (Tous, Séries, Anime, Films).
+  - Raccourci d'accès direct vers le calendrier multi-vues depuis l'en-tête.
+  - Déplacement du calendrier interactif multi-vues (grille mensuelle, timeline hebdomadaire, vue liste et abonnement iCal) vers sa route dédiée `/calendar`.
+  - Mise à jour des onglets de navigation (`components/navItems.tsx`) pour associer le calendrier à `/calendar` et la page d'accueil sous-jacente à `/coming-up`.
+
 ## [v1.27.1] — 2026-10-24
 
 ### Corrigé

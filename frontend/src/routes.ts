@@ -12,6 +12,7 @@
 
 export const ROUTE_PATHS = {
   home: '/',
+  calendar: '/calendar',
   comingUp: '/coming-up',
   continueWatching: '/continue-watching',
   releases: '/releases',
@@ -41,6 +42,7 @@ export const ROUTE_PATHS = {
 
 export const routeTo = {
   home: () => '/',
+  calendar: () => '/calendar',
   comingUp: () => '/coming-up',
   continueWatching: () => '/continue-watching',
   releases: () => '/releases',

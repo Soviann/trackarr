@@ -8,7 +8,7 @@ Welcome to the **Trackarr User Guide**. This document explains how to navigate, 
 
 ## 📑 Table of Contents
 1. [Library & Navigation](#1-library--navigation)
-   - [1.1. Multi-View Calendar & iCal Export (`/coming-up`)](#11-multi-view-calendar--ical-export-coming-up)
+   - [1.1. Dedicated Upcoming Airing Page (`/coming-up`) & Multi-View Calendar (`/calendar`)](#11-dedicated-upcoming-airing-page-coming-up--multi-view-calendar-calendar)
    - [1.2. Stats Insights & Annual Retrospective (`/stats` & `/wrapped`)](#12-stats-insights--annual-retrospective-stats--wrapped)
 2. [Managing Titles & Episodes](#2-managing-titles--episodes)
 3. [Search, Live Discovery & Mobile Sharing](#3-search-live-discovery--mobile-sharing)
@@ -41,7 +41,7 @@ The **Library** screen is your media command center:
 - **Mobile Bottom Navigation**: 5 explicit, translated tabs with universal SVG icons and 48px touch targets:
   - **Collection** (`/`): Your personal media library with poster grid and watching progress lists.
   - **Explore** (`/search`): Unified search across your collection and external TMDB/AniList discovery.
-  - **Calendar** (`/coming-up`): Multi-view release calendar and iCal export feed.
+  - **Calendar** (`/calendar`): Multi-view release calendar and iCal export feed.
   - **Stats** (`/stats`): In-depth viewing analytics, top cast, and annual Wrapped retrospectives.
   - **Admin** (`/admin`): System settings, task queue, integrations, and metadata maintenance.
 - **Desktop Navigation Sidebar (≥ 1024px)**: On wider screens, the mobile bottom bar is automatically hidden and replaced by a lateral desktop `<aside>` sidebar:
@@ -89,9 +89,17 @@ The **Library** screen is your media command center:
 
 ---
 
-## 1.1. Multi-View Calendar & iCal Export (`/coming-up`)
+## 1.1. Dedicated Upcoming Airing Page (`/coming-up`) & Multi-View Calendar (`/calendar`)
 
-The **Calendar** page (`/coming-up`) provides a complete schedule of upcoming episodes and movie releases for all titles in your watchlist (`watching`, `plan_to_watch`, or returning `completed`):
+### Dedicated Upcoming Airing Page (`/coming-up`)
+Clicking the "Coming Up" card on the Home page opens the dedicated upcoming airing view:
+- **At-a-Glance Release Info**: Displays every title scheduled to air soon with cover image, next air date (with relative badges such as "Today", day of week, or "in X days"), and next episode tag (e.g. `S2 E4 · 25 Oct`).
+- **Complete Airing List**: No truncation or arbitrary limits—lists all matching upcoming titles.
+- **Direct Filtering**: Category chips (*All*, *Series*, *Anime*, *Movies*) for instant filtering.
+- **Calendar Shortcut**: One-tap header button jumping directly to the interactive multi-view calendar.
+
+### Multi-View Calendar & iCal Export (`/calendar`)
+The **Calendar** page (`/calendar`) provides a complete schedule of upcoming episodes and movie releases for all titles in your watchlist (`watching`, `plan_to_watch`, or returning `completed`):
 
 - **3 Visualisation Modes**:
   - **📅 Monthly Grid (Grille Mois)**: Standard 7-column calendar (Mon–Sun) with month navigation, "Today" highlight, per-day event pills and category color coding (Anime, Series, Movies). Tapping any day opens a rich card overview below the grid.
