@@ -21,6 +21,7 @@ export interface PosterTileItem {
   name: string
   sublabel: string
   sublabelVariant?: 'default' | 'amber' | 'teal' | 'muted'
+  badgeLabel?: string
   progressRatio?: number
   onPrime?: boolean
   watch_providers?: WatchProvider[]
@@ -54,6 +55,7 @@ export function PosterTile({ item }: Props) {
 
   const hasArr = item.sonarr_id != null || item.radarr_id != null
   const isUnaired = isUnairedOrTBA(item.next_episode)
+  const showArrBadge = Boolean(hasArr && item.next_episode && item.status !== 'dropped' && !isUnaired)
 
   return (
     <div
@@ -77,7 +79,7 @@ export function PosterTile({ item }: Props) {
         </div>
 
         {/* Arr availability badge (top-right) */}
-        {hasArr && item.next_episode && item.status !== 'dropped' && !isUnaired && (
+        {showArrBadge && item.next_episode && (
           <span className={s.arrAvailableBadge}>
             {`S${item.next_episode.season_number.toString().padStart(2, '0')}E${item.next_episode.episode.toString().padStart(2, '0')} ${t('common.dispoBadge')}`}
           </span>
@@ -85,7 +87,7 @@ export function PosterTile({ item }: Props) {
 
         {/* Saga smart next-up badge */}
         {item.is_saga_next_up && (
-          <span className={clsx(s.sagaBadge, hasArr && item.next_episode && item.status !== 'dropped' && !isUnaired && s.sagaBadgeStacked)}>
+          <span className={clsx(s.sagaBadge, showArrBadge && s.sagaBadgeStacked)}>
             {t('continueWatching.sagaNextUp')}
           </span>
         )}
@@ -117,9 +119,9 @@ export function PosterTile({ item }: Props) {
             <div className={s.progressFill} style={{ width: `${item.progressRatio * 100}%` }} />
           </div>
         )}
-        {item.progressRatio === undefined && !hasArr && (
+        {item.progressRatio === undefined && !showArrBadge && (item.badgeLabel || item.sublabel) && (
           <span className={`${s.badge} ${s[`badge_${item.sublabelVariant ?? 'default'}`]}`}>
-            {item.sublabel}
+            {item.badgeLabel ?? item.sublabel}
           </span>
         )}
       </div>

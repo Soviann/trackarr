@@ -235,8 +235,8 @@
 - **Single Source of Truth**: All route patterns live in `ROUTE_PATHS`, route builders in `routeTo`.
 - **API URL Rule**: `apiFetch` and `useApi` automatically prepend `/api`. Never write `apiFetch('/api/...')`.
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
-- **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` maps to `/` (`Collection`), `/releases` maps to `/coming-up` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
-- **Code Splitting & Lazy Loading (`App.tsx`)**: Secondary sections (all Admin subpages, Stats, Wrapped, MatchReview, Help, Validate) are lazy-loaded via `lazy()` and wrapped in `<Suspense fallback={null}>`. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `ContinueWatching`, `Add`) remain synchronous for instant mobile first-load.
+- **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` and `/coming-up` map to `/` (`Collection`), `/releases` maps to `/calendar` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
+- **Code Splitting & Lazy Loading (`App.tsx`)**: Secondary sections (all Admin subpages, Stats, Wrapped, MatchReview, Help, Validate) are lazy-loaded via `lazy()` and wrapped in `<Suspense fallback={null}>`. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `Calendar`, `ContinueWatching`, `Add`) remain synchronous for instant mobile first-load.
 - **SPA HTTP Cache Headers (`internal/handler/spa.go`)**: Hashed assets under `/assets/*` serve `Cache-Control: public, max-age=31536000, immutable`. HTML documents (`index.html`) and client-side fallback routes serve `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ### State Management (`frontend/src/store.ts`)
@@ -318,7 +318,8 @@
 | `/` | `Library` | `pages/Library.tsx` | Main library fluid grid (2-8 columns), custom filters, and bottom navigation |
 | `/releases` | `Releases` | `pages/Releases.tsx` | Prowlarr releases feed with multi-indexer filters and 1-click addition |
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` | In-progress titles, quick watch buttons, and unwatched episodes tracking |
-| `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
+| `/calendar` | `Calendar` | `pages/Calendar.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
+| `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Dedicated upcoming airing page with at-a-glance next air dates and episode tags |
 | `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, external discovery deduplication (filtering out titles already in library with badge or empty notice), full-card clickability on owned titles, and discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), local library cross-checking (`In Library ↗`), full-card clickable links to owned titles, optional hide-in-library filter toggle, 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
 | `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |

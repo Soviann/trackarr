@@ -585,6 +585,14 @@ export const fr: TranslationSchema = {
     saved: 'Enregistré',
     error: 'Erreur de sauvegarde',
   },
+  upcoming: {
+    title: 'À venir',
+    airingSoon: '{count} bientôt diffusés',
+    openCalendar: 'Calendrier',
+    empty: 'Aucune sortie à venir',
+    emptyFiltered: 'Aucune sortie ne correspond à vos filtres actifs',
+    loadError: 'Impossible de charger les sorties à venir',
+  },
   calendar: {
     title: 'Calendrier',
     comingUp: 'Coming Up',

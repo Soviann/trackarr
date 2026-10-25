@@ -8,6 +8,7 @@ import { FilterDrawer, type FilterState, type FilterActions } from './components
 import { SearchBar } from './components/SearchBar'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { Library } from './pages/Library'
+import { Calendar } from './pages/Calendar'
 import { ComingUp } from './pages/ComingUp'
 import { ContinueWatching } from './pages/ContinueWatching'
 import { Releases } from './pages/Releases'
@@ -367,6 +368,7 @@ export function App() {
             <Suspense fallback={null}>
               <Router onChange={handleRoute}>
                 <Library path={ROUTE_PATHS.home} filterOpen={filterDrawerOpen} />
+                <Calendar path={ROUTE_PATHS.calendar} />
                 <ComingUp path={ROUTE_PATHS.comingUp} />
                 <ContinueWatching path={ROUTE_PATHS.continueWatching} />
                 <Releases path={ROUTE_PATHS.releases} />

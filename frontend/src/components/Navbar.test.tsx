@@ -35,16 +35,16 @@ describe('Navbar', () => {
     )
 
     fireEvent.click(getByRole('button', { name: 'Calendar' }))
-    expect(onNavigate).toHaveBeenCalledWith('/coming-up')
+    expect(onNavigate).toHaveBeenCalledWith('/calendar')
 
     fireEvent.click(getByRole('button', { name: 'Explore' }))
     expect(onNavigate).toHaveBeenCalledWith('/search')
   })
 
-  it('activates calendar tab for /coming-up and /releases', () => {
+  it('activates calendar tab for /calendar and /releases', () => {
     const onNavigate = vi.fn()
     const { getByRole, rerender } = render(
-      <Navbar currentPath="/coming-up" onNavigate={onNavigate} />
+      <Navbar currentPath="/calendar" onNavigate={onNavigate} />
     )
 
     let calBtn = getByRole('button', { name: 'Calendar' })
@@ -55,7 +55,7 @@ describe('Navbar', () => {
     expect(calBtn.getAttribute('aria-current')).toBe('page')
   })
 
-  it('activates collection tab for / and /continue-watching', () => {
+  it('activates collection tab for /, /continue-watching, and /coming-up', () => {
     const onNavigate = vi.fn()
     const { getByRole, rerender } = render(
       <Navbar currentPath="/" onNavigate={onNavigate} />
@@ -65,6 +65,10 @@ describe('Navbar', () => {
     expect(colBtn.getAttribute('aria-current')).toBe('page')
 
     rerender(<Navbar currentPath="/continue-watching" onNavigate={onNavigate} />)
+    colBtn = getByRole('button', { name: 'Collection' })
+    expect(colBtn.getAttribute('aria-current')).toBe('page')
+
+    rerender(<Navbar currentPath="/coming-up" onNavigate={onNavigate} />)
     colBtn = getByRole('button', { name: 'Collection' })
     expect(colBtn.getAttribute('aria-current')).toBe('page')
   })

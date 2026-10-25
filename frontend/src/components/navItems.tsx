@@ -36,7 +36,7 @@ export const navTabs: NavTab[] = [
   {
     id: 'calendar',
     labelKey: 'nav.calendar',
-    path: ROUTE_PATHS.comingUp,
+    path: ROUTE_PATHS.calendar,
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -76,7 +76,9 @@ export function getActiveTab(currentPath: string): string {
   if (cleanPath === ROUTE_PATHS.adminValidate) return ROUTE_PATHS.search
   const root = cleanPath === ROUTE_PATHS.home ? ROUTE_PATHS.home : `/${cleanPath.split('/')[1]}`
   if (root === ROUTE_PATHS.continueWatching) return ROUTE_PATHS.home
-  if (root === ROUTE_PATHS.releases) return ROUTE_PATHS.comingUp
+  if (root === ROUTE_PATHS.comingUp) return ROUTE_PATHS.home
+  if (root === ROUTE_PATHS.releases) return ROUTE_PATHS.calendar
+  if (root === ROUTE_PATHS.calendar) return ROUTE_PATHS.calendar
   if (root === ROUTE_PATHS.add) return ROUTE_PATHS.search
   return root
 }

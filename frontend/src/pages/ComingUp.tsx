@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef, useMemo } from 'preact/hooks'
+import { route } from 'preact-router'
 import { apiFetch } from '../api'
+import { routeTo } from '../routes'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PosterTile, type PosterTileItem } from '../components/PosterTile'
-import { CalendarMonthGrid } from '../components/CalendarMonthGrid'
-import { CalendarWeekTimeline } from '../components/CalendarWeekTimeline'
-import { CalendarIcalModal } from '../components/CalendarIcalModal'
-import type { CalendarEvent, CalendarViewMode } from '../types'
+import type { UpcomingTitle } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useTranslation, type Locale, type TranslationKey } from '../i18n'
 import s from './ComingUp.module.css'
@@ -14,95 +13,95 @@ function airDateBadge(
   dateStr: string,
   locale: Locale,
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
-): { label: string; variant: 'amber' | 'teal' | 'muted' } {
+): { label: string; dateFormatted: string; variant: 'amber' | 'teal' | 'muted' } {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const air = new Date(dateStr)
+  const air = new Date(`${dateStr}T00:00:00`)
   air.setHours(0, 0, 0, 0)
   const diffDays = Math.round((air.getTime() - today.getTime()) / 86_400_000)
-  if (diffDays === 0) return { label: t('calendar.today'), variant: 'amber' }
-  if (diffDays <= 6) {
+  const dateFormatted = air.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' })
+
+  if (diffDays === 0) {
+    return { label: t('calendar.today'), dateFormatted, variant: 'amber' }
+  }
+  if (diffDays > 0 && diffDays <= 6) {
     return {
       label: air.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { weekday: 'short' }),
+      dateFormatted,
       variant: 'teal',
     }
   }
-  return { label: t('calendar.inDays', { days: diffDays }), variant: 'muted' }
+  if (diffDays > 6) {
+    return {
+      label: t('calendar.inDays', { days: diffDays }),
+      dateFormatted,
+      variant: 'muted',
+    }
+  }
+  return { label: dateFormatted, dateFormatted, variant: 'muted' }
 }
 
 function toTile(
-  ev: CalendarEvent,
+  item: UpcomingTitle,
   locale: Locale,
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
 ): PosterTileItem {
-  const { label, variant } = airDateBadge(ev.air_date, locale, t)
-  const epTag =
-    ev.season_number != null && ev.episode_number != null
-      ? `S${String(ev.season_number).padStart(2, '0')}E${String(ev.episode_number).padStart(2, '0')}`
-      : ev.next_air_episode || ''
+  const { label, dateFormatted, variant } = airDateBadge(item.next_air_date, locale, t)
+  const epTag = item.next_air_episode ? item.next_air_episode.trim() : ''
 
   return {
-    id: ev.title_id,
-    type: ev.type,
-    is_anime: ev.is_anime,
-    sonarr_id: ev.sonarr_id,
-    radarr_id: ev.radarr_id,
-    cover_url: ev.cover_url,
-    name: ev.title_name,
-    sublabel: epTag ? `${epTag} · ${label}` : label,
+    id: item.id,
+    type: item.type,
+    is_anime: item.is_anime,
+    sonarr_id: item.sonarr_id,
+    radarr_id: item.radarr_id,
+    cover_url: item.cover_url,
+    name: item.name,
+    sublabel: epTag ? `${epTag} · ${dateFormatted}` : dateFormatted,
+    badgeLabel: label,
     sublabelVariant: variant,
-    watch_providers: ev.watch_providers,
+    watch_providers: item.watch_providers,
   }
 }
 
 export function ComingUp(_props: { path?: string }) {
   const { t, locale } = useTranslation()
-  const [viewMode, setViewMode] = useState<CalendarViewMode>(() => {
-    const saved = localStorage.getItem('trackarr_calendar_view')
-    if (saved === 'week' || saved === 'list' || saved === 'month') {
-      return saved
-    }
-    return 'month'
-  })
-
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'anime'>('all')
-  const [events, setEvents] = useState<CalendarEvent[] | null>(null)
+  const [titles, setTitles] = useState<UpcomingTitle[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isIcalOpen, setIsIcalOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  useScrollRestoration('comingUp', events !== null && viewMode === 'list')
+  useScrollRestoration('comingUp', titles !== null)
 
-  const handleSetViewMode = (mode: CalendarViewMode) => {
-    setViewMode(mode)
-    localStorage.setItem('trackarr_calendar_view', mode)
-  }
-
-  useEffect(() => {
+  const loadTitles = () => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
+    setError(null)
 
-    // Fetch calendar events
-    apiFetch<CalendarEvent[]>('/calendar/events', { signal: ctrl.signal })
+    apiFetch<UpcomingTitle[]>('/titles/upcoming', { signal: ctrl.signal })
       .then((data) => {
-        if (!ctrl.signal.aborted) setEvents(data)
+        if (!ctrl.signal.aborted) setTitles(data ?? [])
       })
       .catch((err) => {
         if (ctrl.signal.aborted) return
-        setError(err instanceof Error ? err.message : t('calendar.loadError'))
+        setError(err instanceof Error ? err.message : t('upcoming.loadError'))
       })
-    return () => ctrl.abort()
-  }, [t])
+  }
 
-  const filteredEvents = useMemo(() => {
-    if (!events) return []
-    if (typeFilter === 'all') return events
-    if (typeFilter === 'anime') return events.filter((e) => e.is_anime)
-    if (typeFilter === 'movie') return events.filter((e) => e.type === 'movie')
-    if (typeFilter === 'series') return events.filter((e) => e.type === 'series' && !e.is_anime)
-    return events
-  }, [events, typeFilter])
+  useEffect(() => {
+    loadTitles()
+    return () => abortRef.current?.abort()
+  }, [])
+
+  const filteredTitles = useMemo(() => {
+    if (!titles) return []
+    if (typeFilter === 'all') return titles
+    if (typeFilter === 'anime') return titles.filter((item) => item.is_anime)
+    if (typeFilter === 'movie') return titles.filter((item) => item.type === 'movie')
+    if (typeFilter === 'series') return titles.filter((item) => item.type === 'series' && !item.is_anime)
+    return titles
+  }, [titles, typeFilter])
 
   return (
     <div className={s.page}>
@@ -116,12 +115,11 @@ export function ComingUp(_props: { path?: string }) {
             </svg>
           </button>
           <div className={s.headerText}>
-            <span className={s.label}>// {t('calendar.comingUp')}</span>
-            {events && (
+            <span className={s.label}>// {t('upcoming.title')}</span>
+            {titles && (
               <span className={s.count}>
-                {t('calendar.upcomingCount', {
-                  count: filteredEvents.length,
-                  plural: filteredEvents.length === 1 ? '' : 's',
+                {t('upcoming.airingSoon', {
+                  count: filteredTitles.length,
                 })}
               </span>
             )}
@@ -129,56 +127,28 @@ export function ComingUp(_props: { path?: string }) {
         </div>
 
         <button
-          onClick={() => setIsIcalOpen(true)}
-          className={s.icalBtn}
-          title={t('calendar.icalFeed')}
+          onClick={() => route(routeTo.calendar())}
+          className={s.calendarBtn}
+          title={t('upcoming.openCalendar')}
         >
-          <span>📅</span>
-          <span>{t('calendar.icalFeed')}</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <span>{t('upcoming.openCalendar')}</span>
         </button>
       </div>
 
-      {/* Control Bar: View selector + Category filters */}
+      {/* Control Bar: Category filters */}
       <div className={s.controlBar}>
-        <div className={s.viewSelector} role="tablist" aria-label={t('calendar.title')}>
-          <button
-            role="tab"
-            aria-selected={viewMode === 'month'}
-            className={`${s.viewTab}${viewMode === 'month' ? ` ${s.viewTabActive}` : ''}`}
-            onClick={() => handleSetViewMode('month')}
-          >
-            📅 {t('calendar.viewMonth')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={viewMode === 'week'}
-            className={`${s.viewTab}${viewMode === 'week' ? ` ${s.viewTabActive}` : ''}`}
-            onClick={() => handleSetViewMode('week')}
-          >
-            📆 {t('calendar.viewWeek')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={viewMode === 'list'}
-            className={`${s.viewTab}${viewMode === 'list' ? ` ${s.viewTabActive}` : ''}`}
-            onClick={() => handleSetViewMode('list')}
-          >
-            📋 {t('calendar.viewList')}
-          </button>
-        </div>
-
-        <div className={s.typeFilters} role="group" aria-label="Filters">
+        <div className={s.typeFilters} role="group" aria-label={t('search.filters')}>
           <button
             className={`${s.typeChip}${typeFilter === 'all' ? ` ${s.typeChipActive}` : ''}`}
             onClick={() => setTypeFilter('all')}
           >
             {t('franchise.all')}
-          </button>
-          <button
-            className={`${s.typeChip}${typeFilter === 'movie' ? ` ${s.typeChipActive}` : ''}`}
-            onClick={() => setTypeFilter('movie')}
-          >
-            🎬 {t('franchise.movies')}
           </button>
           <button
             className={`${s.typeChip}${typeFilter === 'series' ? ` ${s.typeChipActive}` : ''}`}
@@ -192,6 +162,12 @@ export function ComingUp(_props: { path?: string }) {
           >
             ⛩️ Anime
           </button>
+          <button
+            className={`${s.typeChip}${typeFilter === 'movie' ? ` ${s.typeChipActive}` : ''}`}
+            onClick={() => setTypeFilter('movie')}
+          >
+            🎬 {t('franchise.movies')}
+          </button>
         </div>
       </div>
 
@@ -199,7 +175,7 @@ export function ComingUp(_props: { path?: string }) {
 
       {/* Main Content Area */}
       <div className={s.contentArea}>
-        {events === null && (
+        {titles === null && (
           <div className={s.grid} aria-busy="true" aria-label={t('common.loading')}>
             {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className={s.skeletonTile} aria-hidden="true" />
@@ -207,30 +183,20 @@ export function ComingUp(_props: { path?: string }) {
           </div>
         )}
 
-        {events && filteredEvents.length === 0 && (
-          <div className={s.empty}>{t('calendar.emptyFiltered')}</div>
+        {titles && filteredTitles.length === 0 && (
+          <div className={s.empty}>
+            {titles.length === 0 ? t('upcoming.empty') : t('upcoming.emptyFiltered')}
+          </div>
         )}
 
-        {events && filteredEvents.length > 0 && (
-          <>
-            {viewMode === 'month' && <CalendarMonthGrid events={filteredEvents} />}
-            {viewMode === 'week' && <CalendarWeekTimeline events={filteredEvents} />}
-            {viewMode === 'list' && (
-              <div className={s.grid}>
-                {filteredEvents.map((ev) => (
-                  <PosterTile key={ev.id} item={toTile(ev, locale, t)} />
-                ))}
-              </div>
-            )}
-          </>
+        {titles && filteredTitles.length > 0 && (
+          <div className={s.grid}>
+            {filteredTitles.map((item) => (
+              <PosterTile key={item.id} item={toTile(item, locale, t)} />
+            ))}
+          </div>
         )}
       </div>
-
-      {/* iCal Subscription Modal */}
-      <CalendarIcalModal
-        isOpen={isIcalOpen}
-        onClose={() => setIsIcalOpen(false)}
-      />
     </div>
   )
 }

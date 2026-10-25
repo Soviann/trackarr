@@ -61,7 +61,7 @@
   letter-spacing: 0.04em;
 }
 
-.icalBtn {
+.calendarBtn {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
@@ -78,12 +78,16 @@
   white-space: nowrap;
 }
 
-.icalBtn:hover {
+.calendarBtn:hover {
   background: var(--accent-wash);
   border-color: var(--accent);
 }
 
-/* Control Bar: View selector & Type filters */
+.calendarBtn svg {
+  flex-shrink: 0;
+}
+
+/* Control Bar: Category filters */
 .controlBar {
   padding: 0 var(--space-lg) var(--space-md);
   display: flex;
@@ -91,35 +95,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-}
-
-.viewSelector {
-  display: inline-flex;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-button);
-  padding: 2px;
-  gap: 2px;
-}
-
-.viewTab {
-  padding: 5px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--ink-dim);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.viewTabActive {
-  background: var(--bg-elev2);
-  color: var(--accent);
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .typeFilters {
@@ -149,7 +124,7 @@
   font-weight: 600;
 }
 
-/* Content Views */
+/* Content */
 .contentArea {
   padding: 0 var(--space-lg);
 }
@@ -177,16 +152,6 @@
 }
 
 @media (max-width: 600px) {
-  .controlBar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .viewSelector {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    text-align: center;
-  }
   .grid {
     grid-template-columns: 1fr 1fr 1fr;
   }
