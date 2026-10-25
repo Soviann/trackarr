@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.28.0] — 2026-10-25
+
 ### Ajouté
 - **Page dédiée « À venir » (`/coming-up`) et séparation de la route Calendrier (`/calendar`) (`frontend/src/pages/ComingUp.tsx`, `frontend/src/pages/Calendar.tsx`, `frontend/src/routes.ts`)** :
   - Transformation de `/coming-up` en page dédiée aux sorties imminentes affichant l'intégralité des titres à venir directement depuis `/api/titles/upcoming`.
