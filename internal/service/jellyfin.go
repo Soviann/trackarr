@@ -60,6 +60,8 @@ func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.
 			return nil
 		}
 		// proceed with completion scrobble
+	case "userdatasaved":
+		return s.processUserDataSaved(ctx, jf)
 	default:
 		return nil
 	}
@@ -182,6 +184,75 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 	default:
 		return nil
 	}
+}
+
+func (s *JellyfinService) processUserDataSaved(ctx context.Context, jf *model.JellyfinPayload) error {
+	var titleType model.TitleType
+	switch strings.ToLower(strings.TrimSpace(jf.ItemType)) {
+	case "movie":
+		titleType = model.TitleTypeMovie
+	case "series":
+		titleType = model.TitleTypeSeries
+	default:
+		return nil
+	}
+
+	rating, ok := parseJellyfinRating(jf.Rating)
+	if !ok {
+		return nil
+	}
+
+	ids := ExternalIDs{
+		IMDB: strings.TrimSpace(jf.ProviderIMDB),
+		TMDB: int64(atoiSafe(jf.ProviderTMDB)),
+		TVDB: int64(atoiSafe(jf.ProviderTVDB)),
+	}
+	if ids.IMDB == "" && ids.TMDB == 0 && ids.TVDB == 0 {
+		return nil
+	}
+
+	var imdbPtr *string
+	if ids.IMDB != "" {
+		imdbPtr = &ids.IMDB
+	}
+	var tmdbPtr *int64
+	if ids.TMDB != 0 {
+		tmdbPtr = &ids.TMDB
+	}
+	var tvdbPtr *int64
+	if ids.TVDB != 0 {
+		tvdbPtr = &ids.TVDB
+	}
+
+	titles := repository.NewTitleRepository(s.db)
+	title, err := titles.FindByExternalID(imdbPtr, tmdbPtr, nil, nil, tvdbPtr, &titleType)
+	if err != nil {
+		s.log.Debug("title not found for Jellyfin rating webhook",
+			"itemType", jf.ItemType,
+			"name", jf.Name,
+			"imdb", ids.IMDB,
+			"tmdb", ids.TMDB,
+			"tvdb", ids.TVDB,
+			"err", err,
+		)
+		return nil
+	}
+
+	if title.MyRating != nil && *title.MyRating == rating {
+		s.log.Debug("skipping duplicate Jellyfin rating update", "titleID", title.ID, "rating", rating)
+		return nil
+	}
+
+	if s.titleSvc == nil {
+		return nil
+	}
+
+	if err := s.titleSvc.Update(ctx, title.ID, repository.TitleUpdate{MyRating: &rating}, title, nil, &rating, false); err != nil {
+		return fmt.Errorf("update title rating from Jellyfin: %w", err)
+	}
+
+	s.log.Info("updated rating from Jellyfin webhook", "titleID", title.ID, "title", title.PrimaryName(), "rating", rating)
+	return nil
 }
 
 func (s *JellyfinService) processMovie(ctx context.Context, jf *model.JellyfinPayload, year int, ids ExternalIDs, rawPayload string) error {

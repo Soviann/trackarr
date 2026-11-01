@@ -25,6 +25,7 @@ type jellyfinTestEnv struct {
 	titleRepo *repository.TitleRepository
 	eventRepo *repository.WatchEventRepository
 	hub       *service.PlaybackHubService
+	taskRepo  *repository.TaskRepository
 }
 
 func setupJellyfinTest(t *testing.T) *jellyfinTestEnv {
@@ -57,6 +58,7 @@ func setupJellyfinTest(t *testing.T) *jellyfinTestEnv {
 		titleRepo: titleRepo,
 		eventRepo: eventRepo,
 		hub:       playbackHub,
+		taskRepo:  taskRepo,
 	}
 }
 
@@ -483,4 +485,214 @@ func TestJellyfinPayload_RatingJSON(t *testing.T) {
 	assert.Equal(t, "UserDataSaved", payload.NotificationType)
 	assert.Equal(t, "9", payload.Rating)
 	assert.Equal(t, "27205", payload.ProviderTMDB)
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_MovieRating(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	tmdbID := int64(157336)
+	movieID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2014,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{
+		{Name: "Interstellar", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Movie",
+		Name:             "Interstellar",
+		Rating:           "9",
+		ProviderTMDB:     "157336",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 9, *title.MyRating)
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_SeriesRating(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	tvdbID := int64(81189)
+	seriesID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{
+		{Name: "Breaking Bad", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Series",
+		Name:             "Breaking Bad",
+		Rating:           "10",
+		ProviderTVDB:     "81189",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 10, *title.MyRating)
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_EpisodeIgnored(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	tvdbID := int64(81189)
+	seriesID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TVDBID:      &tvdbID,
+	}, []model.TitleName{
+		{Name: "Breaking Bad", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Episode",
+		Name:             "Pilot",
+		Rating:           "9",
+		ProviderTVDB:     "81189",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	assert.Nil(t, title.MyRating, "Episode rating must not update series rating")
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_RedundantRatingSkipped(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	tmdbID := int64(157336)
+	existingRating := 8
+	movieID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2014,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+		MyRating:    &existingRating,
+	}, []model.TitleName{
+		{Name: "Interstellar", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Movie",
+		Name:             "Interstellar",
+		Rating:           "8",
+		ProviderTMDB:     "157336",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 8, *title.MyRating)
+
+	// Ensure no tasks were enqueued
+	tasks, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_AnimeMovieEnqueuesAniListPush(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	anilistID := int64(199)
+	tmdbID := int64(129)
+	movieID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		IsAnime:     true,
+		Year:        2001,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		AniListID:   &anilistID,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{
+		{Name: "Spirited Away", Language: "en", IsPrimary: true},
+	})
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Movie",
+		Name:             "Spirited Away",
+		Rating:           "10",
+		ProviderTMDB:     "129",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 10, *title.MyRating)
+
+	tasks, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeAniListPushMovie, tasks[0].TaskType)
+}
+
+func TestProcessJellyfinWebhook_UserDataSaved_AnimeSeriesCompletedSeasonEnqueuesAniListPush(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	tmdbID := int64(209867)
+	seriesID := testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		IsAnime:     true,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{
+		{Name: "Frieren: Beyond Journey's End", Language: "en", IsPrimary: true},
+	})
+
+	season := testutil.UpsertSeason(t, env.db, seriesID, 1, 1)
+	testutil.MarkEpisodesWatched(t, env.db, season.ID, 1)
+	testutil.InsertSeasonExternalID(t, env.db, season.ID, repository.ProviderAniList, "154587")
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "UserDataSaved",
+		ItemType:         "Series",
+		Name:             "Frieren: Beyond Journey's End",
+		Rating:           "10",
+		ProviderTMDB:     "209867",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 10, *title.MyRating)
+
+	tasks, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeAniListPushSeason, tasks[0].TaskType)
 }
