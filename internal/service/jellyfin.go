@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -420,4 +421,28 @@ func resolveJellyfinPlayer(jf *model.JellyfinPayload) string {
 		return client
 	}
 	return "Jellyfin"
+}
+
+func parseJellyfinRating(raw string) (int, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0, false
+	}
+	val, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil || math.IsNaN(val) || math.IsInf(val, 0) || val <= 0 {
+		return 0, false
+	}
+	rounded := int(math.Round(val))
+	if rounded < 1 {
+		return 0, false
+	}
+	if rounded > 10 {
+		rounded = 10
+	}
+	return rounded, true
+}
+
+// ParseJellyfinRating parses a Jellyfin rating string into a 1–10 integer rating.
+func ParseJellyfinRating(raw string) (int, bool) {
+	return parseJellyfinRating(raw)
 }

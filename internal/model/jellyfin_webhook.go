@@ -13,6 +13,7 @@ type JellyfinPayload struct {
 	Name               string `json:"name"`              // movie title or episode name
 	Year               string `json:"year"`
 	PlayedToCompletion string `json:"played_to_completion"` // "True"/"False" — only on PlaybackStop
+	Rating             string `json:"rating"`
 
 	// External provider IDs. For an Episode these are the EPISODE's own IDs, not
 	// the series' — so episode matching relies on series_id + series_name, never

@@ -418,3 +418,69 @@ func TestProcessJellyfinWebhook_PlayAndStop(t *testing.T) {
 	require.NotNil(t, activeDefault)
 	assert.Equal(t, "Jellyfin", activeDefault.Player)
 }
+
+func TestParseJellyfinRating(t *testing.T) {
+	tests := []struct {
+		name     string
+		raw      string
+		expected int
+		expectOK bool
+	}{
+		// Nominal / standard cases
+		{"standard integer", "8", 8, true},
+		{"standard with whitespace", "  7  ", 7, true},
+		{"mid-scale integer", "5", 5, true},
+
+		// Decimal rounding cases
+		{"decimal round down", "8.4", 8, true},
+		{"decimal round half up", "8.5", 9, true},
+		{"decimal round up", "8.6", 9, true},
+		{"decimal below 1 rounding up", "0.5", 1, true},
+		{"decimal round down to 1", "1.4", 1, true},
+
+		// Boundary cases
+		{"boundary min valid", "1", 1, true},
+		{"boundary max valid", "10", 10, true},
+		{"boundary clamped decimal over 10", "10.4", 10, true},
+		{"boundary clamped integer over 10", "11", 10, true},
+		{"boundary high value clamped", "100", 10, true},
+		{"boundary zero", "0", 0, false},
+		{"boundary positive rounding to 0", "0.4", 0, false},
+		{"boundary negative zero", "-0.0", 0, false},
+
+		// Error / Invalid cases
+		{"empty string", "", 0, false},
+		{"whitespace only", "   ", 0, false},
+		{"non-numeric string", "foo", 0, false},
+		{"negative integer", "-2", 0, false},
+		{"negative float", "-0.1", 0, false},
+		{"nan string", "NaN", 0, false},
+		{"infinity string", "+Inf", 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := service.ParseJellyfinRating(tt.raw)
+			assert.Equal(t, tt.expectOK, ok, "ParseJellyfinRating(%q) ok mismatch", tt.raw)
+			assert.Equal(t, tt.expected, got, "ParseJellyfinRating(%q) value mismatch", tt.raw)
+		})
+	}
+}
+
+func TestJellyfinPayload_RatingJSON(t *testing.T) {
+	rawJSON := `{
+		"notification_type": "UserDataSaved",
+		"item_type": "Movie",
+		"name": "Inception",
+		"year": "2010",
+		"rating": "9",
+		"provider_tmdb": "27205"
+	}`
+
+	var payload model.JellyfinPayload
+	err := json.Unmarshal([]byte(rawJSON), &payload)
+	require.NoError(t, err)
+	assert.Equal(t, "UserDataSaved", payload.NotificationType)
+	assert.Equal(t, "9", payload.Rating)
+	assert.Equal(t, "27205", payload.ProviderTMDB)
+}
