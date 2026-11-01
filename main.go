@@ -14,7 +14,7 @@ var distFS embed.FS
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: trackarr <serve|import|backfill-accents|reset-password|version>")
+		fmt.Println("Usage: trackarr <serve|import|backfill-accents|reset-password|sync-jellyfin-ratings|version>")
 		os.Exit(1)
 	}
 
@@ -30,6 +30,8 @@ func main() {
 		err = cmd.BackfillAccents(os.Args[2:])
 	case "reset-password":
 		err = cmd.ResetPassword(os.Args[2:])
+	case "sync-jellyfin-ratings":
+		err = cmd.SyncJellyfinRatings(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Println(cmd.Version())
 	default:

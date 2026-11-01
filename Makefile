@@ -7,7 +7,7 @@ DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
 .PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build build-mcp migrate version
-.PHONY: import import-dry db-reset reset-import backfill-accents reset-password
+.PHONY: import import-dry db-reset reset-import backfill-accents reset-password jellyfin-sync-ratings
 
 .DEFAULT_GOAL := help
 help: ## Show this help
@@ -73,6 +73,9 @@ backfill-accents: ## Backfill poster dominant colors on titles (idempotent unles
 
 reset-password: ## Reset admin password (PASSWORD=..., USERNAME=admin optional)
 	$(EXEC) ./tmp/trackarr reset-password $(if $(PASSWORD),--password="$(PASSWORD)",) $(if $(USERNAME),--username="$(USERNAME)",)
+
+jellyfin-sync-ratings: ## Sync Trackarr user ratings to Jellyfin (supports DRY_RUN=1, JELLYFIN_URL=..., JELLYFIN_API_KEY=..., JELLYFIN_USER_ID=...)
+	$(EXEC) ./tmp/trackarr sync-jellyfin-ratings $(if $(filter 1 true,$(DRY_RUN)),-dry-run,) $(if $(JELLYFIN_URL),-jellyfin-url $(JELLYFIN_URL),) $(if $(JELLYFIN_API_KEY),-api-key $(JELLYFIN_API_KEY),) $(if $(JELLYFIN_USER_ID),-user-id $(JELLYFIN_USER_ID),)
 
 db-reset: ## Reset local SQLite database (delete + restart to re-migrate)
 	$(EXEC) sh -c 'rm -f $${DATA_DIR}/trackarr.db $${DATA_DIR}/trackarr.db-wal $${DATA_DIR}/trackarr.db-shm $${DATA_DIR}/plextracker.db $${DATA_DIR}/plextracker.db-wal $${DATA_DIR}/plextracker.db-shm'
