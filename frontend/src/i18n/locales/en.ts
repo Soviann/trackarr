@@ -981,7 +981,7 @@ export const en = {
     noneRecorded: 'None recorded',
     jellyfinHelpTitle: 'Webhook Configuration in Jellyfin',
     jellyfinHelpStep1: 'In your Jellyfin server, navigate to Dashboard → Plugins → Webhook → Add Generic Destination:',
-    jellyfinNotificationType: 'Notification Types: Playback Start, Playback Stop',
+    jellyfinNotificationType: 'Notification Types: Playback Start, Playback Stop, User Data Saved',
     jellyfinItemType: 'Item Type: Movies & Episodes',
     plexHelpTitle: 'Webhook Configuration in Plex',
     plexHelpStep1: 'In your Plex Media Server, navigate to Settings → Webhooks → Add Webhook:',
