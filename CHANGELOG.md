@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.29.0] — 2026-11-01
+
 ### Ajouté
 - **Ingestion des notes Jellyfin via webhook (`UserDataSaved`) & synchronisation sortante (`sync-jellyfin-ratings`)** :
   - Ingestion automatique des notes Jellyfin sur les événements webhook `UserDataSaved` avec coercition sur l'échelle entière 1–10 et déclenchement de la synchronisation AniList en arrière-plan.
