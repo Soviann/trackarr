@@ -54,9 +54,9 @@ func TestSyncJellyfinRatings_MissingRequiredFlags(t *testing.T) {
 			origURL := os.Getenv("JELLYFIN_URL")
 			origKey := os.Getenv("JELLYFIN_API_KEY")
 			origUser := os.Getenv("JELLYFIN_USER_ID")
-			os.Unsetenv("JELLYFIN_URL")
-			os.Unsetenv("JELLYFIN_API_KEY")
-			os.Unsetenv("JELLYFIN_USER_ID")
+			_ = os.Unsetenv("JELLYFIN_URL")
+			_ = os.Unsetenv("JELLYFIN_API_KEY")
+			_ = os.Unsetenv("JELLYFIN_USER_ID")
 			defer func() {
 				if origURL != "" {
 					_ = os.Setenv("JELLYFIN_URL", origURL)
@@ -244,8 +244,8 @@ func TestSyncJellyfinRatings_Entrypoint(t *testing.T) {
 func TestIsRegularFile(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "testfile-*")
 	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	assert.True(t, isRegularFile(tmpFile.Name()))
 	assert.False(t, isRegularFile(os.TempDir())) // Directory, not regular file

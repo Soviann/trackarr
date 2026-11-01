@@ -35,9 +35,9 @@ func runSyncJellyfinRatings(args []string, out io.Writer, overrideDB *sql.DB) er
 	dryRun := fs.Bool("dry-run", false, "Simulate rating synchronization without sending updates to Jellyfin")
 
 	fs.Usage = func() {
-		fmt.Fprintf(out, "Usage: trackarr sync-jellyfin-ratings [flags]\n\n")
-		fmt.Fprintf(out, "Syncs ratings from Trackarr into Jellyfin library items.\n\n")
-		fmt.Fprintf(out, "Flags:\n")
+		_, _ = fmt.Fprintf(out, "Usage: trackarr sync-jellyfin-ratings [flags]\n\n")
+		_, _ = fmt.Fprintf(out, "Syncs ratings from Trackarr into Jellyfin library items.\n\n")
+		_, _ = fmt.Fprintf(out, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
@@ -63,7 +63,7 @@ func runSyncJellyfinRatings(args []string, out io.Writer, overrideDB *sql.DB) er
 		if userVal == "" {
 			missing = append(missing, "-user-id (or $JELLYFIN_USER_ID)")
 		}
-		fmt.Fprintf(out, "Error: missing required parameter(s): %s\n\n", strings.Join(missing, ", "))
+		_, _ = fmt.Fprintf(out, "Error: missing required parameter(s): %s\n\n", strings.Join(missing, ", "))
 		fs.Usage()
 		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
 	}
@@ -116,12 +116,12 @@ func runSyncJellyfinRatings(args []string, out io.Writer, overrideDB *sql.DB) er
 	logger := slog.Default()
 	syncSvc := service.NewJellyfinSyncService(writeDB, cfg, logger)
 
-	fmt.Fprintf(out, "Starting Jellyfin rating synchronization...\n")
+	_, _ = fmt.Fprintf(out, "Starting Jellyfin rating synchronization...\n")
 	if *dryRun {
-		fmt.Fprintf(out, "Mode: DRY RUN (no modifications will be sent to Jellyfin)\n")
+		_, _ = fmt.Fprintf(out, "Mode: DRY RUN (no modifications will be sent to Jellyfin)\n")
 	}
-	fmt.Fprintf(out, "Jellyfin URL: %s\n", urlVal)
-	fmt.Fprintf(out, "User ID:      %s\n\n", userVal)
+	_, _ = fmt.Fprintf(out, "Jellyfin URL: %s\n", urlVal)
+	_, _ = fmt.Fprintf(out, "User ID:      %s\n\n", userVal)
 
 	ctx := context.Background()
 	summary, err := syncSvc.SyncRatings(ctx)
@@ -134,20 +134,20 @@ func runSyncJellyfinRatings(args []string, out io.Writer, overrideDB *sql.DB) er
 }
 
 func printSummaryReport(w io.Writer, s service.JellyfinSyncSummary, dryRun bool) {
-	fmt.Fprintf(w, "\n========================================\n")
-	fmt.Fprintf(w, "      Jellyfin Rating Sync Summary      \n")
-	fmt.Fprintf(w, "========================================\n")
+	_, _ = fmt.Fprintf(w, "\n========================================\n")
+	_, _ = fmt.Fprintf(w, "      Jellyfin Rating Sync Summary      \n")
+	_, _ = fmt.Fprintf(w, "========================================\n")
 	if dryRun {
-		fmt.Fprintf(w, "  Mode:    DRY RUN (no changes pushed)\n")
+		_, _ = fmt.Fprintf(w, "  Mode:    DRY RUN (no changes pushed)\n")
 	} else {
-		fmt.Fprintf(w, "  Mode:    LIVE\n")
+		_, _ = fmt.Fprintf(w, "  Mode:    LIVE\n")
 	}
-	fmt.Fprintf(w, "  Matched: %d\n", s.Matched)
-	fmt.Fprintf(w, "  Updated: %d\n", s.Updated)
-	fmt.Fprintf(w, "  Skipped: %d\n", s.Skipped)
-	fmt.Fprintf(w, "  Missing: %d\n", s.Missing)
-	fmt.Fprintf(w, "  Errors:  %d\n", s.Errors)
-	fmt.Fprintf(w, "========================================\n")
+	_, _ = fmt.Fprintf(w, "  Matched: %d\n", s.Matched)
+	_, _ = fmt.Fprintf(w, "  Updated: %d\n", s.Updated)
+	_, _ = fmt.Fprintf(w, "  Skipped: %d\n", s.Skipped)
+	_, _ = fmt.Fprintf(w, "  Missing: %d\n", s.Missing)
+	_, _ = fmt.Fprintf(w, "  Errors:  %d\n", s.Errors)
+	_, _ = fmt.Fprintf(w, "========================================\n")
 }
 
 func isRegularFile(path string) bool {

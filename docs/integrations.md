@@ -46,7 +46,7 @@ When you rate a movie or series in Jellyfin:
 1. Jellyfin sends a `UserDataSaved` webhook notification to Trackarr containing the item metadata and `"rating": "{{Rating}}"`.
 2. **Scale Coercion**: Trackarr parses decimal or integer strings (e.g. `"8.0"`, `"7"`) and normalizes/clamps them to an integer score on the 1–10 scale (`math.Round`). If the rating is 0 or empty, it is safely ignored.
 3. **Library Matching**: The item is matched against your Trackarr library by external provider IDs (`provider_tmdb`, `provider_tvdb`, `provider_imdb`), with title/year fallback for movies.
-4. **Transactional Update**: The rating is recorded in SQLite via `TitleWriter.UpdateRating`.
+4. **Transactional Update**: The rating is recorded in SQLite via `TitleService.Update` / `TitleWriter.Update`.
 5. **AniList Sync**: If the rated media is an Anime with a linked AniList ID and is completed or dropped, Trackarr asynchronously enqueues a rating push to AniList.
 
 ### Outbound Jellyfin Rating Sync (`sync-jellyfin-ratings`):
