@@ -2273,3 +2273,62 @@ func TestListContinueWatching_SagaSmartNextUp(t *testing.T) {
 		assert.Empty(t, items)
 	})
 }
+
+func TestTitleRepository_ListRatedTitles(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	t.Run("empty repository returns empty slice", func(t *testing.T) {
+		titles, err := repo.ListRatedTitles(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, titles)
+	})
+
+	t.Run("returns only titles with positive rating", func(t *testing.T) {
+		rating8 := 8
+		rating4 := 4
+
+		id1 := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2021,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			MyRating:    &rating8,
+			TMDBID:      ptr(int64(101)),
+			IMDBID:      ptr("tt101"),
+		}, []model.TitleName{{Name: "Rated Movie", Language: "en", IsPrimary: true}})
+
+		id2 := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2022,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+			MyRating:    &rating4,
+			TVDBID:      ptr(int64(202)),
+		}, []model.TitleName{{Name: "Rated Series", Language: "en", IsPrimary: true}})
+
+		// Unrated title (nil rating)
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Unrated Movie", Language: "en", IsPrimary: true}})
+
+		titles, err := repo.ListRatedTitles(ctx)
+		require.NoError(t, err)
+		require.Len(t, titles, 2)
+
+		assert.Equal(t, id1, titles[0].ID)
+		assert.Equal(t, "Rated Movie", titles[0].PrimaryName())
+		assert.Equal(t, &rating8, titles[0].MyRating)
+		assert.Equal(t, ptr(int64(101)), titles[0].TMDBID)
+		assert.Equal(t, ptr("tt101"), titles[0].IMDBID)
+
+		assert.Equal(t, id2, titles[1].ID)
+		assert.Equal(t, "Rated Series", titles[1].PrimaryName())
+		assert.Equal(t, &rating4, titles[1].MyRating)
+		assert.Equal(t, ptr(int64(202)), titles[1].TVDBID)
+	})
+}

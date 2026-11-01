@@ -444,6 +444,88 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	return r.loadTitleRelations(titles)
 }
 
+// ListRatedTitles retrieves all titles where my_rating IS NOT NULL AND my_rating > 0,
+// loading primary title name and external IDs.
+func (r *TitleRepository) ListRatedTitles(ctx context.Context) ([]model.Title, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, my_rating, status
+		FROM titles
+		WHERE my_rating IS NOT NULL AND my_rating > 0
+		ORDER BY id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("list rated titles: %w", err)
+	}
+	defer rows.Close()
+
+	var titles []model.Title
+	for rows.Next() {
+		var t model.Title
+		if err := rows.Scan(
+			&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL,
+			&t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
+			&t.MyRating, &t.Status,
+		); err != nil {
+			return nil, fmt.Errorf("scan rated title: %w", err)
+		}
+		titles = append(titles, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rated titles: %w", err)
+	}
+	rows.Close()
+
+	if len(titles) == 0 {
+		return titles, nil
+	}
+
+	titleMap := make(map[int64]*model.Title, len(titles))
+	ids := make([]int64, len(titles))
+	for i := range titles {
+		ids[i] = titles[i].ID
+		titleMap[titles[i].ID] = &titles[i]
+	}
+
+	const chunkSize = 500
+	for i := 0; i < len(ids); i += chunkSize {
+		end := i + chunkSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunk := ids[i:end]
+
+		placeholders := make([]string, len(chunk))
+		args := make([]any, len(chunk))
+		for j, id := range chunk {
+			placeholders[j] = "?"
+			args[j] = id
+		}
+
+		inClause := strings.Join(placeholders, ",")
+		nameRows, err := r.db.QueryContext(ctx, `SELECT id, title_id, name, language, is_primary FROM title_names WHERE title_id IN (`+inClause+`) ORDER BY title_id, is_primary DESC`, args...)
+		if err != nil {
+			return nil, fmt.Errorf("get title names bulk: %w", err)
+		}
+
+		for nameRows.Next() {
+			var n model.TitleName
+			if err := nameRows.Scan(&n.ID, &n.TitleID, &n.Name, &n.Language, &n.IsPrimary); err != nil {
+				nameRows.Close()
+				return nil, fmt.Errorf("scan title name: %w", err)
+			}
+			if t, ok := titleMap[n.TitleID]; ok {
+				t.Names = append(t.Names, n)
+			}
+		}
+		if err := nameRows.Err(); err != nil {
+			nameRows.Close()
+			return nil, fmt.Errorf("iterate title names: %w", err)
+		}
+		nameRows.Close()
+	}
+
+	return titles, nil
+}
+
 // FindByRadarrID looks up a title by its linked Radarr ID.
 func (r *TitleRepository) FindByRadarrID(radarrID int64) (*model.Title, error) {
 	var id int64
