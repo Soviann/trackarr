@@ -6,7 +6,7 @@
 
 ## 1. Core Architecture
 - **Stack**: Go 1.24, SQLite 3 (WAL mode, FTS5), `chi/v5`, Preact 11, TypeScript (strict), Vite.
-- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `version`); `cmd/trackarr-mcp/` ➔ Standalone native Go MCP server (`make build-mcp`).
+- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `sync-jellyfin-ratings`, `version`); `cmd/trackarr-mcp/` ➔ Standalone native Go MCP server (`make build-mcp`).
 - **HTTP Server**: `internal/router/router.go` wires middleware (CORS, Auth, Compression, Recovery, Rate Limiting) and routes.
 - **Dependency Injection**:
   - `internal/database`: `DBTX` interface (`*sql.DB` or `*sql.Tx`), helper `WithTx` / `WithTxContext`.
@@ -129,6 +129,9 @@
     - Plex `media.play` / `media.resume` and Jellyfin `PlaybackStart` resolve existing library titles in read-only mode and register active sessions in RAM.
     - `media.stop` and `PlaybackStop` clear active sessions. `GET /api/playback/active` returns 204 No Content when idle or 200 OK with session payload.
     - Mobile frontend surfaces a pulsing `LivePlaybackIndicator` above navbar, opening `LivePlaybackDrawer` with quick `+1 Marquer vu` action.
+28. **Jellyfin Rating Ingestion & Outbound Sync**:
+    - Jellyfin `UserDataSaved` webhooks deliver rating events (float/int coerced to 1–10 integer score via `math.Round`). Matched against local library by external IDs (TMDB, TVDB, IMDb), persisted via `TitleWriter.UpdateRating`, and asynchronously enqueues AniList rating push for anime.
+    - Outbound CLI tool `sync-jellyfin-ratings` (`make jellyfin-sync-ratings`) pushes existing Trackarr ratings to Jellyfin REST API (`GET /Users/{userId}/Items` and `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}`) with rate throttling and dry-run support.
 
 ---
 
@@ -222,7 +225,7 @@
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
-- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble) & `PlaybackStart` (live companion).
+- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble), `PlaybackStart` (live companion), and `UserDataSaved` (inbound rating ingestion with 1–10 scale coercion and AniList sync trigger).
 - `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` & `media.play` / `media.resume` / `media.stop`.
 - `GET /api/playback/active` : Active media playback session (204 No Content if idle, 200 OK with session payload).
 - `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.
@@ -242,5 +245,5 @@
 ---
 
 ## 5. Development Workflow
-- Execute commands via `Makefile`: `make up`, `make down`, `make test`, `make test-front`, `make lint`, `make lint-front`, `make build`, `make build-mcp`.
+- Execute commands via `Makefile`: `make up`, `make down`, `make test`, `make test-front`, `make lint`, `make lint-front`, `make build`, `make build-mcp`, `make jellyfin-sync-ratings`.
 - Live rebuild on frontend changes: Run `make test-front` then `touch main.go`.

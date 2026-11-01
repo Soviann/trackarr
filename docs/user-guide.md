@@ -154,9 +154,11 @@ Opening a title displays its rich details:
 - **Next Episode Action, Binge Estimator & Continue Saga**: A prominent call-to-action hero card right under the title identity allowing 1-click progression (`▶ Marquer S02E06 comme vu`) without unfolding season lists. Includes real-time binge estimation (*« ⏱️ Reste ~3h 15m (4 épisodes) »* or total duration for Plan to Watch titles). When a series is completed or caught up, if an uncompleted prequel, sequel, or chronological saga entry exists, the hero transitions into a **Continue Saga** (*« Poursuivre la saga »*) card displaying the next movie or series with direct navigation or 1-tap addition (`+ À voir`). Hidden when series is caught up with no saga relations or when episode is TBA.
 - **Personal Notes (Notes personnelles)**: A private notes card on every title with debounced auto-save (500ms) to jot down reminders, personal reviews, quotes, or recommendations.
 - **Streaming Badges**: Displays multi-provider streaming badges (Netflix, Amazon Prime Video, Disney+, Apple TV+, Max, Canal+, Crunchyroll, Paramount+, ADN) when the title is available on active subscription platforms configured in *Admin ➔ System Settings*.
-- **Conditional Direct Rating Card**:
+- **Conditional Direct Rating Card & Jellyfin Sync**:
   - **Unrated Title**: A responsive 1-tap touch strip of buttons (`1` to `10`) is displayed directly on the rating card for instant scoring without opening a drawer, automatically syncing with AniList in the background.
   - **Rated Title**: Displays a clean, prominent rating (`MY RATING: 8/10`) alongside community ratings (TMDB, AniList) and an *« Edit »* button to open the rating bottom sheet for modifications or IMDb sync.
+  - **Jellyfin Rating Ingestion**: When rating a movie or series in Jellyfin, a `UserDataSaved` webhook notification automatically syncs your rating to Trackarr (normalized to the 1–10 scale) and triggers downstream AniList sync.
+  - **Initial Jellyfin Rating Sync**: Run `make jellyfin-sync-ratings` (or CLI `trackarr sync-jellyfin-ratings`) to cross-reference and push all existing Trackarr ratings to your Jellyfin user profile.
 - **Cast & Crew**: List of actors and directors with their roles. Tapping a name opens their **Person** view, listing all matching titles present in your Trackarr library.
 - **Media Management & History**: Add and last watched dates, cumulative watch time, original title, and grouped watch history sessions (e.g. `S1 E1–4 · Apr 12`).
 - **Studio Bento Seasons & Episodes (`UX-2`)**: On widescreen monitors (≥ 1024px), seasons and episodes are structured as a 2-column Studio Bento Box: the left column provides a dedicated season rail with completion gauges, total counts, and the batch toggle, while the right column hosts an internally scrollable episode list (max-height 520px). This eliminates asymmetric vertical scrolling on long multi-season series and is paired with keyboard shortcuts (`W` for next episode, `1..9` for seasons). On touch screens, horizontal thumb swipe on episode rows (`UX-3`) instantly toggles watch state with haptic feedback.
@@ -284,3 +286,7 @@ When AniList OAuth is connected:
 
 ### Can duplicate scrobbles occur if Jellyfin and Plex send simultaneous webhooks?
 > **Answer**: No. Trackarr computes an event fingerprint (media ID + title + timestamp window) and discards duplicate scrobble events received within a short threshold.
+
+### How do Jellyfin ratings sync with Trackarr?
+> **Answer**: Inbound ratings from Jellyfin are captured via the Jellyfin Webhook plugin configured with the `UserDataSaved` notification type and `"rating": "{{Rating}}"` in its JSON payload. Scores are clamped and normalized to Trackarr's 1–10 scale. To populate your Jellyfin library with ratings already saved in Trackarr, run `make jellyfin-sync-ratings` (supports dry-run mode via `DRY_RUN=1`).
+

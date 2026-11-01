@@ -6,6 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Ingestion des notes Jellyfin via webhook (`UserDataSaved`) & synchronisation sortante (`sync-jellyfin-ratings`)** :
+  - Ingestion automatique des notes Jellyfin sur les événements webhook `UserDataSaved` avec coercition sur l'échelle entière 1–10 et déclenchement de la synchronisation AniList en arrière-plan.
+  - Outil CLI `sync-jellyfin-ratings` et cible `make jellyfin-sync-ratings` pour propager les notes Trackarr vers l'API REST de Jellyfin avec support du mode simulation (`--dry-run` / `DRY_RUN=1`).
+
 ### Documentation & Maintenance
 - **Audit de la documentation & synchronisation (`docs/INDEX.md`, `docs/maintenance.md`, `docs/llm.md`, `docs/patterns.md`)** :
   - Mise à jour des références de navigation et des routes : séparation de `/calendar` (calendrier multi-vues) et `/coming-up` (sorties imminentes).

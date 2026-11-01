@@ -37,11 +37,13 @@
 | `import` | `cmd/import.go` | Simkl backup import (`--dry-run` available). |
 | `backfill-accents` | `cmd/backfill_accents.go` | Extract and persist dominant cover accent colors (`--force` flag). |
 | `reset-password` | `cmd/reset_password.go` | Reset admin password and output a fresh emergency recovery key (`--password`, `--username`). |
+| `sync-jellyfin-ratings` | `cmd/sync_jellyfin_ratings.go` | Outbound batch rating synchronization from Trackarr to Jellyfin library (`--dry-run`). |
 | `trackarr-mcp` | `cmd/trackarr-mcp/` | Standalone native Go Model Context Protocol (MCP) server for AI agents. |
 | `make version` | `Makefile` | Print Trackarr version (`Trackarr vX.Y.Z`). |
 | `make build` | `Makefile` | Build standalone production binary with dynamic `-ldflags` (`./tmp/trackarr`). |
 | `make build-mcp` | `Makefile` | Build standalone MCP server binary with dynamic `-ldflags` (`./tmp/trackarr-mcp`). |
 | `make reset-password` | `Makefile` | CLI wrapper to reset admin password locally (`PASSWORD=...`, `USERNAME=...`). |
+| `make jellyfin-sync-ratings` | `Makefile` | CLI wrapper to sync ratings to Jellyfin (`DRY_RUN=1`, `JELLYFIN_URL=...`). |
 | `make reset-import` | `Makefile` | Resets local DB and imports a Simkl backup (`BACKUP_FILE=`). |
 
 ### Schema & Models (`internal/model/`)
@@ -66,7 +68,7 @@
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List`, `ListAll`, `ListRated`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -127,7 +129,7 @@
 | POST | `/api/admin/api-keys` | `adminAPIKeys.Create` | Create a new labeled API key with granular scopes |
 | POST | `/api/admin/api-keys/{id}/revoke` | `adminAPIKeys.Revoke` | Revoke active API key |
 | DELETE | `/api/admin/api-keys/{id}` | `adminAPIKeys.Delete` | Permanently remove API key |
-| POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles from Jellyfin |
+| POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles and UserDataSaved ratings from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
 | POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/import events from Radarr & Sonarr, mark media downloaded, and push alerts |
 | GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |

@@ -89,6 +89,9 @@ docker exec -t trackarr trackarr version
 
 # Historical Backup Import (Simkl)
 docker exec -t trackarr trackarr import --dry-run /path/to/backup.zip
+
+# Outbound Jellyfin Rating Sync (with dry run)
+docker exec -t trackarr trackarr sync-jellyfin-ratings --dry-run
 ```
 
 ---
