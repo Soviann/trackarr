@@ -7,7 +7,7 @@ import { haptic, HAPTIC_SHORT } from '../utils/haptic'
 import { formatWatchtimeShort, getCoverUrl } from '../utils'
 import type { Title, ContinueWatchingTitle, UpcomingTitle, StatsResponse, Settings } from '../types'
 import { colors } from '../theme'
-import { useTitleStore } from '../store'
+import { useTitleStore, hasActiveFilters } from '../store'
 import { routeTo } from '../routes'
 import { useTranslation } from '../i18n'
 import { TitleCard } from '../components/TitleCard'
@@ -154,19 +154,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
   const loadMore = useTitleStore(s => s.loadMore)
   const invalidate = useTitleStore(s => s.invalidate)
 
-  const hasActiveFilters = Boolean(
-    filter.status ||
-    filter.type ||
-    filter.is_anime ||
-    filter.series_status ||
-    filter.decade ||
-    filter.release_from ||
-    filter.release_to ||
-    (filter.genres && filter.genres.length > 0) ||
-    (filter.origin_country && filter.origin_country.length > 0) ||
-    filter.my_rating_min ||
-    filter.tmdb_rating_min
-  )
+  const hasActive = hasActiveFilters(filter)
 
   const handleResetFilters = useCallback(() => {
     useTitleStore.setState({
@@ -460,7 +448,7 @@ export function Library({ path: _path, filterOpen = false }: { path?: string; fi
 
       {!loading && titles.length === 0 && (
         <EmptyOrOnboarding
-          hasActiveFilters={hasActiveFilters}
+          hasActiveFilters={hasActive}
           onResetFilters={handleResetFilters}
         />
       )}

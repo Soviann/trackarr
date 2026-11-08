@@ -36,7 +36,8 @@ const mockSearchState = {
   setSearchOnTMDB: vi.fn(),
 }
 
-vi.mock('./store', () => {
+vi.mock('./store', async () => {
+  const actual = await vi.importActual<typeof import('./store')>('./store')
   const useTitleStore = (sel?: (s: typeof mockTitleState) => unknown) =>
     sel ? sel(mockTitleState) : mockTitleState
   useTitleStore.getState = () => mockTitleState
@@ -47,7 +48,7 @@ vi.mock('./store', () => {
   useSearchStore.getState = () => mockSearchState
   useSearchStore.setState = vi.fn()
 
-  return { useTitleStore, useSearchStore }
+  return { ...actual, useTitleStore, useSearchStore }
 })
 
 vi.mock('./api', () => ({

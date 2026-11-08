@@ -244,7 +244,7 @@
 
 ### State Management (`frontend/src/store.ts`)
 - `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and session-persistent filters (`status`, `type`, `is_anime`, `series_status`, `decade`, `release_from`, `release_to`, `genres`, `origin_country`, `my_rating_min`, `tmdb_rating_min`). Filters persist across title details and navigation, resetting only on explicit user action or reload.
-- `useSearchStore`: Search query state, debounce, and TMDB toggle. Preserved across title/person detail drill-down navigation and restored on browser back button; automatically reset alongside filter drawer filters when exiting search to main sections, entering fresh search, or exiting merge mode.
+- `useSearchStore`: Search query state, text and filter-only search execution with `hasActiveFilters` helper, debounce, and TMDB toggle. Preserved across title/person detail drill-down navigation and restored on browser back button; automatically reset alongside filter drawer filters when exiting search to main sections, entering fresh search, or exiting merge mode.
 
 ### Components Map (`frontend/src/components/`)
 

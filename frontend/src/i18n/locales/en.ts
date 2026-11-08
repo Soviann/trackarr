@@ -190,6 +190,8 @@ export const en = {
     emptyMergeSub: 'Merging "{name}"',
     resultCount: '{count} / {total} results for "{query}"',
     resultCountSingle: '1 result for "{query}"',
+    resultCountNoQuery: '{count} / {total} results',
+    resultCountNoQuerySingle: '1 result',
     noResults: 'No results for "{query}"',
     searching: 'Searching...',
     loadMore: 'Load more',

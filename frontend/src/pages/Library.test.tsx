@@ -59,10 +59,14 @@ const mockStoreState = {
   sort: { field: 'updated_at', order: 'desc' },
 }
 
-vi.mock('../store', () => ({
-  useTitleStore: (sel?: (s: typeof mockStoreState) => unknown) =>
-    sel ? sel(mockStoreState) : mockStoreState,
-}))
+vi.mock('../store', async () => {
+  const actual = await vi.importActual<typeof import('../store')>('../store')
+  return {
+    ...actual,
+    useTitleStore: (sel?: (s: typeof mockStoreState) => unknown) =>
+      sel ? sel(mockStoreState) : mockStoreState,
+  }
+})
 
 vi.mock('../api', () => ({
   apiFetch: vi.fn().mockResolvedValue([]),

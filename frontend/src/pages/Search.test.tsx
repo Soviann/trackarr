@@ -52,7 +52,8 @@ const mockTitleState = {
   invalidate: vi.fn(),
 }
 
-vi.mock('../store', () => {
+vi.mock('../store', async () => {
+  const actual = await vi.importActual<typeof import('../store')>('../store')
   const useSearchStore = Object.assign(
     (selector: (s: typeof mockSearchState) => unknown) => selector(mockSearchState),
     {
@@ -67,12 +68,26 @@ vi.mock('../store', () => {
     }
   )
 
-  return { useSearchStore, useTitleStore }
+  return {
+    ...actual,
+    useSearchStore,
+    useTitleStore,
+  }
 })
 
 describe('Search Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSearchState.query = ''
+    mockSearchState.searchOnTMDB = false
+    mockSearchState.discoveryResults = []
+    mockSearchState.results = []
+    mockSearchState.total = 0
+    mockSearchState.hasMore = false
+    mockSearchState.loading = false
+    mockSearchState.loadingMore = false
+    mockSearchState.error = null
+    mockTitleState.filter = {}
     window.history.pushState({}, '', '/search')
   })
 
@@ -366,5 +381,66 @@ describe('Search Page', () => {
 
     const stopPropagationSpy = vi.fn()
     fireEvent.click(tmdbBadge, { stopPropagation: stopPropagationSpy })
+  })
+
+  it('renders initial empty state when query is empty and no filters are active', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = ''
+    mockTitleState.filter = {}
+    mockSearchState.results = []
+    mockSearchState.total = 0
+
+    const { getByText } = render(<Search />)
+
+    expect(getByText('Search across your entire library')).toBeDefined()
+  })
+
+  it('renders results and count without query when searching by filter alone', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = ''
+    mockTitleState.filter = { genres: ['Action'] }
+    mockSearchState.results = [
+      {
+        id: 99,
+        type: 'movie',
+        is_anime: false,
+        year: 2024,
+        status: 'watching',
+        names: [{ name: 'Action Hero', language: 'en', is_primary: true }],
+      } as unknown as Title,
+    ]
+    mockSearchState.total = 1
+
+    const { container, queryByText } = render(<Search />)
+
+    // Empty state should NOT be rendered
+    expect(queryByText('Search across your entire library')).toBeNull()
+
+    // Result card is rendered
+    expect(container.querySelector('a.card[href="/title/99"]')).not.toBeNull()
+
+    // Result count formatted without query
+    const resultCountText = container.querySelector('.resultCountText')
+    expect(resultCountText?.textContent).toBe('1 result')
+  })
+
+  it('renders filter empty state message when filter alone yields no results', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = ''
+    mockTitleState.filter = { type: 'movie', is_anime: 'true' }
+    mockSearchState.results = []
+    mockSearchState.total = 0
+    mockSearchState.loading = false
+
+    const { container, getByText, queryByText } = render(<Search />)
+
+    // Initial empty state should NOT be shown
+    expect(queryByText('Search across your entire library')).toBeNull()
+
+    // No results message for filters is displayed
+    expect(getByText('No media matches your active filters')).toBeDefined()
+
+    // TMDB discover prompt is NOT shown when no query string was typed
+    expect(container.querySelector('.discoverPromptBox')).toBeNull()
   })
 })

@@ -33,7 +33,7 @@ function saveSort(sort: SortState) {
   localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort))
 }
 
-type TitleFilter = {
+export type TitleFilter = {
   status?: string
   type?: string
   is_anime?: string
@@ -49,6 +49,24 @@ type TitleFilter = {
   origin_country?: string[]
   my_rating_min?: string
   tmdb_rating_min?: string
+}
+
+export function hasActiveFilters(filter?: TitleFilter): boolean {
+  if (!filter) return false
+  return Boolean(
+    filter.status ||
+    filter.type ||
+    filter.is_anime ||
+    filter.match_status ||
+    filter.series_status ||
+    filter.decade ||
+    filter.release_from ||
+    filter.release_to ||
+    (filter.genres && filter.genres.length > 0) ||
+    (filter.origin_country && filter.origin_country.length > 0) ||
+    filter.my_rating_min ||
+    filter.tmdb_rating_min
+  )
 }
 
 // Serializes the filter fields shared by library + search into params.
@@ -209,8 +227,8 @@ export interface SearchState {
   setSearchOnTMDB: (v: boolean) => void
   setDiscoveryResults: (items: DiscoveryItem[] | ((prev: DiscoveryItem[]) => DiscoveryItem[])) => void
   setLoadingDiscovery: (loading: boolean) => void
-  search: (filter: TitleState['filter']) => Promise<void>
-  loadMore: (filter: TitleState['filter']) => Promise<void>
+  search: (filter?: TitleState['filter']) => Promise<void>
+  loadMore: (filter?: TitleState['filter']) => Promise<void>
   clear: () => void
 }
 
@@ -235,10 +253,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     })),
   setLoadingDiscovery: (loadingDiscovery) => set({ loadingDiscovery }),
 
-  search: async (filter) => {
+  search: async (filter = {}) => {
     const { query, results } = get()
     const trimmed = query.trim()
-    if (!trimmed) {
+    const hasFilters = hasActiveFilters(filter)
+    if (!trimmed && !hasFilters) {
       set({ results: [], total: 0, hasMore: false, error: null, loading: false })
       return
     }
@@ -253,7 +272,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
     try {
       const params = new URLSearchParams()
-      params.set('search', trimmed)
+      if (trimmed) {
+        params.set('search', trimmed)
+      }
       if (filter.status) params.set('status', filter.status)
       appendFilterParams(params, filter)
 
@@ -276,17 +297,20 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  loadMore: async (filter) => {
+  loadMore: async (filter = {}) => {
     const { query, results, hasMore, loadingMore, _searchGen } = get()
     const trimmed = query.trim()
-    if (!trimmed || !hasMore || loadingMore) return
+    const hasFilters = hasActiveFilters(filter)
+    if ((!trimmed && !hasFilters) || !hasMore || loadingMore) return
 
     const offset = results.length
     const gen = _searchGen
     set({ loadingMore: true })
     try {
       const params = new URLSearchParams()
-      params.set('search', trimmed)
+      if (trimmed) {
+        params.set('search', trimmed)
+      }
       if (filter.status) params.set('status', filter.status)
       appendFilterParams(params, filter)
 

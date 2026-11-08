@@ -4,7 +4,7 @@ import { route } from 'preact-router'
 import clsx from 'clsx'
 import type { Title, TitleStatus, DiscoveryItem } from '../types'
 import { useTranslation } from '../i18n'
-import { useTitleStore, useSearchStore } from '../store'
+import { useTitleStore, useSearchStore, hasActiveFilters } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
 import { routeTo } from '../routes'
@@ -80,6 +80,10 @@ export function Search({
   const loadingDiscovery = useSearchStore(s => s.loadingDiscovery) ?? false
   const setLoadingDiscovery = useSearchStore(s => s.setLoadingDiscovery) ?? (() => {})
 
+  const hasActive = hasActiveFilters(filter)
+  const hasQuery = Boolean(query.trim())
+  const isSearching = hasQuery || hasActive
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     try {
       const stored = localStorage.getItem('trackarr_search_view_mode')
@@ -147,6 +151,7 @@ export function Search({
     filter.status,
     filter.type,
     filter.is_anime,
+    filter.match_status,
     filter.series_status,
     filter.decade,
     filter.release_from,
@@ -395,7 +400,7 @@ export function Search({
 
         {/* Results area */}
         <div className={s.results}>
-          {!query.trim() && (
+          {!isSearching && (
             <div className={s.emptyState}>
               <div className={s.emptyInner}>
                 <div className={s.emptyIcon}>
@@ -415,15 +420,19 @@ export function Search({
             </div>
           )}
 
-          {query.trim() && error && <ErrorBanner message={error} onRetry={retry} />}
+          {isSearching && error && <ErrorBanner message={error} onRetry={retry} />}
 
           {results.length > 0 && (
             <>
               <div className={s.resultCount}>
                 <span className={s.resultCountText}>
                   {total === 1
-                    ? t('search.resultCountSingle', { query: query.trim() })
-                    : t('search.resultCount', { count: results.length, total, query: query.trim() })}
+                    ? (hasQuery
+                        ? t('search.resultCountSingle', { query: query.trim() })
+                        : t('search.resultCountNoQuerySingle'))
+                    : (hasQuery
+                        ? t('search.resultCount', { count: results.length, total, query: query.trim() })
+                        : t('search.resultCountNoQuery', { count: results.length, total }))}
                 </span>
               </div>
 
@@ -511,12 +520,14 @@ export function Search({
             </>
           )}
 
-          {query.trim() && !loading && results.length === 0 && !error && (!searchOnTMDB || (!loadingDiscovery && discoveryItems.length === 0)) && (
+          {isSearching && !loading && results.length === 0 && !error && (!searchOnTMDB || (!loadingDiscovery && discoveryItems.length === 0)) && (
             <div className={s.emptyPromptCard}>
               <p className={s.emptyPromptText}>
-                {t('search.noResults', { query: query.trim() })}
+                {hasQuery
+                  ? t('search.noResults', { query: query.trim() })
+                  : t('library.noResults')}
               </p>
-              {!searchOnTMDB ? (
+              {hasQuery && !searchOnTMDB ? (
                 <div className={s.discoverPromptBox}>
                   <span className={s.discoverPromptSub}>{t('search.discoverPrompt')}</span>
                   <button
@@ -711,7 +722,7 @@ export function Search({
             </>
           )}
 
-          {query.trim() && (loading || loadingDiscovery) && (
+          {isSearching && (loading || loadingDiscovery) && (
             <div className={s.statusMessage}>
               {t('search.searching')}
             </div>

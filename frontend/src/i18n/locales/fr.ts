@@ -192,6 +192,8 @@ export const fr: TranslationSchema = {
     emptyMergeSub: 'Fusion de "{name}"',
     resultCount: '{count} / {total} résultats pour "{query}"',
     resultCountSingle: '1 résultat pour "{query}"',
+    resultCountNoQuery: '{count} / {total} résultats',
+    resultCountNoQuerySingle: '1 résultat',
     noResults: 'Aucun résultat pour "{query}"',
     searching: 'Recherche en cours...',
     loadMore: 'Charger plus',
