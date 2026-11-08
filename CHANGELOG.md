@@ -6,6 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.29.1] — 2026-11-08
+
+### Corrigé
+- **Recherche par filtres sans terme textuel (`frontend/src/store.ts`, `frontend/src/pages/Search.tsx`)** :
+  - Autorisation de la recherche et de la pagination dans `useSearchStore` dès lors que des filtres sont actifs, sans exiger la saisie d'un caractère dans le champ de recherche.
+  - Masquage de l'état vide initial (`search.emptyState`) dès qu'un filtre est sélectionné et affichage immédiat des résultats correspondants ou du message d'absence de résultat.
+  - Formatage adapté du compteur de résultats sans terme de recherche (`resultCountNoQuery`, `resultCountNoQuerySingle`).
+
+### Sécurité & Infrastructure
+- **Mise à jour des dépendances** : Mise à niveau de `vitest` et `github.com/mark3labs/mcp-go`.
+
 ## [v1.29.0] — 2026-11-01
 
 ### Ajouté
