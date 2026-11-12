@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.29.2] — 2026-11-12
+
+### Corrigé
+- **Superposition mobile du bandeau de lecture en cours et du tiroir d'actions (`frontend/src/components/ActionDrawer.module.css`, `frontend/src/components/LivePlaybackIndicator.module.css`, `frontend/src/app.tsx`)** :
+  - Introduction de la variable CSS dynamique `--live-playback-height` (44px active, 0px inactive) positionnant la poignée `ActionDrawer` (`ACTIONS`) au-dessus du bandeau de lecture au lieu de la laisser recouverte.
+  - Ajustement des marges de défilement du bas de page (`TitleDetail`, `.withNavbar`, `.withSearchBar`) et élévation synchronisée du snackbar d'annulation (`UndoSnackbar`) et de la barre de sélection multiple (`.actionBar`).
+
 ## [v1.29.1] — 2026-11-08
 
 ### Corrigé
