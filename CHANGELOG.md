@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.29.3] — 2026-11-13
+
+### Corrigé
+- **Hauteur et cascade du bandeau de lecture en cours (`frontend/src/components/LivePlaybackIndicator.module.css`, `frontend/src/app.module.css`, `frontend/src/app.tsx`)** :
+  - Découplage de la hauteur intrinsèque de `LivePlaybackIndicator` (`min-height: 44px`, `padding: 8px 14px`) pour empêcher tout écrasement accidentel à 0px.
+  - Définition robuste de la variable CSS `--live-playback-height` via la classe `.withPlayback` sur `.root`, assurant la cascade prévisible vers les tiroirs d'actions et snackbars.
+
 ## [v1.29.2] — 2026-11-12
 
 ### Corrigé

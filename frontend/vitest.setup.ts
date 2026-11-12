@@ -10,16 +10,28 @@ const fallbackRequestAnimationFrame = (cb: FrameRequestCallback) => {
 
 function ensurePolyfills() {
   if (typeof globalThis !== 'undefined') {
-    globalThis.cancelAnimationFrame = globalThis.cancelAnimationFrame || fallbackCancelAnimationFrame
-    globalThis.requestAnimationFrame = globalThis.requestAnimationFrame || fallbackRequestAnimationFrame
+    if (typeof (globalThis as any).cancelAnimationFrame !== 'function') {
+      ;(globalThis as any).cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof (globalThis as any).requestAnimationFrame !== 'function') {
+      ;(globalThis as any).requestAnimationFrame = fallbackRequestAnimationFrame
+    }
   }
   if (typeof global !== 'undefined') {
-    ;(global as any).cancelAnimationFrame = (global as any).cancelAnimationFrame || fallbackCancelAnimationFrame
-    ;(global as any).requestAnimationFrame = (global as any).requestAnimationFrame || fallbackRequestAnimationFrame
+    if (typeof (global as any).cancelAnimationFrame !== 'function') {
+      ;(global as any).cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof (global as any).requestAnimationFrame !== 'function') {
+      ;(global as any).requestAnimationFrame = fallbackRequestAnimationFrame
+    }
   }
   if (typeof window !== 'undefined') {
-    window.cancelAnimationFrame = window.cancelAnimationFrame || fallbackCancelAnimationFrame
-    window.requestAnimationFrame = window.requestAnimationFrame || fallbackRequestAnimationFrame
+    if (typeof window.cancelAnimationFrame !== 'function') {
+      window.cancelAnimationFrame = fallbackCancelAnimationFrame
+    }
+    if (typeof window.requestAnimationFrame !== 'function') {
+      window.requestAnimationFrame = fallbackRequestAnimationFrame
+    }
   }
 }
 

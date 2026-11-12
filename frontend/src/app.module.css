@@ -1,6 +1,11 @@
 .root {
   min-height: 100vh;
   --sidebar-width: 240px;
+  --live-playback-height: 0px;
+}
+
+.withPlayback {
+  --live-playback-height: 44px;
 }
 
 .rootSidebarCollapsed {

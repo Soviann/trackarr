@@ -356,7 +356,13 @@ export function App() {
     <ErrorBoundary>
       <UndoProvider>
         <div
-          className={clsx(s.root, sidebarCollapsed && s.rootSidebarCollapsed, !hideNavbar && s.withNavbar, isSearch && s.withSearchBar)}
+          className={clsx(
+            s.root,
+            playback.session && s.withPlayback,
+            sidebarCollapsed && s.rootSidebarCollapsed,
+            !hideNavbar && s.withNavbar,
+            isSearch && s.withSearchBar
+          )}
           style={playback.session ? ({ '--live-playback-height': '44px' } as any) : undefined}
         >
           {!hideNavbar && (

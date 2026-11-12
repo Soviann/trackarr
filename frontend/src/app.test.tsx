@@ -354,13 +354,15 @@ describe('App navigation & filter drawer', () => {
       return Promise.resolve([])
     })
 
-    const { container } = render(<App />)
+    const { container, getByText } = render(<App />)
     await act(async () => {
       await Promise.resolve()
     })
 
     const root = container.firstElementChild as HTMLElement
     expect(root.style.getPropertyValue('--live-playback-height')).toBe('44px')
+    expect(root.className).toMatch(/withPlayback/)
+    expect(getByText('Breaking Bad')).not.toBeNull()
   })
 })
 
