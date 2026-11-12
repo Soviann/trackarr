@@ -1,5 +1,5 @@
 .page {
-  padding-bottom: 140px; /* space for drawer + navbar */
+  padding-bottom: calc(140px + var(--live-playback-height, 0px)); /* space for drawer + navbar + live playback */
   position: relative;
   /* Cover image + fade gradients stacked as multi-layer bg.
      Cover URL provided inline via --cover-bg.

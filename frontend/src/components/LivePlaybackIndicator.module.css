@@ -5,7 +5,10 @@
   gap: 10px;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 8px 14px;
+  padding: 0 14px;
+  height: var(--live-playback-height, 44px);
+  min-height: var(--live-playback-height, 44px);
+  box-sizing: border-box;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background-color 150ms ease;

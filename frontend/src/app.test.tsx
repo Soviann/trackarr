@@ -340,5 +340,27 @@ describe('App navigation & filter drawer', () => {
     expect(queryByText('Merge titles?')).not.toBeNull()
     expect(window.location.pathname).not.toBe('/title/99')
   })
+
+  it('sets --live-playback-height on root when playback is active', async () => {
+    const { apiFetch } = await import('./api')
+    vi.mocked(apiFetch).mockImplementation((path: string) => {
+      if (path === '/playback/active') {
+        return Promise.resolve({
+          title_id: 101,
+          title_name: 'Breaking Bad',
+          source: 'plex',
+        })
+      }
+      return Promise.resolve([])
+    })
+
+    const { container } = render(<App />)
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    const root = container.firstElementChild as HTMLElement
+    expect(root.style.getPropertyValue('--live-playback-height')).toBe('44px')
+  })
 })
 

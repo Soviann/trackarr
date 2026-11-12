@@ -254,7 +254,7 @@
 | `AdminHeader` | `components/AdminHeader.tsx` | Reusable sticky header for admin pages with 34px circular back button, deterministic navigation, title, optional badge slot, and action children slot |
 | `Sidebar` | `components/Sidebar.tsx` | Desktop collapsible lateral navigation sidebar (≥ 1024px) with Trackarr branding, vertical navigation tabs, active state indicators, and collapse/expand toggle |
 | `navItems` | `components/navItems.tsx` | 5-tab definitions (`navTabs`), SVG icons, and contextual active tab routing (`getActiveTab`) |
-| `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle, and overscroll containment |
+| `ActionDrawer` | `components/ActionDrawer.tsx` | Slide-up drawer exposing management actions for titles and seasons with GPU-accelerated translateY transitions, 38px docked handle elevated via `--live-playback-height` over active playback, and overscroll containment |
 | `SectionCards` | `components/SectionCards.tsx` | 3-column hub cards header on Library page with poster slices backdrop and editorial titles |
 | `SectionRow` | `components/SectionRow.tsx` | Section row header container with count pill and action buttons |
 | `TitleCard` | `components/TitleCard.tsx` | Horizontal list card with progress bar, quick mark action, and caught-up status |

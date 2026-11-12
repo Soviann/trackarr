@@ -8,11 +8,11 @@
 }
 
 .withNavbar {
-  padding-bottom: 108px;
+  padding-bottom: calc(108px + var(--live-playback-height, 0px));
 }
 
 .withSearchBar {
-  padding-bottom: 172px;
+  padding-bottom: calc(172px + var(--live-playback-height, 0px));
 }
 
 .main {

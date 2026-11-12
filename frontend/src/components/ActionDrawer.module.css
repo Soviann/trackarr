@@ -1,7 +1,7 @@
 .container {
   --drawer-handle-height: 38px;
   position: fixed;
-  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px) + var(--live-playback-height, 0px));
   left: 0;
   right: 0;
   margin: 0 auto;
@@ -12,8 +12,8 @@
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
   border-radius: var(--radius-drawer) var(--radius-drawer) 0 0;
-  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform;
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), bottom 0.2s ease;
+  will-change: transform, bottom;
   overscroll-behavior-y: contain;
 }
 

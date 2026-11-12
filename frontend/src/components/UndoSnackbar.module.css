@@ -2,7 +2,7 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(64px + env(safe-area-inset-bottom));
+  bottom: calc(64px + env(safe-area-inset-bottom) + var(--live-playback-height, 0px));
   margin: 0 auto;
   max-width: 480px;
   z-index: 120;
@@ -41,7 +41,7 @@
   .snackbarContainer {
     left: calc(var(--sidebar-width, 240px) + var(--space-lg));
     right: auto;
-    bottom: var(--space-lg);
+    bottom: calc(var(--space-lg) + var(--live-playback-height, 0px));
     margin: 0;
   }
 }
