@@ -172,7 +172,7 @@ Opening a title displays its rich details:
 - **Actions Drawer**:
   - **Rate**: Set personal 1–10 star score.
   - **Edit**: Modify title type (Movie/Series), anime flag, or watch status. When changing a TV series to *Dropped* (Abandonné), an optional checkbox allows automatically deleting the series from Sonarr (including disk file purge and import list exclusion).
-  - **More**: Send to Radarr/Sonarr (File Arr), Rematch, Merge into another title, Refresh Metadata, or Delete. If a series was previously deleted from Sonarr, Trackarr displays a distinct *« Deleted »* (*« Supprimée »*) badge and substitutes the action with *« Re-add to Sonarr »* (*« Réajouter à Sonarr »*), prompting a protective `ConfirmationDrawer` before configuring push settings and clearing Sonarr import exclusions.
+  - **More**: Send to Radarr/Sonarr (File Arr), Rematch, Merge into another title, Refresh Metadata, or Delete. For movies already managed in Radarr (**Manage in Radarr**), the drawer also includes **Delete from Radarr** to purge the movie and its files from disk/NAS (with an optional import exclusion enabled by default) while keeping your Trackarr watch status, rating, and history intact. If a series was previously deleted from Sonarr, Trackarr displays a distinct *« Deleted »* (*« Supprimée »*) badge and substitutes the action with *« Re-add to Sonarr »* (*« Réajouter à Sonarr »*), prompting a protective `ConfirmationDrawer` before configuring push settings and clearing Sonarr import exclusions.
   - **External Links**: Instant shortcuts to IMDb, TMDB, TVDB, and AniList.
 - **Rating Push Notification**: Sends an optional Web Push notification prompting to rate a movie or completed series after finishing it (configurable in *Admin ➔ Notifications*).
 
@@ -239,6 +239,7 @@ Trackarr bridges media tracking with your download managers:
   - **Cyan top border**: Series is tracked in **Sonarr**.
 - **Arr Icon Badges**: 18px indicator pills on search and list cards showing Radarr target or Sonarr waveform.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), with defaults configurable at `/admin/arr`.
+- **Delete Movies from Radarr**: On movies already linked in Radarr (**Manage in Radarr**), tap **Delete from Radarr** to open an inline confirmation prompt warning that disk/NAS files will be permanently deleted. An **import exclusion** checkbox is checked by default to prevent Radarr lists from re-adding the movie automatically, while your Trackarr watch status, rating, and history stay preserved. If you re-push the movie later, Trackarr clears the Radarr exclusion automatically.
 - **Prowlarr Releases**: Access incoming releases on `/releases` with multi-indexer filtering, year filtering, and 1-click **+ Add** to Trackarr.
 
 ---

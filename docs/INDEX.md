@@ -67,6 +67,6 @@ For developers and contributors looking into the internals:
 - [**Database Model & SQLite WAL**](dev/database-model.md) — Database schema, reader/writer separation, and transaction invariants.
 - [**Matching Pipeline & AI Verification**](dev/matching-pipeline.md) — 5-step resolution engine and Gemini AI verification.
 - [**AniList Sync & Multi-Parts**](dev/anilist-sync.md) — Prequel trees, season mapping, and GraphQL push protocol.
-- [**Arr Stack Integration**](dev/arr-integration.md) — Radarr/Sonarr proxy architecture, queue management, and quality profiles.
+- [**Arr Stack Integration**](dev/arr-integration.md) — Radarr/Sonarr proxy architecture, queue management, quality profiles, and deletion workflows.
 - [**Background Jobs & Task Queue**](background-jobs.md) — 24h metadata refresh ticker, asynchronous SQLite task queue, retry policies, and graceful shutdown.
 - [**Native Go MCP Server (stdio)**](dev/mcp-server.md) — Model Context Protocol (MCP) server for Claude Desktop, Cursor, and Antigravity.

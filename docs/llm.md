@@ -132,6 +132,11 @@
 28. **Jellyfin Rating Ingestion & Outbound Sync**:
     - Jellyfin `UserDataSaved` webhooks deliver rating events (float/int coerced to 1–10 integer score via `math.Round`). Matched against local library by external IDs (TMDB, TVDB, IMDb), persisted via `TitleWriter.UpdateRating`, and asynchronously enqueues AniList rating push for anime.
     - Outbound CLI tool `sync-jellyfin-ratings` (`make jellyfin-sync-ratings`) pushes existing Trackarr ratings to Jellyfin REST API (`GET /Users/{userId}/Items` and `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}`) with rate throttling and dry-run support.
+29. **Radarr Movie Deletion & Re-push Exclusion Cleanup**:
+    - `DELETE /api/arr/title/{id}` (`arr:write` scope, movie-only) executes `ArrService.DeleteMovieFromRadarr` synchronously (`DELETE /api/v3/movie/{id}?deleteFiles=...&addImportExclusion=...`, both defaulting to `true` when omitted or empty body).
+    - Lookup fallback (`lookupRadarrMovieID` querying `/api/v3/movie?tmdbId=` and `/api/v3/movie/lookup?term=tmdb:`) propagates Radarr/network errors; only confirmed absence (`[]`/`404`) or successful deletion (`200`/`204`/`404`) transactionally clears `radarr_id` (`ClearRadarrID`) and `downloaded_at` (`ClearDownloadedAt`) via `TitleWriter.Update` without altering `status`, `my_rating`, `watch_events`, or `arr_ignored`.
+    - `ArrService.PushTitle` invokes `removeRadarrImportExclusion` (`GET /api/v3/exclusions` + `DELETE /api/v3/exclusions/{id}` matching `tmdbId`) on both already-exists and post-add branches.
+    - `ArrPushSheet` displays a destructive "Delete from Radarr" button only for movies with live `arrDetails?.exists === true`, switching to an inline confirmation view inside the same `BottomSheet` (avoiding nested `BottomSheet` focus/Escape/history conflicts) with disk/NAS deletion warning, `add_import_exclusion` toggle (default `true`), `errorBanner` recovery, and `onDeleted` invalidation in `TitleDetail` and `FranchiseRelationsSection`.
 
 ---
 
@@ -231,7 +236,8 @@
 - `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.
 - `GET /api/arr/{app}/rootfolder` & `GET /api/arr/{app}/qualityprofile` : Proxy Radarr/Sonarr root folders and quality profiles.
 - `GET /api/arr/title/{id}` & `PUT /api/arr/title/{id}` : Check Arr library status and edit quality profile / root folder.
-- `POST /api/arr/push/{id}` : Push title to Radarr/Sonarr download queue.
+- `DELETE /api/arr/title/{id}` : Delete movie from Radarr (`delete_files`, `add_import_exclusion`, defaulting to `true`), clearing `radarr_id` and `downloaded_at` while preserving watch status/history (`arr:write` scope).
+- `POST /api/arr/push/{id}` : Push title to Radarr/Sonarr download queue (clears matching import exclusions).
 - `POST /api/arr/queue/{id}/push` : Push title from queue directly to Radarr / Sonarr.
 - `GET /api/releases` & `POST /api/releases/add` : Browse Prowlarr releases feed and 1-click import.
 - `POST /api/client-errors` : Client-side error reporting.

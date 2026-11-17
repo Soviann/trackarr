@@ -128,6 +128,12 @@ Manage your media library and track availability seamlessly:
 - **Disk File Purge & Import Exclusion**: Trackarr dispatches a background job executing `DELETE /api/v3/series/{id}?deleteFiles=true&addImportListExclusion=true`, purging downloaded files from disk and registering the series with Sonarr's Import List Exclusions (preventing automated Trakt or IMDb lists from re-importing it).
 - **Safe Re-add Workflow**: For deleted series (`sonarr_deleted_at != null`), the title detail view displays a distinct *Deleted* (*Supprimée*) badge and *Re-add to Sonarr* (*Réajouter à Sonarr*) button. Clicking it opens a protective `ConfirmationDrawer` before configuring push parameters, and successful re-adding automatically deletes the import list exclusion (`DELETE /api/v3/importlistexclusion/{id}`).
 
+### Deleting Movies from Radarr (`ArrPushSheet`):
+- **In-Drawer Deletion**: When viewing a movie currently tracked in Radarr (verified live as `exists: true`), opening the Arr sheet (**Manage in Radarr**) provides a destructive **Delete from Radarr** action.
+- **Explicit Confirmation & Disk Warning**: Selecting **Delete from Radarr** switches the sheet into an inline confirmation view warning that the movie will be removed from Radarr and its folder and video files permanently deleted from disk / NAS, while preserving your Trackarr watch status, personal rating, and watch history.
+- **Import Exclusion Toggle**: An **Add import exclusion** checkbox (checked by default) sets `addImportExclusion=true` on Radarr (`DELETE /api/v3/movie/{id}?deleteFiles=true&addImportExclusion=...`) to prevent Radarr import lists from re-importing the movie automatically.
+- **Immediate Cleanup & Re-Push Exclusion Removal**: Once deleted, Trackarr clears the local Radarr association and download availability timestamp (`radarr_id` and `downloaded_at`), resetting the movie back to **Send to Radarr**. If you later send the movie to Radarr again, Trackarr automatically removes any matching Radarr exclusion (`DELETE /api/v3/exclusions/{id}`).
+
 ---
 
 ## 4. Streaming Watch Providers
