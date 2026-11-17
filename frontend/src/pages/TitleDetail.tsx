@@ -1089,6 +1089,10 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         onUnlinked={() => {
           setData((prev) => (prev ? { ...prev, sonarr_id: undefined, radarr_id: undefined } : prev))
         }}
+        onDeleted={() => {
+          setData((prev) => (prev ? { ...prev, radarr_id: null, downloaded_at: null } : prev))
+          void invalidate()
+        }}
       />
 
       <RatingPrompt

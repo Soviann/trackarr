@@ -7,6 +7,7 @@ import { aniListMediaUrl, getCoverUrl, hexToRgba } from '../utils'
 import { apiFetch } from '../api'
 import { useTranslation } from '../i18n'
 import { useUndo } from '../context/UndoContext'
+import { useTitleStore } from '../store'
 import { BottomSheet } from './BottomSheet'
 import { ArrPushSheet } from './ArrPushSheet'
 import s from './FranchiseRelationsSection.module.css'
@@ -31,6 +32,7 @@ export function FranchiseRelationsSection({
 }: FranchiseRelationsSectionProps) {
   const { t } = useTranslation()
   const { showUndo } = useUndo()
+  const invalidate = useTitleStore((st) => st.invalidate)
   const [relations, setRelations] = useState<TitleRelation[]>(initialRelations)
   const [addingId, setAddingId] = useState<number | null>(null)
   const [arrPushTitle, setArrPushTitle] = useState<Title | null>(null)
@@ -690,6 +692,28 @@ export function FranchiseRelationsSection({
           }}
           title={arrPushTitle}
           onSuccess={() => {
+            setShowArrPush(false)
+            setArrPushTitle(null)
+          }}
+          onUnlinked={() => {
+            setRelations((prev) =>
+              prev.map((r) =>
+                r.matched_title_id === arrPushTitle.id
+                  ? { ...r, matched_radarr_id: null, matched_sonarr_id: null }
+                  : r
+              )
+            )
+            void invalidate()
+          }}
+          onDeleted={() => {
+            setRelations((prev) =>
+              prev.map((r) =>
+                r.matched_title_id === arrPushTitle.id
+                  ? { ...r, matched_radarr_id: null }
+                  : r
+              )
+            )
+            void invalidate()
             setShowArrPush(false)
             setArrPushTitle(null)
           }}

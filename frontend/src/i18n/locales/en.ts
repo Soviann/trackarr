@@ -862,6 +862,13 @@ export const en = {
     selectFolderAndProfile: 'Please select a root folder and a quality profile.',
     errorUpdating: 'Error updating in {app}',
     staleEntryNotice: 'This title was not found in {app} (it may have been deleted). You can add it now.',
+    deleteFromRadarr: 'Delete from Radarr',
+    deleteConfirmTitle: 'Delete "{title}" from Radarr?',
+    deleteConfirmDesc: 'This will remove the movie from Radarr and permanently delete its folder and video files from disk / NAS. Your Trackarr watch history and status will be preserved.',
+    addImportExclusion: 'Prevent automatic re-import (add import exclusion in Radarr)',
+    confirmDeleteFromRadarr: 'Confirm permanent deletion',
+    deleting: 'Deleting...',
+    errorDeleting: 'Error deleting from Radarr',
   },
   rematch: {
     arrUnlinkTitle: 'Unlink from {app}?',
