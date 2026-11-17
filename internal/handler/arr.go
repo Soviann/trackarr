@@ -3,11 +3,13 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/Soviann/trackarr/internal/handler/httputil"
+	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -127,6 +129,67 @@ func (h *ArrHandler) PushToArr(w http.ResponseWriter, r *http.Request) error {
 	httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status": "ok",
 		"arr_id": arrID,
+	})
+	return nil
+}
+
+type arrDeleteRequest struct {
+	DeleteFiles        *bool `json:"delete_files"`
+	AddImportExclusion *bool `json:"add_import_exclusion"`
+}
+
+// DeleteTitleArr removes a movie from Radarr and clears local radarr_id and downloaded_at.
+func (h *ArrHandler) DeleteTitleArr(w http.ResponseWriter, r *http.Request) error {
+	if h.titles == nil || h.arrSvc == nil {
+		return httputil.InternalError("Arr handler not properly configured", fmt.Errorf("missing dependencies"))
+	}
+
+	titleID, err := httputil.ParseIDParam(r, "id")
+	if err != nil {
+		return httputil.BadRequest("Invalid ID")
+	}
+
+	title, err := h.titles.GetByID(titleID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return httputil.NotFound("Title not found")
+		}
+		return httputil.InternalError("Failed to get title", err)
+	}
+
+	if title.Type != model.TitleTypeMovie {
+		return httputil.BadRequest("Only movie titles can be deleted from Radarr")
+	}
+
+	var req arrDeleteRequest
+	if r.Body != nil {
+		if err := httputil.ReadJSON(r, &req, 1<<20); err != nil && !errors.Is(err, io.EOF) {
+			return httputil.BadRequest("Invalid JSON")
+		}
+	}
+
+	deleteFiles := true
+	if req.DeleteFiles != nil {
+		deleteFiles = *req.DeleteFiles
+	}
+	addImportExclusion := true
+	if req.AddImportExclusion != nil {
+		addImportExclusion = *req.AddImportExclusion
+	}
+
+	err = h.arrSvc.DeleteMovieFromRadarr(r.Context(), service.RadarrDeletePayload{
+		TitleID:            title.ID,
+		RadarrID:           title.RadarrID,
+		TMDBID:             title.TMDBID,
+		DeleteFiles:        deleteFiles,
+		AddImportExclusion: addImportExclusion,
+	})
+	if err != nil {
+		return httputil.InternalError("Failed to delete from Radarr", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
 	})
 	return nil
 }

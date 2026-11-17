@@ -6,6 +6,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Suppression d'un film dans Radarr et sur le disque depuis le tiroir Arr (`DELETE /api/arr/title/{id}`, `ArrPushSheet`)** :
+  - Nouvel endpoint synchrone `DELETE /api/arr/title/{id}` (protégé par le scope `arr:write`, réservé aux films) acceptant les options `delete_files` et `add_import_exclusion` (`true` par défaut) pour supprimer un film de Radarr et effacer ses fichiers sur disque tout en conservant intacts le statut Trackarr, la note et l'historique de visionnage.
+  - Nettoyage automatique des exclusions d'import Radarr (`DELETE /api/v3/exclusions/{id}`) dans `ArrService.PushTitle` lors du réenvoi ultérieur d'un film vers Radarr.
+  - Bouton **Supprimer de Radarr** dans `ArrPushSheet` (affiché uniquement pour les films confirmés présents dans Radarr) avec vue de confirmation intégrée dans la même feuille, avertissement de suppression définitive sur disque/NAS, case d'exclusion d'import cochée par défaut, gestion d'erreur inline (`errorBanner`) et mise à jour immédiate de l'état local et du cache (`TitleDetail`, `FranchiseRelationsSection`).
+
+### Corrigé
+- **Nettoyage atomique et propagation des erreurs lors de la suppression Radarr (`ArrService.DeleteMovieFromRadarr`)** :
+  - Propagation des erreurs réseau, de configuration ou HTTP lors de la recherche de repli par `tmdbId` dans Radarr au lieu de les assimiler à une absence.
+  - Réinitialisation transactionnelle de `radarr_id` et `downloaded_at` dans SQLite après suppression confirmée ou absence avérée, sans modifier `status`, `my_rating`, `watch_events` ni `arr_ignored`.
+
+### Documentation
+- **Synchronisation des guides Arr & API (`docs/dev/arr-integration.md`, `docs/patterns.md`, `docs/llm.md`, `docs/integrations.md`, `docs/user-guide.md`, `docs/INDEX.md`)** :
+  - Documentation de l'endpoint `DELETE /api/arr/title/{id}`, du flux de confirmation dans `ArrPushSheet` et du nettoyage des exclusions Radarr au réenvoi.
+
 ## [v1.29.4] — 2026-11-17
 
 ### Corrigé

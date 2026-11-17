@@ -1,7 +1,25 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, fireEvent, cleanup } from '@testing-library/preact'
+import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
+import { render, fireEvent, waitFor, screen, cleanup } from '@testing-library/preact'
 import { FranchiseRelationsSection } from './FranchiseRelationsSection'
+import { apiFetch } from '../api'
 import type { TitleRelation } from '../types'
+
+const mockInvalidate = vi.fn()
+
+vi.mock('../api', () => ({
+  apiFetch: vi.fn(),
+}))
+
+vi.mock('../store', () => ({
+  useTitleStore: (selector?: (st: { invalidate: typeof mockInvalidate }) => unknown) => {
+    const state = { invalidate: mockInvalidate }
+    return selector ? selector(state) : state
+  },
+}))
+
+beforeEach(() => {
+  vi.resetAllMocks()
+})
 
 afterEach(() => cleanup())
 
@@ -233,5 +251,165 @@ describe('FranchiseRelationsSection', () => {
     const drawerContainer = document.querySelector('[class*="drawerContainer"]') as HTMLElement
     expect(drawerContainer).toBeTruthy()
     expect(drawerContainer.style.getPropertyValue('--cover-accent')).toBe('#e11d48')
+  })
+
+  it('clears matched_radarr_id, calls invalidate, and closes ArrPushSheet on movie deletion', async () => {
+    const rels = [
+      makeRelation({
+        id: 1,
+        provider: 'tmdb',
+        external_id: 603,
+        format: 'MOVIE',
+        title: 'The Matrix',
+        matched_title_id: 50,
+        matched_status: 'completed',
+        matched_type: 'movie',
+        matched_radarr_id: 777,
+      }),
+    ]
+
+    vi.mocked(apiFetch).mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === '/titles/50') {
+        return {
+          id: 50,
+          type: 'movie',
+          is_anime: false,
+          year: 1999,
+          cover_url: null,
+          accent_hex: null,
+          imdb_id: null,
+          simkl_id: null,
+          simkl_slug: null,
+          anilist_id: null,
+          tmdb_id: 603,
+          tvdb_id: null,
+          radarr_id: 777,
+          downloaded_at: '2026-01-01T00:00:00Z',
+          total_watch_minutes: 0,
+          my_rating: 9,
+          status: 'completed',
+          series_status: null,
+          match_status: 'confirmed',
+          original_title: 'The Matrix',
+          match_source: null,
+          overview: null,
+          genres: null,
+          runtime: 136,
+          tmdb_rating: null,
+          credits: null,
+          anilist_rating: null,
+          release_date: null,
+          created_at: '',
+          updated_at: '',
+          names: [{ id: 1, title_id: 50, name: 'The Matrix', language: 'en', is_primary: true }],
+          seasons: [],
+        }
+      }
+      if (path === '/admin/arr') return { radarr_std_root_folder: '/movies', radarr_std_quality_profile: '1' }
+      if (path.includes('/rootfolder')) return [{ id: 1, path: '/movies' }]
+      if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD' }]
+      if (path === '/arr/title/50' && (!init || !init.method || init.method === 'GET')) {
+        return {
+          app: 'radarr',
+          exists: true,
+          arr_id: 777,
+          monitored: true,
+          quality_profile_id: 1,
+          root_folder_path: '/movies',
+          has_file: true,
+        }
+      }
+      if (path === '/arr/title/50' && init?.method === 'DELETE') {
+        return { status: 'ok' }
+      }
+      return {}
+    })
+
+    render(<FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send to Arr' }))
+
+    const deleteBtn = await screen.findByRole('button', { name: /Delete from Radarr/i })
+    fireEvent.click(deleteBtn)
+    fireEvent.click(screen.getByRole('button', { name: /Confirm permanent deletion/i }))
+
+    await waitFor(() => {
+      expect(mockInvalidate).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('button', { name: /Confirm permanent deletion/i })).toBeNull()
+    })
+
+    expect(apiFetch).toHaveBeenCalledWith(
+      '/arr/title/50',
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
+
+  it('calls invalidate and keeps ArrPushSheet open with stale notice when matched title is unlinked on open', async () => {
+    const rels = [
+      makeRelation({
+        id: 1,
+        provider: 'tmdb',
+        external_id: 603,
+        format: 'MOVIE',
+        title: 'The Matrix',
+        matched_title_id: 50,
+        matched_status: 'completed',
+        matched_type: 'movie',
+        matched_radarr_id: 777,
+      }),
+    ]
+
+    vi.mocked(apiFetch).mockImplementation(async (path: string) => {
+      if (path === '/titles/50') {
+        return {
+          id: 50,
+          type: 'movie',
+          is_anime: false,
+          year: 1999,
+          cover_url: null,
+          accent_hex: null,
+          imdb_id: null,
+          simkl_id: null,
+          simkl_slug: null,
+          anilist_id: null,
+          tmdb_id: 603,
+          tvdb_id: null,
+          radarr_id: 777,
+          total_watch_minutes: 0,
+          my_rating: 9,
+          status: 'completed',
+          series_status: null,
+          match_status: 'confirmed',
+          original_title: 'The Matrix',
+          match_source: null,
+          overview: null,
+          genres: null,
+          runtime: 136,
+          tmdb_rating: null,
+          credits: null,
+          anilist_rating: null,
+          release_date: null,
+          created_at: '',
+          updated_at: '',
+          names: [{ id: 1, title_id: 50, name: 'The Matrix', language: 'en', is_primary: true }],
+          seasons: [],
+        }
+      }
+      if (path === '/admin/arr') return { radarr_std_root_folder: '/movies', radarr_std_quality_profile: '1' }
+      if (path.includes('/rootfolder')) return [{ id: 1, path: '/movies' }]
+      if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD' }]
+      if (path === '/arr/title/50') return { app: 'radarr', exists: false }
+      return {}
+    })
+
+    render(<FranchiseRelationsSection relations={rels} initialOpenDrawer={true} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send to Arr' }))
+
+    await waitFor(() => {
+      expect(mockInvalidate).toHaveBeenCalledOnce()
+      expect(screen.getByText(/was not found in Radarr/i)).toBeTruthy()
+      expect(screen.getByText('Send to Radarr')).toBeTruthy()
+    })
   })
 })

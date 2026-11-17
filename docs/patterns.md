@@ -96,7 +96,7 @@
 | `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions & `UserDataSaved` rating sync) | `docs/integrations.md` |
 | `JellyfinSyncService` | `internal/service/jellyfin_sync.go` | Outbound rating synchronization from Trackarr to Jellyfin REST API | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
-| `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, and deletion enqueuing | `docs/dev/arr-integration.md` |
+| `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, Radarr deletion & exclusion cleanup, and Sonarr deletion enqueuing | `docs/dev/arr-integration.md` |
 | `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download/upgrade events, update `downloaded_at`, push alerts | `docs/integrations.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
@@ -211,6 +211,7 @@
 | GET | `/api/arr/{app}/qualityprofile` | `arr.ProxyQualityProfile` | Proxy quality profile options from Radarr/Sonarr |
 | GET | `/api/arr/title/{id}` | `arr.GetTitleArr` | Get title Arr configuration and status |
 | PUT | `/api/arr/title/{id}` | `arr.UpdateTitleArr` | Update title Arr configuration and status |
+| DELETE | `/api/arr/title/{id}` | `arr.DeleteTitleArr` | Delete movie from Radarr (`delete_files`, `add_import_exclusion`), clear `radarr_id` & `downloaded_at` |
 | POST | `/api/arr/push/{id}` | `arr.PushToArr` | Send title directly to Radarr / Sonarr |
 | POST | `/api/arr/queue/{id}/push` | `arr.PushToArr` | Push title from queue directly to Radarr / Sonarr |
 | POST | `/api/client-errors` | `clientErrors.Handle` | Client-side error reporting |
@@ -283,7 +284,7 @@
 | `MatchReviewCard` | `components/MatchReviewCard.tsx` | Review card with external ID chips, confirm, and fix actions |
 | `RatingPrompt`| `components/RatingPrompt.tsx` | 10-star rating popup with AniList / IMDb shortcuts |
 | `EditSheet` | `components/EditSheet.tsx` | Quick edit for status, type, and display title (with optional Sonarr deletion when marking series dropped) |
-| `ArrPushSheet` | `components/ArrPushSheet.tsx` | Slide-up modal sheet to configure options and push title directly to Radarr/Sonarr |
+| `ArrPushSheet` | `components/ArrPushSheet.tsx` | Slide-up modal sheet to configure options, push titles to Radarr/Sonarr, and delete linked movies from Radarr with inline confirmation |
 | `ReleaseDetailSheet` | `components/ReleaseDetailSheet.tsx` | Slide-up modal sheet displaying torrent metadata, scene release name, external links and 1-click addition button |
 | `NextEpisodeHero` | `components/NextEpisodeHero.tsx` | Prominent call-to-action hero card with 1-click next episode mark, binge duration estimator, and Continue Saga chronological sequel card when caught up or completed |
 | `PersonalNotesCard` | `components/PersonalNotesCard.tsx` | Private memo/notes card on title detail with debounced auto-save |

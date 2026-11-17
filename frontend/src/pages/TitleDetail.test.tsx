@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/preact'
+import { useState } from 'preact/hooks'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import { TitleDetail } from './TitleDetail'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import type { Title } from '../types'
+
+const mockInvalidate = vi.fn()
 
 vi.mock('../hooks/useApi', () => ({
   useApi: vi.fn(),
@@ -18,9 +21,10 @@ vi.mock('../hooks/useScrollRestoration', () => ({
 }))
 
 vi.mock('../store', () => ({
-  useTitleStore: () => ({
-    invalidate: vi.fn(),
-  }),
+  useTitleStore: (selector?: (st: { invalidate: typeof mockInvalidate }) => unknown) => {
+    const state = { invalidate: mockInvalidate }
+    return selector ? selector(state) : state
+  },
 }))
 
 vi.mock('../context/UndoContext', () => ({
@@ -381,6 +385,147 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
 
       const ambientMesh = container.querySelector('[class*="ambientMesh"]')
       expect(ambientMesh).toBeTruthy()
+    })
+  })
+
+  describe('Radarr deletion wiring', () => {
+    it('clears radarr_id and downloaded_at, preserves status and rating, and calls invalidate on delete', async () => {
+      const initialMovie: Title = {
+        ...mockNormalSeries,
+        id: 55,
+        type: 'movie',
+        tmdb_id: 603,
+        tvdb_id: null,
+        radarr_id: 777,
+        downloaded_at: '2026-01-15T10:00:00Z',
+        status: 'watching',
+        my_rating: 9,
+        series_status: null,
+        original_title: 'The Matrix',
+        names: [{ id: 1, title_id: 55, name: 'The Matrix', language: 'en', is_primary: true }],
+      }
+
+      vi.mocked(apiFetch).mockImplementation(async (path: string, init?: RequestInit) => {
+        if (path === '/settings') return {}
+        if (path === '/admin/arr') return { radarr_std_root_folder: '/movies', radarr_std_quality_profile: '1' }
+        if (path.includes('/rootfolder')) return [{ id: 1, path: '/movies' }]
+        if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD' }]
+        if (path === '/arr/title/55' && (!init || !init.method || init.method === 'GET')) {
+          return {
+            app: 'radarr',
+            exists: true,
+            arr_id: 777,
+            monitored: true,
+            quality_profile_id: 1,
+            root_folder_path: '/movies',
+            has_file: true,
+          }
+        }
+        if (path === '/arr/title/55' && init?.method === 'DELETE') {
+          return { status: 'ok' }
+        }
+        return {}
+      })
+
+      function StatefulTitleDetail() {
+        const [movie, setMovie] = useState<Title | null>(initialMovie)
+        vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+          if (endpoint === '/settings') {
+            return { data: {}, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+          }
+          return {
+            data: movie,
+            loading: false,
+            error: null,
+            mutate: vi.fn(),
+            setData: (updater: unknown) => {
+              setMovie((prev) => (typeof updater === 'function' ? (updater as (p: Title | null) => Title | null)(prev) : (updater as Title | null)))
+            },
+          }
+        })
+        return <TitleDetail id="55" />
+      }
+
+      render(<StatefulTitleDetail />)
+
+      expect(screen.getAllByText('Manage in Radarr').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText(/Available/)).toBeTruthy()
+      expect(screen.getByText('Watching')).toBeTruthy()
+      expect(screen.getByText('9')).toBeTruthy()
+
+      fireEvent.click(screen.getAllByText('Manage in Radarr')[0])
+
+      const deleteBtn = await screen.findByRole('button', { name: /Delete from Radarr/i })
+      fireEvent.click(deleteBtn)
+      fireEvent.click(screen.getByRole('button', { name: /Confirm permanent deletion/i }))
+
+      await waitFor(() => {
+        expect(mockInvalidate).toHaveBeenCalledOnce()
+        expect(screen.getAllByText('Send to Radarr').length).toBeGreaterThanOrEqual(1)
+      })
+      expect(screen.queryByText('Manage in Radarr')).toBeNull()
+      expect(screen.queryByText(/Available/)).toBeNull()
+      expect(screen.getByText('Watching')).toBeTruthy()
+      expect(screen.getByText('9')).toBeTruthy()
+    })
+
+    it('keeps movie state intact and does not call invalidate when Radarr deletion fails', async () => {
+      const initialMovie: Title = {
+        ...mockNormalSeries,
+        id: 56,
+        type: 'movie',
+        tmdb_id: 604,
+        tvdb_id: null,
+        radarr_id: 778,
+        downloaded_at: '2026-01-15T10:00:00Z',
+        status: 'watching',
+        my_rating: 8,
+        series_status: null,
+        original_title: 'The Matrix Reloaded',
+        names: [{ id: 1, title_id: 56, name: 'The Matrix Reloaded', language: 'en', is_primary: true }],
+      }
+
+      const setDataMock = vi.fn()
+      vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+        if (endpoint === '/settings') {
+          return { data: {}, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+        }
+        return { data: initialMovie, loading: false, error: null, mutate: vi.fn(), setData: setDataMock }
+      })
+
+      vi.mocked(apiFetch).mockImplementation(async (path: string, init?: RequestInit) => {
+        if (path === '/admin/arr') return { radarr_std_root_folder: '/movies', radarr_std_quality_profile: '1' }
+        if (path.includes('/rootfolder')) return [{ id: 1, path: '/movies' }]
+        if (path.includes('/qualityprofile')) return [{ id: 1, name: 'HD' }]
+        if (path === '/arr/title/56' && (!init || !init.method || init.method === 'GET')) {
+          return {
+            app: 'radarr',
+            exists: true,
+            arr_id: 778,
+            monitored: true,
+            quality_profile_id: 1,
+            root_folder_path: '/movies',
+            has_file: true,
+          }
+        }
+        if (path === '/arr/title/56' && init?.method === 'DELETE') {
+          throw new Error('Radarr error 500')
+        }
+        return {}
+      })
+
+      render(<TitleDetail id="56" />)
+      fireEvent.click(screen.getAllByText('Manage in Radarr')[0])
+
+      const deleteBtn = await screen.findByRole('button', { name: /Delete from Radarr/i })
+      fireEvent.click(deleteBtn)
+      fireEvent.click(screen.getByRole('button', { name: /Confirm permanent deletion/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert').textContent).toContain('Radarr error 500')
+      })
+      expect(setDataMock).not.toHaveBeenCalled()
+      expect(mockInvalidate).not.toHaveBeenCalled()
     })
   })
 })

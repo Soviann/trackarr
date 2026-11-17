@@ -37,15 +37,25 @@ interface ArrSettings {
   sonarr_anime_quality_profile?: string
 }
 
-interface ArrPushSheetProps {
+export interface ArrPushSheetProps {
   open: boolean
   onClose: () => void
   title: Title | null
   onSuccess?: (arrId: number) => void
   onUnlinked?: () => void
+  onDeleted?: () => void
 }
 
-export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: ArrPushSheetProps) {
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const msg = (err as { message: unknown }).message
+    if (typeof msg === 'string' && msg.length > 0) return msg
+  }
+  return ''
+}
+
+export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked, onDeleted }: ArrPushSheetProps) {
   if (!title) return null
 
   const { t } = useTranslation()
@@ -65,24 +75,36 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
   const [qualityProfiles, setQualityProfiles] = useState<QualityProfile[]>([])
   const [arrDetails, setArrDetails] = useState<ArrTitleDetails | null>(null)
   const [staleMissing, setStaleMissing] = useState(false)
-  
+
   const [monitored, setMonitored] = useState('true')
   const [search, setSearch] = useState('false')
   const [rootFolder, setRootFolder] = useState('')
   const [qualityProfile, setQualityProfile] = useState('')
 
   const [saving, setSaving] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [addImportExclusion, setAddImportExclusion] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setError(null)
       setStaleMissing(false)
+      setArrDetails(null)
+      setConfirmingDelete(false)
+      setAddImportExclusion(true)
+      setDeleting(false)
       return
     }
 
+    let cancelled = false
     setLoadingOptions(true)
     setError(null)
+    setArrDetails(null)
+    setConfirmingDelete(false)
+    setAddImportExclusion(true)
+    setDeleting(false)
 
     Promise.all([
       apiFetch<ArrSettings>('/admin/arr').catch(() => ({} as ArrSettings)),
@@ -90,6 +112,7 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
       apiFetch<QualityProfile[]>(`/arr/${app}/qualityprofile`).catch(() => [] as QualityProfile[]),
       apiFetch<ArrTitleDetails>(`/arr/title/${title.id}`).catch(() => null),
     ]).then(([settings, rfList, qpList, liveDetails]) => {
+      if (cancelled) return
       setRootFolders(rfList)
       setQualityProfiles(qpList)
       setArrDetails(liveDetails)
@@ -111,10 +134,11 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
           setStaleMissing(true)
           onUnlinked?.()
         }
-        const defMonitored = (settings as any)[`${prefix}_monitored`] || 'true'
-        const defSearch = (settings as any)[`${prefix}_search`] || 'false'
-        const defRoot = (settings as any)[`${prefix}_root_folder`] || (rfList.length > 0 ? rfList[0].path : '')
-        const defQuality = (settings as any)[`${prefix}_quality_profile`] || (qpList.length > 0 ? String(qpList[0].id) : '')
+        const settingsMap = settings as Record<string, string | undefined>
+        const defMonitored = settingsMap[`${prefix}_monitored`] || 'true'
+        const defSearch = settingsMap[`${prefix}_search`] || 'false'
+        const defRoot = settingsMap[`${prefix}_root_folder`] || (rfList.length > 0 ? rfList[0].path : '')
+        const defQuality = settingsMap[`${prefix}_quality_profile`] || (qpList.length > 0 ? String(qpList[0].id) : '')
 
         setMonitored(defMonitored)
         setSearch(defSearch)
@@ -122,10 +146,15 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
         setQualityProfile(defQuality)
       }
       setLoadingOptions(false)
-    }).catch(err => {
-      setError(err.message)
+    }).catch((err: unknown) => {
+      if (cancelled) return
+      setError(getErrorMessage(err) || t('arrPush.errorUpdating', { app: appLabel }))
       setLoadingOptions(false)
     })
+
+    return () => {
+      cancelled = true
+    }
   }, [open, app, prefix, title.id])
 
   const handleSave = async () => {
@@ -156,10 +185,37 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
       const finalID = res.arr_id ?? arrDetails?.arr_id ?? 0
       onSuccess?.(finalID)
       onClose()
-    } catch (err: any) {
-      setError(err.message || t('arrPush.errorUpdating', { app: appLabel }))
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || t('arrPush.errorUpdating', { app: appLabel }))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (deleting) return
+    setDeleting(true)
+    setError(null)
+
+    try {
+      await apiFetch<{ status?: string }>(`/arr/title/${title.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delete_files: true,
+          add_import_exclusion: addImportExclusion,
+        }),
+      })
+      if (onDeleted) {
+        onDeleted()
+      } else {
+        onUnlinked?.()
+      }
+      onClose()
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || t('arrPush.errorDeleting'))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -168,9 +224,20 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
   const isLinked = Boolean(arrDetails ? arrDetails.exists : (!staleMissing && ((!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null))))
   const isStaleMissing = staleMissing || Boolean(arrDetails && !arrDetails.exists && ((!isRadarr && title.sonarr_id != null) || (isRadarr && title.radarr_id != null)))
   const isPreviouslyDeleted = !isRadarr && !isLinked && Boolean(title.sonarr_deleted_at)
+  const canDeleteFromRadarr = isRadarr && arrDetails?.exists === true
 
   return (
-    <BottomSheet open={open} onClose={onClose} ariaLabel={isLinked ? t('arrPush.manageInApp', { app: appLabel }) : t('arrPush.sendToApp', { app: appLabel })}>
+    <BottomSheet
+      open={open}
+      onClose={() => {
+        if (!deleting) onClose()
+      }}
+      ariaLabel={
+        confirmingDelete
+          ? t('arrPush.deleteConfirmTitle', { title: name })
+          : (isLinked ? t('arrPush.manageInApp', { app: appLabel }) : t('arrPush.sendToApp', { app: appLabel }))
+      }
+    >
       <div className={s.sheet}>
         {/* Header with Poster & Essential info */}
         <div className={s.header}>
@@ -215,161 +282,240 @@ export function ArrPushSheet({ open, onClose, title, onSuccess, onUnlinked }: Ar
           </div>
         </div>
 
-        {/* Error / Warning notices */}
-        {!hasRequiredID && (
-          <div className={s.warningBox}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>
-              {t('arrPush.missingIdWarning', { idType: isRadarr ? 'TMDB' : 'TVDB', app: appLabel })}
-            </span>
-          </div>
-        )}
-
-        {isStaleMissing && (
-          <div className={s.warningBox}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>
-              {t('arrPush.staleEntryNotice', { app: appLabel })}
-            </span>
-          </div>
-        )}
-
-        {isPreviouslyDeleted && (
-          <div className={s.warningBox}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>
-              {t('arrPush.previouslyDeletedNotice')}
-            </span>
-          </div>
-        )}
-
-        {error && (
-          <div className={s.errorBanner}>
-            {error}
-          </div>
-        )}
-
-        {/* Configuration Options */}
-        <div className={s.section}>
-          <div className={s.sectionLabel}>{t('arrPush.appOptions', { app: appLabel })}</div>
-          
-          <div className={s.formGrid}>
-            <div className={s.formGroup}>
-              <label htmlFor="arr-root-folder" className={s.formLabel}>{t('arrPush.rootFolder')}</label>
-              <select
-                id="arr-root-folder"
-                name="root_folder"
-                className={s.select}
-                value={rootFolder}
-                disabled={loadingOptions || saving}
-                onChange={e => setRootFolder((e.target as HTMLSelectElement).value)}
-              >
-                {rootFolders.length === 0 && <option value="">{rootFolder || t('arrPush.noFolders')}</option>}
-                {rootFolders.map(rf => (
-                  <option key={rf.id} value={rf.path}>{rf.path}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor="arr-quality-profile" className={s.formLabel}>{t('arrPush.qualityProfile')}</label>
-              <select
-                id="arr-quality-profile"
-                name="quality_profile"
-                className={s.select}
-                value={qualityProfile}
-                disabled={loadingOptions || saving}
-                onChange={e => setQualityProfile((e.target as HTMLSelectElement).value)}
-              >
-                {qualityProfiles.length === 0 && <option value="">{t('arrPush.noProfiles')}</option>}
-                {qualityProfiles.map(qp => (
-                  <option key={qp.id} value={qp.id}>{qp.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor="arr-monitored" className={s.formLabel}>{t('arrPush.monitored')}</label>
-              <select
-                id="arr-monitored"
-                name="monitored"
-                className={s.select}
-                value={monitored}
-                disabled={loadingOptions || saving}
-                onChange={e => setMonitored((e.target as HTMLSelectElement).value)}
-              >
-                <option value="true">{t('common.yes')}</option>
-                <option value="false">{t('common.no')}</option>
-              </select>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor="arr-search" className={s.formLabel}>{t('arrPush.searchForMissing')}</label>
-              <select
-                id="arr-search"
-                name="search"
-                className={s.select}
-                value={search}
-                disabled={loadingOptions || saving}
-                onChange={e => setSearch((e.target as HTMLSelectElement).value)}
-              >
-                <option value="false">{t('common.no')}</option>
-                <option value="true">{t('common.yes')}</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Primary Action Button */}
-        <div className={s.actionWrap}>
-          <button
-            type="button"
-            className={`${s.btnPush} ${isRadarr ? s.btnRadarr : s.btnSonarr}`}
-            onClick={handleSave}
-            disabled={!hasRequiredID || saving || loadingOptions || !rootFolder || !qualityProfile}
-          >
-            {saving ? (
-              t('arrPush.saving')
-            ) : isLinked ? (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
+        {confirmingDelete ? (
+          <div className={s.confirmSection}>
+            <div className={s.confirmWarning}>
+              <div className={s.confirmHeader}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className={s.confirmIcon}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-                {t('arrPush.updateInApp', { app: appLabel })}
-              </>
-            ) : isPreviouslyDeleted ? (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="1 4 1 10 7 10" />
-                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                </svg>
-                {t('arrPush.readdToSonarr')}
-              </>
-            ) : (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-                {t('arrPush.sendToApp', { app: appLabel })}
-              </>
+                <h3 className={s.confirmTitle}>{t('arrPush.deleteConfirmTitle', { title: name })}</h3>
+              </div>
+              <p className={s.confirmDesc}>{t('arrPush.deleteConfirmDesc')}</p>
+            </div>
+
+            {error && (
+              <div className={s.errorBanner} role="alert">
+                {error}
+              </div>
             )}
-          </button>
-        </div>
+
+            <label htmlFor="arr-add-import-exclusion" className={s.checkboxContainer}>
+              <input
+                id="arr-add-import-exclusion"
+                type="checkbox"
+                className={s.checkbox}
+                checked={addImportExclusion}
+                disabled={deleting}
+                onChange={e => setAddImportExclusion((e.target as HTMLInputElement).checked)}
+              />
+              <span className={s.checkboxText}>{t('arrPush.addImportExclusion')}</span>
+            </label>
+
+            <div className={s.confirmActions}>
+              <button
+                type="button"
+                className={s.btnCancel}
+                onClick={() => {
+                  setError(null)
+                  setConfirmingDelete(false)
+                }}
+                disabled={deleting}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className={s.btnConfirmDanger}
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting ? t('arrPush.deleting') : t('arrPush.confirmDeleteFromRadarr')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Error / Warning notices */}
+            {!hasRequiredID && (
+              <div className={s.warningBox}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>
+                  {t('arrPush.missingIdWarning', { idType: isRadarr ? 'TMDB' : 'TVDB', app: appLabel })}
+                </span>
+              </div>
+            )}
+
+            {isStaleMissing && (
+              <div className={s.warningBox}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>
+                  {t('arrPush.staleEntryNotice', { app: appLabel })}
+                </span>
+              </div>
+            )}
+
+            {isPreviouslyDeleted && (
+              <div className={s.warningBox}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>
+                  {t('arrPush.previouslyDeletedNotice')}
+                </span>
+              </div>
+            )}
+
+            {error && (
+              <div className={s.errorBanner} role="alert">
+                {error}
+              </div>
+            )}
+
+            {/* Configuration Options */}
+            <div className={s.section}>
+              <div className={s.sectionLabel}>{t('arrPush.appOptions', { app: appLabel })}</div>
+
+              <div className={s.formGrid}>
+                <div className={s.formGroup}>
+                  <label htmlFor="arr-root-folder" className={s.formLabel}>{t('arrPush.rootFolder')}</label>
+                  <select
+                    id="arr-root-folder"
+                    name="root_folder"
+                    className={s.select}
+                    value={rootFolder}
+                    disabled={loadingOptions || saving}
+                    onChange={e => setRootFolder((e.target as HTMLSelectElement).value)}
+                  >
+                    {rootFolders.length === 0 && <option value="">{rootFolder || t('arrPush.noFolders')}</option>}
+                    {rootFolders.map(rf => (
+                      <option key={rf.id} value={rf.path}>{rf.path}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={s.formGroup}>
+                  <label htmlFor="arr-quality-profile" className={s.formLabel}>{t('arrPush.qualityProfile')}</label>
+                  <select
+                    id="arr-quality-profile"
+                    name="quality_profile"
+                    className={s.select}
+                    value={qualityProfile}
+                    disabled={loadingOptions || saving}
+                    onChange={e => setQualityProfile((e.target as HTMLSelectElement).value)}
+                  >
+                    {qualityProfiles.length === 0 && <option value="">{t('arrPush.noProfiles')}</option>}
+                    {qualityProfiles.map(qp => (
+                      <option key={qp.id} value={qp.id}>{qp.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={s.formGroup}>
+                  <label htmlFor="arr-monitored" className={s.formLabel}>{t('arrPush.monitored')}</label>
+                  <select
+                    id="arr-monitored"
+                    name="monitored"
+                    className={s.select}
+                    value={monitored}
+                    disabled={loadingOptions || saving}
+                    onChange={e => setMonitored((e.target as HTMLSelectElement).value)}
+                  >
+                    <option value="true">{t('common.yes')}</option>
+                    <option value="false">{t('common.no')}</option>
+                  </select>
+                </div>
+
+                <div className={s.formGroup}>
+                  <label htmlFor="arr-search" className={s.formLabel}>{t('arrPush.searchForMissing')}</label>
+                  <select
+                    id="arr-search"
+                    name="search"
+                    className={s.select}
+                    value={search}
+                    disabled={loadingOptions || saving}
+                    onChange={e => setSearch((e.target as HTMLSelectElement).value)}
+                  >
+                    <option value="false">{t('common.no')}</option>
+                    <option value="true">{t('common.yes')}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary & Destructive Actions */}
+            <div className={s.actionWrap}>
+              <button
+                type="button"
+                className={`${s.btnPush} ${isRadarr ? s.btnRadarr : s.btnSonarr}`}
+                onClick={handleSave}
+                disabled={!hasRequiredID || saving || loadingOptions || !rootFolder || !qualityProfile}
+              >
+                {saving ? (
+                  t('arrPush.saving')
+                ) : isLinked ? (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    {t('arrPush.updateInApp', { app: appLabel })}
+                  </>
+                ) : isPreviouslyDeleted ? (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10" />
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                    </svg>
+                    {t('arrPush.readdToSonarr')}
+                  </>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    {t('arrPush.sendToApp', { app: appLabel })}
+                  </>
+                )}
+              </button>
+
+              {canDeleteFromRadarr && (
+                <button
+                  type="button"
+                  className={s.btnDelete}
+                  onClick={() => {
+                    setError(null)
+                    setAddImportExclusion(true)
+                    setConfirmingDelete(true)
+                  }}
+                  disabled={saving || loadingOptions}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                  {t('arrPush.deleteFromRadarr')}
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </BottomSheet>
   )

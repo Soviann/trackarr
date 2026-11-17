@@ -232,9 +232,7 @@ func (s *ArrService) PushTitle(ctx context.Context, titleID int64, payload PushP
 		if err := s.saveArrID(ctx, titleID, app, arrID); err != nil {
 			return 0, err
 		}
-		if app == "sonarr" && title.TVDBID != nil && *title.TVDBID > 0 {
-			s.removeSonarrImportListExclusion(ctx, *title.TVDBID)
-		}
+		s.cleanupImportExclusion(ctx, app, title)
 		return arrID, nil
 	}
 
@@ -282,9 +280,7 @@ func (s *ArrService) PushTitle(ctx context.Context, titleID int64, payload PushP
 	if err := s.saveArrID(ctx, titleID, app, arrID); err != nil {
 		return 0, err
 	}
-	if app == "sonarr" && title.TVDBID != nil && *title.TVDBID > 0 {
-		s.removeSonarrImportListExclusion(ctx, *title.TVDBID)
-	}
+	s.cleanupImportExclusion(ctx, app, title)
 	return arrID, nil
 }
 
@@ -657,48 +653,23 @@ func (s *ArrService) DeleteSeriesFromSonarr(ctx context.Context, payload SonarrD
 }
 
 // DeleteMovieFromRadarr deletes a movie from Radarr, purges files if deleteFiles is true,
-// and records an import exclusion if addImportExclusion is true.
+// records an import exclusion if addImportExclusion is true, and clears local radarr_id and downloaded_at.
 func (s *ArrService) DeleteMovieFromRadarr(ctx context.Context, payload RadarrDeletePayload) error {
 	var arrID int64
 	if payload.RadarrID != nil && *payload.RadarrID > 0 {
 		arrID = *payload.RadarrID
 	} else if payload.TMDBID != nil && *payload.TMDBID > 0 {
-		// Lookup by TMDB ID in Radarr
-		endpoint := fmt.Sprintf("/api/v3/movie?tmdbId=%d", *payload.TMDBID)
-		resp, err := s.ProxyRequest(ctx, "radarr", "GET", endpoint, nil)
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				var items []map[string]interface{}
-				if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
-					if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
-						arrID = int64(idF)
-					}
-				}
-			}
-		}
-		// If still not found, try movie lookup
-		if arrID == 0 {
-			lookupEndpoint := fmt.Sprintf("/api/v3/movie/lookup?term=tmdb:%d", *payload.TMDBID)
-			resp, err := s.ProxyRequest(ctx, "radarr", "GET", lookupEndpoint, nil)
-			if err == nil {
-				defer resp.Body.Close()
-				if resp.StatusCode == http.StatusOK {
-					var items []map[string]interface{}
-					if err := json.NewDecoder(resp.Body).Decode(&items); err == nil && len(items) > 0 {
-						if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
-							arrID = int64(idF)
-						}
-					}
-				}
-			}
+		var err error
+		arrID, err = s.lookupRadarrMovieID(ctx, *payload.TMDBID)
+		if err != nil {
+			return err
 		}
 	}
 
 	if arrID == 0 {
-		// Movie does not exist in Radarr; ensure local radarr_id is cleared.
+		// Movie does not exist in Radarr; clear local radarr_id and downloaded_at.
 		if payload.TitleID > 0 {
-			_ = s.clearArrID(ctx, payload.TitleID, "radarr")
+			return s.clearRadarrDeletionState(ctx, payload.TitleID)
 		}
 		return nil
 	}
@@ -718,10 +689,72 @@ func (s *ArrService) DeleteMovieFromRadarr(ctx context.Context, payload RadarrDe
 	}
 
 	if payload.TitleID > 0 {
-		_ = s.clearArrID(ctx, payload.TitleID, "radarr")
+		return s.clearRadarrDeletionState(ctx, payload.TitleID)
 	}
 
 	return nil
+}
+
+func (s *ArrService) lookupRadarrMovieID(ctx context.Context, tmdbID int64) (int64, error) {
+	endpoints := []string{
+		fmt.Sprintf("/api/v3/movie?tmdbId=%d", tmdbID),
+		fmt.Sprintf("/api/v3/movie/lookup?term=tmdb:%d", tmdbID),
+	}
+
+	for _, endpoint := range endpoints {
+		arrID, err := s.fetchRadarrIDFromEndpoint(ctx, endpoint)
+		if err != nil {
+			return 0, err
+		}
+		if arrID > 0 {
+			return arrID, nil
+		}
+	}
+
+	return 0, nil
+}
+
+func (s *ArrService) fetchRadarrIDFromEndpoint(ctx context.Context, endpoint string) (int64, error) {
+	resp, err := s.ProxyRequest(ctx, "radarr", "GET", endpoint, nil)
+	if err != nil {
+		return 0, fmt.Errorf("lookup movie in radarr (%s): %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return 0, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("radarr lookup (%s) returned %d: %s", endpoint, resp.StatusCode, string(body))
+	}
+
+	var items []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		return 0, fmt.Errorf("decode radarr lookup (%s): %w", endpoint, err)
+	}
+	if len(items) > 0 {
+		if idF, ok := items[0]["id"].(float64); ok && idF > 0 {
+			return int64(idF), nil
+		}
+	}
+	return 0, nil
+}
+
+func (s *ArrService) clearRadarrDeletionState(ctx context.Context, titleID int64) error {
+	if s.writeDB == nil {
+		return fmt.Errorf("write database not configured on arr service")
+	}
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		update := repository.TitleUpdate{
+			ClearRadarrID:     true,
+			ClearDownloadedAt: true,
+		}
+		if err := repository.NewTitleWriter(tx).Update(ctx, titleID, update); err != nil {
+			return fmt.Errorf("clear radarr deletion state: %w", err)
+		}
+		return nil
+	})
 }
 
 // DeleteTitleFromArr removes a title from either Radarr or Sonarr based on its type / IDs.
@@ -751,9 +784,34 @@ func (s *ArrService) DeleteTitleFromArr(ctx context.Context, title *model.Title,
 	return nil
 }
 
+func (s *ArrService) cleanupImportExclusion(ctx context.Context, app string, title *model.Title) {
+	if title == nil {
+		return
+	}
+	switch app {
+	case "sonarr":
+		if title.TVDBID != nil && *title.TVDBID > 0 {
+			s.removeSonarrImportListExclusion(ctx, *title.TVDBID)
+		}
+	case "radarr":
+		if title.TMDBID != nil && *title.TMDBID > 0 {
+			s.removeRadarrImportExclusion(ctx, *title.TMDBID)
+		}
+	}
+}
+
 // removeSonarrImportListExclusion removes an import list exclusion for the given TVDB ID if one exists.
 func (s *ArrService) removeSonarrImportListExclusion(ctx context.Context, tvdbID int64) {
-	resp, err := s.ProxyRequest(ctx, "sonarr", "GET", "/api/v3/importlistexclusion", nil)
+	s.removeImportExclusion(ctx, "sonarr", "/api/v3/importlistexclusion", "tvdbId", tvdbID)
+}
+
+// removeRadarrImportExclusion removes an import exclusion for the given TMDB ID if one exists.
+func (s *ArrService) removeRadarrImportExclusion(ctx context.Context, tmdbID int64) {
+	s.removeImportExclusion(ctx, "radarr", "/api/v3/exclusions", "tmdbId", tmdbID)
+}
+
+func (s *ArrService) removeImportExclusion(ctx context.Context, app, endpoint, idField string, externalID int64) {
+	resp, err := s.ProxyRequest(ctx, app, "GET", endpoint, nil)
 	if err != nil {
 		return
 	}
@@ -768,15 +826,14 @@ func (s *ArrService) removeSonarrImportListExclusion(ctx context.Context, tvdbID
 	}
 
 	for _, item := range exclusions {
-		tvdbF, ok := item["tvdbId"].(float64)
-		if ok && int64(tvdbF) == tvdbID {
+		extF, ok := item[idField].(float64)
+		if ok && int64(extF) == externalID {
 			if idF, ok := item["id"].(float64); ok && idF > 0 {
-				delResp, err := s.ProxyRequest(ctx, "sonarr", "DELETE", fmt.Sprintf("/api/v3/importlistexclusion/%d", int64(idF)), nil)
-				if err == nil {
+				delResp, err := s.ProxyRequest(ctx, app, "DELETE", fmt.Sprintf("%s/%d", endpoint, int64(idF)), nil)
+				if err == nil && delResp != nil {
 					_ = delResp.Body.Close()
 				}
 			}
 		}
 	}
 }
-

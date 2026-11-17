@@ -27,6 +27,9 @@ When a title is pushed directly from the title detail drawer (`ArrPushSheet` via
    - Posts add payload via `POST /api/v3/movie` or `POST /api/v3/series` with `addOptions{searchForMovie: true, searchForMissingEpisodes: true}`.
 5. Persists the returned ID:
    - Sets `titles.radarr_id = ?` or `titles.sonarr_id = ?`.
+6. Cleans up import exclusions (`cleanupImportExclusion`, best-effort non-blocking on both already-exists and post-add branches):
+   - **Radarr**: Queries `GET /api/v3/exclusions` and issues `DELETE /api/v3/exclusions/{id}` for entries matching `tmdbId`.
+   - **Sonarr**: Queries `GET /api/v3/importlistexclusion` and issues `DELETE /api/v3/importlistexclusion/{id}` for entries matching `tvdbId`.
 
 ## Frontend Status Representation
 - **Cards (PosterCard / TitleCard)**: `TypeBadge.tsx` displays colored top accent borders (`#ffc230` yellow for Radarr, `#00c0ff` cyan for Sonarr).
@@ -69,7 +72,24 @@ When opening `ArrPushSheet`:
 2. If Trackarr has `sonarr_id` or `radarr_id` recorded on the title but the live check returns `exists: false` (the entry was deleted directly in Sonarr/Radarr):
    - `ArrPushSheet` warns the user with an alert banner (`staleEntryNotice`).
    - The action button automatically reflects addition ("Send to {App}") rather than update ("Update in {App}").
-   - `ArrPushSheet` invokes `onUnlinked()` so parent components (e.g. `TitleDetail`) immediately reset local `sonarr_id` / `radarr_id` state without requiring a full manual refresh.
+   - `ArrPushSheet` invokes `onUnlinked()` so parent components (e.g. `TitleDetail`, `FranchiseRelationsSection`) immediately reset local `sonarr_id` / `radarr_id` state without requiring a full manual refresh.
+
+## Movie Deletion from Radarr (`ArrPushSheet` & `DELETE /api/arr/title/{id}`)
+1. **HTTP Contract (`ArrHandler.DeleteTitleArr`)**:
+   - Route `DELETE /api/arr/title/{id}` is registered under `r.Route("/arr", ...)` and requires `model.ScopeArrWrite`.
+   - Validates `id` (`400 Bad Request` on invalid ID), loads the title (`404 Not Found` on `sql.ErrNoRows`), and enforces `title.Type == model.TitleTypeMovie` (`400 Bad Request` for non-movie titles).
+   - Accepts an optional JSON body (`{"delete_files": bool, "add_import_exclusion": bool}`), defaulting both `delete_files` and `add_import_exclusion` to `true` when omitted or empty (`io.EOF`), and returning `400 Bad Request` on malformed JSON.
+   - Executes deletion synchronously and returns `200 OK` (`{"status":"ok"}`) or `500` on failure.
+2. **Service Execution & DB Cleanup (`ArrService.DeleteMovieFromRadarr`)**:
+   - Uses `payload.RadarrID` when present or falls back to TMDB lookup (`lookupRadarrMovieID` against `/api/v3/movie?tmdbId={id}` then `/api/v3/movie/lookup?term=tmdb:{id}`), propagating Radarr configuration, network, or non-OK/non-404 errors rather than treating failed lookups as missing.
+   - Issues `DELETE /api/v3/movie/{id}?deleteFiles={bool}&addImportExclusion={bool}` (accepting `200`, `204`, `404`; aborting without DB changes on non-success status codes).
+   - On confirmed Radarr deletion or confirmed absence (`[]` / `404`), atomically clears `radarr_id` (`ClearRadarrID: true`) and `downloaded_at` (`ClearDownloadedAt: true`) inside `database.WithTxContext` via `repository.NewTitleWriter(tx).Update`, while preserving `status`, `my_rating`, `watch_events`, and `arr_ignored` untouched.
+3. **Frontend Confirmation Flow & State Sync**:
+   - `ArrPushSheet` renders the destructive **Delete from Radarr** button strictly for movies (`title.type === 'movie'`) when live `arrDetails?.exists === true`.
+   - Clicking **Delete from Radarr** transitions the sheet into an inline confirmation state inside the same `BottomSheet` (preventing nested sheet focus/`Escape`/history conflicts), showing a permanent disk/NAS deletion warning, an `add_import_exclusion` toggle defaulting to `true`, `Cancel` / `Confirm permanent deletion` buttons (disabled while `deleting` is in flight), and an inline `errorBanner` on failure.
+   - On success, `ArrPushSheet` calls `onDeleted?.()` (falling back to `onUnlinked?.()`) and closes: `TitleDetail` clears `radarr_id: null` and `downloaded_at: null` and calls `useTitleStore.invalidate()`; `FranchiseRelationsSection` clears `matched_radarr_id: null` on matching relation items and invalidates `useTitleStore`.
+4. **Re-Push Exclusion Cleanup**:
+   - When re-pushing a movie to Radarr (`ArrService.PushTitle` via `POST /api/arr/push/{id}` or `/api/arr/queue/{id}/push`), `cleanupImportExclusion` calls `removeRadarrImportExclusion` (`GET /api/v3/exclusions` + `DELETE /api/v3/exclusions/{id}` matching `tmdbId`) as a best-effort cleanup in both the already-exists and post-add branches.
 
 
 

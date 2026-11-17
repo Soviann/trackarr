@@ -301,6 +301,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 				r.With(mw.RequireScope(model.ScopeArrRead)).Get("/{app}/qualityprofile", httputil.WrapHandler(arr.ProxyQualityProfile))
 				r.With(mw.RequireScope(model.ScopeArrRead)).Get("/title/{id}", httputil.WrapHandler(arr.GetTitleArr))
 				r.With(mw.RequireScope(model.ScopeArrWrite)).Put("/title/{id}", httputil.WrapHandler(arr.UpdateTitleArr))
+				r.With(mw.RequireScope(model.ScopeArrWrite)).Delete("/title/{id}", httputil.WrapHandler(arr.DeleteTitleArr))
 				r.With(mw.RequireScope(model.ScopeArrWrite)).Post("/push/{id}", httputil.WrapHandler(arr.PushToArr))
 				r.With(mw.RequireScope(model.ScopeArrWrite)).Post("/queue/{id}/push", httputil.WrapHandler(arr.PushToArr))
 			})

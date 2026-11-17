@@ -864,6 +864,13 @@ export const fr: TranslationSchema = {
     selectFolderAndProfile: 'Veuillez sélectionner un dossier racine et un profil de qualité.',
     errorUpdating: 'Erreur lors de la mise à jour dans {app}',
     staleEntryNotice: 'Ce titre n\'a pas été trouvé dans {app} (il a peut-être été supprimé). Vous pouvez l\'ajouter maintenant.',
+    deleteFromRadarr: 'Supprimer de Radarr',
+    deleteConfirmTitle: 'Supprimer « {title} » de Radarr ?',
+    deleteConfirmDesc: 'Le film sera retiré de Radarr et son dossier ainsi que ses fichiers vidéo seront définitivement supprimés du disque / NAS. Votre statut et votre historique Trackarr seront conservés.',
+    addImportExclusion: 'Empêcher le réimport automatique (ajouter une exclusion dans Radarr)',
+    confirmDeleteFromRadarr: 'Confirmer la suppression définitive',
+    deleting: 'Suppression...',
+    errorDeleting: 'Erreur lors de la suppression dans Radarr',
   },
   rematch: {
     arrUnlinkTitle: 'Dissocier de {app} ?',
