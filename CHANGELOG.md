@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.30.0] — 2026-11-17
+
 ### Ajouté
 - **Suppression d'un film dans Radarr et sur le disque depuis le tiroir Arr (`DELETE /api/arr/title/{id}`, `ArrPushSheet`)** :
   - Nouvel endpoint synchrone `DELETE /api/arr/title/{id}` (protégé par le scope `arr:write`, réservé aux films) acceptant les options `delete_files` et `add_import_exclusion` (`true` par défaut) pour supprimer un film de Radarr et effacer ses fichiers sur disque tout en conservant intacts le statut Trackarr, la note et l'historique de visionnage.
