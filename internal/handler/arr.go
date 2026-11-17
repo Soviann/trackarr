@@ -185,7 +185,7 @@ func (h *ArrHandler) DeleteTitleArr(w http.ResponseWriter, r *http.Request) erro
 		AddImportExclusion: addImportExclusion,
 	})
 	if err != nil {
-		return httputil.InternalError(fmt.Sprintf("Failed to delete from Radarr: %v", err), err)
+		return httputil.InternalError("Failed to delete from Radarr", err)
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, map[string]string{

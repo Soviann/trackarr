@@ -307,12 +307,16 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 		name           string
 		pathID         string // overrides created title ID when non-empty
 		titleType      model.TitleType
+		noRadarrID     bool
 		body           string
 		radarrStatus   int
+		radarrBody     string
+		closeServer    bool
 		unconfigured   bool
 		expectedStatus int
 		expectRadarr   bool
 		errContains    string
+		exactError     string
 	}{
 		{
 			name:           "invalid ID param returns 400",
@@ -354,19 +358,41 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 			errContains:    "Invalid JSON",
 		},
 		{
-			name:           "Radarr 500 error returns 500 and preserves DB",
+			name:           "Radarr 500 error returns sanitized 500 and preserves DB",
 			titleType:      model.TitleTypeMovie,
 			radarrStatus:   http.StatusInternalServerError,
+			radarrBody:     `{"message":"radarr error","path":"/nas/movies/secret"}`,
 			expectedStatus: http.StatusInternalServerError,
 			expectRadarr:   true,
 			errContains:    "Failed to delete from Radarr",
+			exactError:     "Failed to delete from Radarr",
 		},
 		{
-			name:           "unconfigured Radarr returns 500 and preserves DB",
+			name:           "Radarr lookup failure returns sanitized 500 without leaking URL or upstream body",
+			titleType:      model.TitleTypeMovie,
+			noRadarrID:     true,
+			radarrStatus:   http.StatusBadGateway,
+			radarrBody:     `{"message":"radarr lookup failure","path":"/nas/movies/secret"}`,
+			expectedStatus: http.StatusInternalServerError,
+			expectRadarr:   true,
+			errContains:    "Failed to delete from Radarr",
+			exactError:     "Failed to delete from Radarr",
+		},
+		{
+			name:           "Radarr network error returns sanitized 500 without leaking internal URL",
+			titleType:      model.TitleTypeMovie,
+			closeServer:    true,
+			expectedStatus: http.StatusInternalServerError,
+			errContains:    "Failed to delete from Radarr",
+			exactError:     "Failed to delete from Radarr",
+		},
+		{
+			name:           "unconfigured Radarr returns sanitized 500 and preserves DB",
 			titleType:      model.TitleTypeMovie,
 			unconfigured:   true,
 			expectedStatus: http.StatusInternalServerError,
 			errContains:    "Failed to delete from Radarr",
+			exactError:     "Failed to delete from Radarr",
 		},
 	}
 
@@ -379,10 +405,17 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 				if status == 0 {
 					status = http.StatusOK
 				}
+				body := tc.radarrBody
+				if body == "" {
+					body = `{"message":"radarr error"}`
+				}
 				w.WriteHeader(status)
-				_, _ = w.Write([]byte(`{"message":"radarr error"}`))
+				_, _ = w.Write([]byte(body))
 			}))
 			defer arrServer.Close()
+			if tc.closeServer {
+				arrServer.Close()
+			}
 
 			db := testutil.NewTestDB(t)
 			titlesRepo := repository.NewTitleRepository(db)
@@ -390,15 +423,19 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 
 			var createdID int64
 			arrID := int64(42)
+			tmdbID := int64(9988)
 			if tc.titleType != "" {
 				title := &model.Title{
 					Type:        tc.titleType,
 					Year:        2024,
 					Status:      model.TitleStatusCompleted,
 					MatchStatus: model.MatchStatusConfirmed,
+					TMDBID:      &tmdbID,
 				}
 				if tc.titleType == model.TitleTypeMovie {
-					title.RadarrID = &arrID
+					if !tc.noRadarrID {
+						title.RadarrID = &arrID
+					}
 				} else {
 					title.SonarrID = &arrID
 				}
@@ -438,6 +475,15 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 			if tc.errContains != "" {
 				assert.Contains(t, strings.ToLower(rr.Body.String()), strings.ToLower(tc.errContains))
 			}
+			if tc.exactError != "" {
+				var errResp map[string]string
+				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &errResp))
+				assert.Equal(t, map[string]string{"error": tc.exactError}, errResp)
+				assert.NotContains(t, rr.Body.String(), arrServer.URL)
+				assert.NotContains(t, rr.Body.String(), "/nas/movies/secret")
+				assert.NotContains(t, rr.Body.String(), "radarr error")
+				assert.NotContains(t, rr.Body.String(), "not configured")
+			}
 			if tc.expectRadarr {
 				assert.Equal(t, 1, radarrCalls)
 			} else {
@@ -449,8 +495,12 @@ func TestArrHandler_DeleteTitleArr_Errors(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, after.DownloadedAt)
 				if tc.titleType == model.TitleTypeMovie {
-					require.NotNil(t, after.RadarrID)
-					assert.Equal(t, int64(42), *after.RadarrID)
+					if tc.noRadarrID {
+						assert.Nil(t, after.RadarrID)
+					} else {
+						require.NotNil(t, after.RadarrID)
+						assert.Equal(t, int64(42), *after.RadarrID)
+					}
 				} else {
 					require.NotNil(t, after.SonarrID)
 					assert.Equal(t, int64(42), *after.SonarrID)
