@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.29.4] — 2026-11-17
+
+### Corrigé
+- **Adaptation du compagnon de lecture en cours pour les films (`frontend/src/components/LivePlaybackDrawer.tsx`)** :
+  - Suppression du préfixe `+1` sur le bouton d'action lorsqu'un film est en cours de lecture (`Marquer vu` au lieu de `+1 Marquer vu`, réservé aux épisodes de séries).
+  - Masquage de l'année entre parenthèses lorsque celle-ci vaut `0`.
+
+### Sécurité & Infrastructure
+- **Mise à jour des dépendances** : Mise à niveau des dépendances Go et frontend via Dependabot (#105, #106).
+
 ## [v1.29.3] — 2026-11-13
 
 ### Corrigé

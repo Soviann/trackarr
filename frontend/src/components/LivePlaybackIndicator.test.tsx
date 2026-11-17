@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/preact'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, cleanup } from '@testing-library/preact'
 import { LivePlaybackIndicator } from './LivePlaybackIndicator'
 import type { ActivePlaybackSession } from '../types'
 
 describe('LivePlaybackIndicator', () => {
+  afterEach(() => {
+    cleanup()
+  })
   const nominalSeriesSession: ActivePlaybackSession = {
     source: 'plex',
     player: 'Living Room TV',
@@ -44,5 +47,27 @@ describe('LivePlaybackIndicator', () => {
     render(<LivePlaybackIndicator session={movieSession} onClick={vi.fn()} />)
     expect(screen.getByText('Inception')).not.toBeNull()
     expect(screen.getByText('jellyfin')).not.toBeNull()
+    expect(screen.getByText('Now Playing')).not.toBeNull()
+    expect(screen.queryByText(/S\d+E\d+/)).toBeNull()
+  })
+
+  it('renders movie session with player name and without episode numbers', () => {
+    const movieSessionWithPlayer: ActivePlaybackSession = {
+      source: 'plex',
+      player: 'Apple TV',
+      title_id: 203,
+      title_name: 'Interstellar',
+      title_type: 'movie',
+      year: 2014,
+      season_number: 0,
+      episode_number: 0,
+      started_at: '2026-10-24T12:00:00Z',
+      updated_at: '2026-10-24T12:00:00Z',
+    }
+
+    render(<LivePlaybackIndicator session={movieSessionWithPlayer} onClick={vi.fn()} />)
+    expect(screen.getByText('Interstellar')).not.toBeNull()
+    expect(screen.getByText('Now playing on Apple TV')).not.toBeNull()
+    expect(screen.queryByText(/S\d+E\d+/)).toBeNull()
   })
 })

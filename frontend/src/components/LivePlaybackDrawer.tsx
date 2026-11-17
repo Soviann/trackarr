@@ -103,7 +103,7 @@ export function LivePlaybackDrawer({
           <div className={s.meta}>
             <span className={s.liveBadge}>{session.source} • LIVE</span>
             <a href={routeTo.title(session.title_id)} className={s.titleLink} onClick={onClose}>
-              {session.title_name} ({session.year})
+              {session.year > 0 ? `${session.title_name} (${session.year})` : session.title_name}
             </a>
             {seasonEpText && (
               <span className={s.subTitle}>
@@ -133,7 +133,9 @@ export function LivePlaybackDrawer({
               ? `✓ ${t('playback.markedWatched')}`
               : loading
               ? t('playback.markingWatched')
-              : `+1 ${t('playback.markWatched')}`}
+              : isSeries
+              ? `+1 ${t('playback.markWatched')}`
+              : t('playback.markWatched')}
           </button>
           <button
             type="button"

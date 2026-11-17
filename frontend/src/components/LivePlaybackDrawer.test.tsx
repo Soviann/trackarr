@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/preact'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import { LivePlaybackDrawer } from './LivePlaybackDrawer'
 import * as api from '../api'
 import type { ActivePlaybackSession } from '../types'
@@ -9,6 +9,9 @@ vi.mock('../api', () => ({
 }))
 
 describe('LivePlaybackDrawer', () => {
+  afterEach(() => {
+    cleanup()
+  })
   const mockSession: ActivePlaybackSession = {
     source: 'plex',
     player: 'Living Room TV',
@@ -71,6 +74,52 @@ describe('LivePlaybackDrawer', () => {
     await waitFor(() => {
       expect(apiFetchMock).toHaveBeenCalledWith('/titles/101')
       expect(apiFetchMock).toHaveBeenCalledWith('/titles/101/episodes/501', { method: 'PATCH' })
+      expect(onWatchedSuccess).toHaveBeenCalledOnce()
+    })
+  })
+
+  it('renders movie session without episode details or +1 prefix and marks movie completed', async () => {
+    const apiFetchMock = vi.mocked(api.apiFetch)
+    apiFetchMock.mockResolvedValueOnce({})
+
+    const movieSession: ActivePlaybackSession = {
+      source: 'jellyfin',
+      player: 'Apple TV',
+      title_id: 202,
+      title_name: 'Inception',
+      title_type: 'movie',
+      year: 2010,
+      overview: 'A thief who steals corporate secrets through dream-sharing technology.',
+      started_at: '2026-10-24T12:00:00Z',
+      updated_at: '2026-10-24T12:00:00Z',
+    }
+
+    const onWatchedSuccess = vi.fn()
+    const { container } = render(
+      <LivePlaybackDrawer
+        session={movieSession}
+        open={true}
+        onClose={vi.fn()}
+        onDismiss={vi.fn()}
+        onWatchedSuccess={onWatchedSuccess}
+      />
+    )
+
+    expect(screen.getByText('Inception (2010)')).not.toBeNull()
+    expect(screen.queryByText(/S\d+E\d+/)).toBeNull()
+
+    const btn = container.querySelector('button[class*="markWatchedBtn"]') as HTMLButtonElement
+    expect(btn).not.toBeNull()
+    expect(btn.textContent).toBe('Mark Watched')
+    expect(btn.textContent).not.toContain('+1')
+
+    fireEvent.click(btn)
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith('/titles/202', {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'completed' }),
+      })
       expect(onWatchedSuccess).toHaveBeenCalledOnce()
     })
   })

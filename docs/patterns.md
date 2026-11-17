@@ -271,7 +271,7 @@
 | `FilterDrawer`| `components/FilterDrawer.tsx` | Compact filter panel with zero-reflow CSS Grid row collapse and GPU translateY transitions, docked handle row (`[ FILTERS (count) ⌃ ]` + scrolling chips), 3 sub-tabs, overscroll containment, and automatic close on page navigation |
 | `SearchBar` | `components/SearchBar.tsx` | Docked search input bound to `useSearchStore` with media URL auto-detection (IMDb, TMDB, AniList), clear text `✕` button, and integrated filter trigger button with active count badge |
 | `LivePlaybackIndicator` | `components/LivePlaybackIndicator.tsx` | Pulsing live playback pill mounted above bottom navigation displaying active playing title and player |
-| `LivePlaybackDrawer` | `components/LivePlaybackDrawer.tsx` | Slide-up bottom sheet companion displaying active cover, title, season/episode, overview, and `+1 Marquer vu` action |
+| `LivePlaybackDrawer` | `components/LivePlaybackDrawer.tsx` | Slide-up bottom sheet companion displaying active cover, title, season/episode (series), overview, and mark-watched action (`+1` for series, `Marquer vu` for movies) |
 | `SeasonAniListStrip` | `components/SeasonAniListStrip.tsx` | Active season AniList score and multi-part management strip |
 | `SeasonSideStories` | `components/SeasonSideStories.tsx` | Inline cards for side stories and movies recommended at the end of the active season |
 | `SeasonTab` | `components/SeasonTab.tsx` | Interactive tab button for switching season views in TitleDetail |
