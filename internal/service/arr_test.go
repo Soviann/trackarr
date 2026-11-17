@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -442,117 +443,382 @@ func TestArrService_PushTitle_Sonarr_ClearsDeletedAtAndExclusion(t *testing.T) {
 }
 
 func TestArrService_DeleteMovieFromRadarr_Nominal(t *testing.T) {
-	var requestedPath string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestedPath = r.URL.String()
-		if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/42") {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		http.NotFound(w, r)
-	}))
-	defer ts.Close()
-
-	cfg := &config.Config{
-		RadarrURL:    ts.URL,
-		RadarrAPIKey: "radarr-key-delete",
+	cases := []struct {
+		name               string
+		deleteFiles        bool
+		addImportExclusion bool
+		statusCode         int
+		arrIgnored         bool
+		expectedQuery      string
+	}{
+		{
+			name:               "200 OK with deleteFiles and addImportExclusion true",
+			deleteFiles:        true,
+			addImportExclusion: true,
+			statusCode:         http.StatusOK,
+			arrIgnored:         false,
+			expectedQuery:      "/api/v3/movie/42?deleteFiles=true&addImportExclusion=true",
+		},
+		{
+			name:               "204 No Content with flags false preserves arr_ignored",
+			deleteFiles:        false,
+			addImportExclusion: false,
+			statusCode:         http.StatusNoContent,
+			arrIgnored:         true,
+			expectedQuery:      "/api/v3/movie/42?deleteFiles=false&addImportExclusion=false",
+		},
+		{
+			name:               "404 Not Found still cleans up local DB",
+			deleteFiles:        true,
+			addImportExclusion: true,
+			statusCode:         http.StatusNotFound,
+			arrIgnored:         false,
+			expectedQuery:      "/api/v3/movie/42?deleteFiles=true&addImportExclusion=true",
+		},
 	}
 
-	db := testutil.NewTestDB(t)
-	defer db.Close()
-	settingsRepo := repository.NewSettingRepository(db)
-	titlesRepo := repository.NewTitleRepository(db)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var requestedPath string
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestedPath = r.URL.String()
+				if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/42") {
+					w.WriteHeader(tc.statusCode)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+			defer ts.Close()
 
-	radarrID := int64(42)
-	titleID := testutil.CreateTitle(t, db, &model.Title{
-		Type:        model.TitleTypeMovie,
-		Year:        2023,
-		Status:      model.TitleStatusCompleted,
-		MatchStatus: model.MatchStatusConfirmed,
-		RadarrID:    &radarrID,
-	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+			cfg := &config.Config{
+				RadarrURL:    ts.URL,
+				RadarrAPIKey: "radarr-key-delete",
+			}
 
-	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+			db := testutil.NewTestDB(t)
+			defer db.Close()
+			settingsRepo := repository.NewSettingRepository(db)
+			titlesRepo := repository.NewTitleRepository(db)
+			watchEventRepo := repository.NewWatchEventRepository(db)
 
-	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
-		TitleID:            titleID,
-		RadarrID:           &radarrID,
-		DeleteFiles:        true,
-		AddImportExclusion: true,
-	})
-	require.NoError(t, err)
-	assert.Equal(t, "/api/v3/movie/42?deleteFiles=true&addImportExclusion=true", requestedPath)
+			radarrID := int64(42)
+			rating := 9
+			titleID := testutil.CreateTitle(t, db, &model.Title{
+				Type:        model.TitleTypeMovie,
+				Year:        2023,
+				Status:      model.TitleStatusCompleted,
+				MatchStatus: model.MatchStatusConfirmed,
+				MyRating:    &rating,
+				RadarrID:    &radarrID,
+				ArrIgnored:  tc.arrIgnored,
+			}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
 
-	after, err := titlesRepo.GetByID(titleID)
-	require.NoError(t, err)
-	assert.Nil(t, after.RadarrID, "radarr_id must be cleared locally after deletion")
+			testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{
+				SetDownloadedAt: true,
+			})
+			require.NoError(t, database.WithTx(db, func(tx *sql.Tx) error {
+				_, err := repository.NewWatchEventWriter(tx).Create(context.Background(), &model.WatchEvent{
+					TitleID: titleID,
+					Source:  model.WatchEventSourceManual,
+				})
+				return err
+			}))
+
+			before, err := titlesRepo.GetByID(titleID)
+			require.NoError(t, err)
+			require.NotNil(t, before.DownloadedAt, "precondition: downloaded_at must be set")
+
+			arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+			err = arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+				TitleID:            titleID,
+				RadarrID:           &radarrID,
+				DeleteFiles:        tc.deleteFiles,
+				AddImportExclusion: tc.addImportExclusion,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedQuery, requestedPath)
+
+			after, err := titlesRepo.GetByID(titleID)
+			require.NoError(t, err)
+			assert.Nil(t, after.RadarrID, "radarr_id must be cleared locally after deletion")
+			assert.Nil(t, after.DownloadedAt, "downloaded_at must be cleared locally after deletion")
+			assert.Equal(t, model.TitleStatusCompleted, after.Status, "watch status must be preserved")
+			require.NotNil(t, after.MyRating)
+			assert.Equal(t, 9, *after.MyRating, "my_rating must be preserved")
+			assert.Equal(t, tc.arrIgnored, after.ArrIgnored, "arr_ignored must be preserved")
+
+			evCount, err := watchEventRepo.CountByTitleID(titleID)
+			require.NoError(t, err)
+			assert.Equal(t, 1, evCount, "watch_events must be preserved")
+		})
+	}
 }
 
 func TestArrService_DeleteMovieFromRadarr_LookupByTMDB(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v3/movie":
-			assert.Equal(t, "9999", r.URL.Query().Get("tmdbId"))
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[{"id":77,"title":"Found Movie"}]`))
-		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/77"):
-			w.WriteHeader(http.StatusOK)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer ts.Close()
-
-	cfg := &config.Config{
-		RadarrURL:    ts.URL,
-		RadarrAPIKey: "radarr-key-delete",
+	cases := []struct {
+		name               string
+		movieEndpointBody  string
+		lookupEndpointBody string
+		lookupStatus       int
+		expectDeleteCalled bool
+	}{
+		{
+			name:               "found via primary movie?tmdbId endpoint",
+			movieEndpointBody:  `[{"id":77,"title":"Found Movie"}]`,
+			expectDeleteCalled: true,
+		},
+		{
+			name:               "primary empty, found via movie/lookup fallback",
+			movieEndpointBody:  `[]`,
+			lookupEndpointBody: `[{"id":77,"tmdbId":9999,"title":"Found Movie"}]`,
+			lookupStatus:       http.StatusOK,
+			expectDeleteCalled: true,
+		},
+		{
+			name:               "missing in Radarr (200 [] on both) clears local DB",
+			movieEndpointBody:  `[]`,
+			lookupEndpointBody: `[]`,
+			lookupStatus:       http.StatusOK,
+			expectDeleteCalled: false,
+		},
+		{
+			name:               "missing in Radarr (200 [] + 200 entry without id) clears local DB",
+			movieEndpointBody:  `[]`,
+			lookupEndpointBody: `[{"tmdbId":9999,"title":"Unadded Movie"}]`,
+			lookupStatus:       http.StatusOK,
+			expectDeleteCalled: false,
+		},
+		{
+			name:               "missing in Radarr (200 [] + 404 lookup) clears local DB",
+			movieEndpointBody:  `[]`,
+			lookupStatus:       http.StatusNotFound,
+			expectDeleteCalled: false,
+		},
 	}
 
-	db := testutil.NewTestDB(t)
-	defer db.Close()
-	settingsRepo := repository.NewSettingRepository(db)
-	titlesRepo := repository.NewTitleRepository(db)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var deleteCalled bool
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == "/api/v3/movie":
+					assert.Equal(t, "9999", r.URL.Query().Get("tmdbId"))
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(tc.movieEndpointBody))
+				case r.Method == http.MethodGet && r.URL.Path == "/api/v3/movie/lookup":
+					assert.Equal(t, "tmdb:9999", r.URL.Query().Get("term"))
+					status := tc.lookupStatus
+					if status == 0 {
+						status = http.StatusOK
+					}
+					w.WriteHeader(status)
+					if tc.lookupEndpointBody != "" {
+						_, _ = w.Write([]byte(tc.lookupEndpointBody))
+					}
+				case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/movie/77"):
+					deleteCalled = true
+					w.WriteHeader(http.StatusOK)
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer ts.Close()
 
-	tmdbID := int64(9999)
-	titleID := testutil.CreateTitle(t, db, &model.Title{
-		Type:        model.TitleTypeMovie,
-		Year:        2023,
-		Status:      model.TitleStatusCompleted,
-		MatchStatus: model.MatchStatusConfirmed,
-		TMDBID:      &tmdbID,
-	}, []model.TitleName{{Name: "Found Movie", Language: "en", IsPrimary: true}})
+			cfg := &config.Config{
+				RadarrURL:    ts.URL,
+				RadarrAPIKey: "radarr-key-delete",
+			}
 
-	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+			db := testutil.NewTestDB(t)
+			defer db.Close()
+			settingsRepo := repository.NewSettingRepository(db)
+			titlesRepo := repository.NewTitleRepository(db)
 
-	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
-		TitleID:     titleID,
-		TMDBID:      &tmdbID,
-		DeleteFiles: true,
-	})
-	require.NoError(t, err)
+			staleRadarrID := int64(0)
+			tmdbID := int64(9999)
+			titleID := testutil.CreateTitle(t, db, &model.Title{
+				Type:        model.TitleTypeMovie,
+				Year:        2023,
+				Status:      model.TitleStatusCompleted,
+				MatchStatus: model.MatchStatusConfirmed,
+				TMDBID:      &tmdbID,
+				RadarrID:    &staleRadarrID,
+			}, []model.TitleName{{Name: "Found Movie", Language: "en", IsPrimary: true}})
+			testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{SetDownloadedAt: true})
 
-	after, err := titlesRepo.GetByID(titleID)
-	require.NoError(t, err)
-	assert.Nil(t, after.RadarrID)
+			arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+			err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+				TitleID:     titleID,
+				TMDBID:      &tmdbID,
+				DeleteFiles: true,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectDeleteCalled, deleteCalled)
+
+			after, err := titlesRepo.GetByID(titleID)
+			require.NoError(t, err)
+			assert.Nil(t, after.RadarrID)
+			assert.Nil(t, after.DownloadedAt)
+		})
+	}
 }
 
-func TestArrService_DeleteMovieFromRadarr_ServerError(t *testing.T) {
+func TestArrService_DeleteMovieFromRadarr_ErrorsPreserveDB(t *testing.T) {
+	radarrID := int64(42)
+	tmdbID := int64(9999)
+
+	cases := []struct {
+		name         string
+		payload      func(titleID int64) service.RadarrDeletePayload
+		unconfigured bool
+		handler      http.HandlerFunc
+		errContains  string
+	}{
+		{
+			name: "DELETE returns 500",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, RadarrID: &radarrID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"message":"Internal server error"}`))
+			},
+			errContains: "radarr delete returned 500",
+		},
+		{
+			name: "DELETE returns 401 unauthorized",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, RadarrID: &radarrID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"message":"Unauthorized"}`))
+			},
+			errContains: "radarr delete returned 401",
+		},
+		{
+			name: "DELETE fails when Radarr is unconfigured",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, RadarrID: &radarrID, DeleteFiles: true}
+			},
+			unconfigured: true,
+			errContains:  "not configured",
+		},
+		{
+			name: "fallback lookup fails when Radarr is unconfigured",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, TMDBID: &tmdbID, DeleteFiles: true}
+			},
+			unconfigured: true,
+			errContains:  "not configured",
+		},
+		{
+			name: "fallback primary lookup returns 500",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, TMDBID: &tmdbID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"message":"Radarr boom"}`))
+			},
+			errContains: "500",
+		},
+		{
+			name: "fallback primary lookup returns 401",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, TMDBID: &tmdbID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"message":"Invalid API key"}`))
+			},
+			errContains: "401",
+		},
+		{
+			name: "fallback secondary lookup returns 500",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, TMDBID: &tmdbID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/v3/movie" {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+					return
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"message":"Lookup boom"}`))
+			},
+			errContains: "500",
+		},
+		{
+			name: "fallback primary lookup returns malformed JSON",
+			payload: func(titleID int64) service.RadarrDeletePayload {
+				return service.RadarrDeletePayload{TitleID: titleID, TMDBID: &tmdbID, DeleteFiles: true}
+			},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`<html>login</html>`))
+			},
+			errContains: "decode radarr lookup",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.Config{}
+			if !tc.unconfigured {
+				ts := httptest.NewServer(tc.handler)
+				defer ts.Close()
+				cfg.RadarrURL = ts.URL
+				cfg.RadarrAPIKey = "radarr-key-delete"
+			}
+
+			db := testutil.NewTestDB(t)
+			defer db.Close()
+			settingsRepo := repository.NewSettingRepository(db)
+			titlesRepo := repository.NewTitleRepository(db)
+
+			titleID := testutil.CreateTitle(t, db, &model.Title{
+				Type:        model.TitleTypeMovie,
+				Year:        2023,
+				Status:      model.TitleStatusCompleted,
+				MatchStatus: model.MatchStatusConfirmed,
+				RadarrID:    &radarrID,
+				TMDBID:      &tmdbID,
+			}, []model.TitleName{{Name: "Error Movie", Language: "en", IsPrimary: true}})
+			testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{SetDownloadedAt: true})
+
+			arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+			err := arrSvc.DeleteMovieFromRadarr(context.Background(), tc.payload(titleID))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.errContains)
+
+			after, err := titlesRepo.GetByID(titleID)
+			require.NoError(t, err)
+			require.NotNil(t, after.RadarrID, "radarr_id must remain untouched on error")
+			assert.Equal(t, radarrID, *after.RadarrID)
+			assert.NotNil(t, after.DownloadedAt, "downloaded_at must remain untouched on error")
+		})
+	}
+}
+
+func TestArrService_DeleteMovieFromRadarr_PropagatesDBError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"message":"Internal server error"}`))
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
 
 	cfg := &config.Config{
 		RadarrURL:    ts.URL,
-		RadarrAPIKey: "radarr-key-delete",
+		RadarrAPIKey: "radarr-key-db-err",
 	}
 
 	db := testutil.NewTestDB(t)
-	defer db.Close()
 	settingsRepo := repository.NewSettingRepository(db)
 	titlesRepo := repository.NewTitleRepository(db)
-
 	radarrID := int64(42)
 	titleID := testutil.CreateTitle(t, db, &model.Title{
 		Type:        model.TitleTypeMovie,
@@ -560,9 +826,11 @@ func TestArrService_DeleteMovieFromRadarr_ServerError(t *testing.T) {
 		Status:      model.TitleStatusCompleted,
 		MatchStatus: model.MatchStatusConfirmed,
 		RadarrID:    &radarrID,
-	}, []model.TitleName{{Name: "Error Movie", Language: "en", IsPrimary: true}})
+	}, []model.TitleName{{Name: "DB Err Movie", Language: "en", IsPrimary: true}})
 
 	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+	// Close the DB before invoking deletion cleanup so WithTxContext returns an error.
+	require.NoError(t, db.Close())
 
 	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
 		TitleID:     titleID,
@@ -570,7 +838,223 @@ func TestArrService_DeleteMovieFromRadarr_ServerError(t *testing.T) {
 		DeleteFiles: true,
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "radarr delete returned 500")
 }
 
+func TestArrService_DeleteMovieFromRadarr_WithoutRadarrOrTMDBID(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
 
+	radarrID := int64(42)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		RadarrID:    &radarrID,
+	}, []model.TitleName{{Name: "No IDs Movie", Language: "en", IsPrimary: true}})
+	testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{SetDownloadedAt: true})
+
+	arrSvc := service.NewArrService(&config.Config{}, settingsRepo, titlesRepo, db)
+
+	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID: titleID,
+	})
+	require.NoError(t, err)
+
+	after, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	assert.Nil(t, after.RadarrID)
+	assert.Nil(t, after.DownloadedAt)
+}
+
+func TestArrService_DeleteMovieFromRadarr_NetworkErrorPreservesDB(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	// Close the server immediately to force a TCP connection error.
+	ts.Close()
+
+	cfg := &config.Config{
+		RadarrURL:    ts.URL,
+		RadarrAPIKey: "radarr-key-net-err",
+	}
+
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+
+	radarrID := int64(42)
+	tmdbID := int64(9999)
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2023,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		RadarrID:    &radarrID,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Net Err Movie", Language: "en", IsPrimary: true}})
+	testutil.UpdateTitle(t, db, titleID, repository.TitleUpdate{SetDownloadedAt: true})
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+	// Network error on direct DELETE
+	err := arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID:  titleID,
+		RadarrID: &radarrID,
+	})
+	require.Error(t, err)
+
+	after, err := titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, after.RadarrID)
+	assert.NotNil(t, after.DownloadedAt)
+
+	// Network error on fallback TMDB lookup
+	err = arrSvc.DeleteMovieFromRadarr(context.Background(), service.RadarrDeletePayload{
+		TitleID: titleID,
+		TMDBID:  &tmdbID,
+	})
+	require.Error(t, err)
+
+	after, err = titlesRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, after.RadarrID)
+	assert.NotNil(t, after.DownloadedAt)
+}
+
+func TestArrService_PushTitle_Radarr_RemovesExclusion(t *testing.T) {
+	cases := []struct {
+		name                 string
+		lookupResponse       string
+		expectPost           bool
+		exclusionsStatus     int
+		exclusionsBody       string
+		deleteExclStatus     int
+		expectedDeletedExcls []string
+	}{
+		{
+			name:                 "post-add removes matching exclusions and ignores others",
+			lookupResponse:       `[{"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           true,
+			exclusionsStatus:     http.StatusOK,
+			exclusionsBody:       `[{"id":11,"tmdbId":550,"movieTitle":"Fight Club"},{"id":12,"tmdbId":999,"movieTitle":"Other Movie"}]`,
+			deleteExclStatus:     http.StatusOK,
+			expectedDeletedExcls: []string{"/api/v3/exclusions/11"},
+		},
+		{
+			name:                 "already-exists branch removes matching exclusions",
+			lookupResponse:       `[{"id":42,"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           false,
+			exclusionsStatus:     http.StatusOK,
+			exclusionsBody:       `[{"id":15,"tmdbId":550,"movieTitle":"Fight Club"}]`,
+			deleteExclStatus:     http.StatusNoContent,
+			expectedDeletedExcls: []string{"/api/v3/exclusions/15"},
+		},
+		{
+			name:                 "no matching exclusions is a no-op",
+			lookupResponse:       `[{"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           true,
+			exclusionsStatus:     http.StatusOK,
+			exclusionsBody:       `[{"id":12,"tmdbId":999,"movieTitle":"Other Movie"}]`,
+			expectedDeletedExcls: nil,
+		},
+		{
+			name:                 "exclusion GET failure is best-effort and non-blocking",
+			lookupResponse:       `[{"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           true,
+			exclusionsStatus:     http.StatusInternalServerError,
+			exclusionsBody:       `{"error":"boom"}`,
+			expectedDeletedExcls: nil,
+		},
+		{
+			name:                 "exclusion DELETE failure is best-effort and non-blocking",
+			lookupResponse:       `[{"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           true,
+			exclusionsStatus:     http.StatusOK,
+			exclusionsBody:       `[{"id":11,"tmdbId":550,"movieTitle":"Fight Club"}]`,
+			deleteExclStatus:     http.StatusInternalServerError,
+			expectedDeletedExcls: []string{"/api/v3/exclusions/11"},
+		},
+		{
+			name:                 "exclusion malformed JSON is best-effort and non-blocking",
+			lookupResponse:       `[{"tmdbId":550,"title":"Fight Club"}]`,
+			expectPost:           true,
+			exclusionsStatus:     http.StatusOK,
+			exclusionsBody:       `not-json`,
+			expectedDeletedExcls: nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var postCalled bool
+			var exclusionsFetched bool
+			var deletedExclusions []string
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == "/api/v3/movie/lookup":
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(tc.lookupResponse))
+				case r.Method == http.MethodPost && r.URL.Path == "/api/v3/movie":
+					postCalled = true
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(`{"id":42,"tmdbId":550,"title":"Fight Club"}`))
+				case r.Method == http.MethodGet && r.URL.Path == "/api/v3/exclusions":
+					exclusionsFetched = true
+					w.WriteHeader(tc.exclusionsStatus)
+					_, _ = w.Write([]byte(tc.exclusionsBody))
+				case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v3/exclusions/"):
+					deletedExclusions = append(deletedExclusions, r.URL.Path)
+					status := tc.deleteExclStatus
+					if status == 0 {
+						status = http.StatusOK
+					}
+					w.WriteHeader(status)
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer ts.Close()
+
+			cfg := &config.Config{
+				RadarrURL:    ts.URL,
+				RadarrAPIKey: "radarr-key-push",
+			}
+
+			db := testutil.NewTestDB(t)
+			defer db.Close()
+			settingsRepo := repository.NewSettingRepository(db)
+			titlesRepo := repository.NewTitleRepository(db)
+
+			tmdbID := int64(550)
+			titleID := testutil.CreateTitle(t, db, &model.Title{
+				Type:        model.TitleTypeMovie,
+				Year:        1999,
+				Status:      model.TitleStatusCompleted,
+				MatchStatus: model.MatchStatusConfirmed,
+				TMDBID:      &tmdbID,
+			}, []model.TitleName{{Name: "Fight Club", Language: "en", IsPrimary: true}})
+
+			arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+
+			arrID, err := arrSvc.PushTitle(context.Background(), titleID, service.PushPayload{
+				Monitored:      true,
+				Search:         true,
+				RootFolder:     "/movies",
+				QualityProfile: 1,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, int64(42), arrID)
+			assert.Equal(t, tc.expectPost, postCalled)
+			assert.True(t, exclusionsFetched, fmt.Sprintf("GET /api/v3/exclusions must be called (%s)", tc.name))
+			assert.Equal(t, tc.expectedDeletedExcls, deletedExclusions)
+
+			after, err := titlesRepo.GetByID(titleID)
+			require.NoError(t, err)
+			require.NotNil(t, after.RadarrID)
+			assert.Equal(t, int64(42), *after.RadarrID)
+		})
+	}
+}
