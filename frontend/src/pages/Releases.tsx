@@ -14,6 +14,7 @@ import { PullToRefresh } from '../components/PullToRefresh'
 import { CoverPlaceholder, coverBackground } from '../components/CoverPlaceholder'
 import { useTranslation } from '../i18n'
 import { ReleaseDetailSheet } from '../components/ReleaseDetailSheet'
+import { ArrPushSheet } from '../components/ArrPushSheet'
 import s from './Releases.module.css'
 
 function formatBytes(bytes: number): string {
@@ -44,8 +45,10 @@ export function Releases(_props: { path?: string }) {
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'series'>('all')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [indexerFilter, setIndexerFilter] = useState<string>('all')
+  const [libraryFilter, setLibraryFilter] = useState<'all' | 'not_in_library' | 'plan_to_watch'>('all')
   const [releases, setReleases] = useState<ProwlarrRelease[]>([])
   const [selectedRelease, setSelectedRelease] = useState<ProwlarrRelease | null>(null)
+  const [arrPushTitle, setArrPushTitle] = useState<Title | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +103,14 @@ export function Releases(_props: { path?: string }) {
 
   const filteredReleases = useMemo(() => {
     return releases.filter(rel => {
+      const existingId = rel.existing_title_id ?? addedMap[rel.guid]
+      const existingStatus = rel.existing_status ?? (addedMap[rel.guid] ? 'plan_to_watch' : undefined)
+      if (libraryFilter === 'not_in_library' && existingId) {
+        return false
+      }
+      if (libraryFilter === 'plan_to_watch' && existingStatus !== 'plan_to_watch') {
+        return false
+      }
       if (indexerFilter !== 'all' && rel.indexer !== indexerFilter && String(rel.indexer_id) !== indexerFilter) {
         return false
       }
@@ -115,10 +126,10 @@ export function Releases(_props: { path?: string }) {
       const targetYear = parseInt(yearFilter, 10)
       return rel.year === targetYear
     })
-  }, [releases, yearFilter, indexerFilter])
+  }, [releases, yearFilter, indexerFilter, libraryFilter, addedMap])
 
-  const handleAdd = async (rel: ProwlarrRelease) => {
-    if (addingGuid) return
+  const addReleaseToLibrary = async (rel: ProwlarrRelease): Promise<Title | null> => {
+    if (addingGuid) return null
     setAddingGuid(rel.guid)
     haptic(HAPTIC_SHORT)
 
@@ -137,10 +148,34 @@ export function Releases(_props: { path?: string }) {
 
       setAddedMap(prev => ({ ...prev, [rel.guid]: created.id }))
       invalidateLibrary()
+      return created
     } catch (err) {
       setError(err instanceof Error ? err.message : t('releases.errorAdd'))
+      return null
     } finally {
       setAddingGuid(null)
+    }
+  }
+
+  const handleAdd = async (rel: ProwlarrRelease) => {
+    await addReleaseToLibrary(rel)
+  }
+
+  const handleAddAndPush = async (rel: ProwlarrRelease) => {
+    const created = await addReleaseToLibrary(rel)
+    if (created) {
+      setSelectedRelease(null)
+      setArrPushTitle(created)
+    }
+  }
+
+  const handleOpenArrForExisting = async (titleId: number) => {
+    try {
+      const fullTitle = await apiFetch<Title>(`/titles/${titleId}`)
+      setSelectedRelease(null)
+      setArrPushTitle(fullTitle)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('releases.errorAdd'))
     }
   }
 
@@ -201,6 +236,18 @@ export function Releases(_props: { path?: string }) {
           </div>
 
           <div className={s.filterControls}>
+            <div className={s.selectWrap}>
+              <select
+                className={clsx(s.filterSelect, libraryFilter !== 'all' && s.filterSelectActive)}
+                value={libraryFilter}
+                onChange={e => setLibraryFilter((e.target as HTMLSelectElement).value as 'all' | 'not_in_library' | 'plan_to_watch')}
+                aria-label={t('releases.filterByLibrary')}
+              >
+                <option value="all">{t('releases.libraryAll')}</option>
+                <option value="not_in_library">{t('releases.libraryNewOnly')}</option>
+                <option value="plan_to_watch">{t('releases.libraryPlanToWatch')}</option>
+              </select>
+            </div>
             {availableIndexers.length > 1 && (
               <div className={s.selectWrap}>
                 <select
@@ -408,9 +455,21 @@ export function Releases(_props: { path?: string }) {
           release={selectedRelease}
           onClose={() => setSelectedRelease(null)}
           onAdd={handleAdd}
+          onAddAndPush={handleAddAndPush}
+          onOpenArr={handleOpenArrForExisting}
           adding={addingGuid === selectedRelease?.guid}
           existingTitleId={selectedRelease ? (selectedRelease.existing_title_id ?? addedMap[selectedRelease.guid]) : undefined}
           existingStatus={selectedRelease ? (selectedRelease.existing_status ?? (addedMap[selectedRelease.guid] ? 'plan_to_watch' : undefined)) : undefined}
+        />
+
+        <ArrPushSheet
+          open={Boolean(arrPushTitle)}
+          onClose={() => setArrPushTitle(null)}
+          title={arrPushTitle}
+          onSuccess={() => {
+            invalidateLibrary()
+            setArrPushTitle(null)
+          }}
         />
       </div>
     </PullToRefresh>

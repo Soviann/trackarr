@@ -13,6 +13,8 @@ interface ReleaseDetailSheetProps {
   release: ProwlarrRelease | null
   onClose: () => void
   onAdd: (rel: ProwlarrRelease) => Promise<void>
+  onAddAndPush?: (rel: ProwlarrRelease) => Promise<void>
+  onOpenArr?: (titleId: number) => void
   adding: boolean
   existingTitleId?: number
   existingStatus?: TitleStatus
@@ -42,6 +44,8 @@ export function ReleaseDetailSheet({
   release,
   onClose,
   onAdd,
+  onAddAndPush,
+  onOpenArr,
   adding,
   existingTitleId,
   existingStatus,
@@ -168,38 +172,61 @@ export function ReleaseDetailSheet({
         {/* Primary Action Button */}
         <div className={s.actionWrap}>
           {existingTitleId ? (
-            <button
-              type="button"
-              className={s.btnView}
-              onClick={() => {
-                onClose()
-                route(routeTo.title(existingTitleId))
-              }}
-            >
-              {t('releases.viewInTrackarr')}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={s.btnAdd}
-              onClick={() => onAdd(release)}
-              disabled={adding}
-            >
-              {adding ? (
-                t('releases.adding')
-              ) : (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  {t('releases.addToLibraryPlan')}
-                </>
+            <>
+              <button
+                type="button"
+                className={s.btnView}
+                onClick={() => {
+                  onClose()
+                  route(routeTo.title(existingTitleId))
+                }}
+              >
+                {t('releases.viewInTrackarr')}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+              {onOpenArr && (
+                <button
+                  type="button"
+                  className={s.btnAdd}
+                  onClick={() => onOpenArr(existingTitleId)}
+                >
+                  {t('releases.sendToArr')}
+                </button>
               )}
-            </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={s.btnAdd}
+                onClick={() => onAdd(release)}
+                disabled={adding}
+              >
+                {adding ? (
+                  t('releases.adding')
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    {t('releases.addToLibraryPlan')}
+                  </>
+                )}
+              </button>
+              {onAddAndPush && (
+                <button
+                  type="button"
+                  className={s.btnView}
+                  onClick={() => onAddAndPush(release)}
+                  disabled={adding}
+                >
+                  {t('releases.addAndSendToArr')}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
