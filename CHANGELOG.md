@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.33.0] — 2026-11-21
+
 ### Ajouté
 - **Synchronisation planifiée et manuelle des films non vus depuis Jellyfin (`JellyfinSyncService`, `Scheduler`, `/admin/jellyfin`)** :
   - Ajout de la synchronisation périodique des films non vus depuis l'API REST Jellyfin (`FetchUserMovies`, `SyncUnwatchedMovies` avec résolution dynamique de `jellyfin_url`, `jellyfin_api_key` et `jellyfin_user_id` via `SettingKeyJellyfin*`, limitation de débit partagée `APILimiter` et exécution avant le rafraîchissement des métadonnées dans `Scheduler`, désactivée si `DISABLE_BACKGROUND_TASKS=true`).
