@@ -802,7 +802,17 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   <div className={s.ratingHeaderRow} style={{ marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className={s.statLabelTerminal}>{t('details.rateThisTitle')}</span>
-                      <span className={s.noRating}>{t('details.notRated')}</span>
+                      {autoOpenImdb && title.imdb_id ? (
+                        <span
+                          className={`${s.extLinkBadge} ${s.extLinkImdb}`}
+                          title={t('ratingPrompt.saveAndRate')}
+                          data-testid="rate-strip-imdb-badge"
+                        >
+                          IMDb ↗
+                        </span>
+                      ) : (
+                        <span className={s.noRating}>{t('details.notRated')}</span>
+                      )}
                     </div>
                     <div className={s.extRatings}>
                       {title.tmdb_rating != null && (
@@ -1106,6 +1116,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         titleName={name}
         initialRating={title.my_rating}
         hasImdb={!!title.imdb_id}
+        autoOpenImdb={autoOpenImdb}
         onSave={handleSaveRating}
         onSaveAndImdb={(rating) => handleSaveRating(rating, true)}
       />

@@ -554,6 +554,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       vi.mocked(apiFetch).mockResolvedValue({ ...unratedMovie, my_rating: 9 })
 
       render(<TitleDetail id="77" />)
+      expect(screen.getByTestId('rate-strip-imdb-badge')).not.toBeNull()
       fireEvent.click(screen.getByRole('button', { name: 'Rate 9/10' }))
 
       await waitFor(() => {
@@ -578,6 +579,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       vi.mocked(apiFetch).mockResolvedValue({ ...unratedMovie, my_rating: 9 })
 
       render(<TitleDetail id="77" />)
+      expect(screen.queryByTestId('rate-strip-imdb-badge')).toBeNull()
       fireEvent.click(screen.getByRole('button', { name: 'Rate 9/10' }))
 
       await waitFor(() => {
@@ -605,6 +607,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       const editRatingBtn = container.querySelector('button.btnEditRating')
       expect(editRatingBtn).not.toBeNull()
       fireEvent.click(editRatingBtn!)
+      expect(await screen.findByText('Save rating')).not.toBeNull()
       fireEvent.click(await screen.findByRole('button', { name: 'Rate 9/10' }))
       fireEvent.click(screen.getByText('Save & rate'))
 
@@ -617,6 +620,24 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(openSpy).toHaveBeenCalledTimes(1)
       expect(openSpy).toHaveBeenCalledWith('https://www.imdb.com/title/tt1375666/', '_blank', 'noopener,noreferrer')
       openSpy.mockRestore()
+    })
+
+    it('hides Save rating button in Edit rating drawer when auto_open_imdb_on_rate is true and title has IMDb ID', async () => {
+      const ratedMovie: Title = { ...unratedMovie, my_rating: 8 }
+      vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+        if (endpoint === '/settings') {
+          return { data: { auto_open_imdb_on_rate: true }, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+        }
+        return { data: ratedMovie, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      })
+
+      const { container } = render(<TitleDetail id="77" />)
+      const editRatingBtn = container.querySelector('button.btnEditRating')
+      expect(editRatingBtn).not.toBeNull()
+      fireEvent.click(editRatingBtn!)
+
+      expect(await screen.findByText('Save & rate')).not.toBeNull()
+      expect(screen.queryByText('Save rating')).toBeNull()
     })
   })
 })

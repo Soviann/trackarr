@@ -11,13 +11,14 @@ interface RatingPromptProps {
   context?: string
   initialRating?: number | null
   hasImdb: boolean
+  autoOpenImdb?: boolean
   onSave: (rating: number) => void
   onSaveAndImdb?: (rating: number) => void
 }
 
 export function RatingPrompt({
   open, onClose, titleName, context, initialRating,
-  hasImdb, onSave, onSaveAndImdb,
+  hasImdb, autoOpenImdb = false, onSave, onSaveAndImdb,
 }: RatingPromptProps) {
   const { t } = useTranslation()
   const [rating, setRating] = useState(initialRating ?? 0)
@@ -70,14 +71,16 @@ export function RatingPrompt({
 
       {/* Buttons */}
       <div className={s.buttons}>
-        <button
-          onClick={() => { if (rating > 0) onSave(rating) }}
-          className={clsx(s.saveButton, rating > 0 && s.saveButtonActive)}
-        >
-          <span className={clsx(s.saveButtonLabel, rating > 0 && s.saveButtonLabelActive)}>
-            {t('ratingPrompt.saveRating')}
-          </span>
-        </button>
+        {!(hasImdb && autoOpenImdb) && (
+          <button
+            onClick={() => { if (rating > 0) onSave(rating) }}
+            className={clsx(s.saveButton, rating > 0 && s.saveButtonActive)}
+          >
+            <span className={clsx(s.saveButtonLabel, rating > 0 && s.saveButtonLabelActive)}>
+              {t('ratingPrompt.saveRating')}
+            </span>
+          </button>
+        )}
 
         <div className={s.externalButtons}>
           {hasImdb && (

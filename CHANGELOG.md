@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.31.1] — 2026-11-20
+
+### Modifié
+- **UX de notation IMDb automatique (`RatingPrompt`, `TitleDetail`)** :
+  - Masquage du bouton redondant *« Enregistrer la note »* dans le drawer d'édition lorsque l'ouverture automatique d'IMDb est activée et que le titre possède un `imdb_id` (seul *« IMDb — Enregistrer et noter »* reste affiché).
+  - Affichage d'un badge `IMDb ↗` à côté de *« Noter ce titre »* dans le bloc de notation non noté lorsque l'option est active.
+
 ## [v1.31.0] — 2026-11-20
 
 ### Ajouté
