@@ -518,3 +518,94 @@ func (c *Client) PushToArr(ctx context.Context, id int64) (int64, error) {
 	}
 	return res.ArrID, nil
 }
+
+// GetUpcoming returns upcoming calendar events within the next `days` days.
+func (c *Client) GetUpcoming(ctx context.Context, days int, mediaType string) (map[string]any, error) {
+	if days <= 0 {
+		days = 7
+	}
+	if days > 90 {
+		days = 90
+	}
+	now := time.Now().UTC()
+	start := now.Format("2006-01-02")
+	end := now.AddDate(0, 0, days).Format("2006-01-02")
+
+	var events []map[string]any
+	endpoint := fmt.Sprintf("/api/calendar/events?start=%s&end=%s", url.QueryEscape(start), url.QueryEscape(end))
+	if err := c.do(ctx, http.MethodGet, endpoint, nil, &events); err != nil {
+		return nil, err
+	}
+
+	if mediaType != "" && mediaType != "all" {
+		filtered := make([]map[string]any, 0, len(events))
+		for _, ev := range events {
+			if mediaType == "anime" {
+				if isAnime, ok := ev["is_anime"].(bool); ok && isAnime {
+					filtered = append(filtered, ev)
+				}
+				continue
+			}
+			if t, ok := ev["type"].(string); ok && strings.EqualFold(t, mediaType) {
+				filtered = append(filtered, ev)
+			}
+		}
+		events = filtered
+	}
+
+	return map[string]any{
+		"start":  start,
+		"end":    end,
+		"count":  len(events),
+		"events": events,
+	}, nil
+}
+
+// GetActivePlayback returns the active playback session or {"status": "idle"}.
+func (c *Client) GetActivePlayback(ctx context.Context) (map[string]any, error) {
+	var session map[string]any
+	if err := c.do(ctx, http.MethodGet, "/api/playback/active", nil, &session); err != nil {
+		return nil, err
+	}
+	if len(session) == 0 {
+		return map[string]any{"status": "idle"}, nil
+	}
+	return session, nil
+}
+
+// ResolveEpisodeID resolves an episode ID from a title by season/episode number or next unwatched.
+func (c *Client) ResolveEpisodeID(ctx context.Context, titleID int64, seasonNum, episodeNum *int, nextUnwatched bool) (int64, int, int, error) {
+	var raw RawTitle
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/api/titles/%d", titleID), nil, &raw); err != nil {
+		return 0, 0, 0, err
+	}
+
+	if nextUnwatched {
+		for _, s := range raw.Seasons {
+			if s.SeasonNumber == 0 {
+				continue
+			}
+			for _, ep := range s.Episodes {
+				if !ep.Watched {
+					return ep.ID, s.SeasonNumber, ep.EpisodeNumber, nil
+				}
+			}
+		}
+		return 0, 0, 0, fmt.Errorf("no unwatched episodes found for title %d", titleID)
+	}
+
+	if seasonNum == nil || episodeNum == nil {
+		return 0, 0, 0, fmt.Errorf("either episode_id, next_unwatched=true, or both season_number and episode_number are required")
+	}
+
+	for _, s := range raw.Seasons {
+		if s.SeasonNumber == *seasonNum {
+			for _, ep := range s.Episodes {
+				if ep.EpisodeNumber == *episodeNum {
+					return ep.ID, s.SeasonNumber, ep.EpisodeNumber, nil
+				}
+			}
+		}
+	}
+	return 0, 0, 0, fmt.Errorf("episode S%02dE%02d not found for title %d", *seasonNum, *episodeNum, titleID)
+}

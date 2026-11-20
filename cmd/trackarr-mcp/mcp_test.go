@@ -490,3 +490,91 @@ func TestResources_Read(t *testing.T) {
 	require.True(t, ok)
 	assert.Contains(t, cwTextContents.Text, "Succession")
 }
+
+func TestTools_NewExtensions(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/calendar/events", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{"title_id": 1, "title": "Movie A", "type": "movie", "is_anime": false},
+			{"title_id": 2, "title": "Anime B", "type": "series", "is_anime": true},
+		})
+	})
+	mux.HandleFunc("/api/playback/active", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mux.HandleFunc("/api/titles/10", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(RawTitle{
+			ID:   10,
+			Type: "series",
+			Seasons: []RawSeason{
+				{
+					ID: 1, SeasonNumber: 1,
+					Episodes: []RawEpisode{
+						{ID: 101, EpisodeNumber: 1, Watched: true},
+						{ID: 102, EpisodeNumber: 2, Watched: false},
+					},
+				},
+			},
+		})
+	})
+	var markedIDs []int64
+	mux.HandleFunc("/api/titles/10/episodes/batch-watch", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			EpisodeIDs []int64 `json:"episode_ids"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		markedIDs = append(markedIDs, body.EpisodeIDs...)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	client := NewClient(ts.URL, "trck_live_testkey", 5*time.Second)
+	s := server.NewMCPServer("trackarr-test", "1.0.0")
+	registerTools(s, client)
+	ctx := context.Background()
+
+	// 1. trackarr_get_upcoming with anime filter
+	upTool := s.GetTool("trackarr_get_upcoming")
+	res, err := upTool.Handler(ctx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{Name: "trackarr_get_upcoming", Arguments: map[string]any{"days": 7, "type": "anime"}},
+	})
+	require.NoError(t, err)
+	assert.False(t, res.IsError)
+	assert.Contains(t, res.Content[0].(mcp.TextContent).Text, "Anime B")
+	assert.NotContains(t, res.Content[0].(mcp.TextContent).Text, "Movie A")
+
+	// 2. trackarr_get_active_playback returns idle on 204
+	pbTool := s.GetTool("trackarr_get_active_playback")
+	res, err = pbTool.Handler(ctx, mcp.CallToolRequest{Params: mcp.CallToolParams{Name: "trackarr_get_active_playback"}})
+	require.NoError(t, err)
+	assert.False(t, res.IsError)
+	assert.Contains(t, res.Content[0].(mcp.TextContent).Text, "idle")
+
+	// 3. trackarr_set_episode_watched by season_number + episode_number
+	epTool := s.GetTool("trackarr_set_episode_watched")
+	res, err = epTool.Handler(ctx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "trackarr_set_episode_watched",
+			Arguments: map[string]any{"title_id": 10, "season_number": 1, "episode_number": 1, "watched": true},
+		},
+	})
+	require.NoError(t, err)
+	assert.False(t, res.IsError)
+	assert.Contains(t, res.Content[0].(mcp.TextContent).Text, "S01E01")
+
+	// 4. trackarr_set_episode_watched with next_unwatched=true
+	res, err = epTool.Handler(ctx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "trackarr_set_episode_watched",
+			Arguments: map[string]any{"title_id": 10, "next_unwatched": true, "watched": true},
+		},
+	})
+	require.NoError(t, err)
+	assert.False(t, res.IsError)
+	assert.Contains(t, res.Content[0].(mcp.TextContent).Text, "S01E02")
+	assert.Equal(t, []int64{101, 102}, markedIDs)
+}

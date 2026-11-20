@@ -177,9 +177,12 @@ func registerTools(s *server.MCPServer, client *Client) {
 
 	// 9. trackarr_set_episode_watched
 	setEpisodeWatchedTool := mcp.NewTool("trackarr_set_episode_watched",
-		mcp.WithDescription("Mark a specific TV series episode as watched or unwatched."),
+		mcp.WithDescription("Mark a specific TV series episode as watched or unwatched. Provide either episode_id, season_number + episode_number, or next_unwatched=true."),
 		mcp.WithInteger("title_id", mcp.Required(), mcp.Description("Trackarr series title ID")),
-		mcp.WithInteger("episode_id", mcp.Required(), mcp.Description("Episode ID")),
+		mcp.WithInteger("episode_id", mcp.Description("Episode ID (optional if season_number + episode_number or next_unwatched is provided)")),
+		mcp.WithInteger("season_number", mcp.Description("Season number (used with episode_number)")),
+		mcp.WithInteger("episode_number", mcp.Description("Episode number within the season (used with season_number)")),
+		mcp.WithBoolean("next_unwatched", mcp.Description("If true, automatically targets the next unwatched episode")),
 		mcp.WithBoolean("watched", mcp.Required(), mcp.Description("True to mark as watched, false to mark as unwatched")),
 	)
 	s.AddTool(setEpisodeWatchedTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -187,23 +190,48 @@ func registerTools(s *server.MCPServer, client *Client) {
 		if err != nil {
 			return mcp.NewToolResultError("parameter 'title_id' is required"), nil
 		}
-		episodeID, err := req.RequireInt("episode_id")
-		if err != nil {
-			return mcp.NewToolResultError("parameter 'episode_id' is required"), nil
-		}
 		watched, err := req.RequireBool("watched")
 		if err != nil {
 			return mcp.NewToolResultError("parameter 'watched' is required"), nil
 		}
 
-		if err := client.SetEpisodeWatched(ctx, int64(titleID), int64(episodeID), watched); err != nil {
+		args := req.GetArguments()
+		var episodeID int64
+		var resolvedLabel string
+		if rawID, ok := args["episode_id"]; ok && rawID != nil {
+			episodeID = int64(req.GetInt("episode_id", 0))
+		}
+		if episodeID <= 0 {
+			var sPtr, ePtr *int
+			if _, ok := args["season_number"]; ok {
+				sv := req.GetInt("season_number", -1)
+				if sv >= 0 {
+					sPtr = &sv
+				}
+			}
+			if _, ok := args["episode_number"]; ok {
+				ev := req.GetInt("episode_number", -1)
+				if ev >= 0 {
+					ePtr = &ev
+				}
+			}
+			nextUnwatched := req.GetBool("next_unwatched", false)
+			resolvedID, sNum, eNum, resErr := client.ResolveEpisodeID(ctx, int64(titleID), sPtr, ePtr, nextUnwatched)
+			if resErr != nil {
+				return mcp.NewToolResultError(resErr.Error()), nil
+			}
+			episodeID = resolvedID
+			resolvedLabel = fmt.Sprintf(" (S%02dE%02d)", sNum, eNum)
+		}
+
+		if err := client.SetEpisodeWatched(ctx, int64(titleID), episodeID, watched); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("set episode watched failed: %v", err)), nil
 		}
 		action := "watched"
 		if !watched {
 			action = "unwatched"
 		}
-		return mcp.NewToolResultText(fmt.Sprintf("Episode %d of title %d successfully marked as %s.", episodeID, titleID, action)), nil
+		return mcp.NewToolResultText(fmt.Sprintf("Episode %d%s of title %d successfully marked as %s.", episodeID, resolvedLabel, titleID, action)), nil
 	})
 
 	// 10. trackarr_delete_title (Destructive, requires library:delete scope)
@@ -238,6 +266,34 @@ func registerTools(s *server.MCPServer, client *Client) {
 			return mcp.NewToolResultError(fmt.Sprintf("push to Arr failed: %v", err)), nil
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("Successfully pushed title %d to Arr (Arr ID: %d).", id, arrID)), nil
+	})
+
+	// 12. trackarr_get_upcoming
+	getUpcomingTool := mcp.NewTool("trackarr_get_upcoming",
+		mcp.WithDescription("Get upcoming episodes and movies from the Trackarr calendar for the next N days."),
+		mcp.WithInteger("days", mcp.Description("Number of days ahead to query (default 7, max 90)")),
+		mcp.WithString("type", mcp.Description("Optional media type filter"), mcp.Enum("all", "movie", "series", "anime")),
+	)
+	s.AddTool(getUpcomingTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		days := req.GetInt("days", 7)
+		mediaType := req.GetString("type", "all")
+		res, err := client.GetUpcoming(ctx, days, mediaType)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("get upcoming failed: %v", err)), nil
+		}
+		return jsonResult(res)
+	})
+
+	// 13. trackarr_get_active_playback
+	getActivePlaybackTool := mcp.NewTool("trackarr_get_active_playback",
+		mcp.WithDescription("Get the currently active Plex/Jellyfin playback session, or idle status if nothing is playing."),
+	)
+	s.AddTool(getActivePlaybackTool, func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		res, err := client.GetActivePlayback(ctx)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("get active playback failed: %v", err)), nil
+		}
+		return jsonResult(res)
 	})
 }
 
