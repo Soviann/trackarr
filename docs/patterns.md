@@ -93,7 +93,7 @@
 | `Pipeline` | `internal/service/matching/pipeline.go` | Multi-source media matching pipeline with AI candidate disambiguation and verification | `docs/dev/matching-pipeline.md` |
 | `LibraryService` | `internal/service/library.go` | User scrobbles, auto-completion, rating prompts, notifications | `docs/dev/database-model.md` |
 | `PlaybackHubService` | `internal/service/playback_hub.go` | In-memory singleton managing active media playback sessions with thread-safe RWMutex and 4h TTL | `docs/patterns.md` |
-| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions & `UserDataSaved` rating sync) | `docs/integrations.md` |
+| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions with auto-create & `UserDataSaved` rating sync) | `docs/integrations.md` |
 | `JellyfinSyncService` | `internal/service/jellyfin_sync.go` | Outbound rating synchronization from Trackarr to Jellyfin REST API | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, Radarr deletion & exclusion cleanup, and Sonarr deletion enqueuing | `docs/dev/arr-integration.md` |

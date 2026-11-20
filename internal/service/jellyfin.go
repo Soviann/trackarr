@@ -111,13 +111,33 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 		movieType := model.TitleTypeMovie
 		title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, nil, &movieType)
 		if err != nil {
-			title, err = titles.FindByNameAndType(jf.Name, model.TitleTypeMovie, year)
+			if strings.TrimSpace(jf.Name) != "" {
+				title, err = titles.FindByNameAndType(jf.Name, model.TitleTypeMovie, year)
+			}
 			if err != nil {
-				return nil
+				if s.titleSvc == nil || strings.TrimSpace(jf.Name) == "" {
+					return nil
+				}
+				var createdID int64
+				if txErr := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+					var cErr error
+					createdID, cErr = s.titleSvc.CreateFromScrobble(ctx, tx, jf.Name, year, ids, model.TitleTypeMovie, ratingKey, nil, model.TitleStatusWatching)
+					return cErr
+				}); txErr != nil {
+					s.log.Warn("failed to auto-create movie on playback start", "title", jf.Name, "err", txErr)
+					return nil
+				}
+				title, err = titles.GetByID(createdID)
+				if err != nil || title == nil {
+					return nil
+				}
 			}
 		}
 
 		titleName := jf.Name
+		if titleName == "" {
+			titleName = title.PrimaryName()
+		}
 		for _, n := range title.Names {
 			if n.IsPrimary {
 				titleName = n.Name
@@ -158,13 +178,49 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 		seriesType := model.TitleTypeSeries
 		title, err := titles.FindByExternalID(nil, nil, &seriesID, nil, nil, &seriesType)
 		if err != nil {
-			title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, year)
+			if strings.TrimSpace(seriesName) != "" {
+				title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, year)
+			}
 			if err != nil {
-				return nil
+				if s.titleSvc == nil || strings.TrimSpace(seriesName) == "" {
+					return nil
+				}
+				epHints := matching.EpisodeHints{
+					EpisodeName:   jf.Name,
+					SeasonNumber:  seasonNum,
+					EpisodeNumber: episodeNum,
+					EpisodeIMDBID: ids.IMDB,
+				}
+				var createdID int64
+				if txErr := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+					var cErr error
+					createdID, cErr = s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, year, ExternalIDs{}, model.TitleTypeSeries, seriesID, nil, model.TitleStatusWatching, epHints)
+					if cErr != nil {
+						return cErr
+					}
+					if seasonNum > 0 && episodeNum > 0 {
+						seasonWriter := repository.NewSeasonWriter(tx)
+						epWriter := repository.NewEpisodeWriter(tx)
+						if season, sErr := seasonWriter.GetOrCreate(ctx, createdID, seasonNum); sErr == nil {
+							_, _ = epWriter.GetOrCreate(ctx, season.ID, episodeNum)
+						}
+					}
+					return nil
+				}); txErr != nil {
+					s.log.Warn("failed to auto-create series on playback start", "series", seriesName, "err", txErr)
+					return nil
+				}
+				title, err = titles.GetByID(createdID)
+				if err != nil || title == nil {
+					return nil
+				}
 			}
 		}
 
 		titleName := seriesName
+		if titleName == "" {
+			titleName = title.PrimaryName()
+		}
 		for _, n := range title.Names {
 			if n.IsPrimary {
 				titleName = n.Name

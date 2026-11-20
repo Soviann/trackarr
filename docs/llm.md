@@ -126,7 +126,7 @@
     - Generates quoted trigram substrings joined with `OR` and ranks results natively via SQLite `bm25(title_names_trigram_fts)` without memory churn or full-table scans.
 27. **Live Playback Companion Mode (Lot 2 / Q4 2026)**:
     - `PlaybackHubService` is an in-memory thread-safe singleton (`sync.RWMutex`, 4h TTL) tracking active playback without disk writes or lock contention on SQLite.
-    - Plex `media.play` / `media.resume` and Jellyfin `PlaybackStart` resolve existing library titles in read-only mode and register active sessions in RAM.
+    - Plex `media.play` / `media.resume` and Jellyfin `PlaybackStart` resolve existing library titles or auto-create untracked titles in `watching` status, registering active sessions in RAM.
     - `media.stop` and `PlaybackStop` clear active sessions. `GET /api/playback/active` returns 204 No Content when idle or 200 OK with session payload.
     - Mobile frontend surfaces a pulsing `LivePlaybackIndicator` above navbar, opening `LivePlaybackDrawer` with quick `+1 Marquer vu` action.
 28. **Jellyfin Rating Ingestion & Outbound Sync**:
