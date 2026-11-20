@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.32.0] — 2026-11-20
+
 ### Ajouté
 - **Sauvegardes fidèles sans perte (JSON v2 + SQLite `VACUUM INTO`) & rotation automatique** :
   - Export/Import JSON v2 natif sans perte (`personal_notes`, `watch_providers`, `origin_country`, `season_external_ids`, `watch_events`, `title_relations`, `wrapped_snapshots`, liaisons `*arr` et support `.json.gz`).

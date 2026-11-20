@@ -219,13 +219,17 @@
 - `POST /api/admin/tasks/batch-delete` : Bulk delete tasks.
 - `GET /api/admin/notifications` & `PUT /api/admin/notifications` : Web Push notification preferences.
 - `GET /api/admin/arr` & `PUT /api/admin/arr` : Radarr & Sonarr configuration.
+- `POST /api/admin/arr/reconcile` : Enqueue Radarr/Sonarr library & episode availability reconciliation.
+- `POST /api/admin/system-settings/test/jellyfin` : Test Jellyfin API connection.
+- `POST /api/admin/jellyfin/sync-ratings` : Sync Trackarr ratings to Jellyfin (supports `dry_run`).
 - `POST /api/admin/refresh-all` : Start or resume full library metadata refresh in background (accepts `?restart=true`).
 - `GET /api/admin/refresh-all/status` : Get real-time library refresh progress (`status`, `processed_titles`, `total_titles`, `current_title`).
 - `POST /api/admin/refresh-all/cancel` : Cancel or pause running library refresh job.
-- `GET /api/admin/export/json` : 1-Click full JSON library backup download.
+- `GET /api/admin/export/json` : 1-Click lossless JSON v2 library backup download.
+- `GET /api/admin/export/sqlite` : 1-Click compacted SQLite snapshot (`VACUUM INTO`) download.
 - `GET /api/admin/export/csv` : 1-Click spreadsheet CSV library export download.
 - `GET /api/admin/export/trakt` : 1-Click Trakt.tv sync JSON export download.
-- `POST /api/admin/import` : Upload and import backup archive (.zip, .json, .csv) with dry-run support (`?dry_run=true|false`).
+- `POST /api/admin/import` : Upload and import backup archive (.zip, .gz, .json, .csv) with dry-run support (`?dry_run=true|false`).
 - `GET /api/admin/season-audit` : Scan duplicate series groups and return consolidation proposals.
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
