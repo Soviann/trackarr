@@ -157,6 +157,8 @@ func (w *TaskQueueWorker) registerBuiltinHandlers() {
 		return w.handleArrPush(ctx, task, logger, "sonarr")
 	}
 	w.handlers[model.TaskTypeSonarrDelete] = w.handleSonarrDelete
+	w.handlers[model.TaskTypeArrReconcile] = w.handleArrReconcile
+	w.handlers[model.TaskTypeJellyfinRatingPush] = w.handleJellyfinRatingPush
 	w.handlers[model.TaskTypeGenerateWrapped] = w.handleGenerateWrapped
 }
 
@@ -732,10 +734,10 @@ func calculateNextRunAt(attempts int, retryAfter time.Duration) time.Time {
 // Notification preference helpers
 
 const (
-	NotifRatingPrompt   = "notif_rating_prompt"
-	NotifDeadTask       = "notif_dead_task"
-	NotifSeriesEnded    = "notif_series_ended"
-	NotifWrappedReady   = "notif_wrapped_ready"
+	NotifRatingPrompt    = "notif_rating_prompt"
+	NotifDeadTask        = "notif_dead_task"
+	NotifSeriesEnded     = "notif_series_ended"
+	NotifWrappedReady    = "notif_wrapped_ready"
 	NotifMediaDownloaded = "notif_media_downloaded"
 )
 
@@ -750,4 +752,31 @@ func IsNotificationEnabled(settings *repository.SettingRepository, notifType str
 		return true // default: enabled
 	}
 	return val != "false"
+}
+
+func (w *TaskQueueWorker) handleJellyfinRatingPush(ctx context.Context, task model.Task, logger *slog.Logger) error {
+	var payload struct {
+		TitleID int64 `json:"title_id"`
+	}
+	if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
+		return fmt.Errorf("decode jellyfin_rating_push payload: %w", err)
+	}
+	if payload.TitleID <= 0 || w.writeDB == nil {
+		return nil
+	}
+
+	sr := repository.NewSettingRepository(w.writeDB)
+	baseURL, _ := sr.Get("jellyfin_url")
+	apiKey, _ := sr.Get("jellyfin_api_key")
+	userID, _ := sr.Get("jellyfin_user_id")
+	if baseURL == "" || apiKey == "" || userID == "" {
+		return nil
+	}
+
+	syncSvc := NewJellyfinSyncService(w.writeDB, JellyfinSyncConfig{
+		BaseURL: baseURL,
+		APIKey:  apiKey,
+		UserID:  userID,
+	}, logger)
+	return syncSvc.SyncSingleTitle(ctx, payload.TitleID)
 }

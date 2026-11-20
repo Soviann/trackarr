@@ -332,3 +332,60 @@ func (s *JellyfinSyncService) SyncRatings(ctx context.Context) (JellyfinSyncSumm
 
 	return summary, nil
 }
+
+// TestConnection verifies the Jellyfin URL, API key, and user ID by querying 1 item.
+func (s *JellyfinSyncService) TestConnection(ctx context.Context) error {
+	baseURL := strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
+	userID := url.PathEscape(strings.TrimSpace(s.cfg.UserID))
+	if baseURL == "" || strings.TrimSpace(s.cfg.APIKey) == "" || userID == "" {
+		return fmt.Errorf("jellyfin url, api key, and user id are required")
+	}
+
+	reqURL := fmt.Sprintf("%s/Users/%s/Items?limit=1", baseURL, userID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return fmt.Errorf("create jellyfin test request: %w", err)
+	}
+	req.Header.Set("X-Emby-Token", strings.TrimSpace(s.cfg.APIKey))
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := s.cfg.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("jellyfin connection failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fmt.Errorf("jellyfin returned %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+	}
+	return nil
+}
+
+// SyncSingleTitle pushes the Trackarr rating of a single title to Jellyfin if matched.
+func (s *JellyfinSyncService) SyncSingleTitle(ctx context.Context, titleID int64) error {
+	if s.titles == nil {
+		return fmt.Errorf("title repository not configured")
+	}
+	title, err := s.titles.GetByID(titleID)
+	if err != nil {
+		return fmt.Errorf("get title %d: %w", titleID, err)
+	}
+	if title == nil || title.MyRating == nil || *title.MyRating <= 0 {
+		return nil
+	}
+
+	jfItems, err := s.FetchUserItems(ctx)
+	if err != nil {
+		return err
+	}
+	matched := s.MatchItem(*title, jfItems)
+	if matched == nil {
+		s.log.Debug("no matching Jellyfin item found for title", "titleID", titleID, "name", title.PrimaryName())
+		return nil
+	}
+	if matched.UserData != nil && matched.UserData.Rating != nil && int(math.Round(*matched.UserData.Rating)) == *title.MyRating {
+		return nil
+	}
+	return s.PushRating(ctx, matched.ID, *title.MyRating)
+}

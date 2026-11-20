@@ -605,6 +605,7 @@ func (s *TitleService) Update(ctx context.Context, id int64, update repository.T
 		}
 		if before != nil {
 			enqueueAniListPushesOnTitleUpdate(ctx, tx, before, newStatus, newRating)
+			enqueueJellyfinRatingPushOnTitleUpdate(ctx, tx, before, newRating)
 			if deleteFromSonarr {
 				enqueueSonarrDeleteOnTitleUpdate(ctx, tx, before)
 			}
@@ -932,6 +933,25 @@ func (s *TitleService) BatchCreate(ctx context.Context, items []BatchCreateItem)
 	}
 
 	return res, nil
+}
+
+func enqueueJellyfinRatingPushOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newRating *int) {
+	if newRating == nil || *newRating <= 0 || intPtrEq(newRating, before.MyRating) {
+		return
+	}
+	sr := repository.NewSettingRepository(tx)
+	baseURL, _ := sr.Get("jellyfin_url")
+	apiKey, _ := sr.Get("jellyfin_api_key")
+	userID, _ := sr.Get("jellyfin_user_id")
+	if baseURL == "" || apiKey == "" || userID == "" {
+		return
+	}
+	payload := struct {
+		TitleID int64 `json:"title_id"`
+	}{TitleID: before.ID}
+	b, _ := json.Marshal(payload)
+	dedup := fmt.Sprintf("jellyfin_rating_push:%d", before.ID)
+	_, _ = repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeJellyfinRatingPush, string(b), &dedup)
 }
 
 func enqueueAniListPushesOnTitleUpdate(ctx context.Context, tx *sql.Tx, before *model.Title, newStatus *model.TitleStatus, newRating *int) {

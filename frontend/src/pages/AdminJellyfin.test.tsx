@@ -109,6 +109,9 @@ describe('AdminJellyfin (Media Servers) Page', () => {
         method: 'PUT',
         body: JSON.stringify({
           jellyfin_webhook_secret: 'new-jf-secret',
+          jellyfin_url: '',
+          jellyfin_api_key: '',
+          jellyfin_user_id: '',
           plex_webhook_secret: 'plex-secret-abc',
         }),
       })

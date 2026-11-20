@@ -12,8 +12,21 @@ import s from './AdminJellyfin.module.css'
 interface MediaServerSystemSettings {
   jellyfin_webhook_secret?: string
   jellyfin_webhook_url?: string
+  jellyfin_url?: string
+  jellyfin_api_key?: string
+  jellyfin_user_id?: string
+  jellyfin_api_configured?: boolean
   plex_webhook_secret?: string
   plex_webhook_url?: string
+}
+
+interface JellyfinSyncResult {
+  dry_run: boolean
+  matched: number
+  updated: number
+  skipped: number
+  missing: number
+  errors: number
 }
 
 export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
@@ -22,8 +35,16 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
   const { data: sysSettings, mutate: refetchSysSettings } = useApi<MediaServerSystemSettings>('/admin/system-settings')
 
   const [jellyfinSecret, setJellyfinSecret] = useState('')
+  const [jellyfinUrl, setJellyfinUrl] = useState('')
+  const [jellyfinApiKey, setJellyfinApiKey] = useState('')
+  const [jellyfinUserId, setJellyfinUserId] = useState('')
   const [plexSecret, setPlexSecret] = useState('')
   const [saving, setSaving] = useState(false)
+  const [testingJf, setTestingJf] = useState(false)
+  const [jfTestStatus, setJfTestStatus] = useState<{ ok: boolean; text: string } | null>(null)
+  const [syncingJf, setSyncingJf] = useState(false)
+  const [dryRunJf, setDryRunJf] = useState(false)
+  const [jfSyncResult, setJfSyncResult] = useState<JellyfinSyncResult | null>(null)
   const [copiedKey, setCopiedKey] = useState<'jellyfin' | 'plex' | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -31,6 +52,9 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
   useEffect(() => {
     if (sysSettings) {
       setJellyfinSecret(sysSettings.jellyfin_webhook_secret || '')
+      setJellyfinUrl(sysSettings.jellyfin_url || '')
+      setJellyfinApiKey(sysSettings.jellyfin_api_key || '')
+      setJellyfinUserId(sysSettings.jellyfin_user_id || '')
       setPlexSecret(sysSettings.plex_webhook_secret || '')
     }
   }, [sysSettings])
@@ -61,6 +85,9 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
         method: 'PUT',
         body: JSON.stringify({
           jellyfin_webhook_secret: jellyfinSecret,
+          jellyfin_url: jellyfinUrl,
+          jellyfin_api_key: jellyfinApiKey,
+          jellyfin_user_id: jellyfinUserId,
           plex_webhook_secret: plexSecret,
         }),
       })
@@ -71,6 +98,49 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
       setErrorMsg(err instanceof Error ? err.message : String(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTestJellyfin = async () => {
+    setTestingJf(true)
+    setJfTestStatus(null)
+    try {
+      const res = await apiFetch<{ ok: boolean; message?: string; error?: string }>(
+        '/admin/system-settings/test/jellyfin',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            jellyfin_url: jellyfinUrl,
+            jellyfin_api_key: jellyfinApiKey,
+            jellyfin_user_id: jellyfinUserId,
+          }),
+        }
+      )
+      setJfTestStatus({
+        ok: res.ok,
+        text: res.ok ? res.message || 'OK' : res.error || 'Error',
+      })
+    } catch (err: unknown) {
+      setJfTestStatus({ ok: false, text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setTestingJf(false)
+    }
+  }
+
+  const handleSyncJellyfin = async () => {
+    setSyncingJf(true)
+    setJfSyncResult(null)
+    setErrorMsg(null)
+    try {
+      const res = await apiFetch<JellyfinSyncResult>('/admin/jellyfin/sync-ratings', {
+        method: 'POST',
+        body: JSON.stringify({ dry_run: dryRunJf }),
+      })
+      setJfSyncResult(res)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSyncingJf(false)
     }
   }
 
@@ -198,6 +268,95 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
                   >
                     {jellyfinLastScrobble}
                   </span>
+                </div>
+
+                {/* Outbound API Config */}
+                <div className={s.fieldGroup}>
+                  <h3 className={s.helpTitle}>{t('mediaServers.jellyfinApiSectionTitle')}</h3>
+                  <label htmlFor="jellyfin_url" className={s.label}>
+                    <span>{t('mediaServers.jellyfinUrlLabel')}</span>
+                  </label>
+                  <input
+                    id="jellyfin_url"
+                    name="jellyfin_url"
+                    type="url"
+                    value={jellyfinUrl}
+                    onInput={(e) => setJellyfinUrl((e.target as HTMLInputElement).value)}
+                    placeholder="http://localhost:8096"
+                    className={`${s.input} ${s.inputCode}`}
+                  />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label htmlFor="jellyfin_api_key" className={s.label}>
+                    <span>{t('mediaServers.jellyfinApiKeyLabel')}</span>
+                  </label>
+                  <input
+                    id="jellyfin_api_key"
+                    name="jellyfin_api_key"
+                    type="password"
+                    autoComplete="off"
+                    value={jellyfinApiKey}
+                    onInput={(e) => setJellyfinApiKey((e.target as HTMLInputElement).value)}
+                    className={`${s.input} ${s.inputCode}`}
+                  />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label htmlFor="jellyfin_user_id" className={s.label}>
+                    <span>{t('mediaServers.jellyfinUserIdLabel')}</span>
+                  </label>
+                  <input
+                    id="jellyfin_user_id"
+                    name="jellyfin_user_id"
+                    type="text"
+                    autoComplete="off"
+                    value={jellyfinUserId}
+                    onInput={(e) => setJellyfinUserId((e.target as HTMLInputElement).value)}
+                    className={`${s.input} ${s.inputCode}`}
+                  />
+                </div>
+                <div className={s.fieldGroup}>
+                  <div className={s.fieldRow}>
+                    <button
+                      type="button"
+                      className={s.actionBtn}
+                      onClick={() => void handleTestJellyfin()}
+                      disabled={testingJf}
+                    >
+                      {testingJf ? t('mediaServers.testingConnection') : t('mediaServers.testConnection')}
+                    </button>
+                    <button
+                      type="button"
+                      className={s.actionBtn}
+                      onClick={() => void handleSyncJellyfin()}
+                      disabled={syncingJf || !sysSettings?.jellyfin_api_configured}
+                    >
+                      {syncingJf ? t('mediaServers.syncingRatings') : t('mediaServers.syncAllRatings')}
+                    </button>
+                  </div>
+                  <label className={s.label} style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={dryRunJf}
+                      onChange={(e) => setDryRunJf((e.target as HTMLInputElement).checked)}
+                    />
+                    <span>{t('mediaServers.dryRunLabel')}</span>
+                  </label>
+                  {jfTestStatus && (
+                    <div role="status" className={jfTestStatus.ok ? s.alertSuccess : s.alertError} style={{ marginTop: '0.5rem' }}>
+                      {jfTestStatus.ok ? `✅ ${jfTestStatus.text}` : `❌ ${jfTestStatus.text}`}
+                    </div>
+                  )}
+                  {jfSyncResult && (
+                    <div role="status" className={s.alertSuccess} style={{ marginTop: '0.5rem' }}>
+                      {t('mediaServers.syncSummary', {
+                        matched: jfSyncResult.matched,
+                        updated: jfSyncResult.updated,
+                        skipped: jfSyncResult.skipped,
+                        missing: jfSyncResult.missing,
+                        errors: jfSyncResult.errors,
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Instructions */}

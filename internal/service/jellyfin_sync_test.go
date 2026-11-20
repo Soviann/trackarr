@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
+	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
 	"github.com/Soviann/trackarr/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -490,4 +492,86 @@ func TestJellyfinSyncService_SyncRatings(t *testing.T) {
 		assert.Equal(t, 0, summary.Missing)
 		assert.Equal(t, 1, summary.Errors)
 	})
+}
+
+func TestJellyfinSyncService_TestConnectionAndSingleTitle(t *testing.T) {
+	db := setupTestDB(t)
+	rating8 := 8
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2014, Status: model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed, MyRating: &rating8, TMDBID: ptr(int64(157336)),
+	}, []model.TitleName{{Name: "Interstellar", Language: "en", IsPrimary: true}})
+
+	var pushedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && strings.Contains(r.URL.RawQuery, "limit=1") {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Items":[]}`))
+			return
+		}
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"Items": []map[string]any{{
+					"Id":          "jf-1",
+					"Name":        "Interstellar",
+					"Type":        "Movie",
+					"ProviderIds": map[string]string{"Tmdb": "157336"},
+				}},
+			})
+			return
+		}
+		if r.Method == http.MethodPost {
+			pushedPath = r.URL.Path
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	svc := service.NewJellyfinSyncService(db, service.JellyfinSyncConfig{
+		BaseURL: server.URL, APIKey: "tok", UserID: "u1", HTTPClient: server.Client(), ThrottleDelay: -1,
+	}, testutil.NopLogger())
+
+	require.NoError(t, svc.TestConnection(context.Background()))
+	require.NoError(t, svc.SyncSingleTitle(context.Background(), titleID))
+	assert.Equal(t, "/Users/u1/Items/jf-1/Rating", pushedPath)
+}
+
+func TestTitleService_Update_EnqueuesJellyfinRatingPush(t *testing.T) {
+	db := setupTestDB(t)
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	titleSvc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Test Movie", Language: "en", IsPrimary: true}})
+
+	before, err := titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+
+	// 1. Not configured -> does NOT enqueue
+	r7 := 7
+	require.NoError(t, titleSvc.Update(context.Background(), titleID, repository.TitleUpdate{MyRating: &r7}, before, nil, &r7, false))
+	tasks, err := taskRepo.ListPending()
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+
+	// 2. Configured -> enqueues TaskTypeJellyfinRatingPush on rating change
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	sw := repository.NewSettingWriter(tx)
+	require.NoError(t, sw.Set(context.Background(), "jellyfin_url", "http://localhost:8096"))
+	require.NoError(t, sw.Set(context.Background(), "jellyfin_api_key", "key"))
+	require.NoError(t, sw.Set(context.Background(), "jellyfin_user_id", "user1"))
+	require.NoError(t, tx.Commit())
+
+	before, err = titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	r9 := 9
+	require.NoError(t, titleSvc.Update(context.Background(), titleID, repository.TitleUpdate{MyRating: &r9}, before, nil, &r9, false))
+	tasks, err = taskRepo.ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeJellyfinRatingPush, tasks[0].TaskType)
 }

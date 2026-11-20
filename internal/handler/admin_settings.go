@@ -37,34 +37,38 @@ func NewAdminSettingsHandler(
 }
 
 type SystemSettingsResponse struct {
-	AppVersion            string `json:"app_version"`
-	TMDBAPIKey            string `json:"tmdb_api_key"`
-	TMDBConfigured        bool   `json:"tmdb_configured"`
-	TVDBAPIKey            string `json:"tvdb_api_key"`
-	TVDBConfigured        bool   `json:"tvdb_configured"`
-	GeminiAPIKeys         string `json:"gemini_api_keys"`
-	GeminiConfigured      bool   `json:"gemini_configured"`
-	AniListClientID       string `json:"anilist_client_id"`
-	AniListClientSecret   string `json:"anilist_client_secret"`
-	AniListConfigured     bool   `json:"anilist_configured"`
-	JellyfinWebhookSecret string `json:"jellyfin_webhook_secret"`
-	JellyfinWebhookURL    string `json:"jellyfin_webhook_url"`
-	PlexWebhookSecret     string `json:"plex_webhook_secret"`
-	PlexWebhookURL        string `json:"plex_webhook_url"`
-	ArrWebhookSecret      string `json:"arr_webhook_secret"`
-	ArrWebhookURL         string `json:"arr_webhook_url"`
-	RadarrURL             string `json:"radarr_url"`
-	RadarrAPIKey          string `json:"radarr_api_key"`
-	RadarrConfigured      bool   `json:"radarr_configured"`
-	SonarrURL             string `json:"sonarr_url"`
-	SonarrAPIKey          string `json:"sonarr_api_key"`
-	SonarrConfigured      bool   `json:"sonarr_configured"`
-	ProwlarrURL           string `json:"prowlarr_url"`
-	ProwlarrAPIKey        string `json:"prowlarr_api_key"`
-	ProwlarrConfigured    bool   `json:"prowlarr_configured"`
-	VAPIDPublicKey        string `json:"vapid_public_key"`
-	VAPIDSubject          string `json:"vapid_subject"`
-	VAPIDConfigured       bool   `json:"vapid_configured"`
+	AppVersion              string `json:"app_version"`
+	TMDBAPIKey              string `json:"tmdb_api_key"`
+	TMDBConfigured          bool   `json:"tmdb_configured"`
+	TVDBAPIKey              string `json:"tvdb_api_key"`
+	TVDBConfigured          bool   `json:"tvdb_configured"`
+	GeminiAPIKeys           string `json:"gemini_api_keys"`
+	GeminiConfigured        bool   `json:"gemini_configured"`
+	AniListClientID         string `json:"anilist_client_id"`
+	AniListClientSecret     string `json:"anilist_client_secret"`
+	AniListConfigured       bool   `json:"anilist_configured"`
+	JellyfinWebhookSecret   string `json:"jellyfin_webhook_secret"`
+	JellyfinWebhookURL      string `json:"jellyfin_webhook_url"`
+	JellyfinURL             string `json:"jellyfin_url"`
+	JellyfinAPIKey          string `json:"jellyfin_api_key"`
+	JellyfinUserID          string `json:"jellyfin_user_id"`
+	JellyfinAPIConfigured   bool   `json:"jellyfin_api_configured"`
+	PlexWebhookSecret       string `json:"plex_webhook_secret"`
+	PlexWebhookURL          string `json:"plex_webhook_url"`
+	ArrWebhookSecret        string `json:"arr_webhook_secret"`
+	ArrWebhookURL           string `json:"arr_webhook_url"`
+	RadarrURL               string `json:"radarr_url"`
+	RadarrAPIKey            string `json:"radarr_api_key"`
+	RadarrConfigured        bool   `json:"radarr_configured"`
+	SonarrURL               string `json:"sonarr_url"`
+	SonarrAPIKey            string `json:"sonarr_api_key"`
+	SonarrConfigured        bool   `json:"sonarr_configured"`
+	ProwlarrURL             string `json:"prowlarr_url"`
+	ProwlarrAPIKey          string `json:"prowlarr_api_key"`
+	ProwlarrConfigured      bool   `json:"prowlarr_configured"`
+	VAPIDPublicKey          string `json:"vapid_public_key"`
+	VAPIDSubject            string `json:"vapid_subject"`
+	VAPIDConfigured         bool   `json:"vapid_configured"`
 	MetadataLanguage        string `json:"metadata_language"`
 	EnabledWatchProviders   string `json:"enabled_watch_providers"`
 	SagaChronologicalNextUp bool   `json:"saga_chronological_next_up"`
@@ -136,34 +140,38 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 	}
 
 	resp := SystemSettingsResponse{
-		AppVersion:            version.Version,
-		TMDBAPIKey:            maskSecret(get("tmdb_api_key")),
-		TMDBConfigured:        get("tmdb_api_key") != "",
-		TVDBAPIKey:            maskSecret(get("tvdb_api_key")),
-		TVDBConfigured:        get("tvdb_api_key") != "",
-		GeminiAPIKeys:         maskSecret(get("gemini_api_keys")),
-		GeminiConfigured:      get("gemini_api_keys") != "",
-		AniListClientID:       get("anilist_client_id"),
-		AniListClientSecret:   maskSecret(get("anilist_client_secret")),
-		AniListConfigured:     get("anilist_client_id") != "",
-		JellyfinWebhookSecret: jellyfinSecret,
-		JellyfinWebhookURL:    jellyfinURL,
-		PlexWebhookSecret:     plexSecret,
-		PlexWebhookURL:        plexURL,
-		ArrWebhookSecret:      arrSecret,
-		ArrWebhookURL:         arrURL,
-		RadarrURL:             get("radarr_url"),
-		RadarrAPIKey:          maskSecret(get("radarr_api_key")),
-		RadarrConfigured:      get("radarr_url") != "" && get("radarr_api_key") != "",
-		SonarrURL:             get("sonarr_url"),
-		SonarrAPIKey:          maskSecret(get("sonarr_api_key")),
-		SonarrConfigured:      get("sonarr_url") != "" && get("sonarr_api_key") != "",
-		ProwlarrURL:           get("prowlarr_url"),
-		ProwlarrAPIKey:        maskSecret(get("prowlarr_api_key")),
-		ProwlarrConfigured:    get("prowlarr_url") != "" && get("prowlarr_api_key") != "",
-		VAPIDPublicKey:        get("vapid_public_key"),
-		VAPIDSubject:          get("vapid_subject"),
-		VAPIDConfigured:       get("vapid_public_key") != "",
+		AppVersion:              version.Version,
+		TMDBAPIKey:              maskSecret(get("tmdb_api_key")),
+		TMDBConfigured:          get("tmdb_api_key") != "",
+		TVDBAPIKey:              maskSecret(get("tvdb_api_key")),
+		TVDBConfigured:          get("tvdb_api_key") != "",
+		GeminiAPIKeys:           maskSecret(get("gemini_api_keys")),
+		GeminiConfigured:        get("gemini_api_keys") != "",
+		AniListClientID:         get("anilist_client_id"),
+		AniListClientSecret:     maskSecret(get("anilist_client_secret")),
+		AniListConfigured:       get("anilist_client_id") != "",
+		JellyfinWebhookSecret:   jellyfinSecret,
+		JellyfinWebhookURL:      jellyfinURL,
+		JellyfinURL:             get("jellyfin_url"),
+		JellyfinAPIKey:          maskSecret(get("jellyfin_api_key")),
+		JellyfinUserID:          get("jellyfin_user_id"),
+		JellyfinAPIConfigured:   get("jellyfin_url") != "" && get("jellyfin_api_key") != "" && get("jellyfin_user_id") != "",
+		PlexWebhookSecret:       plexSecret,
+		PlexWebhookURL:          plexURL,
+		ArrWebhookSecret:        arrSecret,
+		ArrWebhookURL:           arrURL,
+		RadarrURL:               get("radarr_url"),
+		RadarrAPIKey:            maskSecret(get("radarr_api_key")),
+		RadarrConfigured:        get("radarr_url") != "" && get("radarr_api_key") != "",
+		SonarrURL:               get("sonarr_url"),
+		SonarrAPIKey:            maskSecret(get("sonarr_api_key")),
+		SonarrConfigured:        get("sonarr_url") != "" && get("sonarr_api_key") != "",
+		ProwlarrURL:             get("prowlarr_url"),
+		ProwlarrAPIKey:          maskSecret(get("prowlarr_api_key")),
+		ProwlarrConfigured:      get("prowlarr_url") != "" && get("prowlarr_api_key") != "",
+		VAPIDPublicKey:          get("vapid_public_key"),
+		VAPIDSubject:            get("vapid_subject"),
+		VAPIDConfigured:         get("vapid_public_key") != "",
 		MetadataLanguage:        metadataLang,
 		EnabledWatchProviders:   enabledWP,
 		SagaChronologicalNextUp: get("saga_chronological_next_up") != "false",
@@ -192,6 +200,9 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 		"anilist_client_id":          true,
 		"anilist_client_secret":      true,
 		"jellyfin_webhook_secret":    true,
+		"jellyfin_url":               true,
+		"jellyfin_api_key":           true,
+		"jellyfin_user_id":           true,
 		"plex_webhook_secret":        true,
 		"arr_webhook_secret":         true,
 		"webhook_secret":             true,
@@ -475,6 +486,101 @@ func (h *AdminSettingsHandler) GenerateVAPIDKeys(w http.ResponseWriter, r *http.
 		"message":          "Nouvelles clés VAPID générées avec succès !",
 		"vapid_public_key": pubKey,
 		"vapid_subject":    sub,
+	})
+	return nil
+}
+
+func (h *AdminSettingsHandler) resolveJellyfinConfig(reqURL, reqAPIKey, reqUserID string) (string, string, string) {
+	getSetting := func(key string) string {
+		if h.reloader != nil {
+			return h.reloader.Get(key)
+		}
+		if h.settings != nil {
+			v, _ := h.settings.Get(key)
+			return v
+		}
+		return ""
+	}
+	baseURL := strings.TrimSpace(reqURL)
+	if baseURL == "" {
+		baseURL = getSetting("jellyfin_url")
+	}
+	apiKey := strings.TrimSpace(reqAPIKey)
+	if apiKey == "" || strings.HasPrefix(apiKey, "••••") {
+		apiKey = getSetting("jellyfin_api_key")
+	}
+	userID := strings.TrimSpace(reqUserID)
+	if userID == "" {
+		userID = getSetting("jellyfin_user_id")
+	}
+	return baseURL, apiKey, userID
+}
+
+// TestJellyfin validates the Jellyfin URL, API key, and User ID.
+func (h *AdminSettingsHandler) TestJellyfin(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		URL    string `json:"jellyfin_url"`
+		APIKey string `json:"jellyfin_api_key"`
+		UserID string `json:"jellyfin_user_id"`
+	}
+	_ = httputil.ReadJSON(r, &body, 4096)
+
+	baseURL, apiKey, userID := h.resolveJellyfinConfig(body.URL, body.APIKey, body.UserID)
+	syncSvc := service.NewJellyfinSyncService(h.writeDB, service.JellyfinSyncConfig{
+		BaseURL: baseURL,
+		APIKey:  apiKey,
+		UserID:  userID,
+	}, nil)
+
+	if err := syncSvc.TestConnection(r.Context()); err != nil {
+		httputil.WriteJSON(w, http.StatusOK, map[string]any{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return nil
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"message": "Connexion Jellyfin OK",
+	})
+	return nil
+}
+
+// SyncJellyfinRatings runs an outbound rating sync from Trackarr to Jellyfin.
+func (h *AdminSettingsHandler) SyncJellyfinRatings(w http.ResponseWriter, r *http.Request) error {
+	if h.writeDB == nil {
+		return httputil.InternalError("writeDB not configured", nil)
+	}
+	var body struct {
+		DryRun bool `json:"dry_run"`
+	}
+	_ = httputil.ReadJSON(r, &body, 4096)
+
+	baseURL, apiKey, userID := h.resolveJellyfinConfig("", "", "")
+	if baseURL == "" || apiKey == "" || userID == "" {
+		return httputil.BadRequest("Jellyfin URL, API Key, and User ID must be configured first")
+	}
+
+	syncSvc := service.NewJellyfinSyncService(h.writeDB, service.JellyfinSyncConfig{
+		BaseURL: baseURL,
+		APIKey:  apiKey,
+		UserID:  userID,
+		DryRun:  body.DryRun,
+	}, nil)
+
+	summary, err := syncSvc.SyncRatings(r.Context())
+	if err != nil {
+		return httputil.InternalError("Failed to sync ratings to Jellyfin", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"dry_run": body.DryRun,
+		"matched": summary.Matched,
+		"updated": summary.Updated,
+		"skipped": summary.Skipped,
+		"missing": summary.Missing,
+		"errors":  summary.Errors,
 	})
 	return nil
 }
