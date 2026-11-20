@@ -133,6 +133,23 @@ func (h *ArrHandler) PushToArr(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// ReconcileLibrary enqueues a background Radarr/Sonarr state reconciliation task.
+func (h *ArrHandler) ReconcileLibrary(w http.ResponseWriter, r *http.Request) error {
+	if h.arrSvc == nil {
+		return httputil.InternalError("Arr service not configured", fmt.Errorf("missing arrSvc"))
+	}
+	enqueued, err := h.arrSvc.EnqueueReconcile(r.Context())
+	if err != nil {
+		return httputil.InternalError("Failed to enqueue arr reconciliation", err)
+	}
+	status := "already_queued"
+	if enqueued {
+		status = "queued"
+	}
+	httputil.WriteJSON(w, http.StatusAccepted, map[string]string{"status": status})
+	return nil
+}
+
 type arrDeleteRequest struct {
 	DeleteFiles        *bool `json:"delete_files"`
 	AddImportExclusion *bool `json:"add_import_exclusion"`

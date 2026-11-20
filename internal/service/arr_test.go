@@ -1058,3 +1058,87 @@ func TestArrService_PushTitle_Radarr_RemovesExclusion(t *testing.T) {
 		})
 	}
 }
+
+func TestArrService_ReconcileLibrary(t *testing.T) {
+	radarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/movie":
+			_, _ = w.Write([]byte(`[{"id": 101, "tmdbId": 550, "hasFile": true}]`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer radarrServer.Close()
+
+	sonarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/series":
+			_, _ = w.Write([]byte(`[{"id": 202, "tvdbId": 81189}]`))
+		case "/api/v3/episode":
+			_, _ = w.Write([]byte(`[{"seasonNumber": 1, "episodeNumber": 1, "hasFile": true}]`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer sonarrServer.Close()
+
+	db := testutil.NewTestDB(t)
+	settingsRepo := repository.NewSettingRepository(db)
+	titlesRepo := repository.NewTitleRepository(db)
+	epRepo := repository.NewEpisodeRepository(db)
+	cfg := &config.Config{
+		RadarrURL:    radarrServer.URL,
+		RadarrAPIKey: "r-key",
+		SonarrURL:    sonarrServer.URL,
+		SonarrAPIKey: "s-key",
+	}
+
+	// 1. Movie missing radarr_id and downloaded_at
+	tmdbMovie := int64(550)
+	movieID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 1999, Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdbMovie,
+	}, []model.TitleName{{Name: "Fight Club", Language: "en", IsPrimary: true}})
+
+	// 2. Orphan movie no longer in Radarr
+	orphanRadarrID := int64(999)
+	orphanTMDB := int64(99999)
+	orphanID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusConfirmed, TMDBID: &orphanTMDB, RadarrID: &orphanRadarrID,
+	}, []model.TitleName{{Name: "Removed Movie", Language: "en", IsPrimary: true}})
+
+	// 3. Series missing sonarr_id + episode 1 downloaded
+	tvdbSeries := int64(81189)
+	seriesID := testutil.CreateTitle(t, db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2008, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed, TVDBID: &tvdbSeries,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+	s1 := testutil.GetOrCreateSeason(t, db, seriesID, 1)
+	testutil.SeedEpisode(t, db, s1.ID, 1, "2008-01-20", false)
+
+	arrSvc := service.NewArrService(cfg, settingsRepo, titlesRepo, db)
+	summary, err := arrSvc.ReconcileLibrary(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, summary.MoviesLinked)
+	assert.Equal(t, 1, summary.MoviesCleared)
+	assert.Equal(t, 1, summary.SeriesLinked)
+	assert.Equal(t, 1, summary.EpisodesUpdated)
+
+	m, err := titlesRepo.GetByID(movieID)
+	require.NoError(t, err)
+	require.NotNil(t, m.RadarrID)
+	assert.Equal(t, int64(101), *m.RadarrID)
+	assert.NotNil(t, m.DownloadedAt)
+
+	orphan, err := titlesRepo.GetByID(orphanID)
+	require.NoError(t, err)
+	assert.Nil(t, orphan.RadarrID)
+
+	sr, err := titlesRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	require.NotNil(t, sr.SonarrID)
+	assert.Equal(t, int64(202), *sr.SonarrID)
+
+	eps, err := epRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 1)
+	assert.NotNil(t, eps[0].DownloadedAt)
+}

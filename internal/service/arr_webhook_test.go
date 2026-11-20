@@ -237,3 +237,96 @@ func TestArrWebhookService_Error_MediaNotFound(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, push.calls)
 }
+
+func TestArrWebhookService_DeleteEvents(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	titleRepo := repository.NewTitleRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	epRepo := repository.NewEpisodeRepository(db)
+	svc := service.NewArrWebhookService(db, titleRepo, settingRepo, nil)
+	ctx := context.Background()
+
+	// Seed movie with radarr_id and downloaded_at
+	tmdbID := int64(500)
+	radarrID := int64(11)
+	movieID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		TMDBID:      &tmdbID,
+		RadarrID:    &radarrID,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Delete Movie", Language: "en", IsPrimary: true}})
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "Download",
+		Movie:     &model.ArrMoviePayload{ID: radarrID, TMDBID: tmdbID},
+	}))
+
+	// 1. MovieFileDelete clears downloaded_at but keeps radarr_id
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "MovieFileDelete",
+		Movie:     &model.ArrMoviePayload{ID: radarrID, TMDBID: tmdbID},
+	}))
+	m, err := titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	assert.Nil(t, m.DownloadedAt)
+	require.NotNil(t, m.RadarrID)
+
+	// 2. MovieDelete clears radarr_id and downloaded_at
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "MovieDelete",
+		Movie:     &model.ArrMoviePayload{ID: radarrID, TMDBID: tmdbID},
+	}))
+	m, err = titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	assert.Nil(t, m.DownloadedAt)
+	assert.Nil(t, m.RadarrID)
+
+	// Seed series with sonarr_id and 2 downloaded episodes
+	tvdbID := int64(600)
+	sonarrID := int64(22)
+	seriesID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		TVDBID:      &tvdbID,
+		SonarrID:    &sonarrID,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Delete Series", Language: "en", IsPrimary: true}})
+	s1 := testutil.GetOrCreateSeason(t, db, seriesID, 1)
+	testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", false)
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "Download",
+		Series:    &model.ArrSeriesPayload{ID: sonarrID, TVDBID: tvdbID},
+		Episodes: []model.ArrEpisodePayload{
+			{SeasonNumber: 1, EpisodeNumber: 1},
+			{SeasonNumber: 1, EpisodeNumber: 2},
+		},
+	}))
+
+	// 3. EpisodeFileDelete clears only the targeted episode
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "EpisodeFileDelete",
+		Series:    &model.ArrSeriesPayload{ID: sonarrID, TVDBID: tvdbID},
+		Episodes:  []model.ArrEpisodePayload{{SeasonNumber: 1, EpisodeNumber: 1}},
+	}))
+	eps, err := epRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+	assert.Nil(t, eps[0].DownloadedAt)
+	assert.NotNil(t, eps[1].DownloadedAt)
+
+	// 4. SeriesDelete clears sonarr_id, sets sonarr_deleted_at, and clears all episode downloaded_at
+	require.NoError(t, svc.ProcessArrWebhook(ctx, &model.ArrWebhookPayload{
+		EventType: "SeriesDelete",
+		Series:    &model.ArrSeriesPayload{ID: sonarrID, TVDBID: tvdbID},
+	}))
+	sr, err := titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	assert.Nil(t, sr.SonarrID)
+	assert.NotNil(t, sr.SonarrDeletedAt)
+	eps, err = epRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	assert.Nil(t, eps[1].DownloadedAt)
+}

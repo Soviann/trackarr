@@ -70,6 +70,28 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
 
   const [arrWebhookUrl, setArrWebhookUrl] = useState<string>('')
   const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const [reconciling, setReconciling] = useState(false)
+  const [reconcileResult, setReconcileResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const handleReconcile = async () => {
+    setReconciling(true)
+    setReconcileResult(null)
+    try {
+      const res = await apiFetch<{ status: string }>('/admin/arr/reconcile', { method: 'POST' })
+      const text =
+        res.status === 'already_queued'
+          ? t('arrSettings.reconcileAlreadyQueued')
+          : t('arrSettings.reconcileQueued')
+      setReconcileResult({ ok: true, text })
+    } catch (err: unknown) {
+      setReconcileResult({
+        ok: false,
+        text: err instanceof Error ? err.message : t('arrSettings.reconcileFailed'),
+      })
+    } finally {
+      setReconciling(false)
+    }
+  }
 
   const fetchOptions = () => {
     apiFetch<RootFolder[]>('/arr/radarr/rootfolder')
@@ -504,6 +526,33 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
           </div>
         </div>
       )}
+
+      {/* ARR RECONCILE CARD */}
+      <div className={s.section}>
+        <div className={s.sectionHeader}>
+          <h2 className={s.sectionTitle}>🔄 {t('arrSettings.reconcileTitle')}</h2>
+          <p className={s.sectionDesc}>{t('arrSettings.reconcileDesc')}</p>
+        </div>
+        <div className={s.connectionBody}>
+          <div className={s.connInputRow}>
+            <button
+              type="button"
+              onClick={handleReconcile}
+              disabled={reconciling}
+              className={s.testBtn}
+            >
+              {reconciling ? t('arrSettings.reconcileRunning') : t('arrSettings.reconcileBtn')}
+            </button>
+            {reconcileResult && (
+              <div role="status">
+                <span className={reconcileResult.ok ? s.testResultOk : s.testResultErr}>
+                  {reconcileResult.ok ? `✅ ${reconcileResult.text}` : `❌ ${reconcileResult.text}`}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* TWO-COLUMN DESKTOP GRID FOR DEFAULTS */}
       <div className={s.defaultsGrid}>

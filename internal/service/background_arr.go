@@ -36,3 +36,21 @@ func (w *TaskQueueWorker) handleSonarrDelete(ctx context.Context, task model.Tas
 	logger.Info("processing sonarr delete task", "titleID", payload.TitleID, "deleteFiles", payload.DeleteFiles, "addExclusion", payload.AddImportListExclusion)
 	return w.arrSvc.DeleteSeriesFromSonarr(ctx, payload)
 }
+
+func (w *TaskQueueWorker) handleArrReconcile(ctx context.Context, _ model.Task, logger *slog.Logger) error {
+	if w.arrSvc == nil {
+		return fmt.Errorf("arr service not configured")
+	}
+	summary, err := w.arrSvc.ReconcileLibrary(ctx)
+	if err != nil {
+		return err
+	}
+	logger.Info("completed arr reconciliation",
+		"moviesLinked", summary.MoviesLinked,
+		"moviesCleared", summary.MoviesCleared,
+		"seriesLinked", summary.SeriesLinked,
+		"seriesCleared", summary.SeriesCleared,
+		"episodesUpdated", summary.EpisodesUpdated,
+	)
+	return nil
+}

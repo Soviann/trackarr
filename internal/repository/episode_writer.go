@@ -94,6 +94,35 @@ func (w *EpisodeWriter) MarkDownloadedBySeasonAndEpisode(ctx context.Context, ti
 	return ep, nil
 }
 
+// ClearDownloadedBySeasonAndEpisode clears downloaded_at for a specific episode if it exists.
+func (w *EpisodeWriter) ClearDownloadedBySeasonAndEpisode(ctx context.Context, titleID int64, seasonNumber int, episodeNumber int) error {
+	_, err := w.tx.ExecContext(ctx, `
+		UPDATE episodes
+		SET downloaded_at = NULL
+		WHERE episode = ?
+		  AND season_id IN (SELECT id FROM seasons WHERE title_id = ? AND season_number = ?)`,
+		episodeNumber, titleID, seasonNumber,
+	)
+	if err != nil {
+		return fmt.Errorf("clear episode downloaded_at for title %d s%de%d: %w", titleID, seasonNumber, episodeNumber, err)
+	}
+	return nil
+}
+
+// ClearDownloadedForTitle clears downloaded_at for all episodes belonging to a title.
+func (w *EpisodeWriter) ClearDownloadedForTitle(ctx context.Context, titleID int64) error {
+	_, err := w.tx.ExecContext(ctx, `
+		UPDATE episodes
+		SET downloaded_at = NULL
+		WHERE season_id IN (SELECT id FROM seasons WHERE title_id = ?)`,
+		titleID,
+	)
+	if err != nil {
+		return fmt.Errorf("clear episodes downloaded_at for title %d: %w", titleID, err)
+	}
+	return nil
+}
+
 func (w *EpisodeWriter) BatchMarkWatched(ctx context.Context, ids []int64, watchedAt time.Time) error {
 	if len(ids) == 0 {
 		return nil

@@ -837,3 +837,281 @@ func (s *ArrService) removeImportExclusion(ctx context.Context, app, endpoint, i
 		}
 	}
 }
+
+// ArrReconcileSummary reports changes applied by ReconcileLibrary.
+type ArrReconcileSummary struct {
+	MoviesLinked    int `json:"movies_linked"`
+	MoviesCleared   int `json:"movies_cleared"`
+	SeriesLinked    int `json:"series_linked"`
+	SeriesCleared   int `json:"series_cleared"`
+	EpisodesUpdated int `json:"episodes_updated"`
+}
+
+type radarrMovieItem struct {
+	ID      int64 `json:"id"`
+	TMDBID  int64 `json:"tmdbId"`
+	HasFile bool  `json:"hasFile"`
+}
+
+type sonarrSeriesItem struct {
+	ID     int64 `json:"id"`
+	TVDBID int64 `json:"tvdbId"`
+}
+
+type sonarrEpisodeItem struct {
+	SeasonNumber  int  `json:"seasonNumber"`
+	EpisodeNumber int  `json:"episodeNumber"`
+	HasFile       bool `json:"hasFile"`
+}
+
+// EnqueueReconcile enqueues a deduplicated background reconciliation task.
+func (s *ArrService) EnqueueReconcile(ctx context.Context) (bool, error) {
+	var enqueued bool
+	err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		dedup := string(model.TaskTypeArrReconcile)
+		id, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeArrReconcile, "{}", &dedup)
+		if err != nil {
+			return err
+		}
+		enqueued = id > 0
+		return nil
+	})
+	return enqueued, err
+}
+
+// ReconcileLibrary synchronizes radarr_id, sonarr_id, and downloaded_at with Radarr/Sonarr.
+func (s *ArrService) ReconcileLibrary(ctx context.Context) (*ArrReconcileSummary, error) {
+	summary := &ArrReconcileSummary{}
+	allTitles, err := s.titles.ListAll()
+	if err != nil {
+		return nil, fmt.Errorf("list titles for arr reconcile: %w", err)
+	}
+
+	if radarrURL, radarrKey := s.getAppConfig("radarr"); radarrURL != "" && radarrKey != "" {
+		if err := s.reconcileRadarr(ctx, allTitles, summary); err != nil {
+			return nil, err
+		}
+	}
+	if sonarrURL, sonarrKey := s.getAppConfig("sonarr"); sonarrURL != "" && sonarrKey != "" {
+		if err := s.reconcileSonarr(ctx, allTitles, summary); err != nil {
+			return nil, err
+		}
+	}
+	return summary, nil
+}
+
+func (s *ArrService) reconcileRadarr(ctx context.Context, titles []model.Title, summary *ArrReconcileSummary) error {
+	resp, err := s.ProxyRequest(ctx, "radarr", "GET", "/api/v3/movie", nil)
+	if err != nil {
+		return fmt.Errorf("fetch radarr movies: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("radarr /api/v3/movie returned %d", resp.StatusCode)
+	}
+
+	var movies []radarrMovieItem
+	if err := json.NewDecoder(resp.Body).Decode(&movies); err != nil {
+		return fmt.Errorf("decode radarr movies: %w", err)
+	}
+
+	byID := make(map[int64]radarrMovieItem, len(movies))
+	byTMDB := make(map[int64]radarrMovieItem, len(movies))
+	for _, m := range movies {
+		if m.ID > 0 {
+			byID[m.ID] = m
+		}
+		if m.TMDBID > 0 {
+			byTMDB[m.TMDBID] = m
+		}
+	}
+
+	now := time.Now().UTC()
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		tw := repository.NewTitleWriter(tx)
+		for _, t := range titles {
+			if t.Type != model.TitleTypeMovie {
+				continue
+			}
+			var match *radarrMovieItem
+			if t.RadarrID != nil {
+				if m, ok := byID[*t.RadarrID]; ok {
+					match = &m
+				}
+			}
+			if match == nil && t.TMDBID != nil {
+				if m, ok := byTMDB[*t.TMDBID]; ok {
+					match = &m
+				}
+			}
+
+			if match == nil {
+				if t.RadarrID != nil || t.DownloadedAt != nil {
+					if err := tw.Update(ctx, t.ID, repository.TitleUpdate{
+						ClearRadarrID:     t.RadarrID != nil,
+						ClearDownloadedAt: t.DownloadedAt != nil,
+					}); err != nil {
+						return err
+					}
+					if t.RadarrID != nil {
+						summary.MoviesCleared++
+					}
+				}
+				continue
+			}
+
+			upd := repository.TitleUpdate{}
+			changed := false
+			if t.RadarrID == nil || *t.RadarrID != match.ID {
+				id := match.ID
+				upd.RadarrID = &id
+				changed = true
+				summary.MoviesLinked++
+			}
+			if match.HasFile && t.DownloadedAt == nil {
+				upd.DownloadedAt = &now
+				changed = true
+			} else if !match.HasFile && t.DownloadedAt != nil {
+				upd.ClearDownloadedAt = true
+				changed = true
+			}
+			if changed {
+				if err := tw.Update(ctx, t.ID, upd); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+}
+
+func (s *ArrService) reconcileSonarr(ctx context.Context, titles []model.Title, summary *ArrReconcileSummary) error {
+	resp, err := s.ProxyRequest(ctx, "sonarr", "GET", "/api/v3/series", nil)
+	if err != nil {
+		return fmt.Errorf("fetch sonarr series: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("sonarr /api/v3/series returned %d", resp.StatusCode)
+	}
+
+	var series []sonarrSeriesItem
+	if err := json.NewDecoder(resp.Body).Decode(&series); err != nil {
+		return fmt.Errorf("decode sonarr series: %w", err)
+	}
+
+	byID := make(map[int64]sonarrSeriesItem, len(series))
+	byTVDB := make(map[int64]sonarrSeriesItem, len(series))
+	for _, sr := range series {
+		if sr.ID > 0 {
+			byID[sr.ID] = sr
+		}
+		if sr.TVDBID > 0 {
+			byTVDB[sr.TVDBID] = sr
+		}
+	}
+
+	type seriesEpSync struct {
+		titleID  int64
+		episodes []sonarrEpisodeItem
+	}
+	var epSyncs []seriesEpSync
+
+	// Fetch episode file status before opening the write transaction.
+	for _, t := range titles {
+		if t.Type != model.TitleTypeSeries {
+			continue
+		}
+		if t.Status != model.TitleStatusWatching && t.Status != model.TitleStatusPlanToWatch {
+			continue
+		}
+		var sonarrID int64
+		if t.SonarrID != nil {
+			if sr, ok := byID[*t.SonarrID]; ok {
+				sonarrID = sr.ID
+			}
+		}
+		if sonarrID == 0 && t.TVDBID != nil {
+			if sr, ok := byTVDB[*t.TVDBID]; ok {
+				sonarrID = sr.ID
+			}
+		}
+		if sonarrID == 0 {
+			continue
+		}
+		epResp, err := s.ProxyRequest(ctx, "sonarr", "GET", fmt.Sprintf("/api/v3/episode?seriesId=%d", sonarrID), nil)
+		if err != nil {
+			continue
+		}
+		if epResp.StatusCode == http.StatusOK {
+			var eps []sonarrEpisodeItem
+			if err := json.NewDecoder(epResp.Body).Decode(&eps); err == nil {
+				epSyncs = append(epSyncs, seriesEpSync{titleID: t.ID, episodes: eps})
+			}
+		}
+		_ = epResp.Body.Close()
+	}
+
+	now := time.Now().UTC()
+	return database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		tw := repository.NewTitleWriter(tx)
+		ew := repository.NewEpisodeWriter(tx)
+
+		for _, t := range titles {
+			if t.Type != model.TitleTypeSeries {
+				continue
+			}
+			var match *sonarrSeriesItem
+			if t.SonarrID != nil {
+				if sr, ok := byID[*t.SonarrID]; ok {
+					match = &sr
+				}
+			}
+			if match == nil && t.TVDBID != nil {
+				if sr, ok := byTVDB[*t.TVDBID]; ok {
+					match = &sr
+				}
+			}
+			if match == nil {
+				if t.SonarrID != nil {
+					if err := tw.Update(ctx, t.ID, repository.TitleUpdate{
+						ClearSonarrID:     true,
+						ClearDownloadedAt: t.DownloadedAt != nil,
+					}); err != nil {
+						return err
+					}
+					if err := ew.ClearDownloadedForTitle(ctx, t.ID); err != nil {
+						return err
+					}
+					summary.SeriesCleared++
+				}
+				continue
+			}
+			if t.SonarrID == nil || *t.SonarrID != match.ID {
+				id := match.ID
+				if err := tw.Update(ctx, t.ID, repository.TitleUpdate{SonarrID: &id}); err != nil {
+					return err
+				}
+				summary.SeriesLinked++
+			}
+		}
+
+		for _, syncItem := range epSyncs {
+			for _, ep := range syncItem.episodes {
+				if ep.SeasonNumber < 0 || ep.EpisodeNumber <= 0 {
+					continue
+				}
+				if ep.HasFile {
+					if _, err := ew.MarkDownloadedBySeasonAndEpisode(ctx, syncItem.titleID, ep.SeasonNumber, ep.EpisodeNumber, now); err == nil {
+						summary.EpisodesUpdated++
+					}
+				} else {
+					if err := ew.ClearDownloadedBySeasonAndEpisode(ctx, syncItem.titleID, ep.SeasonNumber, ep.EpisodeNumber); err == nil {
+						summary.EpisodesUpdated++
+					}
+				}
+			}
+		}
+		return nil
+	})
+}

@@ -5,15 +5,17 @@ import "time"
 type TaskType string
 
 const (
-	TaskTypeEnrichment        TaskType = "enrichment"
-	TaskTypeRefresh           TaskType = "refresh"
-	TaskTypeCoverFetch        TaskType = "cover_fetch"
-	TaskTypeAniListPushSeason TaskType = "anilist_push_season"
-	TaskTypeAniListPushMovie  TaskType = "anilist_push_movie"
-	TaskTypeRadarrPush        TaskType = "radarr_push"
-	TaskTypeSonarrPush        TaskType = "sonarr_push"
-	TaskTypeSonarrDelete      TaskType = "sonarr_delete"
-	TaskTypeGenerateWrapped   TaskType = "generate_wrapped"
+	TaskTypeEnrichment         TaskType = "enrichment"
+	TaskTypeRefresh            TaskType = "refresh"
+	TaskTypeCoverFetch         TaskType = "cover_fetch"
+	TaskTypeAniListPushSeason  TaskType = "anilist_push_season"
+	TaskTypeAniListPushMovie   TaskType = "anilist_push_movie"
+	TaskTypeRadarrPush         TaskType = "radarr_push"
+	TaskTypeSonarrPush         TaskType = "sonarr_push"
+	TaskTypeSonarrDelete       TaskType = "sonarr_delete"
+	TaskTypeArrReconcile       TaskType = "arr_reconcile"
+	TaskTypeJellyfinRatingPush TaskType = "jellyfin_rating_push"
+	TaskTypeGenerateWrapped    TaskType = "generate_wrapped"
 )
 
 type TaskStatus string

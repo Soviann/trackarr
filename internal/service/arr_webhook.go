@@ -39,31 +39,47 @@ func (s *ArrWebhookService) ProcessArrWebhook(ctx context.Context, payload *mode
 		return nil
 	}
 
-	if payload.EventType == "Test" {
+	switch payload.EventType {
+	case "Test":
 		log.Printf("arr webhook: test event received (instance: %s)", payload.InstanceName)
 		return nil
-	}
-
-	if payload.EventType != "Download" && payload.EventType != "Upgrade" {
+	case "Download", "Upgrade":
+		if payload.Movie != nil {
+			return s.processRadarrDownload(ctx, payload.Movie)
+		}
+		if payload.Series != nil {
+			return s.processSonarrDownload(ctx, payload.Series, payload.Episodes)
+		}
+		return nil
+	case "MovieFileDelete":
+		if payload.Movie != nil {
+			return s.processRadarrDelete(ctx, payload.Movie, false)
+		}
+		return nil
+	case "MovieDelete":
+		if payload.Movie != nil {
+			return s.processRadarrDelete(ctx, payload.Movie, true)
+		}
+		return nil
+	case "EpisodeFileDelete":
+		if payload.Series != nil {
+			return s.processSonarrEpisodeFileDelete(ctx, payload.Series, payload.Episodes)
+		}
+		return nil
+	case "SeriesDelete":
+		if payload.Series != nil {
+			return s.processSonarrSeriesDelete(ctx, payload.Series)
+		}
+		return nil
+	default:
 		log.Printf("arr webhook: ignored unhandled eventType %q", payload.EventType)
 		return nil
 	}
-
-	if payload.Movie != nil {
-		return s.processRadarrDownload(ctx, payload.Movie)
-	}
-
-	if payload.Series != nil {
-		return s.processSonarrDownload(ctx, payload.Series, payload.Episodes)
-	}
-
-	return nil
 }
 
-func (s *ArrWebhookService) processRadarrDownload(ctx context.Context, movie *model.ArrMoviePayload) error {
+func (s *ArrWebhookService) findMovieTitle(movie *model.ArrMoviePayload) (*model.Title, error) {
 	var targetTitle *model.Title
 	var err error
-
 	if movie.ID > 0 {
 		targetTitle, err = s.titleRepo.FindByRadarrID(movie.ID)
 	}
@@ -75,6 +91,91 @@ func (s *ArrWebhookService) processRadarrDownload(ctx context.Context, movie *mo
 		movieType := model.TitleTypeMovie
 		targetTitle, err = s.titleRepo.FindByExternalID(&movie.IMDBID, nil, nil, nil, nil, &movieType)
 	}
+	return targetTitle, err
+}
+
+func (s *ArrWebhookService) findSeriesTitle(series *model.ArrSeriesPayload) (*model.Title, error) {
+	var targetTitle *model.Title
+	var err error
+	if series.ID > 0 {
+		targetTitle, err = s.titleRepo.FindBySonarrID(series.ID)
+	}
+	if targetTitle == nil && series.TVDBID > 0 {
+		seriesType := model.TitleTypeSeries
+		targetTitle, err = s.titleRepo.FindByExternalID(nil, nil, nil, nil, &series.TVDBID, &seriesType)
+	}
+	if targetTitle == nil && series.IMDBID != "" {
+		seriesType := model.TitleTypeSeries
+		targetTitle, err = s.titleRepo.FindByExternalID(&series.IMDBID, nil, nil, nil, nil, &seriesType)
+	}
+	return targetTitle, err
+}
+
+func (s *ArrWebhookService) processRadarrDelete(ctx context.Context, movie *model.ArrMoviePayload, clearRadarrID bool) error {
+	targetTitle, _ := s.findMovieTitle(movie)
+	if targetTitle == nil {
+		return nil
+	}
+
+	err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).Update(ctx, targetTitle.ID, repository.TitleUpdate{
+			ClearRadarrID:     clearRadarrID,
+			ClearDownloadedAt: true,
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("process radarr delete: %w", err)
+	}
+	return nil
+}
+
+func (s *ArrWebhookService) processSonarrEpisodeFileDelete(ctx context.Context, series *model.ArrSeriesPayload, episodes []model.ArrEpisodePayload) error {
+	targetTitle, _ := s.findSeriesTitle(series)
+	if targetTitle == nil {
+		return nil
+	}
+
+	err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		ew := repository.NewEpisodeWriter(tx)
+		for _, ep := range episodes {
+			if ep.SeasonNumber >= 0 && ep.EpisodeNumber > 0 {
+				if err := ew.ClearDownloadedBySeasonAndEpisode(ctx, targetTitle.ID, ep.SeasonNumber, ep.EpisodeNumber); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("process sonarr episode file delete: %w", err)
+	}
+	return nil
+}
+
+func (s *ArrWebhookService) processSonarrSeriesDelete(ctx context.Context, series *model.ArrSeriesPayload) error {
+	targetTitle, _ := s.findSeriesTitle(series)
+	if targetTitle == nil {
+		return nil
+	}
+
+	err := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+		if err := repository.NewTitleWriter(tx).Update(ctx, targetTitle.ID, repository.TitleUpdate{
+			ClearSonarrID:      true,
+			SetSonarrDeletedAt: true,
+			ClearDownloadedAt:  true,
+		}); err != nil {
+			return err
+		}
+		return repository.NewEpisodeWriter(tx).ClearDownloadedForTitle(ctx, targetTitle.ID)
+	})
+	if err != nil {
+		return fmt.Errorf("process sonarr series delete: %w", err)
+	}
+	return nil
+}
+
+func (s *ArrWebhookService) processRadarrDownload(ctx context.Context, movie *model.ArrMoviePayload) error {
+	targetTitle, err := s.findMovieTitle(movie)
 
 	if targetTitle == nil {
 		log.Printf("arr webhook: movie not found in library: %q (tmdb: %d, radarr: %d, err: %v)", movie.Title, movie.TMDBID, movie.ID, err)
@@ -115,20 +216,7 @@ func (s *ArrWebhookService) processRadarrDownload(ctx context.Context, movie *mo
 }
 
 func (s *ArrWebhookService) processSonarrDownload(ctx context.Context, series *model.ArrSeriesPayload, episodes []model.ArrEpisodePayload) error {
-	var targetTitle *model.Title
-	var err error
-
-	if series.ID > 0 {
-		targetTitle, err = s.titleRepo.FindBySonarrID(series.ID)
-	}
-	if targetTitle == nil && series.TVDBID > 0 {
-		seriesType := model.TitleTypeSeries
-		targetTitle, err = s.titleRepo.FindByExternalID(nil, nil, nil, nil, &series.TVDBID, &seriesType)
-	}
-	if targetTitle == nil && series.IMDBID != "" {
-		seriesType := model.TitleTypeSeries
-		targetTitle, err = s.titleRepo.FindByExternalID(&series.IMDBID, nil, nil, nil, nil, &seriesType)
-	}
+	targetTitle, err := s.findSeriesTitle(series)
 
 	if targetTitle == nil {
 		log.Printf("arr webhook: series not found in library: %q (tvdb: %d, sonarr: %d, err: %v)", series.Title, series.TVDBID, series.ID, err)
