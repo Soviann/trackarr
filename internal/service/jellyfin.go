@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -48,8 +49,12 @@ func NewJellyfinService(db *sql.DB, pipeline *matching.Pipeline, titleSvc *Title
 // ProcessJellyfinWebhook ingests a Jellyfin Webhook-plugin notification.
 // PlaybackStart events register the active playback session in memory.
 // PlaybackStop events clear the active session and, if played to completion, process the scrobble.
+// UserDataSaved events sync user ratings; ItemAdded events track newly added movies/series.
 func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.JellyfinPayload, rawPayload string) error {
-	switch strings.ToLower(jf.NotificationType) {
+	if jf == nil {
+		return nil
+	}
+	switch strings.ToLower(strings.TrimSpace(jf.NotificationType)) {
 	case "playbackstart":
 		return s.processPlaybackStart(ctx, jf)
 	case "playbackstop":
@@ -62,6 +67,8 @@ func (s *JellyfinService) ProcessJellyfinWebhook(ctx context.Context, jf *model.
 		// proceed with completion scrobble
 	case "userdatasaved":
 		return s.processUserDataSaved(ctx, jf)
+	case "itemadded":
+		return s.processItemAdded(ctx, jf)
 	default:
 		return nil
 	}
@@ -324,6 +331,235 @@ func (s *JellyfinService) processUserDataSaved(ctx context.Context, jf *model.Je
 
 	s.log.Info("updated rating from Jellyfin webhook", "titleID", title.ID, "title", title.PrimaryName(), "rating", rating)
 	return nil
+}
+
+func (s *JellyfinService) processItemAdded(ctx context.Context, jf *model.JellyfinPayload) error {
+	var titleType model.TitleType
+	switch strings.ToLower(strings.TrimSpace(jf.ItemType)) {
+	case "movie":
+		titleType = model.TitleTypeMovie
+	case "series":
+		titleType = model.TitleTypeSeries
+	default:
+		return nil
+	}
+
+	if s.db == nil {
+		return fmt.Errorf("jellyfin item added: database is not initialized")
+	}
+
+	name := strings.TrimSpace(jf.Name)
+	if name == "" && titleType == model.TitleTypeSeries {
+		name = strings.TrimSpace(jf.SeriesName)
+	}
+
+	ids := parseJellyfinWebhookExternalIDs(jf)
+	titleName := resolveJellyfinItemAddedName(name, ids)
+	if titleName == "" {
+		return nil
+	}
+
+	year := clampJellyfinYear(atoiSafe(jf.Year))
+	itemID := strings.TrimSpace(jf.ItemID)
+
+	created, err := createJellyfinTitleIfMissing(ctx, s.db, jellyfinTitleImport{
+		TitleType:        titleType,
+		TitleName:        titleName,
+		OriginalName:     name,
+		Year:             year,
+		IDs:              ids,
+		ExternalSourceID: itemID,
+		MatchSource:      "jellyfin_webhook",
+		LookupTVDB:       true,
+	})
+	if err != nil {
+		return fmt.Errorf("jellyfin item added: %w", err)
+	}
+	if created {
+		s.log.Info("created title from Jellyfin ItemAdded webhook",
+			"type", titleType,
+			"title", titleName,
+			"year", year,
+			"itemID", itemID,
+		)
+	}
+	return nil
+}
+
+type jellyfinTitleImport struct {
+	TitleType        model.TitleType
+	TitleName        string
+	OriginalName     string
+	Year             int
+	IDs              ExternalIDs
+	ExternalSourceID string
+	MatchSource      string
+	LookupTVDB       bool
+}
+
+func parseJellyfinWebhookExternalIDs(jf *model.JellyfinPayload) ExternalIDs {
+	var ids ExternalIDs
+	if imdb := strings.ToLower(strings.TrimSpace(jf.ProviderIMDB)); imdb != "" {
+		ids.IMDB = imdb
+	}
+	if v, err := strconv.ParseInt(strings.TrimSpace(jf.ProviderTMDB), 10, 64); err == nil && v > 0 {
+		ids.TMDB = v
+	}
+	if v, err := strconv.ParseInt(strings.TrimSpace(jf.ProviderTVDB), 10, 64); err == nil && v > 0 {
+		ids.TVDB = v
+	}
+	return ids
+}
+
+func resolveJellyfinItemAddedName(name string, ids ExternalIDs) string {
+	if name != "" {
+		return name
+	}
+	switch {
+	case ids.TMDB > 0:
+		return fmt.Sprintf("TMDB %d", ids.TMDB)
+	case ids.TVDB > 0:
+		return fmt.Sprintf("TVDB %d", ids.TVDB)
+	case ids.IMDB != "":
+		return ids.IMDB
+	default:
+		return ""
+	}
+}
+
+func optionalJellyfinIDPointers(ids ExternalIDs, externalSourceID string) (imdbPtr *string, tmdbPtr *int64, tvdbPtr *int64, extIDPtr *string) {
+	if ids.IMDB != "" {
+		imdb := ids.IMDB
+		imdbPtr = &imdb
+	}
+	if ids.TMDB > 0 {
+		tmdb := ids.TMDB
+		tmdbPtr = &tmdb
+	}
+	if ids.TVDB > 0 {
+		tvdb := ids.TVDB
+		tvdbPtr = &tvdb
+	}
+	if externalSourceID != "" {
+		ext := externalSourceID
+		extIDPtr = &ext
+	}
+	return imdbPtr, tmdbPtr, tvdbPtr, extIDPtr
+}
+
+func findExistingJellyfinTitle(
+	titles *repository.TitleRepository,
+	titleType model.TitleType,
+	imdbPtr *string,
+	tmdbPtr *int64,
+	tvdbPtr *int64,
+	extIDPtr *string,
+	name string,
+	year int,
+) (*model.Title, error) {
+	if imdbPtr != nil || tmdbPtr != nil || tvdbPtr != nil || extIDPtr != nil {
+		existing, err := titles.FindByExternalID(imdbPtr, tmdbPtr, extIDPtr, nil, tvdbPtr, &titleType)
+		if err == nil && existing != nil {
+			return existing, nil
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("lookup %s by external id: %w", titleType, err)
+		}
+	}
+	if name != "" {
+		existing, err := titles.FindByNameAndType(name, titleType, year)
+		if err == nil && existing != nil {
+			return existing, nil
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("lookup %s by name and type: %w", titleType, err)
+		}
+	}
+	return nil, nil
+}
+
+func createJellyfinTitleIfMissing(ctx context.Context, db *sql.DB, item jellyfinTitleImport) (bool, error) {
+	imdbPtr, tmdbPtr, tvdbPtr, extIDPtr := optionalJellyfinIDPointers(item.IDs, item.ExternalSourceID)
+	var lookupTVDBPtr *int64
+	if item.LookupTVDB {
+		lookupTVDBPtr = tvdbPtr
+	}
+
+	var created bool
+	now := time.Now().UTC()
+	err := database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+		txTitles := repository.NewTitleRepository(tx)
+		dup, err := findExistingJellyfinTitle(txTitles, item.TitleType, imdbPtr, tmdbPtr, lookupTVDBPtr, extIDPtr, item.OriginalName, item.Year)
+		if err != nil {
+			return err
+		}
+		if dup != nil {
+			return nil
+		}
+
+		matchStatus := model.MatchStatusPendingReview
+		if tmdbPtr != nil && *tmdbPtr > 0 {
+			matchStatus = model.MatchStatusConfirmed
+		}
+		matchSource := item.MatchSource
+		var origTitle *string
+		if item.OriginalName != "" {
+			orig := item.OriginalName
+			origTitle = &orig
+		}
+
+		title := &model.Title{
+			Type:             item.TitleType,
+			Year:             item.Year,
+			Status:           model.TitleStatusPlanToWatch,
+			ExternalSourceID: extIDPtr,
+			IMDBID:           imdbPtr,
+			TMDBID:           tmdbPtr,
+			TVDBID:           tvdbPtr,
+			MatchStatus:      matchStatus,
+			MatchSource:      &matchSource,
+			OriginalTitle:    origTitle,
+			ArrIgnored:       true,
+		}
+		names := []model.TitleName{{
+			Name:      item.TitleName,
+			Language:  "en",
+			IsPrimary: true,
+		}}
+
+		titleWriter := repository.NewTitleWriter(tx)
+		titleID, err := titleWriter.Create(ctx, title, names)
+		if err != nil {
+			return fmt.Errorf("create title: %w", err)
+		}
+		if item.TitleType == model.TitleTypeMovie {
+			if err := titleWriter.MarkDownloaded(ctx, titleID, now); err != nil {
+				return fmt.Errorf("mark title downloaded: %w", err)
+			}
+		}
+
+		payloadJSON, err := json.Marshal(EnrichmentPayload{
+			TitleID:       titleID,
+			TitleName:     item.TitleName,
+			Year:          item.Year,
+			TitleType:     item.TitleType,
+			IMDBID:        item.IDs.IMDB,
+			TMDBID:        item.IDs.TMDB,
+			TVDBID:        item.IDs.TVDB,
+			PreserveMatch: false,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal enrichment payload: %w", err)
+		}
+		dedupKey := fmt.Sprintf("enrichment:%d", titleID)
+		if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey); err != nil {
+			return fmt.Errorf("enqueue enrichment: %w", err)
+		}
+
+		created = true
+		return nil
+	})
+	return created, err
 }
 
 func (s *JellyfinService) processMovie(ctx context.Context, jf *model.JellyfinPayload, year int, ids ExternalIDs, rawPayload string) error {

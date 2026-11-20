@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 )
@@ -535,10 +533,10 @@ func (s *JellyfinSyncService) SyncUnwatchedMovies(ctx context.Context) (Jellyfin
 			continue
 		}
 
-		imdbPtr, tmdbPtr, tvdbPtr, extIDPtr := optionalMoviePointers(ids, externalSourceID)
+		imdbPtr, tmdbPtr, _, extIDPtr := optionalJellyfinIDPointers(ids, externalSourceID)
 		titleName := resolveSyncedMovieName(name, ids)
 
-		existing, lookupErr := findExistingSyncedMovie(readTitles, imdbPtr, tmdbPtr, extIDPtr, name, year)
+		existing, lookupErr := findExistingJellyfinTitle(readTitles, model.TitleTypeMovie, imdbPtr, tmdbPtr, nil, extIDPtr, name, year)
 		if lookupErr != nil {
 			summary.Errors++
 			s.log.Error("failed to lookup existing movie during Jellyfin sync", "name", titleName, "jellyfinID", externalSourceID, "err", lookupErr)
@@ -554,7 +552,16 @@ func (s *JellyfinSyncService) SyncUnwatchedMovies(ctx context.Context) (Jellyfin
 			continue
 		}
 
-		created, createErr := s.createSyncedMovie(ctx, titleName, name, year, ids, imdbPtr, tmdbPtr, tvdbPtr, extIDPtr)
+		created, createErr := createJellyfinTitleIfMissing(ctx, s.db, jellyfinTitleImport{
+			TitleType:        model.TitleTypeMovie,
+			TitleName:        titleName,
+			OriginalName:     name,
+			Year:             year,
+			IDs:              ids,
+			ExternalSourceID: externalSourceID,
+			MatchSource:      "jellyfin_sync",
+			LookupTVDB:       false,
+		})
 		if createErr != nil {
 			summary.Errors++
 			s.log.Error("failed to create unwatched movie from Jellyfin", "name", titleName, "jellyfinID", externalSourceID, "err", createErr)
@@ -568,91 +575,6 @@ func (s *JellyfinSyncService) SyncUnwatchedMovies(ctx context.Context) (Jellyfin
 	}
 
 	return summary, nil
-}
-
-func (s *JellyfinSyncService) createSyncedMovie(
-	ctx context.Context,
-	titleName, originalName string,
-	year int,
-	ids ExternalIDs,
-	imdbPtr *string,
-	tmdbPtr *int64,
-	tvdbPtr *int64,
-	extIDPtr *string,
-) (bool, error) {
-	var created bool
-	now := time.Now().UTC()
-	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
-		txTitles := repository.NewTitleRepository(tx)
-		dup, err := findExistingSyncedMovie(txTitles, imdbPtr, tmdbPtr, extIDPtr, originalName, year)
-		if err != nil {
-			return err
-		}
-		if dup != nil {
-			return nil
-		}
-
-		matchStatus := model.MatchStatusPendingReview
-		if tmdbPtr != nil && *tmdbPtr > 0 {
-			matchStatus = model.MatchStatusConfirmed
-		}
-		matchSource := "jellyfin_sync"
-		var origTitle *string
-		if originalName != "" {
-			orig := originalName
-			origTitle = &orig
-		}
-
-		title := &model.Title{
-			Type:             model.TitleTypeMovie,
-			Year:             year,
-			Status:           model.TitleStatusPlanToWatch,
-			ExternalSourceID: extIDPtr,
-			IMDBID:           imdbPtr,
-			TMDBID:           tmdbPtr,
-			TVDBID:           tvdbPtr,
-			MatchStatus:      matchStatus,
-			MatchSource:      &matchSource,
-			OriginalTitle:    origTitle,
-			ArrIgnored:       true,
-		}
-		names := []model.TitleName{{
-			Name:      titleName,
-			Language:  "en",
-			IsPrimary: true,
-		}}
-
-		titleWriter := repository.NewTitleWriter(tx)
-		titleID, err := titleWriter.Create(ctx, title, names)
-		if err != nil {
-			return fmt.Errorf("create title: %w", err)
-		}
-		if err := titleWriter.MarkDownloaded(ctx, titleID, now); err != nil {
-			return fmt.Errorf("mark title downloaded: %w", err)
-		}
-
-		payloadJSON, err := json.Marshal(EnrichmentPayload{
-			TitleID:       titleID,
-			TitleName:     titleName,
-			Year:          year,
-			TitleType:     model.TitleTypeMovie,
-			IMDBID:        ids.IMDB,
-			TMDBID:        ids.TMDB,
-			TVDBID:        ids.TVDB,
-			PreserveMatch: false,
-		})
-		if err != nil {
-			return fmt.Errorf("marshal enrichment payload: %w", err)
-		}
-		dedupKey := fmt.Sprintf("enrichment:%d", titleID)
-		if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey); err != nil {
-			return fmt.Errorf("enqueue enrichment: %w", err)
-		}
-
-		created = true
-		return nil
-	})
-	return created, err
 }
 
 func extractJellyfinProviderIDs(providerIDs map[string]string) ExternalIDs {
@@ -680,26 +602,6 @@ func clampJellyfinYear(year int) int {
 	return year
 }
 
-func optionalMoviePointers(ids ExternalIDs, externalSourceID string) (imdbPtr *string, tmdbPtr *int64, tvdbPtr *int64, extIDPtr *string) {
-	if ids.IMDB != "" {
-		imdb := ids.IMDB
-		imdbPtr = &imdb
-	}
-	if ids.TMDB > 0 {
-		tmdb := ids.TMDB
-		tmdbPtr = &tmdb
-	}
-	if ids.TVDB > 0 {
-		tvdb := ids.TVDB
-		tvdbPtr = &tvdb
-	}
-	if externalSourceID != "" {
-		ext := externalSourceID
-		extIDPtr = &ext
-	}
-	return imdbPtr, tmdbPtr, tvdbPtr, extIDPtr
-}
-
 func resolveSyncedMovieName(name string, ids ExternalIDs) string {
 	if name != "" {
 		return name
@@ -712,34 +614,4 @@ func resolveSyncedMovieName(name string, ids ExternalIDs) string {
 	default:
 		return ""
 	}
-}
-
-func findExistingSyncedMovie(
-	titles *repository.TitleRepository,
-	imdbPtr *string,
-	tmdbPtr *int64,
-	extIDPtr *string,
-	name string,
-	year int,
-) (*model.Title, error) {
-	movieType := model.TitleTypeMovie
-	if imdbPtr != nil || tmdbPtr != nil || extIDPtr != nil {
-		existing, err := titles.FindByExternalID(imdbPtr, tmdbPtr, extIDPtr, nil, nil, &movieType)
-		if err == nil && existing != nil {
-			return existing, nil
-		}
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("lookup movie by external id: %w", err)
-		}
-	}
-	if name != "" {
-		existing, err := titles.FindByNameAndType(name, model.TitleTypeMovie, year)
-		if err == nil && existing != nil {
-			return existing, nil
-		}
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("lookup movie by name and type: %w", err)
-		}
-	}
-	return nil, nil
 }
