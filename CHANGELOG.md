@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.32.1] — 2026-11-20
+
 ### Corrigé
 - **Compagnon de direct et création automatique des titres non répertoriés (`internal/service/jellyfin.go`, `internal/service/plex.go`)** :
   - Création automatique du titre avec le statut `watching` via `CreateFromScrobble` lors d'un événement `PlaybackStart` (Jellyfin) ou `media.play`/`media.resume` (Plex) pour les films et séries non encore présents dans la collection locale, garantissant l'affichage immédiat du bandeau live dès le lancement de la lecture.
