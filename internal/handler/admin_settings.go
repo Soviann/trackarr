@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -582,5 +584,44 @@ func (h *AdminSettingsHandler) SyncJellyfinRatings(w http.ResponseWriter, r *htt
 		"missing": summary.Missing,
 		"errors":  summary.Errors,
 	})
+	return nil
+}
+
+// SyncJellyfinMovies triggers an inbound sync of unwatched movies from Jellyfin.
+func (h *AdminSettingsHandler) SyncJellyfinMovies(w http.ResponseWriter, r *http.Request) error {
+	if h.writeDB == nil {
+		return httputil.InternalError("writeDB not configured", nil)
+	}
+
+	var body struct {
+		DryRun bool `json:"dry_run"`
+	}
+	if r.Body != nil && r.Body != http.NoBody {
+		if err := httputil.ReadJSON(r, &body, 4096); err != nil && !errors.Is(err, io.EOF) {
+			return httputil.BadRequest("Invalid JSON body")
+		}
+	}
+
+	baseURL, apiKey, userID := h.resolveJellyfinConfig("", "", "")
+	baseURL = strings.TrimSpace(baseURL)
+	apiKey = strings.TrimSpace(apiKey)
+	userID = strings.TrimSpace(userID)
+	if baseURL == "" || apiKey == "" || userID == "" {
+		return httputil.BadRequest("Jellyfin URL, API Key, and User ID must be configured first")
+	}
+
+	syncSvc := service.NewJellyfinSyncService(h.writeDB, service.JellyfinSyncConfig{
+		BaseURL: baseURL,
+		APIKey:  apiKey,
+		UserID:  userID,
+		DryRun:  body.DryRun,
+	}, nil)
+
+	summary, err := syncSvc.SyncUnwatchedMovies(r.Context())
+	if err != nil {
+		return httputil.InternalError("Failed to sync movies from Jellyfin", err)
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, summary)
 	return nil
 }
