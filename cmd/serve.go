@@ -139,6 +139,9 @@ func Serve(distFS embed.FS) error {
 		taskRepo,
 	)
 	scheduler.SetBackupService(backupSvc, cfg.DataDir)
+	jfMovieSyncSvc := service.NewJellyfinSyncService(writeDB, service.JellyfinSyncConfig{}, slog.Default())
+	jfMovieSyncSvc.SetAPILimiter(externalAPILimiter)
+	scheduler.SetJellyfinMovieSyncer(jfMovieSyncSvc)
 	scheduler.SetShutdownWG(&shutdownWG)
 	if !cfg.DisableBackgroundTasks {
 		scheduler.Start(ctx, 24*time.Hour)

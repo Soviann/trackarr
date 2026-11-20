@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 )
@@ -37,19 +39,31 @@ type JellyfinSyncSummary struct {
 	Errors  int
 }
 
-// JellyfinUserData represents user-specific rating data returned by Jellyfin.
+// JellyfinMovieSyncSummary tracks the outcome of an inbound unwatched movie sync run.
+type JellyfinMovieSyncSummary struct {
+	DryRun    bool `json:"dry_run"`
+	Fetched   int  `json:"fetched"`
+	Unwatched int  `json:"unwatched"`
+	Created   int  `json:"created"`
+	Skipped   int  `json:"skipped"`
+	Errors    int  `json:"errors"`
+}
+
+// JellyfinUserData represents user-specific rating and playback state returned by Jellyfin.
 type JellyfinUserData struct {
 	Rating *float64 `json:"Rating,omitempty"`
 	Likes  *bool    `json:"Likes,omitempty"`
+	Played bool     `json:"Played,omitempty"`
 }
 
 // JellyfinLibraryItem represents a movie or series in the user's Jellyfin library.
 type JellyfinLibraryItem struct {
-	ID          string            `json:"Id"`
-	Name        string            `json:"Name"`
-	Type        string            `json:"Type"`
-	ProviderIds map[string]string `json:"ProviderIds"`
-	UserData    *JellyfinUserData `json:"UserData,omitempty"`
+	ID             string            `json:"Id"`
+	Name           string            `json:"Name"`
+	Type           string            `json:"Type"`
+	ProductionYear int               `json:"ProductionYear,omitempty"`
+	ProviderIds    map[string]string `json:"ProviderIds"`
+	UserData       *JellyfinUserData `json:"UserData,omitempty"`
 }
 
 type jellyfinItemsResponse struct {
@@ -57,12 +71,13 @@ type jellyfinItemsResponse struct {
 	TotalRecordCount int                   `json:"TotalRecordCount"`
 }
 
-// JellyfinSyncService handles synchronizing ratings from Trackarr into Jellyfin.
+// JellyfinSyncService handles synchronizing ratings and unwatched movies with Jellyfin.
 type JellyfinSyncService struct {
 	db            *sql.DB
 	titles        *repository.TitleRepository
 	cfg           JellyfinSyncConfig
 	log           *slog.Logger
+	limiter       *APILimiter
 	throttleDelay time.Duration
 	sleepFn       func(time.Duration)
 }
@@ -105,21 +120,73 @@ func (s *JellyfinSyncService) SetSleepFn(fn func(time.Duration)) {
 	s.sleepFn = fn
 }
 
-// FetchUserItems queries Jellyfin for movies and series in the user's library with external provider IDs.
-func (s *JellyfinSyncService) FetchUserItems(ctx context.Context) ([]JellyfinLibraryItem, error) {
-	baseURL := strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
-	userID := url.PathEscape(strings.TrimSpace(s.cfg.UserID))
-	reqURL := fmt.Sprintf("%s/Users/%s/Items?includeItemTypes=Movie,Series&recursive=true&fields=ProviderIds", baseURL, userID)
+// SetAPILimiter configures the shared external API rate limiter.
+func (s *JellyfinSyncService) SetAPILimiter(limiter *APILimiter) {
+	if s == nil || limiter == nil {
+		return
+	}
+	s.limiter = limiter
+}
+
+func (s *JellyfinSyncService) resolveConfig() (baseURL, apiKey, userID string) {
+	baseURL = strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
+	apiKey = strings.TrimSpace(s.cfg.APIKey)
+	userID = strings.TrimSpace(s.cfg.UserID)
+
+	if (baseURL == "" || apiKey == "" || userID == "") && s.db != nil {
+		sr := repository.NewSettingRepository(s.db)
+		if baseURL == "" {
+			if v, err := sr.Get(repository.SettingKeyJellyfinURL); err == nil {
+				baseURL = strings.TrimRight(strings.TrimSpace(v), "/")
+			}
+		}
+		if apiKey == "" {
+			if v, err := sr.Get(repository.SettingKeyJellyfinAPIKey); err == nil {
+				apiKey = strings.TrimSpace(v)
+			}
+		}
+		if userID == "" {
+			if v, err := sr.Get(repository.SettingKeyJellyfinUserID); err == nil {
+				userID = strings.TrimSpace(v)
+			}
+		}
+	}
+	return baseURL, apiKey, userID
+}
+
+func validateJellyfinBaseURL(raw string) (string, error) {
+	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if trimmed == "" {
+		return "", fmt.Errorf("jellyfin base URL is required")
+	}
+	u, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("invalid jellyfin base URL: %w", err)
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if (scheme != "http" && scheme != "https") || u.Host == "" {
+		return "", fmt.Errorf("invalid jellyfin base URL: must use http or https with a non-empty host")
+	}
+	return trimmed, nil
+}
+
+func (s *JellyfinSyncService) fetchItems(ctx context.Context, baseURL, apiKey, userID, includeItemTypes string) ([]JellyfinLibraryItem, error) {
+	escapedUserID := url.PathEscape(strings.TrimSpace(userID))
+	reqURL := fmt.Sprintf("%s/Users/%s/Items?includeItemTypes=%s&recursive=true&fields=ProviderIds", baseURL, escapedUserID, includeItemTypes)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create fetch items request: %w", err)
 	}
 
-	req.Header.Set("X-Emby-Token", strings.TrimSpace(s.cfg.APIKey))
+	req.Header.Set("X-Emby-Token", apiKey)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := s.cfg.HTTPClient.Do(req)
+	client := s.cfg.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 30 * time.Second}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch jellyfin items: %w", err)
 	}
@@ -138,6 +205,33 @@ func (s *JellyfinSyncService) FetchUserItems(ctx context.Context) ([]JellyfinLib
 	return res.Items, nil
 }
 
+// FetchUserItems queries Jellyfin for movies and series in the user's library with external provider IDs.
+func (s *JellyfinSyncService) FetchUserItems(ctx context.Context) ([]JellyfinLibraryItem, error) {
+	baseURL := strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
+	return s.fetchItems(ctx, baseURL, strings.TrimSpace(s.cfg.APIKey), strings.TrimSpace(s.cfg.UserID), "Movie,Series")
+}
+
+// FetchUserMovies queries Jellyfin for movies in the user's library with external provider IDs.
+func (s *JellyfinSyncService) FetchUserMovies(ctx context.Context) ([]JellyfinLibraryItem, error) {
+	baseURL, apiKey, userID := s.resolveConfig()
+	validatedURL, err := validateJellyfinBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	if apiKey == "" {
+		return nil, fmt.Errorf("jellyfin API key is required")
+	}
+	if userID == "" {
+		return nil, fmt.Errorf("jellyfin user ID is required")
+	}
+	if s.limiter != nil {
+		if err := s.limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("jellyfin rate limiter: %w", err)
+		}
+	}
+	return s.fetchItems(ctx, validatedURL, apiKey, userID, "Movie")
+}
+
 // MatchItem finds a Jellyfin library item matching a Trackarr title.
 // Checks media type (Movie vs Series), then checks TMDB, TVDB, and IMDb IDs with case-insensitive keys.
 func (s *JellyfinSyncService) MatchItem(title model.Title, jfItems []JellyfinLibraryItem) *JellyfinLibraryItem {
@@ -151,21 +245,12 @@ func (s *JellyfinSyncService) MatchItem(title model.Title, jfItems []JellyfinLib
 		return nil
 	}
 
-	getProvider := func(ids map[string]string, key string) string {
-		for k, v := range ids {
-			if strings.EqualFold(k, key) {
-				return strings.TrimSpace(v)
-			}
-		}
-		return ""
-	}
-
 	// 1. Match by TMDB ID
 	if title.TMDBID != nil && *title.TMDBID > 0 {
 		targetTMDB := strconv.FormatInt(*title.TMDBID, 10)
 		for i := range jfItems {
 			if strings.EqualFold(jfItems[i].Type, targetType) {
-				if getProvider(jfItems[i].ProviderIds, "Tmdb") == targetTMDB {
+				if getJellyfinProvider(jfItems[i].ProviderIds, "Tmdb") == targetTMDB {
 					item := jfItems[i]
 					return &item
 				}
@@ -178,7 +263,7 @@ func (s *JellyfinSyncService) MatchItem(title model.Title, jfItems []JellyfinLib
 		targetTVDB := strconv.FormatInt(*title.TVDBID, 10)
 		for i := range jfItems {
 			if strings.EqualFold(jfItems[i].Type, targetType) {
-				if getProvider(jfItems[i].ProviderIds, "Tvdb") == targetTVDB {
+				if getJellyfinProvider(jfItems[i].ProviderIds, "Tvdb") == targetTVDB {
 					item := jfItems[i]
 					return &item
 				}
@@ -191,7 +276,7 @@ func (s *JellyfinSyncService) MatchItem(title model.Title, jfItems []JellyfinLib
 		targetIMDB := strings.ToLower(strings.TrimSpace(*title.IMDBID))
 		for i := range jfItems {
 			if strings.EqualFold(jfItems[i].Type, targetType) {
-				providerIMDB := strings.ToLower(getProvider(jfItems[i].ProviderIds, "Imdb"))
+				providerIMDB := strings.ToLower(getJellyfinProvider(jfItems[i].ProviderIds, "Imdb"))
 				if providerIMDB != "" && (providerIMDB == targetIMDB || strings.TrimPrefix(providerIMDB, "tt") == strings.TrimPrefix(targetIMDB, "tt")) {
 					item := jfItems[i]
 					return &item
@@ -201,6 +286,15 @@ func (s *JellyfinSyncService) MatchItem(title model.Title, jfItems []JellyfinLib
 	}
 
 	return nil
+}
+
+func getJellyfinProvider(ids map[string]string, key string) string {
+	for k, v := range ids {
+		if strings.EqualFold(k, key) {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 // PushRating sends a user rating to Jellyfin for a given item.
@@ -388,4 +482,264 @@ func (s *JellyfinSyncService) SyncSingleTitle(ctx context.Context, titleID int64
 		return nil
 	}
 	return s.PushRating(ctx, matched.ID, *title.MyRating)
+}
+
+// SyncUnwatchedMovies fetches movies from Jellyfin, filters to unwatched movies not yet in
+// Trackarr, creates them as plan_to_watch with downloaded_at set, and enqueues enrichment tasks.
+func (s *JellyfinSyncService) SyncUnwatchedMovies(ctx context.Context) (JellyfinMovieSyncSummary, error) {
+	var summary JellyfinMovieSyncSummary
+	if s == nil {
+		return summary, nil
+	}
+
+	baseURL, apiKey, userID := s.resolveConfig()
+	if baseURL == "" || apiKey == "" || userID == "" {
+		return summary, nil
+	}
+	if s.db == nil {
+		return summary, fmt.Errorf("jellyfin movie sync: database is not initialized")
+	}
+
+	items, err := s.FetchUserMovies(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("jellyfin movie sync: fetch user movies: %w", err)
+	}
+
+	summary.DryRun = s.cfg.DryRun
+	summary.Fetched = len(items)
+
+	readTitles := s.titles
+	if readTitles == nil {
+		readTitles = repository.NewTitleRepository(s.db)
+	}
+
+	for _, item := range items {
+		if ctx.Err() != nil {
+			return summary, ctx.Err()
+		}
+		if item.Type != "" && !strings.EqualFold(item.Type, "Movie") {
+			continue
+		}
+		if item.UserData != nil && item.UserData.Played {
+			continue
+		}
+		summary.Unwatched++
+
+		ids := extractJellyfinProviderIDs(item.ProviderIds)
+		externalSourceID := strings.TrimSpace(item.ID)
+		name := strings.TrimSpace(item.Name)
+		year := clampJellyfinYear(item.ProductionYear)
+
+		if name == "" && ids.TMDB == 0 && ids.IMDB == "" {
+			summary.Skipped++
+			continue
+		}
+
+		imdbPtr, tmdbPtr, tvdbPtr, extIDPtr := optionalMoviePointers(ids, externalSourceID)
+		titleName := resolveSyncedMovieName(name, ids)
+
+		existing, lookupErr := findExistingSyncedMovie(readTitles, imdbPtr, tmdbPtr, extIDPtr, name, year)
+		if lookupErr != nil {
+			summary.Errors++
+			s.log.Error("failed to lookup existing movie during Jellyfin sync", "name", titleName, "jellyfinID", externalSourceID, "err", lookupErr)
+			continue
+		}
+		if existing != nil {
+			summary.Skipped++
+			continue
+		}
+
+		if s.cfg.DryRun {
+			summary.Created++
+			continue
+		}
+
+		created, createErr := s.createSyncedMovie(ctx, titleName, name, year, ids, imdbPtr, tmdbPtr, tvdbPtr, extIDPtr)
+		if createErr != nil {
+			summary.Errors++
+			s.log.Error("failed to create unwatched movie from Jellyfin", "name", titleName, "jellyfinID", externalSourceID, "err", createErr)
+			continue
+		}
+		if !created {
+			summary.Skipped++
+			continue
+		}
+		summary.Created++
+	}
+
+	return summary, nil
+}
+
+func (s *JellyfinSyncService) createSyncedMovie(
+	ctx context.Context,
+	titleName, originalName string,
+	year int,
+	ids ExternalIDs,
+	imdbPtr *string,
+	tmdbPtr *int64,
+	tvdbPtr *int64,
+	extIDPtr *string,
+) (bool, error) {
+	var created bool
+	now := time.Now().UTC()
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		txTitles := repository.NewTitleRepository(tx)
+		dup, err := findExistingSyncedMovie(txTitles, imdbPtr, tmdbPtr, extIDPtr, originalName, year)
+		if err != nil {
+			return err
+		}
+		if dup != nil {
+			return nil
+		}
+
+		matchStatus := model.MatchStatusPendingReview
+		if tmdbPtr != nil && *tmdbPtr > 0 {
+			matchStatus = model.MatchStatusConfirmed
+		}
+		matchSource := "jellyfin_sync"
+		var origTitle *string
+		if originalName != "" {
+			orig := originalName
+			origTitle = &orig
+		}
+
+		title := &model.Title{
+			Type:             model.TitleTypeMovie,
+			Year:             year,
+			Status:           model.TitleStatusPlanToWatch,
+			ExternalSourceID: extIDPtr,
+			IMDBID:           imdbPtr,
+			TMDBID:           tmdbPtr,
+			TVDBID:           tvdbPtr,
+			MatchStatus:      matchStatus,
+			MatchSource:      &matchSource,
+			OriginalTitle:    origTitle,
+			ArrIgnored:       true,
+		}
+		names := []model.TitleName{{
+			Name:      titleName,
+			Language:  "en",
+			IsPrimary: true,
+		}}
+
+		titleWriter := repository.NewTitleWriter(tx)
+		titleID, err := titleWriter.Create(ctx, title, names)
+		if err != nil {
+			return fmt.Errorf("create title: %w", err)
+		}
+		if err := titleWriter.MarkDownloaded(ctx, titleID, now); err != nil {
+			return fmt.Errorf("mark title downloaded: %w", err)
+		}
+
+		payloadJSON, err := json.Marshal(EnrichmentPayload{
+			TitleID:       titleID,
+			TitleName:     titleName,
+			Year:          year,
+			TitleType:     model.TitleTypeMovie,
+			IMDBID:        ids.IMDB,
+			TMDBID:        ids.TMDB,
+			TVDBID:        ids.TVDB,
+			PreserveMatch: false,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal enrichment payload: %w", err)
+		}
+		dedupKey := fmt.Sprintf("enrichment:%d", titleID)
+		if _, err := repository.NewTaskWriter(tx).Enqueue(ctx, model.TaskTypeEnrichment, string(payloadJSON), &dedupKey); err != nil {
+			return fmt.Errorf("enqueue enrichment: %w", err)
+		}
+
+		created = true
+		return nil
+	})
+	return created, err
+}
+
+func extractJellyfinProviderIDs(providerIDs map[string]string) ExternalIDs {
+	var ids ExternalIDs
+	if imdb := strings.ToLower(getJellyfinProvider(providerIDs, "Imdb")); imdb != "" {
+		ids.IMDB = imdb
+	}
+	if tmdbStr := getJellyfinProvider(providerIDs, "Tmdb"); tmdbStr != "" {
+		if v, err := strconv.ParseInt(tmdbStr, 10, 64); err == nil && v > 0 {
+			ids.TMDB = v
+		}
+	}
+	if tvdbStr := getJellyfinProvider(providerIDs, "Tvdb"); tvdbStr != "" {
+		if v, err := strconv.ParseInt(tvdbStr, 10, 64); err == nil && v > 0 {
+			ids.TVDB = v
+		}
+	}
+	return ids
+}
+
+func clampJellyfinYear(year int) int {
+	if year < 0 || year > 2100 {
+		return 0
+	}
+	return year
+}
+
+func optionalMoviePointers(ids ExternalIDs, externalSourceID string) (imdbPtr *string, tmdbPtr *int64, tvdbPtr *int64, extIDPtr *string) {
+	if ids.IMDB != "" {
+		imdb := ids.IMDB
+		imdbPtr = &imdb
+	}
+	if ids.TMDB > 0 {
+		tmdb := ids.TMDB
+		tmdbPtr = &tmdb
+	}
+	if ids.TVDB > 0 {
+		tvdb := ids.TVDB
+		tvdbPtr = &tvdb
+	}
+	if externalSourceID != "" {
+		ext := externalSourceID
+		extIDPtr = &ext
+	}
+	return imdbPtr, tmdbPtr, tvdbPtr, extIDPtr
+}
+
+func resolveSyncedMovieName(name string, ids ExternalIDs) string {
+	if name != "" {
+		return name
+	}
+	switch {
+	case ids.IMDB != "":
+		return ids.IMDB
+	case ids.TMDB > 0:
+		return fmt.Sprintf("TMDB %d", ids.TMDB)
+	default:
+		return ""
+	}
+}
+
+func findExistingSyncedMovie(
+	titles *repository.TitleRepository,
+	imdbPtr *string,
+	tmdbPtr *int64,
+	extIDPtr *string,
+	name string,
+	year int,
+) (*model.Title, error) {
+	movieType := model.TitleTypeMovie
+	if imdbPtr != nil || tmdbPtr != nil || extIDPtr != nil {
+		existing, err := titles.FindByExternalID(imdbPtr, tmdbPtr, extIDPtr, nil, nil, &movieType)
+		if err == nil && existing != nil {
+			return existing, nil
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("lookup movie by external id: %w", err)
+		}
+	}
+	if name != "" {
+		existing, err := titles.FindByNameAndType(name, model.TitleTypeMovie, year)
+		if err == nil && existing != nil {
+			return existing, nil
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("lookup movie by name and type: %w", err)
+		}
+	}
+	return nil, nil
 }

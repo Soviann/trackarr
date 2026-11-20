@@ -26,17 +26,23 @@ type CoverSyncer interface {
 	CleanupUnusedCovers(ctx context.Context, day time.Weekday)
 }
 
+// JellyfinMovieSyncer defines the unwatched Jellyfin movie sync method invoked by the Scheduler.
+type JellyfinMovieSyncer interface {
+	SyncUnwatchedMovies(ctx context.Context) (JellyfinMovieSyncSummary, error)
+}
+
 // Scheduler orchestrates periodic background jobs (daily metadata refresh,
 // periodic missing cover fetch, weekly unused cover cleanup, and annual wrapped checks).
 type Scheduler struct {
-	writeDB     *sql.DB
-	syncSvc     MetadataSyncer
-	covers      CoverSyncer
-	statsRepo   *repository.StatsRepository
-	wrappedRepo *repository.WrappedRepository
-	backupSvc   *BackupService
-	dataDir     string
-	shutdownWG  *sync.WaitGroup
+	writeDB        *sql.DB
+	syncSvc        MetadataSyncer
+	covers         CoverSyncer
+	statsRepo      *repository.StatsRepository
+	wrappedRepo    *repository.WrappedRepository
+	backupSvc      *BackupService
+	jellyfinSyncer JellyfinMovieSyncer
+	dataDir        string
+	shutdownWG     *sync.WaitGroup
 }
 
 // SetBackupService configures automated daily SQLite + JSON backups in <dataDir>/backups.
@@ -46,6 +52,14 @@ func (s *Scheduler) SetBackupService(backupSvc *BackupService, dataDir string) {
 	}
 	s.backupSvc = backupSvc
 	s.dataDir = dataDir
+}
+
+// SetJellyfinMovieSyncer configures periodic unwatched movie synchronization from Jellyfin.
+func (s *Scheduler) SetJellyfinMovieSyncer(syncer JellyfinMovieSyncer) {
+	if s == nil {
+		return
+	}
+	s.jellyfinSyncer = syncer
 }
 
 // NewScheduler creates a new background job scheduler.
@@ -206,6 +220,7 @@ func (s *Scheduler) runInitialPass(ctx context.Context) {
 			log.Printf("scheduler: fetched %d missing covers", n)
 		}
 	}
+	s.syncJellyfinMovies(ctx)
 	if s.syncSvc != nil {
 		log.Println("scheduler: starting initial title refresh")
 		s.syncSvc.RefreshTitles(ctx)
@@ -214,6 +229,7 @@ func (s *Scheduler) runInitialPass(ctx context.Context) {
 }
 
 func (s *Scheduler) runScheduledPass(ctx context.Context) {
+	s.syncJellyfinMovies(ctx)
 	if s.syncSvc != nil {
 		log.Println("scheduler: starting scheduled title refresh")
 		s.syncSvc.RefreshTitles(ctx)
@@ -227,6 +243,21 @@ func (s *Scheduler) runScheduledPass(ctx context.Context) {
 	}
 
 	s.RunMaintenance(ctx)
+}
+
+func (s *Scheduler) syncJellyfinMovies(ctx context.Context) {
+	if s == nil || s.jellyfinSyncer == nil {
+		return
+	}
+	summary, err := s.jellyfinSyncer.SyncUnwatchedMovies(ctx)
+	if err != nil {
+		log.Printf("scheduler: jellyfin unwatched movie sync failed: %v", err)
+		return
+	}
+	if summary.Created > 0 || summary.Errors > 0 {
+		log.Printf("scheduler: jellyfin unwatched movie sync completed (fetched=%d unwatched=%d created=%d skipped=%d errors=%d)",
+			summary.Fetched, summary.Unwatched, summary.Created, summary.Skipped, summary.Errors)
+	}
 }
 
 // CheckAnnualWrapped checks if the previous calendar year has concluded and needs
