@@ -36,11 +36,11 @@ export function Setup({ path }: { path?: string }) {
     e.preventDefault()
     setError('')
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError(t('adminAuth.passwordMinLength'))
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('adminAuth.passwordMismatch'))
       return
     }
 
@@ -56,7 +56,7 @@ export function Setup({ path }: { path?: string }) {
       })
       setRecoveryKey(res.recovery_key)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Setup failed')
+      setError(err instanceof Error ? err.message : t('auth.setupFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -84,8 +84,7 @@ export function Setup({ path }: { path?: string }) {
           <div className={s.keyAlert}>
             <div className={s.keyHeader}>🔑 {t('auth.saveKeyTitle')}</div>
             <div className={s.keyDescription}>
-              This key is your <strong>direct emergency method</strong> to reset your password from the browser without an email server (you can also use the server command <code>trackarr reset-password</code>).
-              It is stored as an irreversible cryptographic hash (bcrypt): it is <strong>strictly impossible to recover or decrypt</strong>, even with database access. It will <strong>never be displayed again</strong>.
+              {t('auth.recoveryKeyDescPrefix')} <strong>{t('auth.recoveryKeyDescStrong1')}</strong> {t('auth.recoveryKeyDescMid1')} <code>trackarr reset-password</code>{t('auth.recoveryKeyDescMid2')} <strong>{t('auth.recoveryKeyDescStrong2')}</strong>{t('auth.recoveryKeyDescMid3')} <strong>{t('auth.recoveryKeyDescStrong3')}</strong>.
             </div>
             <div className={s.keyCodeBox}>{recoveryKey}</div>
 

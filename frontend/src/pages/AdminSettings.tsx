@@ -111,7 +111,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
         auto_open_imdb_on_rate: data.auto_open_imdb_on_rate === true ? 'true' : 'false',
       })
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to load configuration')
+      setErrorMsg(err instanceof Error ? err.message : t('settings.loadConfigFailed'))
     }
   }
 
@@ -144,7 +144,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
       await loadSettings()
       setTimeout(() => setSuccessMsg(null), 4000)
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Error while saving settings')
+      setErrorMsg(err instanceof Error ? err.message : t('settings.saveSettingsError'))
     } finally {
       setSaving(false)
     }
@@ -163,7 +163,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
         ...prev,
         [serviceName]: {
           ok: false,
-          error: err instanceof Error ? err.message : 'Test request failed',
+          error: err instanceof Error ? err.message : t('settings.testRequestFailed'),
           loading: false,
         },
       }))
@@ -589,7 +589,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
           {/* TMDB */}
           <div className={s.fieldGroup}>
             <label htmlFor="tmdb_api_key" className={s.label}>
-              <span>TMDB API Key (TheMovieDB)</span>
+              <span>{t('settings.tmdbApiKeyLabel')}</span>
               <span className={clsx(s.statusBadge, settings.tmdb_configured ? s.statusOk : s.statusMissing)}>
                 {settings.tmdb_configured ? t('settings.configured') : t('settings.notConfigured')}
               </span>
@@ -628,7 +628,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
           {/* TVDB */}
           <div className={s.fieldGroup}>
             <label htmlFor="tvdb_api_key" className={s.label}>
-              <span>TheTVDB API Key (v4)</span>
+              <span>{t('settings.tvdbApiKeyLabel')}</span>
               <span className={clsx(s.statusBadge, settings.tvdb_configured ? s.statusOk : s.statusMissing)}>
                 {settings.tvdb_configured ? t('settings.configured') : t('settings.notConfigured')}
               </span>
@@ -667,7 +667,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
           {/* Gemini */}
           <div className={s.fieldGroup}>
             <label htmlFor="gemini_api_keys" className={s.label}>
-              <span>Google Gemini API Key(s)</span>
+              <span>{t('settings.geminiApiKeysLabel')}</span>
               <span className={clsx(s.statusBadge, settings.gemini_configured ? s.statusOk : s.statusMissing)}>
                 {settings.gemini_configured ? t('settings.configured') : t('settings.optional')}
               </span>
@@ -706,7 +706,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
           {/* AniList OAuth Client */}
           <div className={s.fieldGroup}>
             <div className={s.label}>
-              <span>AniList Client ID & Secret</span>
+              <span>{t('settings.anilistClientLabel')}</span>
               <span className={clsx(s.statusBadge, settings.anilist_configured ? s.statusOk : s.statusMissing)}>
                 {settings.anilist_configured ? t('settings.configured') : t('settings.optional')}
               </span>

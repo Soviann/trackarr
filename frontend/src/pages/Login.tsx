@@ -98,7 +98,7 @@ export function Login({ path }: { path?: string }) {
       })
       route(routeTo.home())
     } catch (err: unknown) {
-      setLoginError(err instanceof Error ? err.message : 'Google authentication failed')
+      setLoginError(err instanceof Error ? err.message : t('auth.googleAuthFailed'))
     }
   }
 
@@ -113,7 +113,7 @@ export function Login({ path }: { path?: string }) {
       })
       route(routeTo.home())
     } catch (err: unknown) {
-      setLoginError(err instanceof Error ? err.message : 'Invalid credentials')
+      setLoginError(err instanceof Error ? err.message : t('auth.invalidCredentials'))
     } finally {
       setSubmitting(false)
     }
@@ -123,11 +123,11 @@ export function Login({ path }: { path?: string }) {
     e.preventDefault()
     setRecoveryError('')
     if (newPassword.length < 8) {
-      setRecoveryError('Password must be at least 8 characters')
+      setRecoveryError(t('adminAuth.passwordMinLength'))
       return
     }
     if (newPassword !== confirmPassword) {
-      setRecoveryError('Passwords do not match')
+      setRecoveryError(t('adminAuth.passwordMismatch'))
       return
     }
 
@@ -142,7 +142,7 @@ export function Login({ path }: { path?: string }) {
       })
       setNewRecoveryKey(res.new_recovery_key)
     } catch (err: unknown) {
-      setRecoveryError(err instanceof Error ? err.message : 'Invalid recovery key')
+      setRecoveryError(err instanceof Error ? err.message : t('auth.invalidRecoveryKey'))
     } finally {
       setSubmitting(false)
     }
@@ -222,7 +222,7 @@ export function Login({ path }: { path?: string }) {
                 id="new-pass"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Minimum 8 characters"
+                placeholder={t('auth.min8CharsPlaceholder')}
                 value={newPassword}
                 onInput={(e) => setNewPassword((e.target as HTMLInputElement).value)}
                 className={s.input}
@@ -236,7 +236,7 @@ export function Login({ path }: { path?: string }) {
                 id="confirm-pass"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Repeat password"
+                placeholder={t('auth.repeatPasswordPlaceholder')}
                 value={confirmPassword}
                 onInput={(e) => setConfirmPassword((e.target as HTMLInputElement).value)}
                 className={s.input}
@@ -325,8 +325,8 @@ export function Login({ path }: { path?: string }) {
 
       <div className={s.footer}>
         {config.auth_mode === 'google'
-          ? 'Sign in with your authorized Google account'
-          : 'Trackarr — Self-hosted personal media tracker'}
+          ? t('auth.footerGoogleOnly')
+          : t('auth.footerDefault')}
       </div>
     </div>
   )

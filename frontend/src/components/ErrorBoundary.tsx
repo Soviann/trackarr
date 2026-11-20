@@ -1,5 +1,6 @@
 import { Component } from 'preact'
 import type { ComponentChildren } from 'preact'
+import { getLocale, translate } from '../i18n'
 import s from './ErrorBoundary.module.css'
 
 interface Props {
@@ -37,17 +38,19 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children
 
+    const locale = getLocale()
+
     return (
       <div className={s.container}>
         <div className={s.emoticon}>:(</div>
         <div className={s.title}>
-          Something went wrong
+          {translate(locale, 'errorBoundary.title')}
         </div>
         <div className={s.description}>
-          An unexpected error occurred. Please reload the page.
+          {translate(locale, 'errorBoundary.description')}
         </div>
         <button onClick={this.handleReload} className={s.reloadButton}>
-          Reload
+          {translate(locale, 'errorBoundary.reload')}
         </button>
       </div>
     )

@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n'
 import s from './ErrorBanner.module.css'
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function ErrorBanner({ message, onRetry, onDismiss }: Props) {
+  const { t } = useTranslation()
   if (!message) return null
 
   return (
@@ -14,7 +16,7 @@ export function ErrorBanner({ message, onRetry, onDismiss }: Props) {
       <span className={s.message}>{message}</span>
       {onRetry && (
         <button onClick={onRetry} className={s.retryButton}>
-          Retry
+          {t('common.retry')}
         </button>
       )}
       {onDismiss && (

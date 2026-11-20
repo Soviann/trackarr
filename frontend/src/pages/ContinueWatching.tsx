@@ -60,7 +60,7 @@ export function ContinueWatching(_props: { path?: string }) {
       .then(data => { if (!ctrl.signal.aborted) setItems(data) })
       .catch(err => {
         if (ctrl.signal.aborted) return
-        setError(err instanceof Error ? err.message : 'Failed to load')
+        setError(err instanceof Error ? err.message : t('continueWatching.loadFailed'))
       })
   }
 
@@ -87,7 +87,7 @@ export function ContinueWatching(_props: { path?: string }) {
           },
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to mark movie')
+        setError(err instanceof Error ? err.message : t('continueWatching.markMovieFailed'))
         loadTitles()
       } finally {
         setMarkingIds(prev => {
@@ -134,7 +134,7 @@ export function ContinueWatching(_props: { path?: string }) {
         },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark episode')
+      setError(err instanceof Error ? err.message : t('continueWatching.markEpisodeFailed'))
       loadTitles()
     } finally {
       setMarkingIds(prev => {
@@ -148,7 +148,7 @@ export function ContinueWatching(_props: { path?: string }) {
   return (
     <div className={s.page}>
       <div className={s.header}>
-        <button onClick={() => history.back()} aria-label="Back" className={s.backBtn}>
+        <button onClick={() => history.back()} aria-label={t('common.back')} className={s.backBtn}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
@@ -167,7 +167,7 @@ export function ContinueWatching(_props: { path?: string }) {
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       {items === null && (
-        <div className={s.grid} aria-busy="true" aria-label="Loading continue watching">
+        <div className={s.grid} aria-busy="true" aria-label={t('continueWatching.loadingAria')}>
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className={s.skeletonTile} aria-hidden="true" />
           ))}

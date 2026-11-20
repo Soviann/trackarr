@@ -117,7 +117,7 @@ export function AdminAuth({ path }: { path?: string }): JSX.Element {
       setShowCreateKey(false)
       fetchApiKeys()
     } catch (err: unknown) {
-      setKeyFormError(err instanceof Error ? err.message : 'Failed to create API key')
+      setKeyFormError(err instanceof Error ? err.message : t('adminAuth.createApiKeyFailed'))
     } finally {
       setCreatingKey(false)
     }

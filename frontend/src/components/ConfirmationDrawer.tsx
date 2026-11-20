@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { BottomSheet } from './BottomSheet'
+import { useTranslation } from '../i18n'
 import s from './ConfirmationDrawer.module.css'
 
 interface ConfirmationDrawerProps {
@@ -19,10 +20,11 @@ export function ConfirmationDrawer({
   onConfirm,
   title,
   description,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   isDangerous = false
 }: ConfirmationDrawerProps) {
+  const { t } = useTranslation()
   const [pending, setPending] = useState(false)
 
   const handleConfirm = async () => {
@@ -46,14 +48,14 @@ export function ConfirmationDrawer({
         {description && <div className={s.description}>{description}</div>}
         <div className={s.actions}>
           <button className={s.cancelBtn} onClick={onClose} disabled={pending}>
-            {cancelText}
+            {cancelText ?? t('common.cancel')}
           </button>
           <button
             className={isDangerous ? s.confirmBtnDangerous : s.confirmBtn}
             onClick={handleConfirm}
             disabled={pending}
           >
-            {pending ? 'Working…' : confirmText}
+            {pending ? t('common.working') : (confirmText ?? t('common.confirm'))}
           </button>
         </div>
       </div>

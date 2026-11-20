@@ -527,7 +527,7 @@ function ActivitySection({
       setOffset(off + LIMIT)
       setHasMore(data.length === LIMIT)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load activity')
+      setError(e instanceof Error ? e.message : t('stats.loadActivityFailed'))
     } finally {
       setLoading(false)
     }

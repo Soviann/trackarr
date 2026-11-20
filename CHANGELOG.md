@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Internationalisation (i18n) complète du frontend** :
+  - Extraction et traduction (`en.ts` / `fr.ts`) des chaînes anglaises codées en dur dans `MatchReview`, `MatchReviewCard`, `RematchSheet`, `AnilistCallback`, `PersonTitles`, `ErrorBanner`, `ErrorBoundary`, `TypeBadge`, `ConfirmationDrawer`, `Help`, ainsi que des messages/libellés résiduels dans `Setup`, `Login`, `AdminSettings`, `AdminArr`, `AdminAuth`, `ContinueWatching`, `Stats`, `PosterCard` et `PosterTile`.
+  - Correction du badge anglais `common.dispoBadge` (`AVAIL`), de `stats.watchTimeCumulative` en français, de `mediaServers.jellyfinItemType` (ajout de `Series` et traduction du libellé), et suppression des clés i18n orphelines.
+- **Serveur MCP (`trackarr-mcp`) & Routage SPA** :
+  - Suppression du statut inexistant `"paused"` dans les outils MCP `trackarr_search` et `trackarr_add_title`.
+  - Remplacement des appels `route()` en dur par `routeTo.*` dans `MatchReview`, `MatchReviewCard` et `PosterTile`.
+- **Documentation (`docs/`, `Help.tsx`)** :
+  - Correction de l'URL de redirection OAuth AniList (`/anilist/callback`), de la route `/match-review`, des instructions d'import (`--dry-run` / Web `/admin`), de la documentation de synchronisation des notes Jellyfin, du schéma SQLite (`docs/dev/database-model.md`), des variables webhook dans `docs/deployment.md` et des références `app.tsx` / `/wrapped/:year` / `migrate`.
+
 ## [v1.31.1] — 2026-11-20
 
 ### Modifié

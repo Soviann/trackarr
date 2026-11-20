@@ -4,12 +4,14 @@ import { useEffect, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import { apiFetch } from '../api'
 import { routeTo } from '../routes'
+import { useTranslation } from '../i18n'
 import s from './AnilistCallback.module.css'
 
 type Status = 'pending' | 'error'
 
 export function AnilistCallback({ path }: { path?: string }) {
   void path
+  const { t } = useTranslation()
   const [status, setStatus] = useState<Status>('pending')
 
   useEffect(() => {
@@ -48,12 +50,12 @@ export function AnilistCallback({ path }: { path?: string }) {
     <div className={s.page}>
       <div className={s.card}>
         {status === 'pending' ? (
-          <p className={s.message}>Connecting to AniList...</p>
+          <p className={s.message}>{t('anilistCallback.connecting')}</p>
         ) : (
           <>
-            <p className={s.title}>Couldn't connect to AniList</p>
-            <p className={s.subtitle}>The access token is missing or was rejected.</p>
-            <a href={routeTo.adminAniList()} className={s.link}>Try again</a>
+            <p className={s.title}>{t('anilistCallback.errorTitle')}</p>
+            <p className={s.subtitle}>{t('anilistCallback.errorDesc')}</p>
+            <a href={routeTo.adminAniList()} className={s.link}>{t('anilistCallback.tryAgain')}</a>
           </>
         )}
       </div>

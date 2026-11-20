@@ -2,11 +2,13 @@ import { useApi } from '../hooks/useApi'
 import type { PaginatedResponse } from '../types'
 import { TitleCard } from '../components/TitleCard'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { useTranslation } from '../i18n'
 import s from './PersonTitles.module.css'
 
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 export function PersonTitles({ name }: { path?: string; name?: string }) {
+  const { t } = useTranslation()
   const { data, error, loading, mutate } = useApi<PaginatedResponse>(
     name ? `/titles?person=${encodeURIComponent(name)}&limit=200` : null,
   )
@@ -17,7 +19,7 @@ export function PersonTitles({ name }: { path?: string; name?: string }) {
   return (
     <div className={s.page}>
       <div className={s.header}>
-        <button type="button" className={s.backBtn} onClick={() => history.back()} aria-label="Back">
+        <button type="button" className={s.backBtn} onClick={() => history.back()} aria-label={t('common.back')}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
@@ -27,10 +29,10 @@ export function PersonTitles({ name }: { path?: string; name?: string }) {
 
       {error && <ErrorBanner message={error} onRetry={mutate} />}
 
-      {loading && <div className={s.centered}>Loading…</div>}
+      {loading && <div className={s.centered}>{t('common.loading')}</div>}
 
       {!loading && !error && titles.length === 0 && (
-        <div className={s.centered}>No titles found.</div>
+        <div className={s.centered}>{t('common.noTitlesFound')}</div>
       )}
 
       {titles.length > 0 && (

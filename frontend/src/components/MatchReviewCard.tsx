@@ -2,6 +2,8 @@ import { route } from 'preact-router'
 import type { Title } from '../types'
 import { apiFetch } from '../api'
 import { getName } from '../utils'
+import { routeTo } from '../routes'
+import { useTranslation, type TranslationKey } from '../i18n'
 import { CoverImage } from './CoverImage'
 import s from './MatchReviewCard.module.css'
 
@@ -10,14 +12,14 @@ interface MatchReviewCardProps {
   onUpdate: () => void
 }
 
-const matchSourceLabels: Record<string, string> = {
-  plex_ids: 'Matched via Scrobble metadata',
-  crossref: 'Matched via cross-reference DB',
-  tmdb_search: 'Matched via TMDB search',
-  anilist_search: 'Matched via AniList',
-  gemini_fuzzy: 'Matched via AI fuzzy resolution',
-  manual: 'Manual entry',
-  none: 'No automatic match found',
+const matchSourceKeys: Record<string, TranslationKey> = {
+  plex_ids: 'matchReview.sourcePlexIds',
+  crossref: 'matchReview.sourceCrossref',
+  tmdb_search: 'matchReview.sourceTmdbSearch',
+  anilist_search: 'matchReview.sourceAnilistSearch',
+  gemini_fuzzy: 'matchReview.sourceGeminiFuzzy',
+  manual: 'matchReview.sourceManual',
+  none: 'matchReview.sourceNone',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -26,6 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
+  const { t } = useTranslation()
   const name = getName(title)
   const isUnconfirmed = title.match_status === 'unconfirmed'
   const statusColor = isUnconfirmed ? STATUS_COLORS.unconfirmed : STATUS_COLORS.default
@@ -50,13 +53,15 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
   ].filter(Boolean) as { label: string; value: string; href?: string }[]
 
   // Build contextual explanation
-  const sourceLabel = title.match_source ? (matchSourceLabels[title.match_source] ?? title.match_source) : null
+  const sourceLabel = title.match_source
+    ? (matchSourceKeys[title.match_source] ? t(matchSourceKeys[title.match_source]) : title.match_source)
+    : null
 
   const buildStatusText = () => {
-    const source = sourceLabel ?? (isUnconfirmed ? 'Unconfirmed match' : 'Pending review')
-    if (isUnconfirmed && !hasAnyID) return `${source} — keep as-is or fix match`
-    if (isUnconfirmed && hasAnyID) return `${source} — please verify`
-    if (!isUnconfirmed) return `${source} — AI-verified, confirm?`
+    const source = sourceLabel ?? (isUnconfirmed ? t('matchReview.unconfirmedMatch') : t('matchReview.pendingReview'))
+    if (isUnconfirmed && !hasAnyID) return t('matchReview.suffixKeepOrFix', { source })
+    if (isUnconfirmed && hasAnyID) return t('matchReview.suffixPleaseVerify', { source })
+    if (!isUnconfirmed) return t('matchReview.suffixAiVerified', { source })
     return source
   }
 
@@ -65,7 +70,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
 
   return (
     <div
-      onClick={() => route(`/title/${title.id}`)}
+      onClick={() => route(routeTo.title(title.id))}
       className={s.card}
       style={{ '--status-color': statusColor }}
     >
@@ -87,7 +92,7 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           {/* Original title comparison */}
           {showOriginalTitle && (
             <div className={s.originalTitle}>
-              Original: "{title.original_title}" → "{name}"
+              {t('matchReview.originalComparison', { original: title.original_title ?? '', name })}
             </div>
           )}
 
@@ -121,13 +126,13 @@ export function MatchReviewCard({ title, onUpdate }: MatchReviewCardProps) {
           onClick={handleConfirm}
           className={s.btnConfirm}
         >
-          {hasAnyID ? 'Confirm' : 'Keep as-is'}
+          {hasAnyID ? t('common.confirm') : t('matchReview.keepAsIs')}
         </button>
         <button
-          onClick={(e: Event) => { e.stopPropagation(); route(`/admin/validate?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`) }}
+          onClick={(e: Event) => { e.stopPropagation(); route(`${routeTo.adminValidate()}?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`) }}
           className={s.btnFix}
         >
-          Fix match
+          {t('matchReview.fixMatch')}
         </button>
       </div>
     </div>

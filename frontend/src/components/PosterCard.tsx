@@ -207,7 +207,7 @@ export const PosterCard = memo(function PosterCard({ title, onClick, onLongPress
             onClick={handleQuickMark}
             onPointerDown={(e) => e.stopPropagation()}
             disabled={toggling}
-            aria-label={`Mark S${ne.season_number} E${ne.episode} as watched`}
+            aria-label={t('hero.markEpisodeWatched', { ep: `S${ne.season_number} E${ne.episode}` })}
             title={t('common.markNextWatched')}
           >
             {toggling ? (

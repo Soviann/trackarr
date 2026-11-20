@@ -89,7 +89,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
   useEffect(() => {
     apiFetch<ArrSettings>('/admin/arr')
       .then(data => setSettings(data))
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load Arr settings'))
+      .catch(err => setError(err instanceof Error ? err.message : t('arrSettings.loadFailed')))
     apiFetch<{ arr_webhook_url?: string }>('/admin/system-settings')
       .then(data => {
         if (data.arr_webhook_url) setArrWebhookUrl(data.arr_webhook_url)
@@ -118,7 +118,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
       setSaved(true)
       fetchOptions()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : t('arrSettings.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -153,7 +153,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
         ...prev,
         [service]: {
           ok: false,
-          error: err instanceof Error ? err.message : 'Test request failed',
+          error: err instanceof Error ? err.message : t('arrSettings.testRequestFailed'),
           loading: false,
         },
       }))
@@ -324,7 +324,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
                 name="radarr_api_key"
                 type="text"
                 aria-label={`${t('arrSettings.radarrLabel')} API Key`}
-                placeholder="API Key"
+                placeholder={t('arrSettings.apiKeyPlaceholder')}
                 value={settings?.radarr_api_key || ''}
                 onInput={e => updateSetting('radarr_api_key', (e.target as HTMLInputElement).value)}
                 className={`${s.inputKey} ${s.inputCode}`}
@@ -379,7 +379,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
                 name="sonarr_api_key"
                 type="text"
                 aria-label={`${t('arrSettings.sonarrLabel')} API Key`}
-                placeholder="API Key"
+                placeholder={t('arrSettings.apiKeyPlaceholder')}
                 value={settings?.sonarr_api_key || ''}
                 onInput={e => updateSetting('sonarr_api_key', (e.target as HTMLInputElement).value)}
                 className={`${s.inputKey} ${s.inputCode}`}
@@ -434,7 +434,7 @@ export function AdminArr({ path }: { path?: string }): JSX.Element {
                 name="prowlarr_api_key"
                 type="text"
                 aria-label={`${t('arrSettings.prowlarrLabel')} API Key`}
-                placeholder="API Key"
+                placeholder={t('arrSettings.apiKeyPlaceholder')}
                 value={settings?.prowlarr_api_key || ''}
                 onInput={e => updateSetting('prowlarr_api_key', (e.target as HTMLInputElement).value)}
                 className={`${s.inputKey} ${s.inputCode}`}

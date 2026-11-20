@@ -104,7 +104,7 @@ describe('PosterCard', () => {
     const btn = getByLabelText('Mark S2 E7 as watched')
     expect(btn).not.toBeNull()
     expect(btn.textContent).toBe('+1')
-    expect(getByText('S02E07 DISPO')).not.toBeNull()
+    expect(getByText('S02E07 AVAIL')).not.toBeNull()
   })
 
   it('does not render +1 button or arr availability badge for dropped series', () => {

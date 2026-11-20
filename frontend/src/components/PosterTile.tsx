@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { route } from 'preact-router'
 import type { TitleType, WatchProvider, NextEpisode } from '../types'
 import { useTranslation } from '../i18n'
+import { routeTo } from '../routes'
 import { isUnairedOrTBA } from '../utils'
 import { haptic } from '../utils/haptic'
 import s from './PosterTile.module.css'
@@ -39,7 +40,7 @@ interface Props {
 export function PosterTile({ item }: Props) {
   const { t } = useTranslation()
   const [popping, setPopping] = useState(false)
-  const go = () => route(`/title/${item.id}`)
+  const go = () => route(routeTo.title(item.id))
   const providers = item.watch_providers ?? (item.onPrime ? [{ id: 119, name: 'Amazon Prime Video' }] : undefined)
 
   const handleQuickMarkClick = (e: MouseEvent) => {
@@ -100,7 +101,7 @@ export function PosterTile({ item }: Props) {
             onClick={handleQuickMarkClick}
             onPointerDown={(e) => e.stopPropagation()}
             disabled={item.isMarking}
-            aria-label={item.next_episode ? `Mark S${item.next_episode.season_number} E${item.next_episode.episode} as watched` : `Mark ${item.name} as watched`}
+            aria-label={item.next_episode ? t('hero.markEpisodeWatched', { ep: `S${item.next_episode.season_number} E${item.next_episode.episode}` }) : t('hero.markTitleWatched', { title: item.name })}
             title={t('common.markNextWatched')}
           >
             {item.isMarking ? (

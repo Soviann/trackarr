@@ -13,9 +13,12 @@ import { CoverImage } from '../components/CoverImage'
 import clsx from 'clsx'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { route } from 'preact-router'
+import { routeTo } from '../routes'
+import { useTranslation } from '../i18n'
 import s from './MatchReview.module.css'
 
 export function MatchReview({ path }: { path?: string }) {
+  const { t } = useTranslation()
   const [pendingLimit, setPendingLimit] = useState(50)
   const [unconfirmedLimit, setUnconfirmedLimit] = useState(50)
   const [confirmAllOpen, setConfirmAllOpen] = useState(false)
@@ -43,7 +46,7 @@ export function MatchReview({ path }: { path?: string }) {
           </svg>
         ),
         color: '#2ECC71',
-        label: hasAnyID ? 'Confirm' : 'Keep as-is',
+        label: hasAnyID ? t('common.confirm') : t('matchReview.keepAsIs'),
         onAction: async () => {
           await apiFetch(`/titles/${title.id}`, {
             method: 'PATCH',
@@ -61,13 +64,13 @@ export function MatchReview({ path }: { path?: string }) {
           </svg>
         ),
         color: '#E67E22',
-        label: 'Fix match',
+        label: t('matchReview.fixMatch'),
         onAction: () => {
-          route(`/admin/validate?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`)
+          route(`${routeTo.adminValidate()}?q=${encodeURIComponent(title.original_title ?? name)}&id=${title.id}`)
         },
       },
     ]
-  }, [mutate])
+  }, [mutate, t])
 
   const handleBatchConfirm = async () => {
     await Promise.all(titles.map(t =>
@@ -88,14 +91,14 @@ export function MatchReview({ path }: { path?: string }) {
         <div className={s.headerLeft}>
           <button
             onClick={() => history.back()}
-            aria-label="Back"
+            aria-label={t('common.back')}
             className={s.backBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
-          <div className={s.title}>Match Review</div>
+          <div className={s.title}>{t('nav.matchReview')}</div>
           {titles.length > 0 && (
             <div className={s.badge}>
               <span className={s.badgeText}>{titles.length}</span>
@@ -104,7 +107,7 @@ export function MatchReview({ path }: { path?: string }) {
         </div>
         {titles.length > 1 && (
           <button onClick={() => setConfirmAllOpen(true)} className={s.confirmAllBtn}>
-            Confirm all
+            {t('matchReview.confirmAll')}
           </button>
         )}
       </div>
@@ -112,12 +115,12 @@ export function MatchReview({ path }: { path?: string }) {
       {error && <ErrorBanner message={error} onRetry={mutate} />}
 
       {loading && (
-        <div className={s.statusMsg}>Loading...</div>
+        <div className={s.statusMsg}>{t('common.loading')}</div>
       )}
 
       {!loading && titles.length === 0 && (
         <div className={s.statusMsg}>
-          No titles to review
+          {t('matchReview.empty')}
         </div>
       )}
 
@@ -125,7 +128,7 @@ export function MatchReview({ path }: { path?: string }) {
       {unconfirmed.length > 0 && (
         <>
           <div className={clsx(s.sectionLabel, s.sectionLabelUnconfirmed)}>
-            Unconfirmed ({unconfirmedData?.total ?? unconfirmed.length})
+            {t('matchReview.unconfirmedCount', { count: unconfirmedData?.total ?? unconfirmed.length })}
           </div>
           <div className={clsx(s.cardList, s.cardListSpaced)}>
             {unconfirmed.map((t) => (
@@ -137,7 +140,7 @@ export function MatchReview({ path }: { path?: string }) {
           {unconfirmedData?.has_more && (
             <div className={s.loadMoreRow}>
               <button className={s.loadMoreBtn} disabled={l2} onClick={() => setUnconfirmedLimit(l => l + 50)}>
-                {l2 ? 'Loading...' : 'Load more'}
+                {l2 ? t('common.loading') : t('common.loadMore')}
               </button>
             </div>
           )}
@@ -148,7 +151,7 @@ export function MatchReview({ path }: { path?: string }) {
       {pending.length > 0 && (
         <>
           <div className={clsx(s.sectionLabel, s.sectionLabelPending)}>
-            Pending review ({pendingData?.total ?? pending.length})
+            {t('matchReview.pendingCount', { count: pendingData?.total ?? pending.length })}
           </div>
           <div className={s.cardList}>
             {pending.map((t) => (
@@ -160,7 +163,7 @@ export function MatchReview({ path }: { path?: string }) {
           {pendingData?.has_more && (
             <div className={s.loadMoreRow}>
               <button className={s.loadMoreBtn} disabled={l1} onClick={() => setPendingLimit(l => l + 50)}>
-                {l1 ? 'Loading...' : 'Load more'}
+                {l1 ? t('common.loading') : t('common.loadMore')}
               </button>
             </div>
           )}
@@ -170,7 +173,7 @@ export function MatchReview({ path }: { path?: string }) {
       {(eventsData?.events?.length ?? 0) > 0 && (
         <>
           <div className={clsx(s.sectionLabel, s.sectionLabelEvents)}>
-            Recently auto-matched
+            {t('matchReview.recentlyAutoMatched')}
           </div>
           <div className={s.eventList}>
             {eventsData!.events.map((ev) => (
@@ -188,9 +191,9 @@ export function MatchReview({ path }: { path?: string }) {
                 {ev.title_id != null && (
                   <button
                     className={s.eventFixBtn}
-                    onClick={() => route(`/admin/validate?id=${ev.title_id}`)}
+                    onClick={() => route(`${routeTo.adminValidate()}?id=${ev.title_id}`)}
                   >
-                    Fix match
+                    {t('matchReview.fixMatch')}
                   </button>
                 )}
               </div>
@@ -203,10 +206,10 @@ export function MatchReview({ path }: { path?: string }) {
         open={confirmAllOpen}
         onClose={() => setConfirmAllOpen(false)}
         onConfirm={handleBatchConfirm}
-        title="Confirm all matches?"
-        description={`This will mark all ${titles.length} titles as confirmed.`}
-        confirmText="Confirm all"
-        cancelText="Cancel"
+        title={t('matchReview.confirmAllTitle')}
+        description={t('matchReview.confirmAllDesc', { count: titles.length })}
+        confirmText={t('matchReview.confirmAll')}
+        cancelText={t('common.cancel')}
       />
     </div>
     </PullToRefresh>

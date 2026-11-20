@@ -4,6 +4,7 @@ import { apiFetch } from '../api'
 import { getName } from '../utils'
 import { BottomSheet } from './BottomSheet'
 import { ArrUnlinkDrawer } from './ArrUnlinkDrawer'
+import { useTranslation } from '../i18n'
 import s from './RematchSheet.module.css'
 
 interface RematchSheetProps {
@@ -29,6 +30,7 @@ function extractAniListID(input: string): string {
 }
 
 export function RematchSheet({ open, onClose, title, seasonID, onDone }: RematchSheetProps) {
+  const { t } = useTranslation()
   const season = seasonID != null ? (title.seasons ?? []).find((s) => s.id === seasonID) : undefined
   const [query, setQuery] = useState(getName(title))
   const [mediaType, setMediaType] = useState<'movie' | 'tv'>(title.type === 'movie' ? 'movie' : 'tv')
@@ -283,11 +285,11 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
 
   return (
     <>
-      <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? 'Link AniList season' : 'Rematch title'}>
+      <BottomSheet open={open} onClose={onClose} ariaLabel={seasonID != null ? t('rematch.linkAnilistSeason') : t('rematch.rematchTitle')}>
       <div className={s.content}>
         {seasonID != null ? (
           <>
-            <div className={s.status}>AniList for S{season?.season_number ?? (seasonID === 0 ? 1 : '?')}</div>
+            <div className={s.status}>{t('rematch.anilistForSeason', { season: season?.season_number ?? (seasonID === 0 ? 1 : '?') })}</div>
 
             {/* Search row */}
             <div className={s.searchRow}>
@@ -301,7 +303,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                     doAniListSearch(anilistQuery)
                   }
                 }}
-                placeholder="Search AniList..."
+                placeholder={t('rematch.searchAnilistPlaceholder')}
                 className={s.searchInput}
                 autoFocus
               />
@@ -309,7 +311,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                 onClick={() => doAniListSearch(anilistQuery)}
                 disabled={searchingAniList}
                 className={s.searchBtn}
-                aria-label="Search AniList"
+                aria-label={t('rematch.searchAnilistAria')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -320,22 +322,22 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
 
             {/* Browser search shortcut */}
             <div className={s.externalSearchRow}>
-              <span className={s.externalSearchPrompt}>Or search directly on AniList:</span>
+              <span className={s.externalSearchPrompt}>{t('rematch.orSearchDirectly')}</span>
               <a
                 href={`https://anilist.co/search/anime?search=${encodeURIComponent(anilistQuery.trim() || getName(title))}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={s.externalSearchLink}
               >
-                Search on AniList.co ↗
+                {t('rematch.searchOnAnilistCo')}
               </a>
             </div>
 
             {/* Results */}
             <div className={s.results}>
-              {searchingAniList && <div className={s.status}>Searching AniList...</div>}
+              {searchingAniList && <div className={s.status}>{t('rematch.searchingAnilist')}</div>}
               {!searchingAniList && anilistResults.length === 0 && hasSearchedAniList && (
-                <div className={s.status}>No AniList results</div>
+                <div className={s.status}>{t('rematch.noAnilistResults')}</div>
               )}
               {anilistResults.map((r) => (
                 <button
@@ -370,21 +372,21 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
             {/* Current mapped parts section if any exist */}
             {(season?.anilist_parts ?? []).length > 0 && (
               <div className={s.currentPartsSection}>
-                <div className={s.sectionHeader}>Current parts ({season?.anilist_parts?.length})</div>
+                <div className={s.sectionHeader}>{t('rematch.currentParts', { count: season?.anilist_parts?.length ?? 0 })}</div>
                 {(season?.anilist_parts ?? []).map((p, i) => {
                   const parts = season?.anilist_parts ?? []
                   return (
                     <div key={p.external_id} className={s.partManageRow}>
-                      <span>Part {i + 1}: {p.external_id}{p.score != null ? ` · ${p.score}%` : ''}</span>
+                      <span>{t('rematch.partLabel', { num: i + 1, id: p.external_id })}{p.score != null ? ` · ${p.score}%` : ''}</span>
                       <span className={s.partManageActions}>
                         {parts.length > 1 && (
                           <span className={s.reorderControls}>
-                            <button onClick={() => handleReorder(i, -1)} disabled={saving || i === 0} aria-label={`Move part ${i + 1} up`}>▲</button>
-                            <button onClick={() => handleReorder(i, 1)} disabled={saving || i === parts.length - 1} aria-label={`Move part ${i + 1} down`}>▼</button>
+                            <button onClick={() => handleReorder(i, -1)} disabled={saving || i === 0} aria-label={t('rematch.movePartUpAria', { num: i + 1 })}>▲</button>
+                            <button onClick={() => handleReorder(i, 1)} disabled={saving || i === parts.length - 1} aria-label={t('rematch.movePartDownAria', { num: i + 1 })}>▼</button>
                           </span>
                         )}
                         <button onClick={() => handleRemovePart(p.external_id)} disabled={saving} className={s.removeMapping}>
-                          Remove
+                          {t('common.remove')}
                         </button>
                       </span>
                     </div>
@@ -395,24 +397,24 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
 
             {/* Manual ID toggle */}
             <button onClick={() => setShowManualSeason(!showManualSeason)} className={s.manualToggle}>
-              {showManualSeason ? '▾' : '▸'} Manual AniList ID
+              {showManualSeason ? '▾' : '▸'} {t('rematch.manualAnilistId')}
             </button>
 
             {showManualSeason && (
               <div className={s.manualSection}>
                 <label className={s.fieldLabel}>
-                  Add AniList ID or URL
+                  {t('rematch.addAnilistIdOrUrl')}
                   <input
                     type="text"
                     value={seasonAniListID}
                     onInput={(e) => setSeasonAniListID((e.target as HTMLInputElement).value)}
                     className={s.fieldInput}
-                    placeholder="e.g. 26 or https://anilist.co/anime/26"
+                    placeholder={t('rematch.anilistIdPlaceholder')}
                   />
                 </label>
                 <div className={s.manualActions}>
                   <button onClick={handleAddPart} disabled={saving || !seasonAniListID.trim()} className={s.saveButton}>
-                    <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Add'}</span>
+                    <span className={s.saveButtonLabel}>{saving ? t('common.saving') : t('common.add')}</span>
                   </button>
                 </div>
               </div>
@@ -428,11 +430,11 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                 value={query}
                 onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search TMDB..."
+                placeholder={t('rematch.searchTmdbPlaceholder')}
                 className={s.searchInput}
                 autoFocus
               />
-              <button onClick={handleSubmit} disabled={searching} className={s.searchBtn} aria-label="Search">
+              <button onClick={handleSubmit} disabled={searching} className={s.searchBtn} aria-label={t('common.search')}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -442,22 +444,22 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
 
             {/* Type toggle */}
             <div className={s.typeToggle}>
-              {(['movie', 'tv'] as const).map((t) => (
+              {(['movie', 'tv'] as const).map((tp) => (
                 <button
-                  key={t}
-                  onClick={() => handleTypeChange(t)}
-                  className={`${s.typeBtn} ${mediaType === t ? s.active : ''}`}
+                  key={tp}
+                  onClick={() => handleTypeChange(tp)}
+                  className={`${s.typeBtn} ${mediaType === tp ? s.active : ''}`}
                 >
-                  {t === 'movie' ? 'Movie' : 'TV'}
+                  {tp === 'movie' ? t('common.movie') : t('common.tv')}
                 </button>
               ))}
             </div>
 
             {/* Results grid */}
             <div className={s.results}>
-              {searching && <div className={s.status}>Searching...</div>}
+              {searching && <div className={s.status}>{t('common.searching')}</div>}
               {!searching && results.length === 0 && hasSearched && (
-                <div className={s.status}>No results</div>
+                <div className={s.status}>{t('common.noResults')}</div>
               )}
               {results.map((r) => (
                 <button
@@ -483,7 +485,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
 
             {/* Manual IDs section */}
             <button onClick={() => setShowManual(!showManual)} className={s.manualToggle}>
-              {showManual ? '▾' : '▸'} Manual IDs
+              {showManual ? '▾' : '▸'} {t('rematch.manualIds')}
             </button>
 
             {showManual && (
@@ -497,7 +499,7 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                   <input type="text" value={manualImdb} onInput={(e) => setManualImdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. tt0137523" />
                 </label>
                 <label className={s.fieldLabel}>
-                  {anilistSeason ? `AniList ID (S${anilistSeason.season_number})` : 'AniList ID'}
+                  {anilistSeason ? t('rematch.anilistIdSeason', { season: anilistSeason.season_number }) : 'AniList ID'}
                   <input type="text" value={manualAnilist} onInput={(e) => setManualAnilist((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 21" />
                 </label>
                 <label className={s.fieldLabel}>
@@ -506,13 +508,13 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
                 </label>
                 <label className={s.autoFillRow}>
                   <input type="checkbox" checked={autoFill} onChange={(e) => setAutoFill((e.target as HTMLInputElement).checked)} />
-                  <span>Auto-find the other IDs</span>
+                  <span>{t('rematch.autoFindOtherIds')}</span>
                 </label>
                 <p className={s.autoFillHint}>
-                  Leave blank to remove an ID. Tick the box to let matching fill the empty ones.
+                  {t('rematch.autoFindHint')}
                 </p>
                 <button onClick={handleManualSave} disabled={saving} className={s.saveButton}>
-                  <span className={s.saveButtonLabel}>{saving ? 'Saving...' : 'Save'}</span>
+                  <span className={s.saveButtonLabel}>{saving ? t('common.saving') : t('common.save')}</span>
                 </button>
               </div>
             )}
