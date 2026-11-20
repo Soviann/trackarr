@@ -6,6 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.31.0] — 2026-11-20
+
+### Ajouté
+- **Ouverture automatique d’IMDb à la notation (`auto_open_imdb_on_rate`, `AdminSettings`, `TitleDetail`)** :
+  - Nouveau paramètre système `auto_open_imdb_on_rate` (désactivé par défaut), exposé via `GET /api/settings` et configurable via `GET`/`PUT /api/admin/system-settings` avec un interrupteur dédié dans *Admin ➔ Paramètres système* (*« Ouverture automatique d’IMDb à la notation »*).
+  - Lorsqu'il est activé et que le titre possède un `imdb_id`, noter un titre depuis la barre de notation directe (`1..10`) ou via *Enregistrer* dans la feuille de notation ouvre automatiquement la fiche IMDb correspondante dans un nouvel onglet, tout en conservant le bouton *« Enregistrer et noter »* dans le drawer d'édition sans ouverture en double.
+
+### Corrigé
+- **Test calendrier dépendant de la date (`CalendarMonthGrid.test.tsx`)** :
+  - Utilisation de `getAllByText('Dune 3')` pour éviter les faux négatifs le 20 du mois lorsque la carte apparaît simultanément dans la grille mensuelle et dans le panneau du jour sélectionné.
+
 ## [v1.30.0] — 2026-11-17
 
 ### Ajouté

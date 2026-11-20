@@ -32,6 +32,7 @@ interface SystemSettings {
   metadata_language?: string
   enabled_watch_providers?: string
   saga_chronological_next_up?: boolean
+  auto_open_imdb_on_rate?: boolean
 }
 
 function ChevronIcon({ isOpen }: { isOpen: boolean }) {
@@ -107,6 +108,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
         metadata_language: data.metadata_language || 'fr',
         enabled_watch_providers: data.enabled_watch_providers !== undefined ? data.enabled_watch_providers : DEFAULT_ENABLED_PROVIDERS,
         saga_chronological_next_up: data.saga_chronological_next_up !== false ? 'true' : 'false',
+        auto_open_imdb_on_rate: data.auto_open_imdb_on_rate === true ? 'true' : 'false',
       })
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load configuration')
@@ -417,6 +419,29 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
               disabled={saving}
               aria-label={t('settings.sagaChronologicalNextUp')}
               data-testid="saga-chronological-toggle"
+            >
+              <span className={s.toggleKnob} />
+            </button>
+          </div>
+
+          {/* Auto-open IMDb on Rate */}
+          <div className={s.toggleRow}>
+            <div className={s.toggleInfo}>
+              <span className={s.toggleLabel}>{t('settings.autoOpenImdbOnRate')}</span>
+              <span className={s.toggleDesc}>{t('settings.autoOpenImdbOnRateDesc')}</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formValues.auto_open_imdb_on_rate === 'true'}
+              className={formValues.auto_open_imdb_on_rate === 'true' ? s.toggleOn : s.toggleOff}
+              onClick={() => {
+                const current = formValues.auto_open_imdb_on_rate === 'true'
+                handleChange('auto_open_imdb_on_rate', current ? 'false' : 'true')
+              }}
+              disabled={saving}
+              aria-label={t('settings.autoOpenImdbOnRate')}
+              data-testid="auto-open-imdb-toggle"
             >
               <span className={s.toggleKnob} />
             </button>

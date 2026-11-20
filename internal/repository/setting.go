@@ -40,6 +40,7 @@ const (
 	SettingKeyCalendarToken         = "calendar_token"
 	SettingKeyRefreshJobProgress    = "refresh_job_progress"
 	SettingKeySagaChronologicalNextUp = "saga_chronological_next_up"
+	SettingKeyAutoOpenIMDbOnRate      = "auto_open_imdb_on_rate"
 )
 
 // SettingRepository reads the settings key-value store. Writes live on

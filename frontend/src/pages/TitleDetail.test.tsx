@@ -528,5 +528,96 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(mockInvalidate).not.toHaveBeenCalled()
     })
   })
+
+  describe('auto_open_imdb_on_rate setting', () => {
+    const unratedMovie: Title = {
+      ...mockNormalSeries,
+      id: 77,
+      type: 'movie',
+      imdb_id: 'tt1375666',
+      tmdb_id: 27205,
+      tvdb_id: null,
+      my_rating: null,
+      series_status: null,
+      original_title: 'Inception',
+      names: [{ id: 1, title_id: 77, name: 'Inception', language: 'en', is_primary: true }],
+    }
+
+    it('opens IMDb automatically on inline rate when auto_open_imdb_on_rate is true', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+      vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+        if (endpoint === '/settings') {
+          return { data: { auto_open_imdb_on_rate: true }, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+        }
+        return { data: unratedMovie, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      })
+      vi.mocked(apiFetch).mockResolvedValue({ ...unratedMovie, my_rating: 9 })
+
+      render(<TitleDetail id="77" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Rate 9/10' }))
+
+      await waitFor(() => {
+        expect(apiFetch).toHaveBeenCalledWith('/titles/77', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ my_rating: 9 }),
+        }))
+      })
+      expect(openSpy).toHaveBeenCalledTimes(1)
+      expect(openSpy).toHaveBeenCalledWith('https://www.imdb.com/title/tt1375666/', '_blank', 'noopener,noreferrer')
+      openSpy.mockRestore()
+    })
+
+    it('does not open IMDb on inline rate when auto_open_imdb_on_rate is false', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+      vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+        if (endpoint === '/settings') {
+          return { data: { auto_open_imdb_on_rate: false }, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+        }
+        return { data: unratedMovie, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      })
+      vi.mocked(apiFetch).mockResolvedValue({ ...unratedMovie, my_rating: 9 })
+
+      render(<TitleDetail id="77" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Rate 9/10' }))
+
+      await waitFor(() => {
+        expect(apiFetch).toHaveBeenCalledWith('/titles/77', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ my_rating: 9 }),
+        }))
+      })
+      expect(openSpy).not.toHaveBeenCalled()
+      openSpy.mockRestore()
+    })
+
+    it('keeps Save & rate working in Edit rating drawer when auto_open_imdb_on_rate is false', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+      const ratedMovie: Title = { ...unratedMovie, my_rating: 8 }
+      vi.mocked(useApi).mockImplementation((endpoint: string | null) => {
+        if (endpoint === '/settings') {
+          return { data: { auto_open_imdb_on_rate: false }, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+        }
+        return { data: ratedMovie, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      })
+      vi.mocked(apiFetch).mockResolvedValue({ ...ratedMovie, my_rating: 9 })
+
+      const { container } = render(<TitleDetail id="77" />)
+      const editRatingBtn = container.querySelector('button.btnEditRating')
+      expect(editRatingBtn).not.toBeNull()
+      fireEvent.click(editRatingBtn!)
+      fireEvent.click(await screen.findByRole('button', { name: 'Rate 9/10' }))
+      fireEvent.click(screen.getByText('Save & rate'))
+
+      await waitFor(() => {
+        expect(apiFetch).toHaveBeenCalledWith('/titles/77', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ my_rating: 9 }),
+        }))
+      })
+      expect(openSpy).toHaveBeenCalledTimes(1)
+      expect(openSpy).toHaveBeenCalledWith('https://www.imdb.com/title/tt1375666/', '_blank', 'noopener,noreferrer')
+      openSpy.mockRestore()
+    })
+  })
 })
 

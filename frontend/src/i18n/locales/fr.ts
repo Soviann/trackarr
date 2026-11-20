@@ -399,6 +399,8 @@ export const fr: TranslationSchema = {
     metadataLanguageDesc: 'Langue préférée utilisée pour l’affichage des titres et métadonnées.',
     sagaChronologicalNextUp: 'Priorité chronologique des sagas',
     sagaChronologicalNextUpDesc: 'Affiche automatiquement la suite ou le film suivant dans l’ordre chronologique de la saga après avoir terminé un titre.',
+    autoOpenImdbOnRate: 'Ouverture automatique d’IMDb à la notation',
+    autoOpenImdbOnRateDesc: 'Ouvre automatiquement la fiche IMDb dans un nouvel onglet dès que vous notez un titre (si un identifiant IMDb est disponible).',
     metadataAi: 'Métadonnées & Intelligence Artificielle',
     metadataAiKeysDesc: 'Ces clés activent la recherche, l’enrichissement automatique et la réconciliation intelligente des films, séries et animes.',
     watchProviders: 'Plateformes de streaming & Watch Providers',

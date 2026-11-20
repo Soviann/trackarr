@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { CSSProperties } from 'preact'
 import clsx from 'clsx'
 import { route } from 'preact-router'
-import type { Title, TitleRelation } from '../types'
+import type { Settings, Title, TitleRelation } from '../types'
 import { useApi } from '../hooks/useApi'
 import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba, isUnairedOrTBA } from '../utils'
 import { apiFetch } from '../api'
@@ -66,6 +66,8 @@ function parseJSON<T>(json: string | null): T | null {
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate, setData } = useApi<Title>(id ? `/titles/${id}` : null)
+  const { data: settings } = useApi<Settings>('/settings')
+  const autoOpenImdb = settings?.auto_open_imdb_on_rate === true
   useScrollRestoration(`title-${id ?? ''}`, !loading && title !== null)
   const [activeSeason, setActiveSeason] = useState<number | null>(null)
   const [showRating, setShowRating] = useState(false)
@@ -320,9 +322,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
     }
   }
 
-  const handleSaveRating = async (rating: number) => {
+  const handleSaveRating = async (rating: number, openImdb = autoOpenImdb) => {
     setShowRating(false)
     setData((prev) => prev ? { ...prev, my_rating: rating } : prev)
+    if (openImdb && title.imdb_id) {
+      window.open(`https://www.imdb.com/title/${title.imdb_id}/`, '_blank', 'noopener,noreferrer')
+    }
     try {
       const updated = await apiFetch<Title>(`/titles/${title.id}`, {
         method: 'PATCH',
@@ -1102,10 +1107,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
         initialRating={title.my_rating}
         hasImdb={!!title.imdb_id}
         onSave={handleSaveRating}
-        onSaveAndImdb={(rating) => {
-          handleSaveRating(rating)
-          if (title.imdb_id) window.open(`https://www.imdb.com/title/${title.imdb_id}/`, '_blank', 'noopener,noreferrer')
-        }}
+        onSaveAndImdb={(rating) => handleSaveRating(rating, true)}
       />
 
       <EditSheet

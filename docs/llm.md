@@ -155,7 +155,7 @@
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
 - `title_names_fts` & `title_names_trigram_fts`: FTS5 full-text search index tables on `title_names.name` (`unicode61 remove_diacritics 2` for prefix search, and `tokenize='trigram'` for fuzzy typo and substring matching, migration 051).
-- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
+- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
 
@@ -204,12 +204,12 @@
 - `PUT /api/titles/{titleID}/seasons/{seasonID}/anilist/order` : Reorder multi-part AniList season mappings.
 - `GET /api/genres` : List genres with counts.
 - `GET /api/countries` : List origin countries with counts.
-- `GET /api/settings` : User and app settings (including `saga_chronological_next_up`, `enabled_watch_providers`, AniList and push status).
+- `GET /api/settings` : User and app settings (including `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `enabled_watch_providers`, AniList and push status).
 - `GET /api/anilist/auth` : Generate AniList OAuth authorize URL.
 - `POST /api/anilist/token` : Save AniList OAuth access token.
 - `DELETE /api/anilist/token` : Disconnect AniList integration.
 - `GET /api/admin/auth-settings` & `PUT /api/admin/auth-settings` : Get/update auth mode (`google`, `password`, `hybrid`).
-- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags, `saga_chronological_next_up`) and trigger client hot-reload.
+- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags, `saga_chronological_next_up`, `auto_open_imdb_on_rate`) and trigger client hot-reload.
 - `POST /api/admin/system-settings/test/{service}` : Test connection for TMDB, TVDB, Gemini, Radarr, Sonarr, Prowlarr.
 - `POST /api/admin/system-settings/vapid/generate` : Auto-generate fresh NIST P-256 VAPID keypair.
 - `GET /api/admin/counts` : Total library titles and queued items for admin navbar badge.

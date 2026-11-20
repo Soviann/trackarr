@@ -254,4 +254,32 @@ describe('AdminSettings Page', () => {
       }))
     })
   })
+
+  it('allows toggling auto-open IMDb on rate and saving', async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      auto_open_imdb_on_rate: false,
+    })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auto-open-imdb-toggle')).not.toBeNull()
+    })
+
+    const toggle = screen.getByTestId('auto-open-imdb-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+
+    const saveBtn = screen.getByText('Save Settings')
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"auto_open_imdb_on_rate":"true"'),
+      }))
+    })
+  })
 })

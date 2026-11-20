@@ -397,6 +397,8 @@ export const en = {
     metadataLanguageDesc: 'Preferred language used for title names and metadata display.',
     sagaChronologicalNextUp: 'Saga chronological next-up priority',
     sagaChronologicalNextUpDesc: 'Automatically surface the next uncompleted sequel or movie in franchise order when completing a title.',
+    autoOpenImdbOnRate: 'Auto-open IMDb when rating',
+    autoOpenImdbOnRateDesc: 'Automatically open the IMDb page in a new tab whenever you rate a title (when an IMDb ID is available).',
     metadataAi: 'Metadata & Artificial Intelligence',
     metadataAiKeysDesc: 'These keys enable search, automatic enrichment, and intelligent title reconciliation for movies, TV shows, and anime.',
     watchProviders: 'Streaming Platforms & Watch Providers',

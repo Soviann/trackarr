@@ -73,6 +73,7 @@ func TestGetSystemSettings(t *testing.T) {
 	assert.Equal(t, "fr", resp.MetadataLanguage)
 	assert.Equal(t, "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn", resp.EnabledWatchProviders)
 	assert.True(t, resp.SagaChronologicalNextUp)
+	assert.False(t, resp.AutoOpenIMDbOnRate)
 }
 
 func TestUpdateSystemSettings_AndReload(t *testing.T) {
@@ -85,7 +86,8 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 		"radarr_api_key": "radarr-key-999",
 		"metadata_language": "en",
 		"enabled_watch_providers": "netflix,prime,crunchyroll",
-		"saga_chronological_next_up": "false"
+		"saga_chronological_next_up": "false",
+		"auto_open_imdb_on_rate": "true"
 	}`
 
 	req := httptest.NewRequest("PUT", "/api/admin/system-settings", strings.NewReader(updateBody))
@@ -115,11 +117,16 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "false", sagaNextUp)
 
+	autoOpenIMDb, err := settings.Get("auto_open_imdb_on_rate")
+	require.NoError(t, err)
+	assert.Equal(t, "true", autoOpenIMDb)
+
 	// Verify dynamic reloader returns the new value
 	assert.Equal(t, "new-sqlite-tmdb-key", reloader.Get("tmdb_api_key"))
 	assert.Equal(t, "en", reloader.Get("metadata_language"))
 	assert.Equal(t, "http://192.168.1.50:7878", reloader.Get("radarr_url"))
 	assert.Equal(t, "false", reloader.Get("saga_chronological_next_up"))
+	assert.Equal(t, "true", reloader.Get("auto_open_imdb_on_rate"))
 
 	_ = db
 }

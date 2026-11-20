@@ -32,6 +32,7 @@ type SettingsResponse struct {
 	PlexLastScrobble        *time.Time `json:"plex_last_scrobble_at"`
 	EnabledWatchProviders   string     `json:"enabled_watch_providers,omitempty"`
 	SagaChronologicalNextUp bool       `json:"saga_chronological_next_up"`
+	AutoOpenIMDbOnRate      bool       `json:"auto_open_imdb_on_rate"`
 }
 
 func NewSettingsHandler(settings *repository.SettingRepository, eventRepo *repository.WatchEventRepository, tvdbReady bool, jellyfinConfigured bool, prowlarrSvc ...prowlarrChecker) *SettingsHandler {
@@ -74,12 +75,16 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 
 	enabledWP := "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn"
 	sagaNextUp := true
+	autoOpenIMDb := false
 	if h.settings != nil {
 		if wp, err := h.settings.Get(repository.SettingKeyEnabledWatchProviders); err == nil && wp != "" {
 			enabledWP = wp
 		}
 		if val, err := h.settings.Get(repository.SettingKeySagaChronologicalNextUp); err == nil && val == "false" {
 			sagaNextUp = false
+		}
+		if val, err := h.settings.Get(repository.SettingKeyAutoOpenIMDbOnRate); err == nil && val == "true" {
+			autoOpenIMDb = true
 		}
 	}
 
@@ -94,6 +99,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		PlexLastScrobble:        plexLastScrobble,
 		EnabledWatchProviders:   enabledWP,
 		SagaChronologicalNextUp: sagaNextUp,
+		AutoOpenIMDbOnRate:      autoOpenIMDb,
 	})
 	return nil
 }

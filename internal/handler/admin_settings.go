@@ -68,6 +68,7 @@ type SystemSettingsResponse struct {
 	MetadataLanguage        string `json:"metadata_language"`
 	EnabledWatchProviders   string `json:"enabled_watch_providers"`
 	SagaChronologicalNextUp bool   `json:"saga_chronological_next_up"`
+	AutoOpenIMDbOnRate      bool   `json:"auto_open_imdb_on_rate"`
 }
 
 func maskSecret(s string) string {
@@ -166,6 +167,7 @@ func (h *AdminSettingsHandler) GetSystemSettings(w http.ResponseWriter, r *http.
 		MetadataLanguage:        metadataLang,
 		EnabledWatchProviders:   enabledWP,
 		SagaChronologicalNextUp: get("saga_chronological_next_up") != "false",
+		AutoOpenIMDbOnRate:      get("auto_open_imdb_on_rate") == "true",
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, resp)
@@ -205,6 +207,7 @@ func (h *AdminSettingsHandler) UpdateSystemSettings(w http.ResponseWriter, r *ht
 		"metadata_language":          true,
 		"enabled_watch_providers":    true,
 		"saga_chronological_next_up": true,
+		"auto_open_imdb_on_rate":     true,
 	}
 
 	if err := database.WithTxContext(r.Context(), h.writeDB, func(tx *sql.Tx) error {

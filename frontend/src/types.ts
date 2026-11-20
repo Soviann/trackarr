@@ -14,6 +14,7 @@ export interface Settings {
   plex_last_scrobble_at?: string | null
   enabled_watch_providers?: string
   saga_chronological_next_up?: boolean
+  auto_open_imdb_on_rate?: boolean
 }
 
 export interface PublicConfig {
@@ -26,6 +27,7 @@ export interface PublicConfig {
   metadata_language?: string
   enabled_watch_providers?: string
   saga_chronological_next_up?: boolean
+  auto_open_imdb_on_rate?: boolean
 }
 
 export type TitleType = 'movie' | 'series'
