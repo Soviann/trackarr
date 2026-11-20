@@ -15,7 +15,7 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 2. Navigate to *Dashboard ➔ Plugins ➔ Webhook ➔ Add Generic Destination*.
 3. Configure the destination:
    - **Webhook URL**: `https://<your-trackarr-url>/api/webhook/jellyfin/<secret>` (where `<secret>` matches `JELLYFIN_WEBHOOK_SECRET` or your configured token, also visible and copyable with 1-click in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
-   - **Notification Type**: Check **Playback Start**, **Playback Stop**, and **User Data Saved** (required for the live playback companion, completion scrobbling, and rating sync).
+   - **Notification Type**: Check **Playback Start**, **Playback Stop**, **User Data Saved**, and **Item Added** (required for the live playback companion, completion scrobbling, rating sync, and automatic addition of newly added movies and series).
    - **Item Type**: Check **Movies**, **Episodes**, and **Series**.
    - **Send All Properties**: Leave unchecked.
    - **Request Header**: `Content-Type: application/json`.
@@ -48,6 +48,19 @@ When you rate a movie or series in Jellyfin:
 3. **Library Matching**: The item is matched against your Trackarr library by external provider IDs (`provider_tmdb`, `provider_tvdb`, `provider_imdb`). Items without any external ID are ignored.
 4. **Transactional Update**: The rating is recorded in SQLite via `TitleService.Update` / `TitleWriter.Update`.
 5. **AniList Sync**: If the rated media is an Anime with a linked AniList ID and is completed or dropped, Trackarr asynchronously enqueues a rating push to AniList.
+
+### Inbound Title Addition (`ItemAdded`):
+When Jellyfin imports a new movie or series into your media library (with **Item Added** enabled in the Webhook plugin):
+1. **Supported Item Types**: Trackarr processes `ItemAdded` notifications (case-insensitive) for `Movie` and `Series`. `Episode` (and all other item types) are safely ignored with zero database writes to prevent per-episode webhook churn when adding a multi-episode show.
+2. **Deduplication & Existing Library Safety**: Trackarr extracts provider IDs (`provider_imdb`, `provider_tmdb`, `provider_tvdb`, and `item_id` mapped to `external_source_id`) and falls back to `FindByNameAndType` (exact year when provided; ambiguity-guarded when year is unknown). If the title already exists in Trackarr, it returns immediately without modifying its `status`, `my_rating`, seasons, episodes, or watch history.
+3. **Creation & Async Enrichment**: Missing titles are created in a short transaction with `status = 'plan_to_watch'`, `match_source = 'jellyfin_webhook'`, `arr_ignored = true` (avoiding redundant Radarr/Sonarr pushes), `0` `watch_events`, and `downloaded_at` set **only on movies** (not on series). Trackarr immediately enqueues an asynchronous `enrichment` task (`TaskTypeEnrichment`, `dedup_key = "enrichment:<id>"`) so `TaskQueueWorker` resolves full metadata, posters, and (for series) triggers season/episode backfill (`TaskTypeRefresh`) outside SQLite write locks.
+
+### Scheduled & Manual Unwatched Movie Sync (Jellyfin API):
+In addition to webhook ingestion, configuring your Jellyfin API credentials (**Jellyfin Server URL**, **Jellyfin API Key**, and **Jellyfin User ID**) in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)** enables automatic and manual synchronization of unwatched Jellyfin movies into Trackarr:
+- **Fetch & Unwatched Filter**: Calls `GET {jellyfin_url}/Users/{userId}/Items?includeItemTypes=Movie&recursive=true&fields=ProviderIds` with `X-Emby-Token: <apiKey>` (via the shared 2 rps `APILimiter` before opening any SQLite write transaction) and keeps only movies where `UserData` is absent or `UserData.Played == false`.
+- **Idempotent Creation**: Deduplicates against existing Trackarr movies by `imdb_id`, `tmdb_id`, `external_source_id`, or `FindByNameAndType` (exact year). Already-tracked movies are skipped without touching their status, ratings, or watch events. Missing unwatched movies are created with `status = 'plan_to_watch'`, `downloaded_at` set, `arr_ignored = true`, `match_source = 'jellyfin_sync'`, `0` `watch_events`, and an enqueued `enrichment` task.
+- **Automatic Schedule**: Wired onto `Scheduler` (`cmd/serve.go`) to run on startup (after the 30-second initial delay, before metadata refresh) and on every 24-hour scheduled pass. Cleanly no-ops if any Jellyfin API credential is empty, and is suppressed when `DISABLE_BACKGROUND_TASKS=true`.
+- **Manual Trigger (UI & API)**: Click **Sync Unwatched Movies** on **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)** or call `POST /api/admin/jellyfin/sync-movies` (browser JWT cookie session required; accepts optional `{"dry_run": bool}`). Returns a summary payload with `dry_run`, `fetched`, `unwatched`, `created`, `skipped`, and `errors`.
 
 ### Outbound Jellyfin Rating Sync (`sync-jellyfin-ratings`):
 To push existing ratings from your Trackarr library back to Jellyfin (useful for initial library setup or catching up), use the CLI tool or Makefile target:

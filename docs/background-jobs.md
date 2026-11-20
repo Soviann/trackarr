@@ -66,7 +66,8 @@ The `Scheduler` (`internal/service/scheduler.go`) orchestrates recurring backgro
 
 | Step | Operation | Target | Description |
 |---|---|---|---|
-| **0** | **Cover Fetch** | Missing covers | Scans library for titles without posters and calls `covers.FetchMissingCovers(ctx)`. |
+| **0** | **Cover Fetch** | Missing covers | Scans library for titles without posters and calls `covers.FetchMissingCovers(ctx)` (initial startup pass). |
+| **0b** | **Jellyfin Movie Sync** | Unwatched Jellyfin movies | Before `RefreshTitles` on both initial and 24h scheduled passes, queries Jellyfin (`JellyfinSyncService.SyncUnwatchedMovies` using `APILimiter`) when `jellyfin_url`, `jellyfin_api_key`, and `jellyfin_user_id` are set, adding missing unwatched movies (`plan_to_watch`, `downloaded_at` set) and enqueuing `enrichment` tasks without holding SQLite write locks during HTTP I/O. |
 | **1a** | **TMDB Refresh** | Non-completed series/movies | Updates `series_status` (*Ended*, *Returning*, *Canceled*), genres, `next_air_date`, upcoming episode numbers, and syncs season/episode listings. |
 | **1b** | **AniList Fallback** | Niche anime (No TMDB ID) | Sourced directly from AniList GraphQL (names, synopsis, genres, score, runtime, cover). |
 | **1c** | **TheTVDB Enrichment** | Titles with TVDB link | Fetches community ratings, franchise relations, alternative covers, and cross-references `tvdb_id`. |
@@ -106,7 +107,7 @@ stateDiagram-v2
 
 | Task Type (`task_type`) | Payload Structure | Description & Triggers |
 |---|---|---|
-| `enrichment` | `EnrichmentPayload`<br>(`title_id`, `title_name`, `year`, `title_type`, `is_anime`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `locked_ids`, `preserve_match`) | Runs the full 5-step matching pipeline for a new title (Plex/Jellyfin webhook, manual add, URL import). Respects user-locked external IDs. |
+| `enrichment` | `EnrichmentPayload`<br>(`title_id`, `title_name`, `year`, `title_type`, `is_anime`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `locked_ids`, `preserve_match`) | Runs the full 5-step matching pipeline for a new title (Plex/Jellyfin scrobble or `ItemAdded` webhook, Jellyfin unwatched movie sync, manual add, URL import). Respects user-locked external IDs. |
 | `refresh` | `RefreshPayload`<br>(`title_id`) | Retries a single-title metadata refresh after a network timeout or rate limit during the daily pass. |
 | `cover_fetch` | `CoverFetchPayload`<br>(`title_id`, `tmdb_id`, `anilist_id`, `title_type`) | Downloads high-resolution poster artwork to disk and triggers dominant accent color extraction (`colorextract/`). |
 | `anilist_push_season` | `AniListPushSeasonPayload`<br>(`season_id`) | Asynchronously pushes watched episode progress, completion status, and user ratings to AniList GraphQL for anime series seasons. |
@@ -143,4 +144,4 @@ To avoid SQLite corruption, `database is locked` panics, and orphaned `running` 
   - **Real-Time Status & Controls**: `GET /api/admin/refresh-all/status` exposes current progress and active title name; `POST /api/admin/refresh-all/cancel` pauses or cancels the job. The UI provides a live progress bar, pause/resume, and full restart controls (`?restart=true`).
 
 ### Environment & CLI Flags
-- `DISABLE_BACKGROUND_TASKS=true`: Disables both the 24h ticker and the task queue worker loop. Recommended during bulk imports (`trackarr import`) and automated database migrations.
+- `DISABLE_BACKGROUND_TASKS=true`: Disables the scheduler (24h ticker, 04:30 maintenance, and scheduled Jellyfin unwatched movie sync) as well as the task queue worker loop. Recommended during bulk imports (`trackarr import`) and automated database migrations.

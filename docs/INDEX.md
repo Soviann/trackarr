@@ -29,7 +29,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Exact form fields, OAuth callback URLs, and permissions.
 
 ### 4. [Integrations & Webhooks](integrations.md)
-- Real-time scrobbling and rating sync via **Jellyfin** & **Plex** webhooks (template, deduplication, and initial CLI rating sync).
+- Real-time scrobbling, rating sync, `ItemAdded` auto-addition, and scheduled/manual unwatched movie sync via **Jellyfin** & **Plex** (webhooks, API sync, template, deduplication, and CLI rating sync).
 - Downstream **Radarr & Sonarr** download webhooks (`POST /api/webhook/arr/{secret}`) with emerald availability badges and Web Push notifications.
 - **AniList** bidirectional sync (progress, scores, multi-part season chaining).
 - **Radarr & Sonarr** (*arr) integration, Arr Queue, and Prowlarr releases.

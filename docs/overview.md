@@ -9,7 +9,7 @@
 **Trackarr** is a fast, lightweight, and self-hosted personal media tracker for movies, TV shows, and anime.
 
 ### What Trackarr Does
-- **Automatic Scrobbling**: Automatically logs finished movies and episodes via Jellyfin and Plex webhooks.
+- **Automatic Scrobbling & Library Sync**: Automatically logs finished movies and episodes via Jellyfin and Plex webhooks, ingests newly added Jellyfin movies/series via `ItemAdded`, and syncs unwatched Jellyfin movies automatically.
 - **Unified Library**: Track your media across standard statuses: *Watching*, *Caught up*, *Plan to Watch*, *Completed*, and *Dropped*.
 - **Instant Episode Progress**: One-tap progress tracking with episode counters, next episode hero actions, and upcoming air dates.
 - **Ratings & AniList Sync**: Native 1–10 scoring with automatic background synchronization to AniList (including multi-part season chaining).
