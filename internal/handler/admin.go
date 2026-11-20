@@ -346,7 +346,7 @@ func (h *AdminHandler) ExportSQLite(w http.ResponseWriter, r *http.Request) erro
 		return httputil.InternalError("export sqlite", fmt.Errorf("backup service not configured"))
 	}
 	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("trackarr-export-%d.db", time.Now().UnixNano()))
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if err := h.backupSvc.ExportSQLiteToFile(r.Context(), tmpPath); err != nil {
 		return httputil.InternalError("export sqlite", err)
