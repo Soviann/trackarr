@@ -6,6 +6,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Synchronisation planifiée et manuelle des films non vus depuis Jellyfin (`JellyfinSyncService`, `Scheduler`, `/admin/jellyfin`)** :
+  - Ajout de la synchronisation périodique des films non vus depuis l'API REST Jellyfin (`FetchUserMovies`, `SyncUnwatchedMovies` avec résolution dynamique de `jellyfin_url`, `jellyfin_api_key` et `jellyfin_user_id` via `SettingKeyJellyfin*`, limitation de débit partagée `APILimiter` et exécution avant le rafraîchissement des métadonnées dans `Scheduler`, désactivée si `DISABLE_BACKGROUND_TASKS=true`).
+  - Création transactionnelle des films manquants au statut `plan_to_watch` avec `downloaded_at` renseigné, `arr_ignored = true`, aucun `watch_event`, et mise en file asynchrone de `TaskTypeEnrichment`, tout en préservant strictement les titres déjà existants (déduplication par ID externes ou nom/type/année).
+  - Nouvel endpoint d'administration `POST /api/admin/jellyfin/sync-movies` protégé par session JWT (`mw.JWTAuth`, option `{"dry_run": bool}`, erreurs sanitisées sans fuite de secrets) et bouton **Synchroniser les films non vus** dans `/admin/jellyfin` avec résumé détaillé (`fetched`, `unwatched`, `created`, `skipped`, `errors`).
+- **Ingestion automatique des nouveaux titres via webhook Jellyfin `ItemAdded` (`JellyfinService`)** :
+  - Prise en charge de la notification `ItemAdded` (insensible à la casse) pour les types `Movie` et `Series` afin d'ajouter automatiquement les médias absents en statut `plan_to_watch` (`downloaded_at` uniquement sur les films) et d'enclencher leur enrichissement asynchrone (`TaskTypeEnrichment` puis backfill de saisons `TaskTypeRefresh` pour les séries), tout en ignorant les événements `Episode` et en laissant intacts les titres et historiques existants.
+  - Mise à jour de la documentation intégrée dans `/admin/jellyfin` (EN/FR) pour inclure le type de notification **Item Added**.
+
+### Documentation
+- **Synchronisation des guides Jellyfin & architecture (`docs/integrations.md`, `docs/background-jobs.md`, `docs/patterns.md`, `docs/llm.md`, `docs/user-guide.md`, `docs/INDEX.md`, `docs/overview.md`)** :
+  - Documentation du flux `ItemAdded`, de la synchronisation planifiée et manuelle des films non vus Jellyfin, de l'endpoint `POST /api/admin/jellyfin/sync-movies` et des contrôles d'administration associés.
+
 ## [v1.32.1] — 2026-11-20
 
 ### Corrigé

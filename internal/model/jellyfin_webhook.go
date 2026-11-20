@@ -8,24 +8,25 @@ package model
 // numeric and boolean coercion happens in the service layer, never in the
 // template. The matching template lives in docs/user-guide.md.
 type JellyfinPayload struct {
-	NotificationType   string `json:"notification_type"` // "PlaybackStart" | "PlaybackStop" | ...
-	ItemType           string `json:"item_type"`         // "Movie" | "Episode"
-	Name               string `json:"name"`              // movie title or episode name
+	NotificationType   string `json:"notification_type"` // "PlaybackStart" | "PlaybackStop" | "UserDataSaved" | "ItemAdded"
+	ItemType           string `json:"item_type"`         // "Movie" | "Series" | "Episode"
+	Name               string `json:"name"`              // movie/series title or episode name
 	Year               string `json:"year"`
 	PlayedToCompletion string `json:"played_to_completion"` // "True"/"False" — only on PlaybackStop
 	Rating             string `json:"rating"`
 
 	// External provider IDs. For an Episode these are the EPISODE's own IDs, not
 	// the series' — so episode matching relies on series_id + series_name, never
-	// on these. For a Movie they identify the movie and dedupe against Plex.
+	// on these. For a Movie or Series they identify the title and dedupe against
+	// existing library entries.
 	ProviderIMDB string `json:"provider_imdb"`
 	ProviderTMDB string `json:"provider_tmdb"`
 	ProviderTVDB string `json:"provider_tvdb"`
 
-	ItemID     string `json:"item_id"`     // Jellyfin GUID of the played item
+	ItemID     string `json:"item_id"`     // Jellyfin GUID of the item
 	DeviceName string `json:"device_name"` // client device name e.g. "Living Room TV"
 	ClientName string `json:"client_name"` // client app name e.g. "Jellyfin Web"
-	SeriesName string `json:"series_name"` // episode only
+	SeriesName string `json:"series_name"` // episode or series fallback
 	SeriesID   string `json:"series_id"`   // episode only — stable per-series Jellyfin GUID
 	Season     string `json:"season"`      // episode only
 	Episode    string `json:"episode"`     // episode only

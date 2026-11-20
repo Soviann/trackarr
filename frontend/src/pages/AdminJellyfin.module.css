@@ -113,6 +113,13 @@
   align-items: center;
 }
 
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
 .label {
   font-size: 12px;
   font-weight: 600;

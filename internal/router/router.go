@@ -216,6 +216,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 			r.Post("/admin/system-settings/test/jellyfin", httputil.WrapHandler(adminSettings.TestJellyfin))
 			r.Post("/admin/system-settings/test/{app}", httputil.WrapHandler(adminSettings.TestArr))
 			r.Post("/admin/jellyfin/sync-ratings", httputil.WrapHandler(adminSettings.SyncJellyfinRatings))
+			r.Post("/admin/jellyfin/sync-movies", httputil.WrapHandler(adminSettings.SyncJellyfinMovies))
 			r.Post("/admin/system-settings/vapid/generate", httputil.WrapHandler(adminSettings.GenerateVAPIDKeys))
 			r.Post("/admin/refresh-all", httputil.WrapHandler(admin.RefreshAll))
 			r.Get("/admin/refresh-all/status", httputil.WrapHandler(admin.GetRefreshAllStatus))

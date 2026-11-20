@@ -29,6 +29,15 @@ interface JellyfinSyncResult {
   errors: number
 }
 
+interface JellyfinMovieSyncResult {
+  dry_run: boolean
+  fetched: number
+  unwatched: number
+  created: number
+  skipped: number
+  errors: number
+}
+
 export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
   const { t } = useTranslation()
   const { data: settings, mutate: refetchSettings } = useApi<Settings>('/settings')
@@ -45,6 +54,8 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
   const [syncingJf, setSyncingJf] = useState(false)
   const [dryRunJf, setDryRunJf] = useState(false)
   const [jfSyncResult, setJfSyncResult] = useState<JellyfinSyncResult | null>(null)
+  const [syncingMovies, setSyncingMovies] = useState(false)
+  const [jfMovieSyncResult, setJfMovieSyncResult] = useState<JellyfinMovieSyncResult | null>(null)
   const [copiedKey, setCopiedKey] = useState<'jellyfin' | 'plex' | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -141,6 +152,23 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
       setErrorMsg(err instanceof Error ? err.message : String(err))
     } finally {
       setSyncingJf(false)
+    }
+  }
+
+  const handleSyncJellyfinMovies = async () => {
+    setSyncingMovies(true)
+    setJfMovieSyncResult(null)
+    setErrorMsg(null)
+    try {
+      const res = await apiFetch<JellyfinMovieSyncResult>('/admin/jellyfin/sync-movies', {
+        method: 'POST',
+        body: JSON.stringify({ dry_run: false }),
+      })
+      setJfMovieSyncResult(res)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSyncingMovies(false)
     }
   }
 
@@ -315,7 +343,7 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
                   />
                 </div>
                 <div className={s.fieldGroup}>
-                  <div className={s.fieldRow}>
+                  <div className={s.buttonRow}>
                     <button
                       type="button"
                       className={s.actionBtn}
@@ -331,6 +359,14 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
                       disabled={syncingJf || !sysSettings?.jellyfin_api_configured}
                     >
                       {syncingJf ? t('mediaServers.syncingRatings') : t('mediaServers.syncAllRatings')}
+                    </button>
+                    <button
+                      type="button"
+                      className={s.actionBtn}
+                      onClick={() => void handleSyncJellyfinMovies()}
+                      disabled={syncingMovies || !sysSettings?.jellyfin_api_configured}
+                    >
+                      {syncingMovies ? t('mediaServers.syncingMovies') : t('mediaServers.syncUnwatchedMovies')}
                     </button>
                   </div>
                   <label className={s.label} style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -354,6 +390,17 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
                         skipped: jfSyncResult.skipped,
                         missing: jfSyncResult.missing,
                         errors: jfSyncResult.errors,
+                      })}
+                    </div>
+                  )}
+                  {jfMovieSyncResult && (
+                    <div role="status" className={s.alertSuccess} style={{ marginTop: '0.5rem' }}>
+                      {t('mediaServers.movieSyncSummary', {
+                        fetched: jfMovieSyncResult.fetched,
+                        unwatched: jfMovieSyncResult.unwatched,
+                        created: jfMovieSyncResult.created,
+                        skipped: jfMovieSyncResult.skipped,
+                        errors: jfMovieSyncResult.errors,
                       })}
                     </div>
                   )}

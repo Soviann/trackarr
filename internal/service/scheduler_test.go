@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -19,11 +22,30 @@ import (
 
 type fakeMetadataSyncer struct {
 	refreshCalls atomic.Int32
+	onRefresh    func()
 }
 
 func (f *fakeMetadataSyncer) RefreshTitles(ctx context.Context) []RefreshResult {
 	f.refreshCalls.Add(1)
+	if f.onRefresh != nil {
+		f.onRefresh()
+	}
 	return nil
+}
+
+type fakeJellyfinMovieSyncer struct {
+	calls   atomic.Int32
+	summary JellyfinMovieSyncSummary
+	err     error
+	onSync  func()
+}
+
+func (f *fakeJellyfinMovieSyncer) SyncUnwatchedMovies(ctx context.Context) (JellyfinMovieSyncSummary, error) {
+	f.calls.Add(1)
+	if f.onSync != nil {
+		f.onSync()
+	}
+	return f.summary, f.err
 }
 
 type fakeCoverSyncer struct {
@@ -52,7 +74,9 @@ func setupSchedulerTestDB(t *testing.T) *sql.DB {
 func TestScheduler_NilSafe(t *testing.T) {
 	var s *Scheduler
 	s.SetShutdownWG(&sync.WaitGroup{})
+	s.SetJellyfinMovieSyncer(nil)
 	s.Start(context.Background(), time.Second)
+	s.syncJellyfinMovies(context.Background())
 	s.CheckAnnualWrapped(context.Background())
 	s.RunMaintenance(context.Background())
 }
@@ -187,4 +211,98 @@ func TestScheduler_NextDailyMaintenance(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestScheduler_JellyfinMovieSync(t *testing.T) {
+	t.Run("runInitialPass and runScheduledPass invoke jellyfinSyncer before RefreshTitles", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		var order []string
+		syncer := &fakeMetadataSyncer{
+			onRefresh: func() { order = append(order, "refresh") },
+		}
+		jfSyncer := &fakeJellyfinMovieSyncer{
+			summary: JellyfinMovieSyncSummary{Fetched: 2, Unwatched: 1, Created: 1},
+			onSync:  func() { order = append(order, "jellyfin") },
+		}
+
+		sched := NewScheduler(db, syncer, nil, nil, nil)
+		sched.SetJellyfinMovieSyncer(jfSyncer)
+
+		sched.runInitialPass(context.Background())
+		assert.Equal(t, []string{"jellyfin", "refresh"}, order)
+		assert.Equal(t, int32(1), jfSyncer.calls.Load())
+		assert.Equal(t, int32(1), syncer.refreshCalls.Load())
+
+		order = nil
+		sched.runScheduledPass(context.Background())
+		assert.Equal(t, []string{"jellyfin", "refresh"}, order)
+		assert.Equal(t, int32(2), jfSyncer.calls.Load())
+		assert.Equal(t, int32(2), syncer.refreshCalls.Load())
+	})
+
+	t.Run("tolerates nil syncer and sync errors without halting scheduler", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		syncer := &fakeMetadataSyncer{}
+		sched := NewScheduler(db, syncer, nil, nil, nil)
+
+		// Nil jellyfinSyncer
+		assert.NotPanics(t, func() {
+			sched.runInitialPass(context.Background())
+			sched.runScheduledPass(context.Background())
+		})
+		assert.Equal(t, int32(2), syncer.refreshCalls.Load())
+
+		// Error from jellyfinSyncer
+		jfSyncer := &fakeJellyfinMovieSyncer{
+			err: fmt.Errorf("jellyfin offline"),
+		}
+		sched.SetJellyfinMovieSyncer(jfSyncer)
+		assert.NotPanics(t, func() {
+			sched.runInitialPass(context.Background())
+			sched.runScheduledPass(context.Background())
+		})
+		assert.Equal(t, int32(2), jfSyncer.calls.Load())
+		assert.Equal(t, int32(4), syncer.refreshCalls.Load())
+	})
+
+	t.Run("runs real JellyfinSyncService during initial pass using SQLite settings", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"Items": []map[string]any{
+					{
+						"Id":             "jf-sched-1",
+						"Name":           "Interstellar",
+						"Type":           "Movie",
+						"ProductionYear": 2014,
+						"ProviderIds":    map[string]string{"Tmdb": "157336"},
+					},
+				},
+			})
+		}))
+		defer server.Close()
+
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		sw := repository.NewSettingWriter(tx)
+		require.NoError(t, sw.Set(context.Background(), repository.SettingKeyJellyfinURL, server.URL))
+		require.NoError(t, sw.Set(context.Background(), repository.SettingKeyJellyfinAPIKey, "sched-key"))
+		require.NoError(t, sw.Set(context.Background(), repository.SettingKeyJellyfinUserID, "sched-user"))
+		require.NoError(t, tx.Commit())
+
+		jfSvc := NewJellyfinSyncService(db, JellyfinSyncConfig{HTTPClient: server.Client()}, testutil.NopLogger())
+		jfSvc.SetAPILimiter(NewAPILimiter(10, 1))
+
+		sched := NewScheduler(db, nil, nil, nil, nil)
+		sched.SetJellyfinMovieSyncer(jfSvc)
+		sched.runInitialPass(context.Background())
+
+		tmdbID := int64(157336)
+		movieType := model.TitleTypeMovie
+		title, err := repository.NewTitleRepository(db).FindByExternalID(nil, &tmdbID, nil, nil, nil, &movieType)
+		require.NoError(t, err)
+		assert.Equal(t, model.TitleStatusPlanToWatch, title.Status)
+		assert.NotNil(t, title.DownloadedAt)
+	})
 }

@@ -93,8 +93,8 @@
 | `Pipeline` | `internal/service/matching/pipeline.go` | Multi-source media matching pipeline with AI candidate disambiguation and verification | `docs/dev/matching-pipeline.md` |
 | `LibraryService` | `internal/service/library.go` | User scrobbles, auto-completion, rating prompts, notifications | `docs/dev/database-model.md` |
 | `PlaybackHubService` | `internal/service/playback_hub.go` | In-memory singleton managing active media playback sessions with thread-safe RWMutex and 4h TTL | `docs/patterns.md` |
-| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions with auto-create & `UserDataSaved` rating sync) | `docs/integrations.md` |
-| `JellyfinSyncService` | `internal/service/jellyfin_sync.go` | Outbound rating synchronization from Trackarr to Jellyfin REST API | `docs/integrations.md` |
+| `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions with auto-create, `UserDataSaved` rating sync & `ItemAdded` movie/series auto-add) | `docs/integrations.md` |
+| `JellyfinSyncService` | `internal/service/jellyfin_sync.go` | Outbound rating synchronization and scheduled/manual inbound unwatched movie synchronization with Jellyfin REST API | `docs/integrations.md` |
 | `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, Radarr deletion & exclusion cleanup, and Sonarr deletion enqueuing | `docs/dev/arr-integration.md` |
 | `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download/upgrade events, update `downloaded_at`, push alerts | `docs/integrations.md` |
@@ -106,7 +106,7 @@
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
 | `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation, token rotation & range queries | `docs/user-guide.md` |
 | `BackgroundService` / `MetadataSyncService` | `internal/service/background.go` | Title metadata enrichment and synchronization (TMDB, AniList, TVDB) | `docs/background-jobs.md` |
-| `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (daily refresh, cover maintenance, wrapped checks) | `docs/background-jobs.md` |
+| `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (Jellyfin unwatched movie sync, daily refresh, cover maintenance, automated backups, wrapped checks) | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
 | `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine with priority ordering (interactive pushes ahead of bulk enrichment) | `docs/background-jobs.md` |
@@ -129,7 +129,7 @@
 | POST | `/api/admin/api-keys` | `adminAPIKeys.Create` | Create a new labeled API key with granular scopes |
 | POST | `/api/admin/api-keys/{id}/revoke` | `adminAPIKeys.Revoke` | Revoke active API key |
 | DELETE | `/api/admin/api-keys/{id}` | `adminAPIKeys.Delete` | Permanently remove API key |
-| POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles and UserDataSaved ratings from Jellyfin |
+| POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles, UserDataSaved ratings, and ItemAdded titles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
 | POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/import events from Radarr & Sonarr, mark media downloaded, and push alerts |
 | GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |
@@ -199,6 +199,7 @@
 | POST | `/api/admin/system-settings/test/jellyfin` | `adminSettings.TestJellyfin` | Test Jellyfin API connection |
 | POST | `/api/admin/system-settings/test/{app}` | `adminSettings.TestArr` | Test Radarr, Sonarr, Prowlarr connection |
 | POST | `/api/admin/jellyfin/sync-ratings` | `adminSettings.SyncJellyfinRatings` | Sync Trackarr ratings to Jellyfin (supports `dry_run`) |
+| POST | `/api/admin/jellyfin/sync-movies` | `adminSettings.SyncJellyfinMovies` | Sync unwatched movies from Jellyfin into Trackarr as `plan_to_watch` (supports `dry_run`) |
 | POST | `/api/admin/system-settings/vapid/generate` | `adminSettings.GenerateVAPIDKeys` | Generate NIST P-256 VAPID keypair |
 | POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh (supports `?restart=true`) |
 | GET | `/api/admin/refresh-all/status` | `admin.GetRefreshAllStatus` | Query current library refresh progress and state |
@@ -343,7 +344,7 @@
 | `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` | Background task queue & diagnostics: widescreen scannable layout (1200px), sticky AdminHeader, and centered floating batch action bar |
 | `/admin/notifications` | `AdminNotifications` | `pages/AdminNotifications.tsx` | Web Push Notifications: VAPID key generation and admin contact subject, automatic configuration status, and notification triggers (rating reminder, failed task, series ended) |
-| `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` | Media Servers & Webhooks: Dual server management for Jellyfin and Plex scrobble webhook secrets, full webhook URLs with copy actions, last scrobble timestamps, and configuration guides |
+| `/admin/jellyfin` | `AdminJellyfin` | `pages/AdminJellyfin.tsx` | Media Servers & Webhooks: Jellyfin & Plex webhook secrets/URLs/last scrobble stats, Jellyfin API settings, connection test, outbound rating sync, manual unwatched movie sync, and setup guides |
 | `/admin/anilist` | `AdminAniList` | `pages/AdminAniList.tsx` | AniList OAuth integration (840px): connection status, live token refresh, disconnect confirmation modal, and sticky AdminHeader |
 | `/admin/season-audit` | `AdminSeasonAudit` | `pages/AdminSeasonAudit.tsx` | Split anime season audit: responsive visual diff connectors (1200px), sticky AdminHeader, and merge modal drawers |
 | `/admin/validate` | `Validate` | `pages/Validate.tsx` | Match validation & rematching workspace: interactive status picker, search drawer, and merge utilities |

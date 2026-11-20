@@ -137,6 +137,11 @@
     - Lookup fallback (`lookupRadarrMovieID` querying `/api/v3/movie?tmdbId=` and `/api/v3/movie/lookup?term=tmdb:`) propagates Radarr/network errors; only confirmed absence (`[]`/`404`) or successful deletion (`200`/`204`/`404`) transactionally clears `radarr_id` (`ClearRadarrID`) and `downloaded_at` (`ClearDownloadedAt`) via `TitleWriter.Update` without altering `status`, `my_rating`, `watch_events`, or `arr_ignored`.
     - `ArrService.PushTitle` invokes `removeRadarrImportExclusion` (`GET /api/v3/exclusions` + `DELETE /api/v3/exclusions/{id}` matching `tmdbId`) on both already-exists and post-add branches.
     - `ArrPushSheet` displays a destructive "Delete from Radarr" button only for movies with live `arrDetails?.exists === true`, switching to an inline confirmation view inside the same `BottomSheet` (avoiding nested `BottomSheet` focus/Escape/history conflicts) with disk/NAS deletion warning, `add_import_exclusion` toggle (default `true`), `errorBanner` recovery, and `onDeleted` invalidation in `TitleDetail` and `FranchiseRelationsSection`.
+30. **Jellyfin Unwatched Movie Sync & `ItemAdded` Webhook Ingestion**:
+    - **Scheduled & Manual Movie Sync (`JellyfinSyncService.SyncUnwatchedMovies`)**: Resolves `jellyfin_url`, `jellyfin_api_key`, `jellyfin_user_id` (`SettingKeyJellyfin*`) dynamically from `SettingRepository` when config fields are empty (no-ops cleanly if any credential is missing). Queries `GET /Users/{userID}/Items?includeItemTypes=Movie&recursive=true&fields=ProviderIds` via shared `APILimiter` strictly **before** opening any SQLite write transaction.
+    - **Unwatched Movie Filtering & Creation**: Keeps items where `Type` is `""` or `"Movie"` and `UserData == nil || !UserData.Played`. Deduplicates via `findExistingJellyfinTitle` (`FindByExternalID` on `imdb_id`/`tmdb_id`/`external_source_id` + `FindByNameAndType` with clamped year). Existing titles remain untouched. Missing movies are created inside short per-item transactions (`createJellyfinTitleIfMissing`) with `status = 'plan_to_watch'`, `downloaded_at` set, `arr_ignored = true`, `match_source = 'jellyfin_sync'`, `match_status = 'confirmed'` when `tmdb_id > 0` else `'pending_review'`, `0` `watch_events`, and `TaskTypeEnrichment` (`dedup_key = 'enrichment:<id>'`, `PreserveMatch: false`).
+    - **Scheduler & Route**: Wired onto `Scheduler` via `SetJellyfinMovieSyncer` in `cmd/serve.go` (invoked in `runInitialPass` before `RefreshTitles` and `runScheduledPass`, suppressed when `DISABLE_BACKGROUND_TASKS=true`). Exposed manually via `POST /api/admin/jellyfin/sync-movies` (`mw.JWTAuth(jwtSecret)` cookie auth only; rejects API-key-only requests with `401`, returns `400` on missing settings/bad JSON, `200` `JellyfinMovieSyncSummary`, sanitized `500` without leaking secrets).
+    - **`ItemAdded` Webhook (`JellyfinService.processItemAdded`)**: Case-insensitive/trimmed dispatch for `Movie` (`TitleTypeMovie`) and `Series` (`TitleTypeSeries`), safely ignoring `Episode` and other item types (0 DB writes). Deduplicates via `findExistingJellyfinTitle` (including `tvdb_id`); existing titles remain untouched. Missing titles are created (`plan_to_watch`, `arr_ignored = true`, `match_source = 'jellyfin_webhook'`, `downloaded_at` set **only on movies**, never on series) and enqueue `TaskTypeEnrichment` (resolving metadata, cover, and triggering `TaskTypeRefresh` season backfill for series). Zero `watch_events`, zero `RatingPrompt`, zero `PlaybackHubService` changes.
 
 ---
 
@@ -155,7 +160,7 @@
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
 - `title_names_fts` & `title_names_trigram_fts`: FTS5 full-text search index tables on `title_names.name` (`unicode61 remove_diacritics 2` for prefix search, and `tokenize='trigram'` for fuzzy typo and substring matching, migration 051).
-- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
+- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `jellyfin_url`, `jellyfin_api_key`, `jellyfin_user_id`, `jellyfin_webhook_secret`, `plex_webhook_secret`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
 
@@ -222,6 +227,7 @@
 - `POST /api/admin/arr/reconcile` : Enqueue Radarr/Sonarr library & episode availability reconciliation.
 - `POST /api/admin/system-settings/test/jellyfin` : Test Jellyfin API connection.
 - `POST /api/admin/jellyfin/sync-ratings` : Sync Trackarr ratings to Jellyfin (supports `dry_run`).
+- `POST /api/admin/jellyfin/sync-movies` : Trigger inbound unwatched movie sync from Jellyfin (JWTAuth only; supports `{"dry_run": bool}`).
 - `POST /api/admin/refresh-all` : Start or resume full library metadata refresh in background (accepts `?restart=true`).
 - `GET /api/admin/refresh-all/status` : Get real-time library refresh progress (`status`, `processed_titles`, `total_titles`, `current_title`).
 - `POST /api/admin/refresh-all/cancel` : Cancel or pause running library refresh job.
@@ -234,7 +240,7 @@
 - `POST /api/admin/season-audit/accept` : Execute single season attachment and delete source stray.
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
-- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble), `PlaybackStart` (live companion), and `UserDataSaved` (inbound rating ingestion with 1–10 scale coercion and AniList sync trigger).
+- `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble), `PlaybackStart` (live companion), `UserDataSaved` (inbound rating ingestion with 1–10 scale coercion and AniList sync trigger), and `ItemAdded` (auto-add missing movies/series as `plan_to_watch`).
 - `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` & `media.play` / `media.resume` / `media.stop`.
 - `GET /api/playback/active` : Active media playback session (204 No Content if idle, 200 OK with session payload).
 - `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.

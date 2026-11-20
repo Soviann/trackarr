@@ -197,6 +197,9 @@ Adding media to Trackarr is fast and versatile:
 2. **Direct URL & Identifier Paste**: Paste an IMDb (`https://imdb.com/title/tt...`), TMDB (`https://themoviedb.org/movie/...`), TVDB (`https://thetvdb.com/series/...`), or AniList (`https://anilist.co/anime/...`) link into the search bar to import the exact entry via the validation flow.
 3. **Native Mobile Share**: Trackarr registers as a Web Share Target on Android and iOS. Share a title link directly from your browser or streaming app into Trackarr.
 4. **Desktop Hotkeys**: Press `Cmd+K` / `Ctrl+K` or `/` from any page to focus search immediately.
+5. **Automatic Jellyfin Library Sync & `ItemAdded` Webhook**:
+   - **Real-Time Addition (`ItemAdded`)**: When **Item Added** is enabled in the Jellyfin Webhook plugin, newly added movies and TV series appear automatically in Trackarr under *Plan to Watch* (*À voir*)—with movies marked as available (`downloaded_at`) and without altering existing titles or watch history (`Episode` notifications are ignored).
+   - **Scheduled & Manual Unwatched Movie Sync**: Once Jellyfin API credentials (Server URL, API Key, User ID) are saved under **Admin ➔ Media Servers (`/admin/jellyfin`)**, Trackarr automatically checks Jellyfin on startup and every 24 hours for unwatched movies not yet in your collection, adding them as *Plan to Watch* (*À voir*). You can also trigger this sync on demand using the **Sync Unwatched Movies** button on `/admin/jellyfin`.
 
 > [!TIP]
 > **Fast-Track Mobile Addition Workflow**:
@@ -289,5 +292,10 @@ When AniList OAuth is connected:
 > **Answer**: No. Trackarr computes an event fingerprint (media ID + title + timestamp window) and discards duplicate scrobble events received within a short threshold.
 
 ### How do Jellyfin ratings sync with Trackarr?
-> **Answer**: Inbound ratings from Jellyfin are captured via the Jellyfin Webhook plugin configured with the `UserDataSaved` notification type and `"rating": "{{Rating}}"` in its JSON payload. Scores are clamped and normalized to Trackarr's 1–10 scale. To populate your Jellyfin library with ratings already saved in Trackarr, run `make jellyfin-sync-ratings` (supports dry-run mode via `DRY_RUN=1`).
+> **Answer**: Inbound ratings from Jellyfin are captured via the Jellyfin Webhook plugin configured with the `UserDataSaved` notification type and `"rating": "{{Rating}}"` in its JSON payload. Scores are clamped and normalized to Trackarr's 1–10 scale. To populate your Jellyfin library with ratings already saved in Trackarr, run `make jellyfin-sync-ratings` (supports dry-run mode via `DRY_RUN=1`) or use **Sync All Ratings to Jellyfin** in **Admin ➔ Media Servers (`/admin/jellyfin`)**.
+
+### How do unwatched Jellyfin movies and newly added media appear automatically in Trackarr?
+> **Answer**: Trackarr supports both real-time webhook additions and scheduled API sync:
+> - **Webhook (`ItemAdded`)**: Check **Item Added** alongside **Playback Start**, **Playback Stop**, and **User Data Saved** in your Jellyfin Webhook destination. Newly added `Movie` and `Series` items are added to Trackarr as *Plan to Watch* (*À voir*) while `Episode` events and already-tracked titles are untouched.
+> - **Unwatched Movie Sync**: Configure your Jellyfin Server URL, API Key, and User ID in **Admin ➔ Media Servers (`/admin/jellyfin`)**. Trackarr automatically imports missing unwatched movies on startup and every 24 hours (or anytime you click **Sync Unwatched Movies**), never overwriting existing titles' watch status, ratings, or history.
 

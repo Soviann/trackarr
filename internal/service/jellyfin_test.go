@@ -1,11 +1,16 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -834,4 +839,476 @@ func TestProcessJellyfinWebhook_PlaybackStart_AutoCreatesUntrackedMovieAndSeries
 	assert.Equal(t, 1, createdSeries.Seasons[0].SeasonNumber)
 	require.Len(t, createdSeries.Seasons[0].Episodes, 1)
 	assert.Equal(t, 1, createdSeries.Seasons[0].Episodes[0].Episode)
+}
+
+func TestProcessJellyfinWebhook_ItemAdded_Movie(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "ItemAdded",
+		ItemType:         "Movie",
+		Name:             "  Dune: Part Two  ",
+		Year:             "2024",
+		ItemID:           "  jf-movie-dune2  ",
+		ProviderIMDB:     "  TT15239678  ",
+		ProviderTMDB:     "693134",
+		ProviderTVDB:     "12345",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}")
+	require.NoError(t, err)
+
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+
+	movie, err := env.titleRepo.GetByID(res.Titles[0].ID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleTypeMovie, movie.Type)
+	assert.Equal(t, "Dune: Part Two", movie.PrimaryName())
+	require.NotNil(t, movie.OriginalTitle)
+	assert.Equal(t, "Dune: Part Two", *movie.OriginalTitle)
+	assert.Equal(t, 2024, movie.Year)
+	assert.Equal(t, model.TitleStatusPlanToWatch, movie.Status)
+	require.NotNil(t, movie.ExternalSourceID)
+	assert.Equal(t, "jf-movie-dune2", *movie.ExternalSourceID)
+	require.NotNil(t, movie.IMDBID)
+	assert.Equal(t, "tt15239678", *movie.IMDBID)
+	require.NotNil(t, movie.TMDBID)
+	assert.Equal(t, int64(693134), *movie.TMDBID)
+	require.NotNil(t, movie.TVDBID)
+	assert.Equal(t, int64(12345), *movie.TVDBID)
+	assert.Equal(t, model.MatchStatusConfirmed, movie.MatchStatus)
+	require.NotNil(t, movie.MatchSource)
+	assert.Equal(t, "jellyfin_webhook", *movie.MatchSource)
+	assert.True(t, movie.ArrIgnored)
+	assert.NotNil(t, movie.DownloadedAt, "movie added via ItemAdded must have downloaded_at set")
+
+	watchCount, err := env.eventRepo.CountByTitleID(movie.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, watchCount)
+	assert.Nil(t, env.hub.GetActiveSession())
+
+	tasks, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, model.TaskTypeEnrichment, tasks[0].TaskType)
+	require.NotNil(t, tasks[0].DedupKey)
+	assert.Equal(t, "enrichment:"+strconv.FormatInt(movie.ID, 10), *tasks[0].DedupKey)
+
+	var enrichPayload service.EnrichmentPayload
+	require.NoError(t, json.Unmarshal([]byte(tasks[0].Payload), &enrichPayload))
+	assert.Equal(t, movie.ID, enrichPayload.TitleID)
+	assert.Equal(t, "Dune: Part Two", enrichPayload.TitleName)
+	assert.Equal(t, 2024, enrichPayload.Year)
+	assert.Equal(t, model.TitleTypeMovie, enrichPayload.TitleType)
+	assert.Equal(t, "tt15239678", enrichPayload.IMDBID)
+	assert.Equal(t, int64(693134), enrichPayload.TMDBID)
+	assert.Equal(t, int64(12345), enrichPayload.TVDBID)
+	assert.False(t, enrichPayload.PreserveMatch)
+
+	// Re-sending identical ItemAdded webhook must be an idempotent no-op
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}"))
+	resAfter, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	assert.Len(t, resAfter.Titles, 1)
+	tasksAfter, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	assert.Len(t, tasksAfter, 1)
+}
+
+func TestProcessJellyfinWebhook_ItemAdded_SeriesAndTaskWorkerBackfill(t *testing.T) {
+	env := setupJellyfinTest(t)
+	dataDir := t.TempDir()
+
+	var pngBuf bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{R: 30, G: 90, B: 180, A: 255})
+	require.NoError(t, png.Encode(&pngBuf, img))
+
+	tmdbMux := http.NewServeMux()
+	tmdbMux.HandleFunc("/tv/95396", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":               95396,
+			"name":             "Severance",
+			"overview":         "Mark leads a team of office workers whose memories have been surgically divided.",
+			"first_air_date":   "2022-02-18",
+			"poster_path":      "/sev.png",
+			"episode_run_time": []int{50},
+			"vote_average":     8.4,
+			"genres":           []map[string]any{{"id": 18, "name": "Drama"}},
+			"external_ids": map[string]any{
+				"imdb_id": "tt11280740",
+				"tvdb_id": 371980,
+			},
+		})
+	})
+	tmdbMux.HandleFunc("/tv/95396/translations", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"translations": []map[string]any{
+				{"iso_639_1": "en", "data": map[string]string{"name": "Severance"}},
+			},
+		})
+	})
+	tmdbMux.HandleFunc("/image/sev.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(pngBuf.Bytes())
+	})
+	tmdbServer := httptest.NewServer(tmdbMux)
+	defer tmdbServer.Close()
+
+	jf := &model.JellyfinPayload{
+		NotificationType: "  itemadded  ",
+		ItemType:         "Series",
+		Name:             "Severance",
+		Year:             "2022",
+		ItemID:           "jf-series-sev",
+		ProviderIMDB:     "tt11280740",
+		ProviderTMDB:     "95396",
+		ProviderTVDB:     "371980",
+	}
+
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), jf, "{}"))
+
+	res, err := env.titleRepo.List(repository.TitleFilter{})
+	require.NoError(t, err)
+	require.Len(t, res.Titles, 1)
+
+	series, err := env.titleRepo.GetByID(res.Titles[0].ID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleTypeSeries, series.Type)
+	assert.Equal(t, "Severance", series.PrimaryName())
+	assert.Equal(t, 2022, series.Year)
+	assert.Equal(t, model.TitleStatusPlanToWatch, series.Status)
+	require.NotNil(t, series.ExternalSourceID)
+	assert.Equal(t, "jf-series-sev", *series.ExternalSourceID)
+	assert.Nil(t, series.DownloadedAt, "series added via ItemAdded must leave titles.downloaded_at nil")
+	assert.True(t, series.ArrIgnored)
+	assert.Equal(t, model.MatchStatusConfirmed, series.MatchStatus)
+	require.NotNil(t, series.MatchSource)
+	assert.Equal(t, "jellyfin_webhook", *series.MatchSource)
+
+	watchCount, err := env.eventRepo.CountByTitleID(series.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, watchCount)
+	assert.Nil(t, env.hub.GetActiveSession())
+
+	// Execute enqueued enrichment task via TaskQueueWorker and verify refresh:<id> backfill is queued
+	tmdbClient := matching.NewTMDBClient("test-key")
+	tmdbClient.SetBaseURL(tmdbServer.URL)
+	pipeline := matching.NewPipeline(tmdbClient, nil, nil, nil, dataDir)
+	settingRepo := repository.NewSettingRepository(env.db)
+	titleSvc := service.NewTitleService(env.db, env.titleRepo, env.taskRepo, pipeline)
+	coverSvc := service.NewCoverService(env.db, env.titleRepo, tmdbClient, nil, dataDir)
+	limiter := service.NewAPILimiter(20, 5)
+	coverSvc.SetAPILimiter(limiter)
+
+	worker := service.NewTaskQueueWorker(env.taskRepo, env.titleRepo, pipeline, tmdbClient, nil, nil, settingRepo, dataDir, titleSvc, env.db)
+	worker.SetCovers(coverSvc)
+	worker.SetAPILimiter(limiter)
+
+	var due []model.Task
+	require.NoError(t, database.WithTxContext(context.Background(), env.db, func(tx *sql.Tx) error {
+		var fetchErr error
+		due, fetchErr = repository.NewTaskWriter(tx).FetchDue(context.Background(), 10)
+		return fetchErr
+	}))
+	require.Len(t, due, 1)
+	assert.Equal(t, model.TaskTypeEnrichment, due[0].TaskType)
+
+	require.NoError(t, limiter.Wait(context.Background()))
+	worker.ProcessTask(context.Background(), due[0])
+
+	enriched, err := env.titleRepo.GetByID(series.ID)
+	require.NoError(t, err)
+	require.NotNil(t, enriched.Overview)
+	assert.Contains(t, *enriched.Overview, "surgically divided")
+	require.NotNil(t, enriched.CoverURL)
+	assert.Equal(t, "sev.png", *enriched.CoverURL)
+	assert.NotNil(t, enriched.AccentHex)
+
+	pendingAfter, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	require.Len(t, pendingAfter, 1)
+	assert.Equal(t, model.TaskTypeRefresh, pendingAfter[0].TaskType)
+	require.NotNil(t, pendingAfter[0].DedupKey)
+	assert.Equal(t, "refresh:"+strconv.FormatInt(series.ID, 10), *pendingAfter[0].DedupKey)
+}
+
+func TestProcessJellyfinWebhook_ItemAdded_EpisodeAndUnsupportedIgnored(t *testing.T) {
+	cases := []struct {
+		name string
+		jf   *model.JellyfinPayload
+	}{
+		{
+			name: "episode item ignored",
+			jf: &model.JellyfinPayload{
+				NotificationType: "ItemAdded",
+				ItemType:         "Episode",
+				Name:             "Pilot",
+				SeriesName:       "Severance",
+				SeriesID:         "jf-series-sev",
+				Season:           "1",
+				Episode:          "1",
+				ItemID:           "jf-ep-1",
+				ProviderTMDB:     "99999",
+			},
+		},
+		{
+			name: "season item ignored",
+			jf: &model.JellyfinPayload{
+				NotificationType: "ItemAdded",
+				ItemType:         "Season",
+				Name:             "Season 1",
+				ItemID:           "jf-season-1",
+			},
+		},
+		{
+			name: "audio item ignored",
+			jf: &model.JellyfinPayload{
+				NotificationType: "ItemAdded",
+				ItemType:         "Audio",
+				Name:             "Soundtrack",
+				ItemID:           "jf-audio-1",
+			},
+		},
+		{
+			name: "empty item type ignored",
+			jf: &model.JellyfinPayload{
+				NotificationType: "ItemAdded",
+				ItemType:         "",
+				Name:             "Mystery",
+			},
+		},
+		{
+			name: "unidentifiable movie with empty name and no provider IDs ignored",
+			jf: &model.JellyfinPayload{
+				NotificationType: "ItemAdded",
+				ItemType:         "Movie",
+				Name:             "   ",
+				ItemID:           "jf-guid-only",
+			},
+		},
+		{
+			name: "nil payload safe",
+			jf:   nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := setupJellyfinTest(t)
+			require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), tc.jf, "{}"))
+
+			res, err := env.titleRepo.List(repository.TitleFilter{})
+			require.NoError(t, err)
+			assert.Empty(t, res.Titles)
+
+			tasks, err := env.taskRepo.ListPending()
+			require.NoError(t, err)
+			assert.Empty(t, tasks)
+
+			var watchCount int
+			require.NoError(t, env.db.QueryRow(`SELECT COUNT(*) FROM watch_events`).Scan(&watchCount))
+			assert.Equal(t, 0, watchCount)
+			assert.Nil(t, env.hub.GetActiveSession())
+		})
+	}
+}
+
+func TestProcessJellyfinWebhook_ItemAdded_NameFallbacksAndBoundaries(t *testing.T) {
+	t.Run("series falls back to SeriesName when Name is empty", func(t *testing.T) {
+		env := setupJellyfinTest(t)
+		require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+			NotificationType: "ItemAdded",
+			ItemType:         "Series",
+			Name:             "   ",
+			SeriesName:       "Andor",
+			Year:             "2022",
+			ItemID:           "jf-andor",
+		}, "{}"))
+
+		found, err := env.titleRepo.FindByNameAndType("Andor", model.TitleTypeSeries, 2022)
+		require.NoError(t, err)
+		assert.Equal(t, "Andor", found.PrimaryName())
+		require.NotNil(t, found.OriginalTitle)
+		assert.Equal(t, "Andor", *found.OriginalTitle)
+		assert.Equal(t, model.MatchStatusPendingReview, found.MatchStatus)
+		assert.Nil(t, found.DownloadedAt)
+	})
+
+	t.Run("synthetic fallbacks for empty name with external ID and bounds clamping", func(t *testing.T) {
+		env := setupJellyfinTest(t)
+
+		// TMDB fallback + out-of-bounds negative year
+		require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+			NotificationType: "ItemAdded",
+			ItemType:         "Movie",
+			Year:             "-5",
+			ProviderTMDB:     "603",
+			ItemID:           "jf-tmdb-only",
+		}, "{}"))
+
+		// TVDB fallback + out-of-bounds future year + non-positive TMDB ignored
+		require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+			NotificationType: "ItemAdded",
+			ItemType:         "Series",
+			Year:             "2500",
+			ProviderTMDB:     "-10",
+			ProviderTVDB:     "81189",
+			ItemID:           "jf-tvdb-only",
+		}, "{}"))
+
+		// IMDb fallback + non-numeric year
+		require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+			NotificationType: "ItemAdded",
+			ItemType:         "Movie",
+			Year:             "not-a-year",
+			ProviderIMDB:     "TT0133093",
+		}, "{}"))
+
+		movieType := model.TitleTypeMovie
+		seriesType := model.TitleTypeSeries
+
+		tmdbMovie, err := env.titleRepo.FindByExternalID(nil, ptr(int64(603)), nil, nil, nil, &movieType)
+		require.NoError(t, err)
+		assert.Equal(t, "TMDB 603", tmdbMovie.PrimaryName())
+		assert.Nil(t, tmdbMovie.OriginalTitle)
+		assert.Equal(t, 0, tmdbMovie.Year)
+		assert.Equal(t, model.MatchStatusConfirmed, tmdbMovie.MatchStatus)
+		assert.NotNil(t, tmdbMovie.DownloadedAt)
+
+		tvdbSeries, err := env.titleRepo.FindByExternalID(nil, nil, nil, nil, ptr(int64(81189)), &seriesType)
+		require.NoError(t, err)
+		assert.Equal(t, "TVDB 81189", tvdbSeries.PrimaryName())
+		assert.Nil(t, tvdbSeries.OriginalTitle)
+		assert.Equal(t, 0, tvdbSeries.Year)
+		assert.Nil(t, tvdbSeries.TMDBID)
+		assert.Equal(t, model.MatchStatusPendingReview, tvdbSeries.MatchStatus)
+		assert.Nil(t, tvdbSeries.DownloadedAt)
+
+		imdbMovie, err := env.titleRepo.FindByExternalID(ptr("tt0133093"), nil, nil, nil, nil, &movieType)
+		require.NoError(t, err)
+		assert.Equal(t, "tt0133093", imdbMovie.PrimaryName())
+		assert.Nil(t, imdbMovie.OriginalTitle)
+		assert.Nil(t, imdbMovie.ExternalSourceID)
+		assert.Equal(t, 0, imdbMovie.Year)
+		assert.Equal(t, model.MatchStatusPendingReview, imdbMovie.MatchStatus)
+	})
+}
+
+func TestProcessJellyfinWebhook_ItemAdded_ExistingTitlesUntouchedAndSameYearGuard(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	rating9 := 9
+	rating8 := 8
+	rating3 := 3
+	rating10 := 10
+
+	idByExt := testutil.CreateTitle(t, env.db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2014, Status: model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed, ExternalSourceID: ptr("jf-existing-ext"), MyRating: &rating9,
+	}, []model.TitleName{{Name: "Interstellar", Language: "en", IsPrimary: true}})
+	testutil.CreateWatchEvent(t, env.db, &model.WatchEvent{TitleID: idByExt, Source: model.WatchEventSourceManual})
+
+	idByTMDB := testutil.CreateTitle(t, env.db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2010, Status: model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed, TMDBID: ptr(int64(27205)), MyRating: &rating8,
+	}, []model.TitleName{{Name: "Inception", Language: "en", IsPrimary: true}})
+
+	idByIMDB := testutil.CreateTitle(t, env.db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 1999, Status: model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed, IMDBID: ptr("tt0137523"), MyRating: &rating3,
+	}, []model.TitleName{{Name: "Fight Club", Language: "en", IsPrimary: true}})
+
+	idByTVDB := testutil.CreateTitle(t, env.db, &model.Title{
+		Type: model.TitleTypeSeries, Year: 2008, Status: model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed, TVDBID: ptr(int64(81189)), MyRating: &rating10,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+	season := testutil.UpsertSeason(t, env.db, idByTVDB, 1, 7)
+	testutil.MarkEpisodesWatched(t, env.db, season.ID, 1)
+
+	idByNameYear := testutil.CreateTitle(t, env.db, &model.Title{
+		Type: model.TitleTypeMovie, Year: 2021, Status: model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	// All 5 payloads match existing titles and must leave them completely untouched
+	existingPayloads := []*model.JellyfinPayload{
+		{NotificationType: "ItemAdded", ItemType: "Movie", Name: "Interstellar", Year: "2014", ItemID: "jf-existing-ext"},
+		{NotificationType: "ItemAdded", ItemType: "Movie", Name: "Inception Renamed", Year: "2010", ProviderTMDB: "27205", ItemID: "jf-new-1"},
+		{NotificationType: "ItemAdded", ItemType: "Movie", Name: "Fight Club", Year: "1999", ProviderIMDB: "TT0137523", ItemID: "jf-new-2"},
+		{NotificationType: "ItemAdded", ItemType: "Series", Name: "Breaking Bad", Year: "2008", ProviderTVDB: "81189", ItemID: "jf-new-3"},
+		{NotificationType: "ItemAdded", ItemType: "Movie", Name: "Dune", Year: "2021", ItemID: "jf-dune-2021"},
+	}
+	for _, p := range existingPayloads {
+		require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), p, "{}"))
+	}
+
+	tasks, err := env.taskRepo.ListPending()
+	require.NoError(t, err)
+	assert.Empty(t, tasks, "matching existing titles must not enqueue enrichment tasks")
+
+	gotExt, err := env.titleRepo.GetByID(idByExt)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, gotExt.Status)
+	require.NotNil(t, gotExt.MyRating)
+	assert.Equal(t, 9, *gotExt.MyRating)
+	assert.Nil(t, gotExt.DownloadedAt)
+	weCount, err := env.eventRepo.CountByTitleID(idByExt)
+	require.NoError(t, err)
+	assert.Equal(t, 1, weCount)
+
+	gotTMDB, err := env.titleRepo.GetByID(idByTMDB)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, gotTMDB.Status)
+	assert.Nil(t, gotTMDB.ExternalSourceID)
+
+	gotIMDB, err := env.titleRepo.GetByID(idByIMDB)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusDropped, gotIMDB.Status)
+
+	gotTVDB, err := env.titleRepo.GetByID(idByTVDB)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, gotTVDB.Status)
+	require.NotNil(t, gotTVDB.MyRating)
+	assert.Equal(t, 10, *gotTVDB.MyRating)
+	require.Len(t, gotTVDB.Seasons, 1)
+	require.Len(t, gotTVDB.Seasons[0].Episodes, 1)
+	assert.True(t, gotTVDB.Seasons[0].Episodes[0].Watched)
+
+	gotNameYear, err := env.titleRepo.GetByID(idByNameYear)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusCompleted, gotNameYear.Status)
+
+	// Different year (Dune 1984) must NOT collide with Dune 2021
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+		NotificationType: "ItemAdded",
+		ItemType:         "Movie",
+		Name:             "Dune",
+		Year:             "1984",
+		ItemID:           "jf-dune-1984",
+	}, "{}"))
+
+	dune1984, err := env.titleRepo.FindByNameAndType("Dune", model.TitleTypeMovie, 1984)
+	require.NoError(t, err)
+	assert.NotEqual(t, idByNameYear, dune1984.ID)
+	assert.Equal(t, model.TitleStatusPlanToWatch, dune1984.Status)
+
+	// Same TMDB ID across different media types (Movie vs Series) must NOT collide
+	require.NoError(t, env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+		NotificationType: "ItemAdded",
+		ItemType:         "Series",
+		Name:             "Inception: The Series",
+		Year:             "2026",
+		ProviderTMDB:     "27205",
+		ItemID:           "jf-series-same-tmdb",
+	}, "{}"))
+
+	seriesType := model.TitleTypeSeries
+	createdSeries, err := env.titleRepo.FindByExternalID(nil, ptr(int64(27205)), nil, nil, nil, &seriesType)
+	require.NoError(t, err)
+	assert.NotEqual(t, idByTMDB, createdSeries.ID)
+	assert.Equal(t, model.TitleStatusPlanToWatch, createdSeries.Status)
+	assert.Nil(t, createdSeries.DownloadedAt)
 }
