@@ -45,7 +45,7 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
 When you rate a movie or series in Jellyfin:
 1. Jellyfin sends a `UserDataSaved` webhook notification to Trackarr containing the item metadata and `"rating": "{{Rating}}"`.
 2. **Scale Coercion**: Trackarr parses decimal or integer strings (e.g. `"8.0"`, `"7"`) and normalizes/clamps them to an integer score on the 1–10 scale (`math.Round`). If the rating is 0 or empty, it is safely ignored.
-3. **Library Matching**: The item is matched against your Trackarr library by external provider IDs (`provider_tmdb`, `provider_tvdb`, `provider_imdb`), with title/year fallback for movies.
+3. **Library Matching**: The item is matched against your Trackarr library by external provider IDs (`provider_tmdb`, `provider_tvdb`, `provider_imdb`). Items without any external ID are ignored.
 4. **Transactional Update**: The rating is recorded in SQLite via `TitleService.Update` / `TitleWriter.Update`.
 5. **AniList Sync**: If the rated media is an Anime with a linked AniList ID and is completed or dropped, Trackarr asynchronously enqueues a rating push to AniList.
 
@@ -71,16 +71,16 @@ docker exec -t trackarr trackarr sync-jellyfin-ratings \
 The command accepts CLI flags or reads defaults from environment variables:
 | Flag | Env Var | Default | Description |
 |---|---|---|---|
-| `--jellyfin-url` | `JELLYFIN_URL` | `http://localhost:8096` | Base URL of the Jellyfin server |
+| `--jellyfin-url` | `JELLYFIN_URL` | *(none — required)* | Base URL of the Jellyfin server |
 | `--api-key` | `JELLYFIN_API_KEY` | *(none)* | Jellyfin Admin/User API token |
 | `--user-id` | `JELLYFIN_USER_ID` | *(none)* | Target Jellyfin User ID (hex string) |
-| `--dry-run` | `DRY_RUN` | `false` | Test run without sending rating updates to Jellyfin |
+| `--dry-run` | — *(Makefile: `DRY_RUN=1`)* | `false` | Test run without sending rating updates to Jellyfin |
 
 #### Matching & Push Mechanism:
 1. **Fetch User Items**: Queries `GET /Users/{userId}/Items?includeItemTypes=Movie,Series&recursive=true&fields=ProviderIds` using header `X-Emby-Token: <apiKey>`.
-2. **Library Cross-Reference**: Queries all rated titles (`user_rating > 0`) from Trackarr via `TitleRepository.ListRated` and matches against Jellyfin items using normalized external provider IDs (`tmdb`, `tvdb`, `imdb`).
+2. **Library Cross-Reference**: Queries all rated titles (`my_rating > 0`) from Trackarr via `TitleRepository.ListRatedTitles` and matches against Jellyfin items using normalized external provider IDs (`tmdb`, `tvdb`, `imdb`).
 3. **Rating Push**: For matched items, calls `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}` (where `likes = (rating >= 6)`). Includes polite rate throttling (~50ms) between requests to avoid server strain.
-4. **Summary Report**: Prints a formatted summary table displaying counts for `Matched`, `Updated`, `Skipped` (unmatched), and `Errors`.
+4. **Summary Report**: Prints a formatted summary table displaying 5 counts: `Matched`, `Updated`, `Skipped` (already at the same rating or simulated via `--dry-run`), `Missing` (not found in Jellyfin), and `Errors`.
 
 ### Plex Webhook Configuration:
 1. In Plex Web, go to **Settings ➔ Webhooks ➔ Add Webhook**.

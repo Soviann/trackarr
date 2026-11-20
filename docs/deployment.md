@@ -89,6 +89,8 @@ When launching Trackarr for the first time with a fresh database:
 | `PROWLARR_URL` / `PROWLARR_API_KEY` | Prowlarr instance URL and API Key | — | Optional |
 | `JELLYFIN_WEBHOOK_SECRET` | Secret token for Jellyfin webhook authentication | — | Optional |
 | `PLEX_WEBHOOK_SECRET` | Secret token for Plex webhook authentication | — | Optional |
+| `ARR_WEBHOOK_SECRET` | Secret token for Radarr/Sonarr (`On Download`/`On Upgrade`) webhook authentication | — | Optional |
+| `WEBHOOK_SECRET` | Fallback webhook secret token (checked when `COOKIE_SECURE=true` if service-specific secrets are unset) | — | Optional |
 | `COOKIE_SECURE` | Enforce HTTPS Secure flag on session cookies (`true`/`false`) | `false` | Recommended on HTTPS |
 | `METADATA_LANGUAGE` | Preferred language code for title metadata | `fr` | No |
 | `DISABLE_BACKGROUND_TASKS` | Disable 24h cron ticker and background task queue worker | `false` | No |

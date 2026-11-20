@@ -6,7 +6,7 @@
 
 ## 1. Core Architecture
 - **Stack**: Go 1.24, SQLite 3 (WAL mode, FTS5), `chi/v5`, Preact 11, TypeScript (strict), Vite.
-- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve`, `import`, `migrate`, `reset-password`, `backfill-accents`, `sync-jellyfin-ratings`, `version`); `cmd/trackarr-mcp/` ➔ Standalone native Go MCP server (`make build-mcp`).
+- **Entrypoint**: `main.go` ➔ CLI dispatcher (`serve` [runs DB migrations automatically], `import`, `reset-password`, `backfill-accents`, `sync-jellyfin-ratings`, `version`); `cmd/trackarr-mcp/` ➔ Standalone native Go MCP server (`make build-mcp`).
 - **HTTP Server**: `internal/router/router.go` wires middleware (CORS, Auth, Compression, Recovery, Rate Limiting) and routes.
 - **Dependency Injection**:
   - `internal/database`: `DBTX` interface (`*sql.DB` or `*sql.Tx`), helper `WithTx` / `WithTxContext`.
@@ -94,7 +94,7 @@
     - Webhook episode clues: Jellyfin and Plex scrobbles for episodes forward `EpisodeHints` (episode name, season number, episode number, IMDb ID) through `CreateFromScrobble` to `VerifyMatch` and `DisambiguateCandidates`, confirming the exact series adaptation.
     - Title ambiguity guard: `FindByNameAndType(name, type, year)` enforces exact year matching when `year > 0`. When `year <= 0`, it queries with `LIMIT 2` and returns `sql.ErrNoRows` if `count > 1` to prevent arbitrary series hijacking across distinct adaptations.
 20. **Code Splitting & SPA HTTP Cache Strategy**:
-    - `App.tsx` lazy-loads secondary routes (`Admin*`, `Stats`, `Wrapped`, `MatchReview`, `Help`, `Validate`) via `lazy()` with `<Suspense fallback={null}>`, keeping initial bundle lean (~191 kB) for mobile devices. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `ContinueWatching`, `Add`) remain synchronous for instant first render.
+    - `app.tsx` lazy-loads secondary routes (`Admin*`, `Stats`, `Wrapped`, `MatchReview`, `Help`, `Validate`) via `lazy()` with `<Suspense fallback={null}>`, keeping initial bundle lean (~191 kB) for mobile devices. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `Calendar`, `ContinueWatching`, `Add`) remain synchronous for instant first render.
     - `SPAHandler` in `internal/handler/spa.go` serves immutable cache headers (`public, max-age=31536000, immutable`) for hashed assets under `/assets/*`, and `no-cache, no-store, must-revalidate` for `index.html` and SPA fallback routes, avoiding stale service worker/browser caches.
 21. **Studio Bento & Desktop/Mobile Micro-Interactions (Lot 3)**:
     - `PosterHoverCard`: desktop hover card on poster cards with 280ms debounced reveal (`@media (hover: hover)`), portal positioning clamped to viewport, ambient glow (`accent_hex`), ratings, short synopsis, watch providers, and direct `+1` next episode button.
@@ -130,7 +130,7 @@
     - `media.stop` and `PlaybackStop` clear active sessions. `GET /api/playback/active` returns 204 No Content when idle or 200 OK with session payload.
     - Mobile frontend surfaces a pulsing `LivePlaybackIndicator` above navbar, opening `LivePlaybackDrawer` with quick `+1 Marquer vu` action.
 28. **Jellyfin Rating Ingestion & Outbound Sync**:
-    - Jellyfin `UserDataSaved` webhooks deliver rating events (float/int coerced to 1–10 integer score via `math.Round`). Matched against local library by external IDs (TMDB, TVDB, IMDb), persisted via `TitleWriter.UpdateRating`, and asynchronously enqueues AniList rating push for anime.
+    - Jellyfin `UserDataSaved` webhooks deliver rating events (float/int coerced to 1–10 integer score via `math.Round`). Matched against local library by external IDs (TMDB, TVDB, IMDb), persisted via `TitleService.Update` / `TitleWriter.Update`, and asynchronously enqueues AniList rating push for anime.
     - Outbound CLI tool `sync-jellyfin-ratings` (`make jellyfin-sync-ratings`) pushes existing Trackarr ratings to Jellyfin REST API (`GET /Users/{userId}/Items` and `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}`) with rate throttling and dry-run support.
 29. **Radarr Movie Deletion & Re-push Exclusion Cleanup**:
     - `DELETE /api/arr/title/{id}` (`arr:write` scope, movie-only) executes `ArrService.DeleteMovieFromRadarr` synchronously (`DELETE /api/v3/movie/{id}?deleteFiles=...&addImportExclusion=...`, both defaulting to `true` when omitted or empty body).

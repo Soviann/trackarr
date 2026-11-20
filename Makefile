@@ -6,7 +6,7 @@ export
 DC = docker compose -f docker-compose.dev.yml
 EXEC = $(DC) exec app
 
-.PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build build-mcp migrate version
+.PHONY: help up down logs shell test test-front lint lint-front fmt dev-frontend build build-mcp version
 .PHONY: import import-dry db-reset reset-import backfill-accents reset-password jellyfin-sync-ratings
 
 .DEFAULT_GOAL := help
@@ -56,9 +56,6 @@ build-mcp: ## Build MCP server binary
 
 version: ## Show application version
 	$(EXEC) ./tmp/trackarr version
-
-migrate: ## Run database migrations
-	$(EXEC) ./tmp/trackarr migrate
 
 # ── Local Tools & Data Management ───────────────────────────────────
 

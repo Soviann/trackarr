@@ -58,7 +58,7 @@ Chaque section ci-dessous fera l'objet d'une **session de travail indépendante*
   - Remplacer les dégradés superposés sur le texte dans [`Wrapped.module.css`](../frontend/src/pages/Wrapped.module.css) par des contrastes solides nets.
 - [x] **Accessibilité technique (Audit Lighthouse & ARIA)** :
   - Corriger les attributs `aria-label` orphelins sur `<div>` dans [`TypeBadge.tsx`](../frontend/src/components/TypeBadge.tsx) en ajoutant `role="img"`.
-  - Ajouter le point de repère structurel `<main>` dans [`App.tsx`](../frontend/src/App.tsx).
+  - Ajouter le point de repère structurel `<main>` dans [`app.tsx`](../frontend/src/app.tsx).
 
 ---
 

@@ -68,7 +68,7 @@
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `ListRated`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List`, `ListAll`, `ListRatedTitles`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -240,7 +240,7 @@
 - **API URL Rule**: `apiFetch` and `useApi` automatically prepend `/api`. Never write `apiFetch('/api/...')`.
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
 - **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` and `/coming-up` map to `/` (`Collection`), `/releases` maps to `/calendar` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
-- **Code Splitting & Lazy Loading (`App.tsx`)**: Secondary sections (all Admin subpages, Stats, Wrapped, MatchReview, Help, Validate) are lazy-loaded via `lazy()` and wrapped in `<Suspense fallback={null}>`. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `Calendar`, `ContinueWatching`, `Add`) remain synchronous for instant mobile first-load.
+- **Code Splitting & Lazy Loading (`app.tsx`)**: Secondary sections (all Admin subpages, Stats, Wrapped, MatchReview, Help, Validate) are lazy-loaded via `lazy()` and wrapped in `<Suspense fallback={null}>`. Direct usage views (`Library`, `Search`, `TitleDetail`, `ComingUp`, `Calendar`, `ContinueWatching`, `Add`) remain synchronous for instant mobile first-load.
 - **SPA HTTP Cache Headers (`internal/handler/spa.go`)**: Hashed assets under `/assets/*` serve `Cache-Control: public, max-age=31536000, immutable`. HTML documents (`index.html`) and client-side fallback routes serve `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ### State Management (`frontend/src/store.ts`)
@@ -329,7 +329,7 @@
 | `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
 | `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Bento (`UX-2`), zero-reflow GPU ambient glow mesh (`.ambientMesh` with `--cover-accent-glow`, `--cover-accent-wash` dual radial gradients), full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar & Bento Box on desktop (>=1024px) with synchronized seasons rail, internal episodes scroll (max-height 520px), and keyboard shortcuts (`W` for next episode, `1..9` for seasons) |
 | `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |
-| `/wrapped` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
+| `/wrapped`, `/wrapped/:year` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
 | `/login` | `Login` | `pages/Login.tsx` | Local password login and Google OAuth authentication |
 | `/setup` | `Setup` | `pages/Setup.tsx` | Initial administrative setup and emergency recovery key generation |
 | `/match-review` | `MatchReview` | `pages/MatchReview.tsx` | Review queue for unconfirmed and low-confidence title matches |
