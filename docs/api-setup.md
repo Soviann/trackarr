@@ -71,7 +71,7 @@ AniList provides anime metadata, episode lists, seasons relations, community sco
 3. Click **Create New Client**.
 4. Fill in the form:
    - **Name**: `Trackarr`
-   - **Redirect URL**: `https://<your-trackarr-url>/api/auth/anilist/callback` (or `http://<server-ip>:8080/api/auth/anilist/callback`)
+   - **Redirect URL**: `https://<your-trackarr-url>/anilist/callback` (or `http://<server-ip>:8080/anilist/callback`)
 5. Click **Save**.
 6. Copy the **Client ID** (a numeric ID) and **Client Secret**.
 
