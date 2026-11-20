@@ -29,4 +29,8 @@ type JellyfinPayload struct {
 	SeriesID   string `json:"series_id"`   // episode only — stable per-series Jellyfin GUID
 	Season     string `json:"season"`      // episode only
 	Episode    string `json:"episode"`     // episode only
+
+	Overview              string `json:"overview"`
+	RunTimeTicks          string `json:"runtime_ticks"`
+	PlaybackPositionTicks string `json:"playback_position_ticks"`
 }

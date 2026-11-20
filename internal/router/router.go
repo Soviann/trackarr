@@ -81,6 +81,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	// Handlers
 	titles := handler.NewTitleHandler(ctx, writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
 	titles.SetShutdownWG(shutdownWG)
+	titles.SetPlaybackHub(playbackHub)
 	library := handler.NewLibraryHandler(titleReadRepo)
 
 	// TMDB search handler (optional — requires TMDB key)
@@ -94,6 +95,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	}
 	anilistSearch := handler.NewAniListSearchHandler(anilistClient)
 	episodes := handler.NewEpisodeHandler(writeDB, libSvc, titleReadRepo)
+	episodes.SetPlaybackHub(playbackHub)
 	backupSvc := service.NewBackupService(writeDB, titleRepo, seasonRepo, episodeRepo, eventRepo, taskRepo)
 	admin := handler.NewAdminHandler(ctx, writeDB, taskRepo, titleRepo, settingRepo, bgSvc, backupSvc)
 	admin.SetShutdownWG(shutdownWG)

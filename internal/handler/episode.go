@@ -11,9 +11,17 @@ import (
 )
 
 type EpisodeHandler struct {
-	db         *sql.DB
-	service    *service.LibraryService
-	titlesRead *repository.TitleRepository // readDB — reload after post-commit backfill
+	db          *sql.DB
+	service     *service.LibraryService
+	titlesRead  *repository.TitleRepository // readDB — reload after post-commit backfill
+	playbackHub *service.PlaybackHubService
+}
+
+// SetPlaybackHub injects the in-memory live playback hub so manual watch actions clear active sessions.
+func (h *EpisodeHandler) SetPlaybackHub(hub *service.PlaybackHubService) {
+	if h != nil {
+		h.playbackHub = hub
+	}
 }
 
 func NewEpisodeHandler(db *sql.DB, svc *service.LibraryService, titlesRead *repository.TitleRepository) *EpisodeHandler {
@@ -51,6 +59,9 @@ func (h *EpisodeHandler) ToggleWatched(w http.ResponseWriter, r *http.Request) e
 	// Reload from readDB so the response reflects every auto-checked episode and
 	// the client doesn't show stale season state.
 	if ep != nil && ep.Watched {
+		if h.playbackHub != nil {
+			h.playbackHub.ClearByTitleID(titleID)
+		}
 		if reloaded, err := h.titlesRead.GetByID(titleID); err == nil && reloaded != nil {
 			title = reloaded
 		}
@@ -86,6 +97,9 @@ func (h *EpisodeHandler) BatchMarkWatched(w http.ResponseWriter, r *http.Request
 	title, prompt, err := h.service.MarkEpisodesWatchedTx(r.Context(), titleID, body.EpisodeIDs, nil, model.WatchEventSourceManual, nil)
 	if err != nil {
 		return httputil.InternalError("Internal error", err)
+	}
+	if h.playbackHub != nil {
+		h.playbackHub.ClearByTitleID(titleID)
 	}
 	h.service.SendRatingPrompt(r.Context(), prompt)
 

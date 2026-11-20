@@ -257,3 +257,68 @@ func TestProcessPlexWebhook_PlayAndStop(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, env.hub.GetActiveSession())
 }
+
+func TestProcessPlexWebhook_MediaRate(t *testing.T) {
+	env := setupPlexTest(t)
+
+	res, err := env.db.Exec(`INSERT INTO titles (type, year, status, match_status, external_source_id) VALUES ('movie', 2010, 'completed', 'confirmed', '99002')`)
+	require.NoError(t, err)
+	titleID, err := res.LastInsertId()
+	require.NoError(t, err)
+	_, err = env.db.Exec(`INSERT INTO title_names (title_id, name, language, is_primary) VALUES (?, 'Interstellar', 'en', 1)`, titleID)
+	require.NoError(t, err)
+
+	// 1. Nominal: 8.6 rounds to 9
+	rating := 8.6
+	err = env.svc.ProcessPlexWebhook(context.Background(), &model.PlexPayload{
+		Event: "media.rate",
+		Metadata: model.PlexMetadata{
+			RatingKey:  "99002",
+			Type:       "movie",
+			Title:      "Interstellar",
+			UserRating: &rating,
+		},
+	}, "{}")
+	require.NoError(t, err)
+
+	title, err := env.titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 9, *title.MyRating)
+
+	// 2. Boundary: > 10 clamps to 10
+	high := 12.0
+	err = env.svc.ProcessPlexWebhook(context.Background(), &model.PlexPayload{
+		Event: "media.rate",
+		Metadata: model.PlexMetadata{
+			RatingKey:  "99002",
+			Type:       "movie",
+			Title:      "Interstellar",
+			UserRating: &high,
+		},
+	}, "{}")
+	require.NoError(t, err)
+
+	title, err = env.titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 10, *title.MyRating)
+
+	// 3. Invalid / <= 0 is ignored
+	zero := 0.0
+	err = env.svc.ProcessPlexWebhook(context.Background(), &model.PlexPayload{
+		Event: "media.rate",
+		Metadata: model.PlexMetadata{
+			RatingKey:  "99002",
+			Type:       "movie",
+			Title:      "Interstellar",
+			UserRating: &zero,
+		},
+	}, "{}")
+	require.NoError(t, err)
+
+	title, err = env.titleRepo.GetByID(titleID)
+	require.NoError(t, err)
+	require.NotNil(t, title.MyRating)
+	assert.Equal(t, 10, *title.MyRating)
+}

@@ -269,6 +269,47 @@ func TestEpisodeHandler_BatchMarkWatched_Unwatch(t *testing.T) {
 	assert.False(t, eps[1].Watched)
 }
 
+func TestEpisodeHandler_ClearsPlaybackHubOnWatch(t *testing.T) {
+	h, db := setupEpisodeHandler(t)
+	hub := service.NewPlaybackHubService()
+	h.SetPlaybackHub(hub)
+
+	titleID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+	}, []model.TitleName{{Name: "Live Show", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, titleID, 1)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2024-01-01", false)
+	ep2 := testutil.SeedEpisode(t, db, s1.ID, 2, "2024-01-08", false)
+
+	r := chi.NewRouter()
+	r.Patch("/titles/{titleID}/episodes/{episodeID}", httputil.WrapHandler(h.ToggleWatched))
+	r.Post("/titles/{titleID}/episodes/batch-watch", httputil.WrapHandler(h.BatchMarkWatched))
+
+	// 1. ToggleWatched clears active session
+	hub.SetSession(model.ActivePlaybackSession{Source: "plex", Player: "TV", TitleID: titleID, TitleName: "Live Show"})
+	require.NotNil(t, hub.GetActiveSession())
+
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/titles/%d/episodes/%d", titleID, ep1.ID), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Nil(t, hub.GetActiveSession())
+
+	// 2. BatchMarkWatched clears active session
+	hub.SetSession(model.ActivePlaybackSession{Source: "jellyfin", Player: "TV", TitleID: titleID, TitleName: "Live Show"})
+	require.NotNil(t, hub.GetActiveSession())
+
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/titles/%d/episodes/batch-watch", titleID), strings.NewReader(fmt.Sprintf(`{"episode_ids":[%d]}`, ep2.ID)))
+	rr = httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Nil(t, hub.GetActiveSession())
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }

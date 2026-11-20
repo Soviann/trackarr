@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"time"
 
@@ -50,6 +51,8 @@ func (s *PlexService) ProcessPlexWebhook(ctx context.Context, p *model.PlexPaylo
 			s.playbackHub.ClearSession("plex", p.Player.Title)
 		}
 		return nil
+	case "media.rate":
+		return s.processMediaRate(ctx, p)
 	case "media.scrobble":
 		// proceed with watched processing below
 	default:
@@ -77,6 +80,80 @@ func (s *PlexService) ProcessPlexWebhook(ctx context.Context, p *model.PlexPaylo
 		s.playbackHub.ClearSession("plex", p.Player.Title)
 	}
 	return err
+}
+
+func (s *PlexService) processMediaRate(ctx context.Context, p *model.PlexPayload) error {
+	if p.Metadata.UserRating == nil || math.IsNaN(*p.Metadata.UserRating) || math.IsInf(*p.Metadata.UserRating, 0) || *p.Metadata.UserRating <= 0 {
+		return nil
+	}
+	rating := int(math.Round(*p.Metadata.UserRating))
+	if rating < 1 {
+		return nil
+	}
+	if rating > 10 {
+		rating = 10
+	}
+
+	var titleType model.TitleType
+	ratingKey := p.Metadata.RatingKey
+	switch strings.ToLower(strings.TrimSpace(p.Metadata.Type)) {
+	case "movie":
+		titleType = model.TitleTypeMovie
+	case "show":
+		titleType = model.TitleTypeSeries
+	case "episode":
+		titleType = model.TitleTypeSeries
+		if p.Metadata.GrandparentRatingKey != "" {
+			ratingKey = p.Metadata.GrandparentRatingKey
+		}
+	default:
+		return nil
+	}
+
+	imdb, tmdb, tvdb := p.Metadata.ExtractExternalIDs()
+	var imdbPtr *string
+	if imdb != "" {
+		imdbPtr = &imdb
+	}
+	var tmdbPtr *int64
+	if tmdb != 0 {
+		tmdbPtr = &tmdb
+	}
+	var tvdbPtr *int64
+	if tvdb != 0 {
+		tvdbPtr = &tvdb
+	}
+	var ratingKeyPtr *string
+	if ratingKey != "" {
+		ratingKeyPtr = &ratingKey
+	}
+
+	titles := repository.NewTitleRepository(s.db)
+	title, err := titles.FindByExternalID(imdbPtr, tmdbPtr, ratingKeyPtr, nil, tvdbPtr, &titleType)
+	if err != nil {
+		s.log.Debug("title not found for Plex media.rate webhook",
+			"type", p.Metadata.Type,
+			"title", p.Metadata.Title,
+			"err", err,
+		)
+		return nil
+	}
+
+	if title.MyRating != nil && *title.MyRating == rating {
+		s.log.Debug("skipping duplicate Plex rating update", "titleID", title.ID, "rating", rating)
+		return nil
+	}
+
+	if s.titleSvc == nil {
+		return nil
+	}
+
+	if err := s.titleSvc.Update(ctx, title.ID, repository.TitleUpdate{MyRating: &rating}, title, nil, &rating, false); err != nil {
+		return fmt.Errorf("update title rating from Plex: %w", err)
+	}
+
+	s.log.Info("updated rating from Plex media.rate webhook", "titleID", title.ID, "title", title.PrimaryName(), "rating", rating)
+	return nil
 }
 
 func (s *PlexService) processPlaybackStart(ctx context.Context, p *model.PlexPayload) error {

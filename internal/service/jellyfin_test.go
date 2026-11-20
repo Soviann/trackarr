@@ -696,3 +696,75 @@ func TestProcessJellyfinWebhook_UserDataSaved_AnimeSeriesCompletedSeasonEnqueues
 	require.Len(t, tasks, 1)
 	assert.Equal(t, model.TaskTypeAniListPushSeason, tasks[0].TaskType)
 }
+
+func TestProcessJellyfinWebhook_PlaybackStart_MetadataAndFallback(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	overview := "A thief who steals corporate secrets through dream-sharing."
+	tmdbID := int64(27205)
+	testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2010,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+		Overview:    &overview,
+	}, []model.TitleName{
+		{Name: "Inception", Language: "en", IsPrimary: true},
+	})
+
+	// 1. Movie with empty overview in payload falls back to title.Overview, ticks converted to seconds
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+		NotificationType:      "PlaybackStart",
+		ItemType:              "Movie",
+		Name:                  "Inception",
+		ProviderTMDB:          "27205",
+		DeviceName:            "Living Room TV",
+		RunTimeTicks:          "88800000000", // 8880s
+		PlaybackPositionTicks: "1200000000",  // 120s
+	}, "{}")
+	require.NoError(t, err)
+
+	active := env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, overview, active.Overview)
+	assert.Equal(t, int64(8880), active.DurationSec)
+	assert.Equal(t, int64(120), active.ViewOffsetSec)
+
+	// 2. Payload overview takes precedence over title.Overview when provided
+	seriesTMDB := int64(1396)
+	seriesOverview := "Series overview"
+	testutil.CreateTitle(t, env.db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &seriesTMDB,
+		Overview:    &seriesOverview,
+	}, []model.TitleName{
+		{Name: "Breaking Bad", Language: "en", IsPrimary: true},
+	})
+	// Attach series_id as external_source_id for episode matching
+	_, err = env.db.Exec(`UPDATE titles SET external_source_id = 'jf-series-1' WHERE tmdb_id = 1396`)
+	require.NoError(t, err)
+
+	err = env.svc.ProcessJellyfinWebhook(context.Background(), &model.JellyfinPayload{
+		NotificationType:      "PlaybackStart",
+		ItemType:              "Episode",
+		Name:                  "Pilot",
+		SeriesName:            "Breaking Bad",
+		SeriesID:              "jf-series-1",
+		Season:                "1",
+		Episode:               "1",
+		Overview:              "Episode-specific overview",
+		RunTimeTicks:          "34800000000", // 3480s
+		PlaybackPositionTicks: "0",
+	}, "{}")
+	require.NoError(t, err)
+
+	active = env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, "Episode-specific overview", active.Overview)
+	assert.Equal(t, int64(3480), active.DurationSec)
+	assert.Equal(t, int64(0), active.ViewOffsetSec)
+}

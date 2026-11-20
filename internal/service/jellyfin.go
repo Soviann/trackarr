@@ -125,15 +125,23 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 			}
 		}
 
+		overview := strings.TrimSpace(jf.Overview)
+		if overview == "" && title.Overview != nil {
+			overview = *title.Overview
+		}
+
 		session := model.ActivePlaybackSession{
-			Source:    "jellyfin",
-			Player:    resolveJellyfinPlayer(jf),
-			TitleID:   title.ID,
-			TitleName: titleName,
-			TitleType: model.TitleTypeMovie,
-			Year:      title.Year,
-			CoverURL:  title.CoverURL,
-			AccentHex: title.AccentHex,
+			Source:        "jellyfin",
+			Player:        resolveJellyfinPlayer(jf),
+			TitleID:       title.ID,
+			TitleName:     titleName,
+			TitleType:     model.TitleTypeMovie,
+			Year:          title.Year,
+			CoverURL:      title.CoverURL,
+			AccentHex:     title.AccentHex,
+			Overview:      overview,
+			DurationSec:   parseJellyfinTicksToSeconds(jf.RunTimeTicks),
+			ViewOffsetSec: parseJellyfinTicksToSeconds(jf.PlaybackPositionTicks),
 		}
 		s.playbackHub.SetSession(session)
 		return nil
@@ -164,6 +172,10 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 			}
 		}
 		epName := jf.Name
+		overview := strings.TrimSpace(jf.Overview)
+		if overview == "" && title.Overview != nil {
+			overview = *title.Overview
+		}
 
 		session := model.ActivePlaybackSession{
 			Source:        "jellyfin",
@@ -177,6 +189,9 @@ func (s *JellyfinService) processPlaybackStart(ctx context.Context, jf *model.Je
 			SeasonNumber:  &seasonNum,
 			EpisodeNumber: &episodeNum,
 			EpisodeName:   &epName,
+			Overview:      overview,
+			DurationSec:   parseJellyfinTicksToSeconds(jf.RunTimeTicks),
+			ViewOffsetSec: parseJellyfinTicksToSeconds(jf.PlaybackPositionTicks),
 		}
 		s.playbackHub.SetSession(session)
 		return nil
@@ -516,4 +531,16 @@ func parseJellyfinRating(raw string) (int, bool) {
 // ParseJellyfinRating parses a Jellyfin rating string into a 1–10 integer rating.
 func ParseJellyfinRating(raw string) (int, bool) {
 	return parseJellyfinRating(raw)
+}
+
+func parseJellyfinTicksToSeconds(raw string) int64 {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0
+	}
+	ticks, err := strconv.ParseInt(trimmed, 10, 64)
+	if err != nil || ticks <= 0 {
+		return 0
+	}
+	return ticks / 10_000_000
 }

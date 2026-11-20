@@ -49,6 +49,7 @@ type PlexMetadata struct {
 	Duration             int64           `json:"duration"`
 	ViewOffset           int64           `json:"viewOffset"`
 	Summary              string          `json:"summary"`
+	UserRating           *float64        `json:"userRating"`
 	Guid                 []PlexGUIDItem  `json:"Guid"`
 	RawGUID              json.RawMessage `json:"guid"`
 }

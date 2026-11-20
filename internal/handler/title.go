@@ -21,25 +21,33 @@ import (
 )
 
 type TitleHandler struct {
-	serverCtx  context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
-	db         *sql.DB
-	titles     *repository.TitleRepository // writeDB — Create, Update, Merge, Rematch
-	titlesRead *repository.TitleRepository // readDB — List, GetByID (non-blocking reads)
-	seasons    *repository.SeasonRepository
-	episodes   *repository.EpisodeRepository
-	events     *repository.WatchEventRepository
-	tasks      *repository.TaskRepository
-	pipeline   *matching.Pipeline
-	service    *service.TitleService
-	bgSvc      *service.BackgroundService
-	shutdownWG *sync.WaitGroup // optional — joined on shutdown so fire-and-forget refresh can finish
-	cache      *cache.Cache
+	serverCtx   context.Context // lifecycle ctx — cancelled on SIGTERM so fire-and-forget goroutines stop at shutdown
+	db          *sql.DB
+	titles      *repository.TitleRepository // writeDB — Create, Update, Merge, Rematch
+	titlesRead  *repository.TitleRepository // readDB — List, GetByID (non-blocking reads)
+	seasons     *repository.SeasonRepository
+	episodes    *repository.EpisodeRepository
+	events      *repository.WatchEventRepository
+	tasks       *repository.TaskRepository
+	pipeline    *matching.Pipeline
+	service     *service.TitleService
+	bgSvc       *service.BackgroundService
+	shutdownWG  *sync.WaitGroup // optional — joined on shutdown so fire-and-forget refresh can finish
+	cache       *cache.Cache
+	playbackHub *service.PlaybackHubService
 }
 
 // SetCache injects the in-memory read cache.
 func (h *TitleHandler) SetCache(c *cache.Cache) {
 	if h != nil {
 		h.cache = c
+	}
+}
+
+// SetPlaybackHub injects the in-memory live playback hub so marking a title completed clears active sessions.
+func (h *TitleHandler) SetPlaybackHub(hub *service.PlaybackHubService) {
+	if h != nil {
+		h.playbackHub = hub
 	}
 }
 
@@ -367,7 +375,6 @@ func (h *TitleHandler) BatchCreate(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-
 func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	id, err := httputil.ParseIDParam(r, "id")
 	if err != nil {
@@ -375,12 +382,12 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var body struct {
-		Status        *model.TitleStatus `json:"status"`
-		MatchStatus   *model.MatchStatus `json:"match_status"`
-		MyRating      *int               `json:"my_rating"`
-		Type          *model.TitleType   `json:"type"`
-		IsAnime       *bool              `json:"is_anime"`
-		ArrIgnored    *bool              `json:"arr_ignored"`
+		Status           *model.TitleStatus `json:"status"`
+		MatchStatus      *model.MatchStatus `json:"match_status"`
+		MyRating         *int               `json:"my_rating"`
+		Type             *model.TitleType   `json:"type"`
+		IsAnime          *bool              `json:"is_anime"`
+		ArrIgnored       *bool              `json:"arr_ignored"`
 		PersonalNotes    *string            `json:"personal_notes"`
 		DeleteFromSonarr *bool              `json:"delete_from_sonarr"`
 	}
@@ -424,6 +431,10 @@ func (h *TitleHandler) Update(w http.ResponseWriter, r *http.Request) error {
 
 	if err := h.service.Update(r.Context(), id, update, before, body.Status, body.MyRating, deleteFromSonarr); err != nil {
 		return httputil.InternalError("Internal error", err)
+	}
+
+	if body.Status != nil && *body.Status == model.TitleStatusCompleted && h.playbackHub != nil {
+		h.playbackHub.ClearByTitleID(id)
 	}
 
 	if typeChanged {
