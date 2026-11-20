@@ -110,7 +110,7 @@ Search movies and series in Trackarr by title, keyword, or external URL.
 - **Parameters**:
   - `query` (string, optional): Search keyword, title name, or external URL.
   - `type` (string, optional): `"movie"` or `"series"`.
-  - `status` (string, optional): `"plan_to_watch"`, `"watching"`, `"completed"`, `"paused"`, `"dropped"`.
+  - `status` (string, optional): `"plan_to_watch"`, `"watching"`, `"completed"`, `"dropped"`.
   - `limit` (integer, optional, default: 20, max: 100): Results limit.
 - **Scope**: `library:read`.
 

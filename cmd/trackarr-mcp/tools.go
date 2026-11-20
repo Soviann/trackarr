@@ -15,7 +15,7 @@ func registerTools(s *server.MCPServer, client *Client) {
 		mcp.WithDescription("Search movies and series in the Trackarr library by keyword, media type, or watch status."),
 		mcp.WithString("query", mcp.Description("Search keyword, title name, or external URL")),
 		mcp.WithString("type", mcp.Description("Filter by media type ('movie' or 'series')"), mcp.Enum("movie", "series")),
-		mcp.WithString("status", mcp.Description("Filter by watch status ('plan_to_watch', 'watching', 'completed', 'paused', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "paused", "dropped")),
+		mcp.WithString("status", mcp.Description("Filter by watch status ('plan_to_watch', 'watching', 'completed', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "dropped")),
 		mcp.WithInteger("limit", mcp.Description("Maximum number of results to return (default: 20, max: 100)")),
 	)
 	s.AddTool(searchTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -101,7 +101,7 @@ func registerTools(s *server.MCPServer, client *Client) {
 		mcp.WithString("imdb_id", mcp.Description("IMDb ID (e.g. tt1234567)")),
 		mcp.WithInteger("anilist_id", mcp.Description("AniList ID")),
 		mcp.WithBoolean("is_anime", mcp.Description("Flag indicating whether title is anime")),
-		mcp.WithString("status", mcp.Description("Watch status ('plan_to_watch', 'watching', 'completed', 'paused', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "paused", "dropped")),
+		mcp.WithString("status", mcp.Description("Watch status ('plan_to_watch', 'watching', 'completed', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "dropped")),
 	)
 	s.AddTool(addTitleTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var item BatchCreateItem
@@ -152,7 +152,7 @@ func registerTools(s *server.MCPServer, client *Client) {
 	updateTitleTool := mcp.NewTool("trackarr_update_title",
 		mcp.WithDescription("Update title status, user rating (0-10), personal notes, or settings."),
 		mcp.WithInteger("id", mcp.Required(), mcp.Description("Trackarr title ID")),
-		mcp.WithString("status", mcp.Description("Watch status ('plan_to_watch', 'watching', 'completed', 'paused', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "paused", "dropped")),
+		mcp.WithString("status", mcp.Description("Watch status ('plan_to_watch', 'watching', 'completed', 'dropped')"), mcp.Enum("plan_to_watch", "watching", "completed", "dropped")),
 		mcp.WithInteger("my_rating", mcp.Description("User rating (0-10)")),
 		mcp.WithString("personal_notes", mcp.Description("Personal notes / user review")),
 		mcp.WithBoolean("is_anime", mcp.Description("Mark whether title is anime")),
