@@ -413,7 +413,7 @@ func (r *TitleRepository) GetLiteByID(ctx context.Context, id int64) (*TitleLite
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, sonarr_deleted_at, downloaded_at, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, sonarr_deleted_at, downloaded_at, personal_notes, watch_providers, origin_country, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -421,11 +421,11 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
-		var lastWatchedAtStr, lastRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr *string
+		var lastWatchedAtStr, lastRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr, watchProvidersRaw *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.ExternalSourceID, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &t.PersonalNotes, &watchProvidersRaw, &t.OriginCountry, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
@@ -433,6 +433,7 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 		t.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
 		t.SonarrDeletedAt = parseSQLiteTime(sonarrDeletedAtStr)
 		t.DownloadedAt = parseSQLiteTime(downloadedAtStr)
+		t.WatchProviders = parseWatchProviders(watchProvidersRaw)
 		titles = append(titles, t)
 	}
 	if err := rows.Err(); err != nil {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -33,7 +34,18 @@ type Scheduler struct {
 	covers      CoverSyncer
 	statsRepo   *repository.StatsRepository
 	wrappedRepo *repository.WrappedRepository
+	backupSvc   *BackupService
+	dataDir     string
 	shutdownWG  *sync.WaitGroup
+}
+
+// SetBackupService configures automated daily SQLite + JSON backups in <dataDir>/backups.
+func (s *Scheduler) SetBackupService(backupSvc *BackupService, dataDir string) {
+	if s == nil {
+		return
+	}
+	s.backupSvc = backupSvc
+	s.dataDir = dataDir
 }
 
 // NewScheduler creates a new background job scheduler.
@@ -175,6 +187,15 @@ func (s *Scheduler) RunMaintenance(ctx context.Context) {
 		log.Printf("scheduler: wal_checkpoint failed: %v", err)
 	} else {
 		log.Println("scheduler: wal_checkpoint(PASSIVE) completed")
+	}
+
+	if s.backupSvc != nil && s.dataDir != "" {
+		backupDir := filepath.Join(s.dataDir, "backups")
+		if err := s.backupSvc.WriteAutomatedBackups(ctx, backupDir, 7); err != nil {
+			log.Printf("scheduler: automated backup failed: %v", err)
+		} else {
+			log.Printf("scheduler: automated backup completed in %s", backupDir)
+		}
 	}
 }
 

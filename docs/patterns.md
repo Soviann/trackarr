@@ -188,6 +188,7 @@
 | PUT | `/api/admin/notifications` | `admin.UpdateNotificationPrefs` | Update Web Push notification preferences |
 | GET | `/api/admin/arr` | `admin.GetArrSettings` | Radarr & Sonarr configuration |
 | PUT | `/api/admin/arr` | `admin.UpdateArrSettings` | Update Radarr & Sonarr configuration |
+| POST | `/api/admin/arr/reconcile` | `arr.ReconcileLibrary` | Enqueue Radarr/Sonarr library & episode availability reconciliation |
 | GET | `/api/admin/auth-settings` | `auth.GetAuthSettings` | Get auth mode and configuration state |
 | PUT | `/api/admin/auth-settings` | `auth.UpdateAuthSettings` | Update auth mode (`google`, `password`, `hybrid`) |
 | GET | `/api/admin/system-settings` | `adminSettings.GetSystemSettings` | Read current system configuration (including `app_version`), masked secrets and webhook URLs |
@@ -195,15 +196,18 @@
 | POST | `/api/admin/system-settings/test/tmdb` | `adminSettings.TestTMDB` | Test TMDB connection |
 | POST | `/api/admin/system-settings/test/tvdb` | `adminSettings.TestTVDB` | Test TVDB connection |
 | POST | `/api/admin/system-settings/test/gemini` | `adminSettings.TestGemini` | Test Gemini AI connection |
+| POST | `/api/admin/system-settings/test/jellyfin` | `adminSettings.TestJellyfin` | Test Jellyfin API connection |
 | POST | `/api/admin/system-settings/test/{app}` | `adminSettings.TestArr` | Test Radarr, Sonarr, Prowlarr connection |
+| POST | `/api/admin/jellyfin/sync-ratings` | `adminSettings.SyncJellyfinRatings` | Sync Trackarr ratings to Jellyfin (supports `dry_run`) |
 | POST | `/api/admin/system-settings/vapid/generate` | `adminSettings.GenerateVAPIDKeys` | Generate NIST P-256 VAPID keypair |
 | POST | `/api/admin/refresh-all` | `admin.RefreshAll` | Trigger full library refresh (supports `?restart=true`) |
 | GET | `/api/admin/refresh-all/status` | `admin.GetRefreshAllStatus` | Query current library refresh progress and state |
 | POST | `/api/admin/refresh-all/cancel` | `admin.CancelRefreshAll` | Cancel or pause running library refresh job |
-| GET | `/api/admin/export/json` | `admin.ExportJSON` | 1-Click full JSON library backup download |
+| GET | `/api/admin/export/json` | `admin.ExportJSON` | 1-Click lossless JSON v2 library backup download |
+| GET | `/api/admin/export/sqlite` | `admin.ExportSQLite` | 1-Click compacted SQLite snapshot (`VACUUM INTO`) download |
 | GET | `/api/admin/export/csv` | `admin.ExportCSV` | 1-Click spreadsheet CSV library export download |
 | GET | `/api/admin/export/trakt` | `admin.ExportTrakt` | 1-Click Trakt.tv sync JSON export download |
-| POST | `/api/admin/import` | `admin.ImportBackup` | Upload and import backup (.zip, .json, .csv) with dry-run support |
+| POST | `/api/admin/import` | `admin.ImportBackup` | Upload and import backup (.zip, .gz, .json, .csv) with dry-run support |
 | GET | `/api/admin/season-audit` | `seasonAudit.List` | Suggested multi-season merges |
 | POST | `/api/admin/season-audit/accept` | `seasonAudit.Accept` | Execute suggested merge |
 | POST | `/api/admin/season-audit/dismiss` | `seasonAudit.Dismiss` | Dismiss suggested merge |

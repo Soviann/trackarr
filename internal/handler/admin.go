@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -334,6 +337,32 @@ func (h *AdminHandler) ExportTrakt(w http.ResponseWriter, r *http.Request) error
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+	return nil
+}
+
+// ExportSQLite streams a compacted, consistent SQLite snapshot (VACUUM INTO) as attachment download.
+func (h *AdminHandler) ExportSQLite(w http.ResponseWriter, r *http.Request) error {
+	if h.backupSvc == nil {
+		return httputil.InternalError("export sqlite", fmt.Errorf("backup service not configured"))
+	}
+	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("trackarr-export-%d.db", time.Now().UnixNano()))
+	defer os.Remove(tmpPath)
+
+	if err := h.backupSvc.ExportSQLiteToFile(r.Context(), tmpPath); err != nil {
+		return httputil.InternalError("export sqlite", err)
+	}
+
+	f, err := os.Open(tmpPath)
+	if err != nil {
+		return httputil.InternalError("open sqlite export", err)
+	}
+	defer f.Close()
+
+	filename := fmt.Sprintf("trackarr-backup-%s.db", time.Now().UTC().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, f)
 	return nil
 }
 

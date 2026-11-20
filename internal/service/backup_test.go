@@ -6,6 +6,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -80,7 +83,7 @@ func TestBackupService_ExportJSON(t *testing.T) {
 	err = json.Unmarshal(data, &backup)
 	require.NoError(t, err)
 
-	assert.Equal(t, "1.0", backup.Version)
+	assert.Equal(t, "2.0", backup.Version)
 	assert.Equal(t, 1, backup.TotalCount)
 	require.Len(t, backup.Titles, 1)
 	assert.Equal(t, "Dune: Part Two", backup.Titles[0].PrimaryName())
@@ -273,4 +276,138 @@ func TestBackupService_Import_ZIP_Oversized(t *testing.T) {
 	_, err = deps.svc.Import(bytes.NewReader(zipBuf.Bytes()), "archive.zip", false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "exceeds maximum allowed size")
+}
+
+func TestBackupService_V2LosslessRoundTrip(t *testing.T) {
+	src := setupBackupService(t)
+	ctx := context.Background()
+
+	// Seed rich data: personal_notes, watch_providers, origin_country, season rating,
+	// season_external_ids, watch_events, and wrapped_snapshots.
+	tmdb := int64(209867)
+	radarr := int64(55)
+	notes := "Rewatch in winter!"
+	providers := []model.WatchProvider{{ID: 8, Name: "Netflix"}}
+	origin := "JP"
+	var titleID, seasonID, epID int64
+	require.NoError(t, database.WithTxContext(ctx, src.db, func(tx *sql.Tx) error {
+		var err error
+		titleID, err = repository.NewTitleWriter(tx).Create(ctx, &model.Title{
+			Type: model.TitleTypeSeries, IsAnime: true, Year: 2023,
+			Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed,
+			TMDBID: &tmdb, RadarrID: &radarr, ArrIgnored: true,
+		}, []model.TitleName{{Name: "Frieren", Language: "en", IsPrimary: true}})
+		if err != nil {
+			return err
+		}
+		if err := repository.NewBackupWriter(tx).UpdateTitleExtraFields(ctx, titleID, model.Title{
+			PersonalNotes:  &notes,
+			WatchProviders: providers,
+			OriginCountry:  &origin,
+		}); err != nil {
+			return err
+		}
+		s, err := repository.NewSeasonWriter(tx).GetOrCreate(ctx, titleID, 1)
+		if err != nil {
+			return err
+		}
+		seasonID = s.ID
+		if err := repository.NewSeasonWriter(tx).UpdateTotalEpisodes(ctx, seasonID, 28); err != nil {
+			return err
+		}
+		ep, err := repository.NewEpisodeWriter(tx).GetOrCreate(ctx, seasonID, 1)
+		if err != nil {
+			return err
+		}
+		epID = ep.ID
+		if err := repository.NewEpisodeWriter(tx).MarkWatched(ctx, epID, time.Now().UTC()); err != nil {
+			return err
+		}
+		if err := repository.NewBackupWriter(tx).RestoreSeasonExternalID(ctx, seasonID, repository.BackupSeasonExternalID{
+			Provider: repository.ProviderAniList, ExternalID: "154587", SortOrder: 1,
+		}); err != nil {
+			return err
+		}
+		if _, err := repository.NewWatchEventWriter(tx).Create(ctx, &model.WatchEvent{
+			TitleID:   titleID,
+			EpisodeID: &epID,
+			Source:    model.WatchEventSourceManual,
+		}); err != nil {
+			return err
+		}
+		return repository.NewBackupWriter(tx).RestoreWrappedSnapshot(ctx, repository.BackupWrappedSnapshot{
+			Year: 2025, DataJSON: `{"year":2025}`, CreatedAt: time.Now().UTC(),
+		})
+	}))
+
+	exported, err := src.svc.ExportJSON(ctx)
+	require.NoError(t, err)
+
+	var parsed service.TrackarrBackup
+	require.NoError(t, json.Unmarshal(exported, &parsed))
+	assert.Equal(t, "2.0", parsed.Version)
+	require.Len(t, parsed.Titles, 1)
+	require.NotNil(t, parsed.Titles[0].PersonalNotes)
+	assert.Equal(t, notes, *parsed.Titles[0].PersonalNotes)
+	require.Len(t, parsed.SeasonExternalIDs, 1)
+	require.Len(t, parsed.WatchEvents, 1)
+	require.Len(t, parsed.WrappedSnapshots, 1)
+
+	// Import into a completely fresh DB and verify zero data loss
+	dst := setupBackupService(t)
+	res, err := dst.svc.Import(bytes.NewReader(exported), "trackarr-backup.json", false)
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.Created)
+
+	titles, err := dst.titleRepo.ListAll()
+	require.NoError(t, err)
+	require.Len(t, titles, 1)
+	require.NotNil(t, titles[0].PersonalNotes)
+	assert.Equal(t, notes, *titles[0].PersonalNotes)
+	assert.Equal(t, providers, titles[0].WatchProviders)
+	require.NotNil(t, titles[0].OriginCountry)
+	assert.Equal(t, origin, *titles[0].OriginCountry)
+	require.NotNil(t, titles[0].RadarrID)
+	assert.Equal(t, radarr, *titles[0].RadarrID)
+	require.Len(t, titles[0].Seasons, 1)
+	require.NotNil(t, titles[0].Seasons[0].TotalEpisodes)
+	assert.Equal(t, 28, *titles[0].Seasons[0].TotalEpisodes)
+	require.Len(t, titles[0].Seasons[0].Episodes, 1)
+	assert.True(t, titles[0].Seasons[0].Episodes[0].Watched)
+
+	br := repository.NewBackupRepository(dst.db)
+	extIDs, err := br.ListAllSeasonExternalIDs(ctx)
+	require.NoError(t, err)
+	require.Len(t, extIDs, 1)
+	assert.Equal(t, "154587", extIDs[0].ExternalID)
+
+	events, err := br.ListAllWatchEvents(ctx)
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+
+	wrapped, err := br.ListAllWrappedSnapshots(ctx)
+	require.NoError(t, err)
+	require.Len(t, wrapped, 1)
+	assert.Equal(t, 2025, wrapped[0].Year)
+}
+
+func TestBackupService_WriteAutomatedBackupsAndVacuum(t *testing.T) {
+	deps := setupBackupService(t)
+	tmpDir := t.TempDir()
+
+	// Create an old rotated file that should be pruned
+	oldFile := filepath.Join(tmpDir, "trackarr-2020-01-01.db.gz")
+	require.NoError(t, os.WriteFile(oldFile, []byte("old"), 0o644))
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	require.NoError(t, os.Chtimes(oldFile, oldTime, oldTime))
+
+	require.NoError(t, deps.svc.WriteAutomatedBackups(context.Background(), tmpDir, 7))
+
+	today := time.Now().Format("2006-01-02")
+	_, err := os.Stat(filepath.Join(tmpDir, fmt.Sprintf("trackarr-%s.db.gz", today)))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(tmpDir, fmt.Sprintf("trackarr-%s.json.gz", today)))
+	assert.NoError(t, err)
+	_, err = os.Stat(oldFile)
+	assert.True(t, os.IsNotExist(err), "old backup should be rotated out")
 }

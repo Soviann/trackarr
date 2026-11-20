@@ -675,6 +675,15 @@ export function Admin({ path }: { path?: string }) {
               <span>{t('admin.exportJson')}</span>
             </a>
 
+            <a href="/api/admin/export/sqlite" download className={s.exportBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              </svg>
+              <span>{t('admin.exportSqlite')}</span>
+            </a>
+
             <a href="/api/admin/export/csv" download className={s.exportBtn}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />

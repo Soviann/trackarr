@@ -130,6 +130,15 @@ func Serve(distFS embed.FS) error {
 	}
 
 	scheduler := service.NewScheduler(writeDB, bgSvc, coverSvc, nil, nil)
+	backupSvc := service.NewBackupService(
+		writeDB,
+		titleRepo,
+		repository.NewSeasonRepository(writeDB),
+		repository.NewEpisodeRepository(writeDB),
+		repository.NewWatchEventRepository(writeDB),
+		taskRepo,
+	)
+	scheduler.SetBackupService(backupSvc, cfg.DataDir)
 	scheduler.SetShutdownWG(&shutdownWG)
 	if !cfg.DisableBackgroundTasks {
 		scheduler.Start(ctx, 24*time.Hour)

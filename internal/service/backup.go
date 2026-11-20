@@ -3,26 +3,33 @@ package service
 import (
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 )
 
 type TrackarrBackup struct {
-	Version    string        `json:"version"`
-	ExportedAt string        `json:"exported_at"`
-	TotalCount int           `json:"total_count"`
-	Titles     []model.Title `json:"titles"`
+	Version           string                              `json:"version"`
+	ExportedAt        string                              `json:"exported_at"`
+	TotalCount        int                                 `json:"total_count"`
+	Titles            []model.Title                       `json:"titles"`
+	SeasonExternalIDs []repository.BackupSeasonExternalID `json:"season_external_ids,omitempty"`
+	WatchEvents       []repository.BackupWatchEvent       `json:"watch_events,omitempty"`
+	TitleRelations    []model.TitleRelation               `json:"title_relations,omitempty"`
+	WrappedSnapshots  []repository.BackupWrappedSnapshot  `json:"wrapped_snapshots,omitempty"`
 }
 
 type BackupSummaryResult struct {
@@ -63,21 +70,157 @@ func NewBackupService(
 	}
 }
 
-// ExportJSON returns a full Trackarr JSON backup of all titles and relations.
+// ExportJSON returns a full lossless Trackarr JSON v2 backup of all titles, seasons, episodes,
+// external mappings, watch events, title relations, and wrapped snapshots.
 func (s *BackupService) ExportJSON(ctx context.Context) ([]byte, error) {
 	titles, err := s.titleRepo.ListAll()
 	if err != nil {
 		return nil, fmt.Errorf("list all titles for json export: %w", err)
 	}
 
+	br := repository.NewBackupRepository(s.db)
+	seasonExtIDs, err := br.ListAllSeasonExternalIDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list season external ids for json export: %w", err)
+	}
+	watchEvents, err := br.ListAllWatchEvents(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list watch events for json export: %w", err)
+	}
+	relations, err := br.ListAllTitleRelations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list title relations for json export: %w", err)
+	}
+	wrapped, err := br.ListAllWrappedSnapshots(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list wrapped snapshots for json export: %w", err)
+	}
+
 	backup := TrackarrBackup{
-		Version:    "1.0",
-		ExportedAt: time.Now().UTC().Format(time.RFC3339),
-		TotalCount: len(titles),
-		Titles:     titles,
+		Version:           "2.0",
+		ExportedAt:        time.Now().UTC().Format(time.RFC3339),
+		TotalCount:        len(titles),
+		Titles:            titles,
+		SeasonExternalIDs: seasonExtIDs,
+		WatchEvents:       watchEvents,
+		TitleRelations:    relations,
+		WrappedSnapshots:  wrapped,
 	}
 
 	return json.MarshalIndent(backup, "", "  ")
+}
+
+// ExportSQLiteToFile writes a compacted, consistent SQLite snapshot to destPath using VACUUM INTO.
+func (s *BackupService) ExportSQLiteToFile(ctx context.Context, destPath string) error {
+	return repository.NewBackupRepository(s.db).VacuumInto(ctx, destPath)
+}
+
+// WriteAutomatedBackups writes daily gzipped SQLite (.db.gz) and JSON v2 (.json.gz) backups
+// into backupDir and removes rotated archives older than retentionDays.
+func (s *BackupService) WriteAutomatedBackups(ctx context.Context, backupDir string, retentionDays int) error {
+	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
+	}
+	dateStamp := time.Now().Format("2006-01-02")
+
+	// 1. SQLite snapshot (.db.gz)
+	tmpDB := filepath.Join(backupDir, fmt.Sprintf(".tmp-%s-%d.db", dateStamp, time.Now().UnixNano()))
+	defer os.Remove(tmpDB)
+	if err := s.ExportSQLiteToFile(ctx, tmpDB); err != nil {
+		return err
+	}
+	dbDest := filepath.Join(backupDir, fmt.Sprintf("trackarr-%s.db.gz", dateStamp))
+	if err := gzipFile(tmpDB, dbDest); err != nil {
+		return fmt.Errorf("compress sqlite backup: %w", err)
+	}
+
+	// 2. Lossless JSON v2 (.json.gz)
+	jsonBytes, err := s.ExportJSON(ctx)
+	if err != nil {
+		return err
+	}
+	jsonDest := filepath.Join(backupDir, fmt.Sprintf("trackarr-%s.json.gz", dateStamp))
+	if err := writeGzipBytes(jsonDest, jsonBytes); err != nil {
+		return fmt.Errorf("compress json backup: %w", err)
+	}
+
+	// 3. Rotation
+	if retentionDays > 0 {
+		cutoff := time.Now().Add(-time.Duration(retentionDays) * 24 * time.Hour)
+		entries, err := os.ReadDir(backupDir)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				if !strings.HasPrefix(name, "trackarr-") || (!strings.HasSuffix(name, ".db.gz") && !strings.HasSuffix(name, ".json.gz")) {
+					continue
+				}
+				info, infoErr := entry.Info()
+				if infoErr == nil && info.ModTime().Before(cutoff) {
+					_ = os.Remove(filepath.Join(backupDir, name))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func gzipFile(srcPath, destPath string) error {
+	in, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	tmpDest := destPath + ".tmp"
+	out, err := os.OpenFile(tmpDest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	gz := gzip.NewWriter(out)
+	if _, err := io.Copy(gz, in); err != nil {
+		_ = gz.Close()
+		_ = out.Close()
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	if err := gz.Close(); err != nil {
+		_ = out.Close()
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	return os.Rename(tmpDest, destPath)
+}
+
+func writeGzipBytes(destPath string, data []byte) error {
+	tmpDest := destPath + ".tmp"
+	out, err := os.OpenFile(tmpDest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	gz := gzip.NewWriter(out)
+	if _, err := gz.Write(data); err != nil {
+		_ = gz.Close()
+		_ = out.Close()
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	if err := gz.Close(); err != nil {
+		_ = out.Close()
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(tmpDest)
+		return err
+	}
+	return os.Rename(tmpDest, destPath)
 }
 
 // ExportCSV returns a CSV table containing library titles with summary statistics.
@@ -267,7 +410,7 @@ func (s *BackupService) ExportTrakt(ctx context.Context) ([]byte, error) {
 	return json.MarshalIndent(backup, "", "  ")
 }
 
-// Import processes a backup payload from reader (ZIP, JSON, or CSV).
+// Import processes a backup payload from reader (ZIP, GZIP, JSON, or CSV).
 func (s *BackupService) Import(r io.Reader, filename string, dryRun bool) (*BackupSummaryResult, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -276,6 +419,7 @@ func (s *BackupService) Import(r io.Reader, filename string, dryRun bool) (*Back
 
 	ext := strings.ToLower(filepath.Ext(filename))
 	isZip := ext == ".zip" || (len(data) >= 4 && bytes.HasPrefix(data, []byte("PK\x03\x04")))
+	isGzip := ext == ".gz" || (len(data) >= 2 && data[0] == 0x1f && data[1] == 0x8b)
 
 	if isZip {
 		extractedData, extractedName, err := extractFromZipBytes(data)
@@ -284,6 +428,28 @@ func (s *BackupService) Import(r io.Reader, filename string, dryRun bool) (*Back
 		}
 		data = extractedData
 		ext = strings.ToLower(filepath.Ext(extractedName))
+	} else if isGzip {
+		gr, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("open gzip backup: %w", err)
+		}
+		unpacked, err := io.ReadAll(gr)
+		_ = gr.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read gzip backup: %w", err)
+		}
+		data = unpacked
+		if strings.HasSuffix(strings.ToLower(filename), ".json.gz") {
+			ext = ".json"
+		}
+	}
+
+	// Native lossless Trackarr JSON import (v1 or v2)
+	if ext == ".json" || ext == "" {
+		var trackarr TrackarrBackup
+		if err := json.Unmarshal(data, &trackarr); err == nil && trackarr.Version != "" && len(trackarr.Titles) > 0 {
+			return s.importTrackarrV2(context.Background(), &trackarr, dryRun)
+		}
 	}
 
 	backup, err := s.parseToSimklBackup(data, ext)
@@ -610,4 +776,198 @@ func safeDerefInt64(i *int64) int64 {
 		return 0
 	}
 	return *i
+}
+
+type seasonKey struct {
+	titleID int64
+	season  int
+}
+
+type episodeKey struct {
+	titleID int64
+	season  int
+	episode int
+}
+
+func findExistingBackupTitle(titles *repository.TitleRepository, t *model.Title) (*model.Title, error) {
+	if t.IMDBID != nil || t.TMDBID != nil || t.AniListID != nil || t.TVDBID != nil || t.ExternalSourceID != nil {
+		if existing, err := titles.FindByExternalID(t.IMDBID, t.TMDBID, t.ExternalSourceID, t.AniListID, t.TVDBID, &t.Type); err == nil && existing != nil {
+			return existing, nil
+		}
+	}
+	if primary := t.PrimaryName(); primary != "" {
+		if existing, err := titles.FindByNameAndType(primary, t.Type, t.Year); err == nil && existing != nil {
+			return existing, nil
+		}
+	}
+	return nil, nil
+}
+
+func (s *BackupService) importTrackarrV2(ctx context.Context, backup *TrackarrBackup, dryRun bool) (*BackupSummaryResult, error) {
+	total := len(backup.Titles)
+	if total == 0 {
+		return &BackupSummaryResult{DryRun: dryRun, Message: "No titles found in uploaded file"}, nil
+	}
+
+	if dryRun {
+		created, skipped := 0, 0
+		for i := range backup.Titles {
+			existing, _ := findExistingBackupTitle(s.titleRepo, &backup.Titles[i])
+			if existing != nil {
+				skipped++
+			} else {
+				created++
+			}
+		}
+		return &BackupSummaryResult{
+			DryRun:  true,
+			Created: created,
+			Skipped: skipped,
+			Total:   total,
+			Message: fmt.Sprintf("%d titles ready to import, %d already in library", created, skipped),
+		}, nil
+	}
+
+	var created, skipped int
+	err := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+		tr := repository.NewTitleRepository(tx)
+		tw := repository.NewTitleWriter(tx)
+		gw := repository.NewGenreWriter(tx)
+		sw := repository.NewSeasonWriter(tx)
+		ew := repository.NewEpisodeWriter(tx)
+		rw := repository.NewTitleRelationWriter(tx)
+		bw := repository.NewBackupWriter(tx)
+
+		titleIDMap := make(map[int64]int64, len(backup.Titles))
+		seasonIDMap := make(map[seasonKey]int64)
+		episodeIDMap := make(map[episodeKey]int64)
+
+		for i := range backup.Titles {
+			t := backup.Titles[i]
+			existing, _ := findExistingBackupTitle(tr, &t)
+			if existing != nil {
+				titleIDMap[t.ID] = existing.ID
+				skipped++
+				continue
+			}
+
+			newID, err := tw.Create(ctx, &t, t.Names)
+			if err != nil {
+				return fmt.Errorf("create title %q: %w", t.PrimaryName(), err)
+			}
+			if err := bw.UpdateTitleExtraFields(ctx, newID, t); err != nil {
+				return fmt.Errorf("update extra fields for title %d: %w", newID, err)
+			}
+			if len(t.Genres) > 0 {
+				if err := gw.ReplaceForTitle(ctx, newID, t.Genres); err != nil {
+					return fmt.Errorf("restore genres for title %d: %w", newID, err)
+				}
+			}
+
+			for _, season := range t.Seasons {
+				newSeason, err := sw.GetOrCreate(ctx, newID, season.SeasonNumber)
+				if err != nil {
+					return fmt.Errorf("restore season %d for title %d: %w", season.SeasonNumber, newID, err)
+				}
+				if season.TotalEpisodes != nil {
+					if err := sw.UpdateTotalEpisodes(ctx, newSeason.ID, *season.TotalEpisodes); err != nil {
+						return fmt.Errorf("restore season total episodes: %w", err)
+					}
+				}
+				seasonIDMap[seasonKey{titleID: newID, season: season.SeasonNumber}] = newSeason.ID
+
+				for _, ep := range season.Episodes {
+					newEp, err := ew.GetOrCreate(ctx, newSeason.ID, ep.Episode)
+					if err != nil {
+						return fmt.Errorf("restore episode s%de%d: %w", season.SeasonNumber, ep.Episode, err)
+					}
+					if err := bw.UpdateEpisodeState(ctx, newEp.ID, ep); err != nil {
+						return fmt.Errorf("restore episode state s%de%d: %w", season.SeasonNumber, ep.Episode, err)
+					}
+					episodeIDMap[episodeKey{titleID: newID, season: season.SeasonNumber, episode: ep.Episode}] = newEp.ID
+				}
+			}
+
+			titleIDMap[t.ID] = newID
+			created++
+		}
+
+		for _, sei := range backup.SeasonExternalIDs {
+			newTitleID, ok := titleIDMap[sei.TitleID]
+			if !ok {
+				continue
+			}
+			if sid, ok := seasonIDMap[seasonKey{titleID: newTitleID, season: sei.SeasonNumber}]; ok {
+				if err := bw.RestoreSeasonExternalID(ctx, sid, sei); err != nil {
+					return fmt.Errorf("restore season external id: %w", err)
+				}
+			}
+		}
+
+		for _, we := range backup.WatchEvents {
+			newTitleID, ok := titleIDMap[we.TitleID]
+			if !ok {
+				continue
+			}
+			var epID *int64
+			if we.SeasonNumber != nil && we.EpisodeNumber != nil {
+				if eid, ok := episodeIDMap[episodeKey{titleID: newTitleID, season: *we.SeasonNumber, episode: *we.EpisodeNumber}]; ok {
+					epID = &eid
+				}
+			}
+			if err := bw.RestoreWatchEvent(ctx, newTitleID, epID, we); err != nil {
+				return fmt.Errorf("restore watch event: %w", err)
+			}
+		}
+
+		relsByTitle := make(map[int64][]model.TitleRelation)
+		for _, rel := range backup.TitleRelations {
+			newTitleID, ok := titleIDMap[rel.TitleID]
+			if !ok {
+				continue
+			}
+			rel.TitleID = newTitleID
+			if rel.SeasonNumber != nil {
+				if sid, ok := seasonIDMap[seasonKey{titleID: newTitleID, season: *rel.SeasonNumber}]; ok {
+					rel.SeasonID = &sid
+				} else {
+					rel.SeasonID = nil
+				}
+			} else {
+				rel.SeasonID = nil
+			}
+			if rel.MatchedTitleID != nil {
+				if mapped, ok := titleIDMap[*rel.MatchedTitleID]; ok {
+					rel.MatchedTitleID = &mapped
+				} else {
+					rel.MatchedTitleID = nil
+				}
+			}
+			relsByTitle[newTitleID] = append(relsByTitle[newTitleID], rel)
+		}
+		for tid, rels := range relsByTitle {
+			if err := rw.UpsertBatch(ctx, tid, rels); err != nil {
+				return fmt.Errorf("restore title relations for %d: %w", tid, err)
+			}
+		}
+
+		for _, ws := range backup.WrappedSnapshots {
+			if err := bw.RestoreWrappedSnapshot(ctx, ws); err != nil {
+				return fmt.Errorf("restore wrapped snapshot %d: %w", ws.Year, err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("execute v2 import: %w", err)
+	}
+
+	return &BackupSummaryResult{
+		DryRun:  false,
+		Created: created,
+		Skipped: skipped,
+		Total:   total,
+		Message: fmt.Sprintf("Successfully imported %d titles (%d skipped)", created, skipped),
+	}, nil
 }

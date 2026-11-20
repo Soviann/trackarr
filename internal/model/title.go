@@ -90,6 +90,7 @@ type Title struct {
 	Overview          *string         `json:"overview"`
 	Genres            []string        `json:"genres,omitempty"`
 	WatchProviders    []WatchProvider `json:"watch_providers,omitempty"`
+	OriginCountry     *string         `json:"origin_country,omitempty"`
 	Runtime           *int            `json:"runtime"`
 	TotalWatchMinutes int             `json:"total_watch_minutes"`
 	TMDBRating        *float64        `json:"tmdb_rating"`
@@ -146,11 +147,11 @@ func (t *Title) PrimaryName() string {
 
 // NextEpisode represents the first unwatched episode (for quick-mark in listing).
 type NextEpisode struct {
-	ID           int64   `json:"id"`
-	SeasonID     int64   `json:"season_id"`
-	Episode      int     `json:"episode"`
-	SeasonNumber int     `json:"season_number"`
-	Name         *string `json:"name,omitempty"`
+	ID           int64      `json:"id"`
+	SeasonID     int64      `json:"season_id"`
+	Episode      int        `json:"episode"`
+	SeasonNumber int        `json:"season_number"`
+	Name         *string    `json:"name,omitempty"`
 	AirDate      *string    `json:"air_date,omitempty"`
 	DownloadedAt *time.Time `json:"downloaded_at,omitempty"`
 	IsTBA        bool       `json:"is_tba,omitempty"`

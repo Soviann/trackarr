@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Sauvegardes fidèles sans perte (JSON v2 + SQLite `VACUUM INTO`) & rotation automatique** :
+  - Export/Import JSON v2 natif sans perte (`personal_notes`, `watch_providers`, `origin_country`, `season_external_ids`, `watch_events`, `title_relations`, `wrapped_snapshots`, liaisons `*arr` et support `.json.gz`).
+  - Export SQLite 1-clic (`GET /api/admin/export/sqlite` + bouton dans `/admin`) et génération nocturne rotative (`.db.gz` + `.json.gz`, rétention 7 jours) dans `<DATA_DIR>/backups/` via `Scheduler.RunMaintenance`.
+- **Réconciliation bidirectionnelle `*arr`** :
+  - Prise en charge des webhooks de suppression Radarr/Sonarr (`MovieFileDelete`, `MovieDelete`, `EpisodeFileDelete`, `SeriesDelete`).
+  - Action de réconciliation d'état à la demande (`POST /api/admin/arr/reconcile` et bouton dans `/admin/arr`).
+- **Synchronisation sortante automatique des notes vers Jellyfin** :
+  - Enqueue automatique de `TaskTypeJellyfinRatingPush` lors de la notation d'un titre dans Trackarr, configuration API (`jellyfin_url`, `jellyfin_api_key`, `jellyfin_user_id`), test de connexion et synchronisation globale (avec option Dry-Run) dans `/admin/jellyfin`.
+- **Parité Plex / Jellyfin & Live Playback** :
+  - Support du webhook Plex `media.rate`, enrichissement du Live Playback Jellyfin (`overview`, `runtime_ticks`, `playback_position_ticks`) et purge automatique de la session active (`ClearByTitleID`) lors du marquage manuel d'un titre ou d'un épisode.
+- **Flux 1-Tap Prowlarr (`/releases`)** :
+  - Action « À voir & Envoyer vers Radarr/Sonarr » (`ArrPushSheet`) directement depuis `ReleaseDetailSheet` et filtre par statut en collection (`Tous`, `Nouveaux`, `Dans ma liste À voir`).
+- **Extension du serveur MCP (`trackarr-mcp`)** :
+  - Nouveaux outils `trackarr_get_upcoming` et `trackarr_get_active_playback`, et résolution directe `season_number` + `episode_number` ou `next_unwatched` dans `trackarr_set_episode_watched`.
+
 ### Corrigé
 - **Internationalisation (i18n) complète du frontend** :
   - Extraction et traduction (`en.ts` / `fr.ts`) des chaînes anglaises codées en dur dans `MatchReview`, `MatchReviewCard`, `RematchSheet`, `AnilistCallback`, `PersonTitles`, `ErrorBanner`, `ErrorBoundary`, `TypeBadge`, `ConfirmationDrawer`, `Help`, ainsi que des messages/libellés résiduels dans `Setup`, `Login`, `AdminSettings`, `AdminArr`, `AdminAuth`, `ContinueWatching`, `Stats`, `PosterCard` et `PosterTile`.
