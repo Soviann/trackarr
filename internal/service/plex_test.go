@@ -150,7 +150,6 @@ func TestProcessPlexWebhook_IgnoredNonScrobble(t *testing.T) {
 		name string
 		p    *model.PlexPayload
 	}{
-		{"play event", &model.PlexPayload{Event: "media.play", Metadata: model.PlexMetadata{Type: "movie", Title: "Inception"}}},
 		{"pause event", &model.PlexPayload{Event: "media.pause", Metadata: model.PlexMetadata{Type: "movie", Title: "Inception"}}},
 		{"stop event", &model.PlexPayload{Event: "media.stop", Metadata: model.PlexMetadata{Type: "movie", Title: "Inception"}}},
 		{"unsupported type", &model.PlexPayload{Event: "media.scrobble", Metadata: model.PlexMetadata{Type: "track", Title: "Song"}}},
@@ -321,4 +320,81 @@ func TestProcessPlexWebhook_MediaRate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, title.MyRating)
 	assert.Equal(t, 10, *title.MyRating)
+}
+
+func TestProcessPlexWebhook_PlaybackStart_AutoCreatesUntrackedMovieAndSeries(t *testing.T) {
+	env := setupPlexTest(t)
+
+	// 1. Untracked Movie
+	moviePayload := &model.PlexPayload{
+		Event: "media.play",
+		Player: model.PlexPlayer{
+			Title: "LG Smart TV",
+		},
+		Metadata: model.PlexMetadata{
+			RatingKey: "plex-m-1",
+			Type:      "movie",
+			Title:     "Noryang: Deadly Sea",
+			Year:      2023,
+			Guid: []model.PlexGUIDItem{
+				{ID: "tmdb://660360"},
+				{ID: "imdb://tt22813112"},
+			},
+		},
+	}
+
+	err := env.svc.ProcessPlexWebhook(context.Background(), moviePayload, "{}")
+	require.NoError(t, err)
+
+	active := env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, "Noryang: Deadly Sea", active.TitleName)
+	assert.Equal(t, model.TitleTypeMovie, active.TitleType)
+	assert.Equal(t, "LG Smart TV", active.Player)
+	assert.True(t, active.TitleID > 0)
+
+	createdMovie, err := env.titleRepo.GetByID(active.TitleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, createdMovie.Status)
+	assert.Equal(t, 2023, createdMovie.Year)
+
+	// 2. Untracked Series and Episode
+	seriesPayload := &model.PlexPayload{
+		Event: "media.play",
+		Player: model.PlexPlayer{
+			Title: "LG Smart TV",
+		},
+		Metadata: model.PlexMetadata{
+			RatingKey:            "plex-ep-1",
+			GrandparentRatingKey: "plex-series-1",
+			Type:                 "episode",
+			GrandparentTitle:     "Severance",
+			Title:                "Good News About Hell",
+			Year:                 2022,
+			ParentIndex:          1,
+			Index:                1,
+		},
+	}
+
+	err = env.svc.ProcessPlexWebhook(context.Background(), seriesPayload, "{}")
+	require.NoError(t, err)
+
+	activeSeries := env.hub.GetActiveSession()
+	require.NotNil(t, activeSeries)
+	assert.Equal(t, "Severance", activeSeries.TitleName)
+	assert.Equal(t, model.TitleTypeSeries, activeSeries.TitleType)
+	require.NotNil(t, activeSeries.SeasonNumber)
+	assert.Equal(t, 1, *activeSeries.SeasonNumber)
+	require.NotNil(t, activeSeries.EpisodeNumber)
+	assert.Equal(t, 1, *activeSeries.EpisodeNumber)
+	assert.True(t, activeSeries.TitleID > 0)
+
+	createdSeries, err := env.titleRepo.GetByID(activeSeries.TitleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, createdSeries.Status)
+
+	require.Len(t, createdSeries.Seasons, 1)
+	assert.Equal(t, 1, createdSeries.Seasons[0].SeasonNumber)
+	require.Len(t, createdSeries.Seasons[0].Episodes, 1)
+	assert.Equal(t, 1, createdSeries.Seasons[0].Episodes[0].Episode)
 }

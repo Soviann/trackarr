@@ -184,13 +184,33 @@ func (s *PlexService) processPlaybackStart(ctx context.Context, p *model.PlexPay
 		movieType := model.TitleTypeMovie
 		title, err := titles.FindByExternalID(imdbID, tmdbID, &ratingKey, nil, nil, &movieType)
 		if err != nil {
-			title, err = titles.FindByNameAndType(p.Metadata.Title, model.TitleTypeMovie, p.Metadata.Year)
+			if strings.TrimSpace(p.Metadata.Title) != "" {
+				title, err = titles.FindByNameAndType(p.Metadata.Title, model.TitleTypeMovie, p.Metadata.Year)
+			}
 			if err != nil {
-				return nil
+				if s.titleSvc == nil || strings.TrimSpace(p.Metadata.Title) == "" {
+					return nil
+				}
+				var createdID int64
+				if txErr := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+					var cErr error
+					createdID, cErr = s.titleSvc.CreateFromScrobble(ctx, tx, p.Metadata.Title, p.Metadata.Year, ids, model.TitleTypeMovie, ratingKey, nil, model.TitleStatusWatching)
+					return cErr
+				}); txErr != nil {
+					s.log.Warn("failed to auto-create movie on Plex playback start", "title", p.Metadata.Title, "err", txErr)
+					return nil
+				}
+				title, err = titles.GetByID(createdID)
+				if err != nil || title == nil {
+					return nil
+				}
 			}
 		}
 
 		titleName := p.Metadata.Title
+		if titleName == "" {
+			titleName = title.PrimaryName()
+		}
 		for _, n := range title.Names {
 			if n.IsPrimary {
 				titleName = n.Name
@@ -221,26 +241,62 @@ func (s *PlexService) processPlaybackStart(ctx context.Context, p *model.PlexPay
 			seriesName = p.Metadata.Title
 		}
 		grandparentKey := p.Metadata.GrandparentRatingKey
+		seasonNum := p.Metadata.ParentIndex
+		epNum := p.Metadata.Index
+		epName := p.Metadata.Title
+
 		seriesType := model.TitleTypeSeries
 		title, err := titles.FindByExternalID(nil, nil, &grandparentKey, nil, nil, &seriesType)
 		if err != nil {
-			title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, p.Metadata.Year)
+			if strings.TrimSpace(seriesName) != "" {
+				title, err = titles.FindByNameAndType(seriesName, model.TitleTypeSeries, p.Metadata.Year)
+			}
 			if err != nil {
-				return nil
+				if s.titleSvc == nil || strings.TrimSpace(seriesName) == "" {
+					return nil
+				}
+				epHints := matching.EpisodeHints{
+					EpisodeName:   epName,
+					SeasonNumber:  seasonNum,
+					EpisodeNumber: epNum,
+					EpisodeIMDBID: ids.IMDB,
+				}
+				var createdID int64
+				if txErr := database.WithTxContext(ctx, s.db, func(tx *sql.Tx) error {
+					var cErr error
+					createdID, cErr = s.titleSvc.CreateFromScrobble(ctx, tx, seriesName, p.Metadata.Year, ExternalIDs{}, model.TitleTypeSeries, grandparentKey, nil, model.TitleStatusWatching, epHints)
+					if cErr != nil {
+						return cErr
+					}
+					if seasonNum > 0 && epNum > 0 {
+						seasonWriter := repository.NewSeasonWriter(tx)
+						epWriter := repository.NewEpisodeWriter(tx)
+						if season, sErr := seasonWriter.GetOrCreate(ctx, createdID, seasonNum); sErr == nil {
+							_, _ = epWriter.GetOrCreate(ctx, season.ID, epNum)
+						}
+					}
+					return nil
+				}); txErr != nil {
+					s.log.Warn("failed to auto-create series on Plex playback start", "series", seriesName, "err", txErr)
+					return nil
+				}
+				title, err = titles.GetByID(createdID)
+				if err != nil || title == nil {
+					return nil
+				}
 			}
 		}
 
 		titleName := seriesName
+		if titleName == "" {
+			titleName = title.PrimaryName()
+		}
 		for _, n := range title.Names {
 			if n.IsPrimary {
 				titleName = n.Name
 				break
 			}
 		}
-
-		seasonNum := p.Metadata.ParentIndex
-		epNum := p.Metadata.Index
-		epName := p.Metadata.Title
 
 		session := model.ActivePlaybackSession{
 			Source:        "plex",

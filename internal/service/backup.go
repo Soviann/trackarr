@@ -125,7 +125,7 @@ func (s *BackupService) WriteAutomatedBackups(ctx context.Context, backupDir str
 
 	// 1. SQLite snapshot (.db.gz)
 	tmpDB := filepath.Join(backupDir, fmt.Sprintf(".tmp-%s-%d.db", dateStamp, time.Now().UnixNano()))
-	defer os.Remove(tmpDB)
+	defer func() { _ = os.Remove(tmpDB) }()
 	if err := s.ExportSQLiteToFile(ctx, tmpDB); err != nil {
 		return err
 	}

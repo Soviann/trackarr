@@ -768,3 +768,70 @@ func TestProcessJellyfinWebhook_PlaybackStart_MetadataAndFallback(t *testing.T) 
 	assert.Equal(t, int64(3480), active.DurationSec)
 	assert.Equal(t, int64(0), active.ViewOffsetSec)
 }
+
+func TestProcessJellyfinWebhook_PlaybackStart_AutoCreatesUntrackedMovieAndSeries(t *testing.T) {
+	env := setupJellyfinTest(t)
+
+	// 1. Untracked Movie
+	moviePayload := &model.JellyfinPayload{
+		NotificationType: "PlaybackStart",
+		ItemType:         "Movie",
+		Name:             "Noryang: Deadly Sea",
+		Year:             "2023",
+		ProviderTMDB:     "660360",
+		ProviderIMDB:     "tt22813112",
+		ItemID:           "jf-noryang",
+		DeviceName:       "LG Smart TV",
+	}
+
+	err := env.svc.ProcessJellyfinWebhook(context.Background(), moviePayload, "{}")
+	require.NoError(t, err)
+
+	active := env.hub.GetActiveSession()
+	require.NotNil(t, active)
+	assert.Equal(t, "Noryang: Deadly Sea", active.TitleName)
+	assert.Equal(t, model.TitleTypeMovie, active.TitleType)
+	assert.Equal(t, "LG Smart TV", active.Player)
+	assert.True(t, active.TitleID > 0)
+
+	createdMovie, err := env.titleRepo.GetByID(active.TitleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, createdMovie.Status)
+	assert.Equal(t, 2023, createdMovie.Year)
+
+	// 2. Untracked Series and Episode
+	seriesPayload := &model.JellyfinPayload{
+		NotificationType: "PlaybackStart",
+		ItemType:         "Episode",
+		Name:             "Good News About Hell",
+		SeriesName:       "Severance",
+		Year:             "2022",
+		SeriesID:         "jf-series-sev",
+		Season:           "1",
+		Episode:          "1",
+		DeviceName:       "LG Smart TV",
+	}
+
+	err = env.svc.ProcessJellyfinWebhook(context.Background(), seriesPayload, "{}")
+	require.NoError(t, err)
+
+	activeSeries := env.hub.GetActiveSession()
+	require.NotNil(t, activeSeries)
+	assert.Equal(t, "Severance", activeSeries.TitleName)
+	assert.Equal(t, model.TitleTypeSeries, activeSeries.TitleType)
+	require.NotNil(t, activeSeries.SeasonNumber)
+	assert.Equal(t, 1, *activeSeries.SeasonNumber)
+	require.NotNil(t, activeSeries.EpisodeNumber)
+	assert.Equal(t, 1, *activeSeries.EpisodeNumber)
+	assert.True(t, activeSeries.TitleID > 0)
+
+	createdSeries, err := env.titleRepo.GetByID(activeSeries.TitleID)
+	require.NoError(t, err)
+	assert.Equal(t, model.TitleStatusWatching, createdSeries.Status)
+
+	// Verify season and episode exist
+	require.Len(t, createdSeries.Seasons, 1)
+	assert.Equal(t, 1, createdSeries.Seasons[0].SeasonNumber)
+	require.Len(t, createdSeries.Seasons[0].Episodes, 1)
+	assert.Equal(t, 1, createdSeries.Seasons[0].Episodes[0].Episode)
+}
