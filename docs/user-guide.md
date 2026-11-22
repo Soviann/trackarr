@@ -110,7 +110,8 @@ The **Calendar** page (`/calendar`) provides a complete schedule of upcoming epi
   - Accessible via the **📅 Flux iCal** button in the header.
   - Generates a personal, token-secured feed (`/api/calendar.ics?token=...`).
   - 1-click subscription buttons for **Apple Calendar** (`webcal://`) and **Google Calendar**.
-  - Includes detailed event descriptions (episode number, streaming platforms, status, overview, and direct Trackarr link) with background 6-hour refresh interval.
+  - **Same-Day Episode Grouping**: By default, multiple episodes of the same series airing on the same date are grouped into a single calendar event (using compact titles such as `Title - S01E01-E03` for consecutive episodes or `S01E01, S01E03` / `(+N)` when non-contiguous or multi-season) with every episode enumerated in the description, while single-episode days, distinct series, movies, and title-level `next_air_date` fallback entries remain separate events. Toggle **Group same-day episodes in iCal feed** (`ical_group_same_day`) anytime under *Admin ➔ System Settings* (`/admin/settings`) to revert to one event per episode.
+  - Includes detailed event descriptions (episode number or grouped episode list, streaming platforms, status, overview, and direct Trackarr link) with background 6-hour refresh interval.
   - Security option to regenerate and rotate the secret calendar token at any time.
 
 ---

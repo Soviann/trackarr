@@ -142,6 +142,10 @@
     - **Unwatched Movie Filtering & Creation**: Keeps items where `Type` is `""` or `"Movie"` and `UserData == nil || !UserData.Played`. Deduplicates via `findExistingJellyfinTitle` (`FindByExternalID` on `imdb_id`/`tmdb_id`/`external_source_id` + `FindByNameAndType` with clamped year). Existing titles remain untouched. Missing movies are created inside short per-item transactions (`createJellyfinTitleIfMissing`) with `status = 'plan_to_watch'`, `downloaded_at` set, `arr_ignored = true`, `match_source = 'jellyfin_sync'`, `match_status = 'confirmed'` when `tmdb_id > 0` else `'pending_review'`, `0` `watch_events`, and `TaskTypeEnrichment` (`dedup_key = 'enrichment:<id>'`, `PreserveMatch: false`).
     - **Scheduler & Route**: Wired onto `Scheduler` via `SetJellyfinMovieSyncer` in `cmd/serve.go` (invoked in `runInitialPass` before `RefreshTitles` and `runScheduledPass`, suppressed when `DISABLE_BACKGROUND_TASKS=true`). Exposed manually via `POST /api/admin/jellyfin/sync-movies` (`mw.JWTAuth(jwtSecret)` cookie auth only; rejects API-key-only requests with `401`, returns `400` on missing settings/bad JSON, `200` `JellyfinMovieSyncSummary`, sanitized `500` without leaking secrets).
     - **`ItemAdded` Webhook (`JellyfinService.processItemAdded`)**: Case-insensitive/trimmed dispatch for `Movie` (`TitleTypeMovie`) and `Series` (`TitleTypeSeries`), safely ignoring `Episode` and other item types (0 DB writes). Deduplicates via `findExistingJellyfinTitle` (including `tvdb_id`); existing titles remain untouched. Missing titles are created (`plan_to_watch`, `arr_ignored = true`, `match_source = 'jellyfin_webhook'`, `downloaded_at` set **only on movies**, never on series) and enqueue `TaskTypeEnrichment` (resolving metadata, cover, and triggering `TaskTypeRefresh` season backfill for series). Zero `watch_events`, zero `RatingPrompt`, zero `PlaybackHubService` changes.
+31. **iCal Same-Day Episode Grouping (`CalendarService.GenerateICS`)**:
+    - Admin preference `ical_group_same_day` (`SettingKeyICalGroupSameDay` in `settings` table) defaults to **enabled (`true`)** whenever absent, `sql.ErrNoRows`, nil `settingRepo`, or `!= "false"` (trimmed, case-insensitive). Exposed in `GET`/`PUT /api/admin/system-settings` (`ICalGroupSameDay`) and toggled in `AdminSettings.tsx` (`data-testid="ical-group-same-day-toggle"`); intentionally excluded from `/api/config`, `/api/settings`, and `/api/calendar/events`.
+    - When enabled, `GenerateICS` groups episode events (`Type != "movie"`, `SeasonNumber != nil && EpisodeNumber != nil`, valid `"2006-01-02"` `AirDate`) sharing composite key `(TitleID, AirDate)` while preserving order of first appearance from `ListCalendarEvents` and sorting members by `SeasonNumber ASC, EpisodeNumber ASC, ID ASC`.
+    - Groups of `>= 2` episodes emit a single RFC 5545 `VEVENT` with deterministic `UID:trackarr-group-<TitleID>-<YYYYMMDD>@trackarr`, concise `SUMMARY` (`Title - SxxEyy-Ezz` when strictly consecutive within one season, else comma-joined `SxxEyy` tags capped at 3 with ` (+remaining)`), `DESCRIPTION` enumerating `Episodes (N):` (`- SxxEyy` or `- SxxEyy (EpisodeName)`), streaming providers, overview, and Trackarr URL, escaped via `escapeICS` and folded at ≤ 75 octets on UTF-8 rune boundaries (`writeICSLine`). Single episodes (`trackarr-<event.ID>@trackarr`), movies, `next_air_date` fallback items, and ungrouped mode (`"false"`) emit one `VEVENT` per item.
 
 ---
 
@@ -160,7 +164,7 @@
 - `wrapped_snapshots`: Immutable annual retrospective snapshots (`year`, `data_json`, `created_at`, migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (`id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`, migration 049).
 - `title_names_fts` & `title_names_trigram_fts`: FTS5 full-text search index tables on `title_names.name` (`unicode61 remove_diacritics 2` for prefix search, and `tokenize='trigram'` for fuzzy typo and substring matching, migration 051).
-- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `jellyfin_url`, `jellyfin_api_key`, `jellyfin_user_id`, `jellyfin_webhook_secret`, `plex_webhook_secret`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
+- `settings`: Key-value config store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `jellyfin_url`, `jellyfin_api_key`, `jellyfin_user_id`, `jellyfin_webhook_secret`, `plex_webhook_secret`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `ical_group_same_day`, `calendar_token`, notification preferences). Sessions use signed JWT in HTTP cookies.
 
 ---
 
@@ -195,7 +199,7 @@
 - `GET /api/titles/resolve` : Resolve external metadata from direct URL (IMDb, TMDB, TVDB, AniList).
 - `GET /api/titles/continue-watching` : List in-progress titles with progress ratios, streaming providers, next unwatched episode, and saga smart next-up sequel suggestions (`is_saga_next_up`, `saga_source_title`, `saga_source_id`).
 - `GET /api/titles/upcoming` : List series with upcoming air dates.
-- `GET /api/calendar.ics` : Public token-secured RFC 5545 iCalendar feed (`?token=...`).
+- `GET /api/calendar.ics` : Public token-secured RFC 5545 iCalendar feed (`?token=...`, groups same-day episodes of the same series by default via `ical_group_same_day`).
 - `GET /api/calendar/events` : List calendar events for in-app month/week/list views.
 - `GET /api/calendar/token` : Get active calendar token and subscription URLs.
 - `POST /api/calendar/token/regenerate` : Rotate calendar secret token.
@@ -214,7 +218,7 @@
 - `POST /api/anilist/token` : Save AniList OAuth access token.
 - `DELETE /api/anilist/token` : Disconnect AniList integration.
 - `GET /api/admin/auth-settings` & `PUT /api/admin/auth-settings` : Get/update auth mode (`google`, `password`, `hybrid`).
-- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags, `saga_chronological_next_up`, `auto_open_imdb_on_rate`) and trigger client hot-reload.
+- `GET /api/admin/system-settings` & `PUT /api/admin/system-settings` : Read/update system settings in SQLite (returns `app_version`, masked secrets, integration flags, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `ical_group_same_day`) and trigger client hot-reload.
 - `POST /api/admin/system-settings/test/{service}` : Test connection for TMDB, TVDB, Gemini, Radarr, Sonarr, Prowlarr.
 - `POST /api/admin/system-settings/vapid/generate` : Auto-generate fresh NIST P-256 VAPID keypair.
 - `GET /api/admin/counts` : Total library titles and queued items for admin navbar badge.
