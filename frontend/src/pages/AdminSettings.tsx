@@ -33,6 +33,7 @@ interface SystemSettings {
   enabled_watch_providers?: string
   saga_chronological_next_up?: boolean
   auto_open_imdb_on_rate?: boolean
+  ical_group_same_day?: boolean
 }
 
 function ChevronIcon({ isOpen }: { isOpen: boolean }) {
@@ -109,6 +110,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
         enabled_watch_providers: data.enabled_watch_providers !== undefined ? data.enabled_watch_providers : DEFAULT_ENABLED_PROVIDERS,
         saga_chronological_next_up: data.saga_chronological_next_up !== false ? 'true' : 'false',
         auto_open_imdb_on_rate: data.auto_open_imdb_on_rate === true ? 'true' : 'false',
+        ical_group_same_day: data.ical_group_same_day !== false ? 'true' : 'false',
       })
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : t('settings.loadConfigFailed'))
@@ -442,6 +444,29 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
               disabled={saving}
               aria-label={t('settings.autoOpenImdbOnRate')}
               data-testid="auto-open-imdb-toggle"
+            >
+              <span className={s.toggleKnob} />
+            </button>
+          </div>
+
+          {/* Group Same-Day Episodes in iCal Feed */}
+          <div className={s.toggleRow}>
+            <div className={s.toggleInfo}>
+              <span className={s.toggleLabel}>{t('settings.icalGroupSameDay')}</span>
+              <span className={s.toggleDesc}>{t('settings.icalGroupSameDayDesc')}</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formValues.ical_group_same_day !== 'false'}
+              className={formValues.ical_group_same_day !== 'false' ? s.toggleOn : s.toggleOff}
+              onClick={() => {
+                const current = formValues.ical_group_same_day !== 'false'
+                handleChange('ical_group_same_day', current ? 'false' : 'true')
+              }}
+              disabled={saving}
+              aria-label={t('settings.icalGroupSameDay')}
+              data-testid="ical-group-same-day-toggle"
             >
               <span className={s.toggleKnob} />
             </button>

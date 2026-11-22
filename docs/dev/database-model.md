@@ -46,7 +46,7 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - `season_audit_dismissals`: Discarded duplicate merge proposals. Primary Key: `(source_title_id, target_title_id)`. Columns: `source_title_id`, `target_title_id`, `created_at`.
 - `wrapped_snapshots`: Immutable annual retrospective snapshots. Primary Key: `year`. Columns: `year`, `data_json`, `created_at` (migrations 044–046; empty snapshots are purged).
 - `api_keys`: Machine-to-machine authentication tokens (migration 049). Columns: `id`, `name`, `key_hash`, `key_prefix`, `scopes`, `created_at`, `last_used_at`, `revoked_at`.
-- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `calendar_token`, notification preferences, etc.). Columns: `key`, `value`.
+- `settings`: Key-value configuration store (`radarr_url`, `sonarr_url`, `prowlarr_url`, `admin_password_hash`, `admin_recovery_key_hash`, `jwt_secret`, `vapid_public_key`, `vapid_private_key`, `push_subscription`, `metadata_language`, `enabled_watch_providers`, `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `ical_group_same_day`, `calendar_token`, notification preferences, etc.). Columns: `key`, `value`.
 
 ## Title Merge Invariants (`TitleWriter.Merge`)
 When merging a `sourceID` title into `destID`:

@@ -104,7 +104,7 @@
 | `CoverService` | `internal/service/cover.go` | Cover downloading and accent color extraction (`colorextract/`) | `docs/patterns.md` |
 | `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
-| `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation, token rotation & range queries | `docs/user-guide.md` |
+| `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation (with configurable same-day episode grouping via `ical_group_same_day`), token rotation & range queries | `docs/user-guide.md` |
 | `BackgroundService` / `MetadataSyncService` | `internal/service/background.go` | Title metadata enrichment and synchronization (TMDB, AniList, TVDB) | `docs/background-jobs.md` |
 | `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (Jellyfin unwatched movie sync, daily refresh, cover maintenance, automated backups, wrapped checks) | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
@@ -132,7 +132,7 @@
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles, UserDataSaved ratings, and ItemAdded titles from Jellyfin |
 | POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
 | POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/import events from Radarr & Sonarr, mark media downloaded, and push alerts |
-| GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`) |
+| GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`, groups same-day series episodes by default) |
 | GET | `/api/calendar/events` | `calendarHandler.GetEvents` | In-app calendar events for interactive multi-view calendar |
 | GET | `/api/calendar/token` | `calendarHandler.GetToken` | Retrieve active iCal subscription token & webcal URLs |
 | POST | `/api/calendar/token/regenerate` | `calendarHandler.RegenerateToken` | Rotate iCal secret token |
@@ -339,7 +339,7 @@
 | `/setup` | `Setup` | `pages/Setup.tsx` | Initial administrative setup and emergency recovery key generation |
 | `/match-review` | `MatchReview` | `pages/MatchReview.tsx` | Review queue for unconfirmed and low-confidence title matches |
 | `/admin` | `Admin` | `pages/Admin.tsx` | Admin Hub with responsive 2-column navigation grid (1040px) and live status badges |
-| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings (840px): Appearance & Localization (stylized theme, interface language & metadata language dropdowns), Streaming Platforms (stylized multi-select dropdown), and Metadata & AI keys at bottom |
+| `/admin/settings` | `AdminSettings` | `pages/AdminSettings.tsx` | System settings (840px): Appearance & Localization (stylized theme, interface/metadata language dropdowns, and preference switches including `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `ical_group_same_day`), Streaming Platforms (stylized multi-select dropdown), and Metadata & AI keys at bottom |
 | `/admin/auth` | `AdminAuth` | `pages/AdminAuth.tsx` | Authentication & Security (840px): Access mode (hybrid/local/Google OAuth), local credentials, single-use emergency recovery key generation, and sticky AdminHeader |
 | `/admin/arr` | `AdminArr` | `pages/AdminArr.tsx` | Arr Stack management: Radarr, Sonarr & Prowlarr connection settings, live connection tests, 2-column desktop grid for standard/anime defaults, and sticky AdminHeader |
 | `/admin/tasks` | `AdminTasks` | `pages/AdminTasks.tsx` | Background task queue & diagnostics: widescreen scannable layout (1200px), sticky AdminHeader, and centered floating batch action bar |

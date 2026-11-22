@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/handler"
+	"github.com/Soviann/trackarr/internal/handler/httputil"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
 	"github.com/Soviann/trackarr/internal/service"
@@ -178,4 +181,78 @@ func TestCalendarHandler_TokenEndpoints(t *testing.T) {
 			assert.True(t, len(resp.HTTPURL) > len(tc.want) && resp.HTTPURL[:len(tc.want)] == tc.want, "got %s", resp.HTTPURL)
 		})
 	}
+}
+
+func TestCalendarHandler_ServeICS_GroupingToggle(t *testing.T) {
+	h, calSvc, db, _, settingRepo := setupCalendarHandler(t)
+	adminH := handler.NewAdminSettingsHandler(db, settingRepo, nil)
+
+	airTime := time.Now().UTC()
+	airDate := airTime.Format("2006-01-02")
+	wantDate := airTime.Format("20060102")
+
+	seriesID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2026, Status: model.TitleStatusWatching, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "Frieren", Language: "en", IsPrimary: true}},
+	)
+	season := testutil.UpsertSeason(t, db, seriesID, 1, 12)
+	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 1, Name: "Ep One", AirDate: airDate},
+		{EpisodeNumber: 2, Name: "Ep Two", AirDate: airDate},
+		{EpisodeNumber: 3, Name: "Ep Three", AirDate: airDate},
+	})
+	movieID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 2026, Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusConfirmed, ReleaseDate: &airDate},
+		[]model.TitleName{{Name: "Movie Same Day", Language: "en", IsPrimary: true}},
+	)
+
+	tok, err := calSvc.GetOrCreateToken(context.Background())
+	require.NoError(t, err)
+
+	fetchICS := func() string {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/calendar.ics?token="+tok, nil)
+		req.Host = "trackarr.example.com"
+		httputil.WrapHandler(h.ServeICS)(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+		return strings.ReplaceAll(w.Body.String(), "\r\n ", "")
+	}
+
+	// 1. Default (unset) groups same-day episodes while keeping movie separate.
+	defaultICS := fetchICS()
+	assert.Equal(t, 2, strings.Count(defaultICS, "BEGIN:VEVENT"))
+	assert.Contains(t, defaultICS, fmt.Sprintf("UID:trackarr-group-%d-%s@trackarr", seriesID, wantDate))
+	assert.Contains(t, defaultICS, "SUMMARY:Frieren - S01E01-E03")
+	assert.Contains(t, defaultICS, fmt.Sprintf("UID:trackarr-title-%d-%s@trackarr", movieID, airDate))
+
+	// 2. Disable via PUT /api/admin/system-settings -> GET reports false and ICS emits individual VEVENTs.
+	putFalseReq := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":"false"}`))
+	putFalseRR := httptest.NewRecorder()
+	httputil.WrapHandler(adminH.UpdateSystemSettings)(putFalseRR, putFalseReq)
+	require.Equal(t, http.StatusNoContent, putFalseRR.Code)
+
+	getSettingsReq := httptest.NewRequest(http.MethodGet, "/api/admin/system-settings", nil)
+	getSettingsRR := httptest.NewRecorder()
+	httputil.WrapHandler(adminH.GetSystemSettings)(getSettingsRR, getSettingsReq)
+	require.Equal(t, http.StatusOK, getSettingsRR.Code)
+	var settingsResp handler.SystemSettingsResponse
+	require.NoError(t, json.NewDecoder(getSettingsRR.Body).Decode(&settingsResp))
+	assert.False(t, settingsResp.ICalGroupSameDay)
+
+	ungroupedICS := fetchICS()
+	assert.Equal(t, 4, strings.Count(ungroupedICS, "BEGIN:VEVENT"))
+	assert.NotContains(t, ungroupedICS, "trackarr-group-")
+	assert.Contains(t, ungroupedICS, "SUMMARY:Frieren - S01E01 - Ep One")
+	assert.Contains(t, ungroupedICS, "SUMMARY:Frieren - S01E02 - Ep Two")
+	assert.Contains(t, ungroupedICS, "SUMMARY:Frieren - S01E03 - Ep Three")
+
+	// 3. Re-enable via PUT /api/admin/system-settings -> ICS returns to grouped output.
+	putTrueReq := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":"true"}`))
+	putTrueRR := httptest.NewRecorder()
+	httputil.WrapHandler(adminH.UpdateSystemSettings)(putTrueRR, putTrueReq)
+	require.Equal(t, http.StatusNoContent, putTrueRR.Code)
+
+	regroupedICS := fetchICS()
+	assert.Equal(t, 2, strings.Count(regroupedICS, "BEGIN:VEVENT"))
+	assert.Contains(t, regroupedICS, fmt.Sprintf("UID:trackarr-group-%d-%s@trackarr", seriesID, wantDate))
 }

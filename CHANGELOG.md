@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Regroupement des épisodes du même jour dans le flux iCal (`ical_group_same_day`, `CalendarService`, `/admin/settings`)** :
+  - Regroupement par défaut dans `/api/calendar.ics` des épisodes d'une même série diffusés le même jour en un seul événement RFC 5545 (`UID:trackarr-group-<TitleID>-<YYYYMMDD>@trackarr`), avec titre condensé (`S01E01-E03` pour les épisodes contigus, ou `S01E01, S01E03` / `(+N)` au-delà de 3 épisodes) et description listant chaque épisode (`Episodes (N)`), tout en conservant des `VEVENT` distincts pour les épisodes uniques, les films, les séries différentes, les dates de repli `next_air_date` et le découpage UTF-8 à 75 octets.
+  - Nouveau paramètre système `ical_group_same_day` (activé par défaut), exposé via `GET`/`PUT /api/admin/system-settings` et configurable dans *Admin ➔ Paramètres système* (*« Regrouper les épisodes du même jour dans le flux iCal »*) pour revenir au mode un événement par épisode.
+
+### Documentation
+- **Synchronisation des guides iCal & paramètres système (`docs/patterns.md`, `docs/user-guide.md`, `docs/llm.md`, `docs/dev/database-model.md`)** :
+  - Documentation du regroupement des épisodes du même jour dans le flux iCal, du format `VEVENT` associé et du paramètre système `ical_group_same_day`.
+
 ## [v1.33.1] — 2026-11-22
 
 ### Corrigé
