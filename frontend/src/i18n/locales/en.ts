@@ -378,6 +378,8 @@ export const en = {
     sagaChronologicalNextUpDesc: 'Automatically surface the next uncompleted sequel or movie in franchise order when completing a title.',
     autoOpenImdbOnRate: 'Auto-open IMDb when rating',
     autoOpenImdbOnRateDesc: 'Automatically open the IMDb page in a new tab whenever you rate a title (when an IMDb ID is available).',
+    icalGroupSameDay: 'Group same-day episodes in iCal feed',
+    icalGroupSameDayDesc: 'Combine multiple episodes of the same series airing on the same day into a single calendar event.',
     metadataAi: 'Metadata & Artificial Intelligence',
     metadataAiKeysDesc: 'These keys enable search, automatic enrichment, and intelligent title reconciliation for movies, TV shows, and anime.',
     watchProviders: 'Streaming Platforms & Watch Providers',

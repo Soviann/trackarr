@@ -110,6 +110,7 @@ describe('AdminSettings Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Apparence & Thèmes/)).not.toBeNull() // i18n-ignore
+      expect(screen.getByText(/Regrouper les épisodes du même jour dans le flux iCal/)).not.toBeNull() // i18n-ignore
     })
   })
 
@@ -280,6 +281,101 @@ describe('AdminSettings Page', () => {
         method: 'PUT',
         body: expect.stringContaining('"auto_open_imdb_on_rate":"true"'),
       }))
+    })
+  })
+
+  it('defaults iCal same-day episode grouping to checked when omitted and saves false when toggled off', async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ical_group_same_day: false })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ical-group-same-day-toggle')).not.toBeNull()
+    })
+
+    const toggle = screen.getByTestId('ical-group-same-day-toggle')
+    expect(toggle.getAttribute('role')).toBe('switch')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText('Group same-day episodes in iCal feed')).not.toBeNull()
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    const saveBtn = screen.getByText('Save Settings')
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"ical_group_same_day":"false"'),
+      }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ical-group-same-day-toggle').getAttribute('aria-checked')).toBe('false')
+    })
+  })
+
+  it('allows toggling iCal same-day episode grouping from true to false and saving', async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ ical_group_same_day: true })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ical_group_same_day: false })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ical-group-same-day-toggle')).not.toBeNull()
+    })
+
+    const toggle = screen.getByTestId('ical-group-same-day-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(screen.getByText('Save Settings'))
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"ical_group_same_day":"false"'),
+      }))
+    })
+  })
+
+  it('allows toggling iCal same-day episode grouping from false to true and saving', async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce({ ical_group_same_day: false })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ical_group_same_day: true })
+
+    render(<AdminSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ical-group-same-day-toggle')).not.toBeNull()
+    })
+
+    const toggle = screen.getByTestId('ical-group-same-day-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(screen.getByText('Save Settings'))
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/admin/system-settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"ical_group_same_day":"true"'),
+      }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ical-group-same-day-toggle').getAttribute('aria-checked')).toBe('true')
     })
   })
 })
