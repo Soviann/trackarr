@@ -3,6 +3,7 @@ package handler_test
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -77,6 +78,7 @@ func TestGetSystemSettings(t *testing.T) {
 	assert.Equal(t, "netflix,prime,disney,apple,max,canal,crunchyroll,paramount,adn", resp.EnabledWatchProviders)
 	assert.True(t, resp.SagaChronologicalNextUp)
 	assert.False(t, resp.AutoOpenIMDbOnRate)
+	assert.True(t, resp.ICalGroupSameDay)
 }
 
 func TestUpdateSystemSettings_AndReload(t *testing.T) {
@@ -90,7 +92,8 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 		"metadata_language": "en",
 		"enabled_watch_providers": "netflix,prime,crunchyroll",
 		"saga_chronological_next_up": "false",
-		"auto_open_imdb_on_rate": "true"
+		"auto_open_imdb_on_rate": "true",
+		"ical_group_same_day": "false"
 	}`
 
 	req := httptest.NewRequest("PUT", "/api/admin/system-settings", strings.NewReader(updateBody))
@@ -124,14 +127,163 @@ func TestUpdateSystemSettings_AndReload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "true", autoOpenIMDb)
 
+	icalGroupSameDay, err := settings.Get(repository.SettingKeyICalGroupSameDay)
+	require.NoError(t, err)
+	assert.Equal(t, "false", icalGroupSameDay)
+
 	// Verify dynamic reloader returns the new value
 	assert.Equal(t, "new-sqlite-tmdb-key", reloader.Get("tmdb_api_key"))
 	assert.Equal(t, "en", reloader.Get("metadata_language"))
 	assert.Equal(t, "http://192.168.1.50:7878", reloader.Get("radarr_url"))
 	assert.Equal(t, "false", reloader.Get("saga_chronological_next_up"))
 	assert.Equal(t, "true", reloader.Get("auto_open_imdb_on_rate"))
+	assert.Equal(t, "false", reloader.Get(repository.SettingKeyICalGroupSameDay))
+
+	// Verify GET reflects persisted false value
+	getReq := httptest.NewRequest(http.MethodGet, "/api/admin/system-settings", nil)
+	getRR := httptest.NewRecorder()
+	require.NoError(t, h.GetSystemSettings(getRR, getReq))
+	assert.Equal(t, http.StatusOK, getRR.Code)
+
+	var resp handler.SystemSettingsResponse
+	require.NoError(t, json.NewDecoder(getRR.Body).Decode(&resp))
+	assert.False(t, resp.ICalGroupSameDay)
 
 	_ = db
+}
+
+func TestSystemSettings_ICalGroupSameDay(t *testing.T) {
+	t.Run("nominal default true and toggle round-trip", func(t *testing.T) {
+		_, settings, _, h := setupAdminSettingsTestEnv(t)
+
+		getRaw := func() map[string]any {
+			req := httptest.NewRequest(http.MethodGet, "/api/admin/system-settings", nil)
+			rr := httptest.NewRecorder()
+			httputil.WrapHandler(h.GetSystemSettings)(rr, req)
+			require.Equal(t, http.StatusOK, rr.Code)
+
+			var payload map[string]any
+			require.NoError(t, json.NewDecoder(rr.Body).Decode(&payload))
+			return payload
+		}
+
+		// Default when unset
+		initial := getRaw()
+		val, exists := initial["ical_group_same_day"]
+		require.True(t, exists)
+		assert.Equal(t, true, val)
+
+		// Disable via PUT
+		putFalse := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":"false"}`))
+		rrFalse := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(rrFalse, putFalse)
+		require.Equal(t, http.StatusNoContent, rrFalse.Code)
+
+		stored, err := settings.Get(repository.SettingKeyICalGroupSameDay)
+		require.NoError(t, err)
+		assert.Equal(t, "false", stored)
+		assert.Equal(t, false, getRaw()["ical_group_same_day"])
+
+		// Re-enable via PUT
+		putTrue := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":"true"}`))
+		rrTrue := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(rrTrue, putTrue)
+		require.Equal(t, http.StatusNoContent, rrTrue.Code)
+
+		stored, err = settings.Get(repository.SettingKeyICalGroupSameDay)
+		require.NoError(t, err)
+		assert.Equal(t, "true", stored)
+		assert.Equal(t, true, getRaw()["ical_group_same_day"])
+	})
+
+	t.Run("boundary values and nil reloader fallback", func(t *testing.T) {
+		cases := []struct {
+			name     string
+			dbValue  string
+			expected bool
+		}{
+			{name: "empty string defaults to true", dbValue: "", expected: true},
+			{name: "lowercase false disables", dbValue: "false", expected: false},
+			{name: "uppercase FALSE disables", dbValue: "FALSE", expected: false},
+			{name: "whitespace around false disables", dbValue: " false ", expected: false},
+			{name: "true enables", dbValue: "true", expected: true},
+			{name: "arbitrary non-false string defaults to true", dbValue: "enabled", expected: true},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				db, settings, _, h := setupAdminSettingsTestEnv(t)
+				testutil.SetSetting(t, db, repository.SettingKeyICalGroupSameDay, tc.dbValue)
+
+				req := httptest.NewRequest(http.MethodGet, "/api/admin/system-settings", nil)
+				rr := httptest.NewRecorder()
+				httputil.WrapHandler(h.GetSystemSettings)(rr, req)
+				require.Equal(t, http.StatusOK, rr.Code)
+
+				var resp handler.SystemSettingsResponse
+				require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+				assert.Equal(t, tc.expected, resp.ICalGroupSameDay)
+
+				// Also verify direct SettingRepository read when reloader is nil
+				noReloaderHandler := handler.NewAdminSettingsHandler(db, settings, nil)
+				req2 := httptest.NewRequest(http.MethodGet, "/api/admin/system-settings", nil)
+				rr2 := httptest.NewRecorder()
+				httputil.WrapHandler(noReloaderHandler.GetSystemSettings)(rr2, req2)
+				require.Equal(t, http.StatusOK, rr2.Code)
+
+				var resp2 handler.SystemSettingsResponse
+				require.NoError(t, json.NewDecoder(rr2.Body).Decode(&resp2))
+				assert.Equal(t, tc.expected, resp2.ICalGroupSameDay)
+			})
+		}
+
+		// Whitespace passed via PUT is trimmed before saving
+		_, settings, _, h := setupAdminSettingsTestEnv(t)
+		putReq := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":" false "}`))
+		putRR := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(putRR, putReq)
+		require.Equal(t, http.StatusNoContent, putRR.Code)
+
+		stored, err := settings.Get(repository.SettingKeyICalGroupSameDay)
+		require.NoError(t, err)
+		assert.Equal(t, "false", stored)
+	})
+
+	t.Run("error and rejected input handling", func(t *testing.T) {
+		_, settings, _, h := setupAdminSettingsTestEnv(t)
+
+		// Unknown keys are ignored while allowed keys are persisted
+		reqUnknown := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"unknown_key":"val","ical_group_same_day":"false"}`))
+		rrUnknown := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(rrUnknown, reqUnknown)
+		require.Equal(t, http.StatusNoContent, rrUnknown.Code)
+
+		_, err := settings.Get("unknown_key")
+		assert.True(t, errors.Is(err, sql.ErrNoRows))
+
+		stored, err := settings.Get(repository.SettingKeyICalGroupSameDay)
+		require.NoError(t, err)
+		assert.Equal(t, "false", stored)
+
+		// Non-string JSON value returns 400
+		reqBadType := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":false}`))
+		rrBadType := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(rrBadType, reqBadType)
+		assert.Equal(t, http.StatusBadRequest, rrBadType.Code)
+
+		// Malformed JSON returns 400
+		reqMalformed := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":`))
+		rrMalformed := httptest.NewRecorder()
+		httputil.WrapHandler(h.UpdateSystemSettings)(rrMalformed, reqMalformed)
+		assert.Equal(t, http.StatusBadRequest, rrMalformed.Code)
+
+		// Nil writeDB returns 500
+		nilDBHandler := handler.NewAdminSettingsHandler(nil, settings, nil)
+		reqNilDB := httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", strings.NewReader(`{"ical_group_same_day":"false"}`))
+		rrNilDB := httptest.NewRecorder()
+		httputil.WrapHandler(nilDBHandler.UpdateSystemSettings)(rrNilDB, reqNilDB)
+		assert.Equal(t, http.StatusInternalServerError, rrNilDB.Code)
+	})
 }
 
 func TestTestArr_Validation(t *testing.T) {
