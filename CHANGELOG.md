@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.34.1] — 2026-11-22
+
 ### Corrigé
 - **Lien Google Calendar dans la modale d'abonnement iCal (`CalendarIcalModal.tsx`)** :
   - Restauration du schéma `webcal://` (`tokenData.webcal_url`) dans le paramètre `cid=` de `https://calendar.google.com/calendar/r?cid=...`, Google Agenda rejetant les URLs `https://` dans `cid=` (*« Impossible d'ajouter l'agenda. Vérifiez l'url »*).
