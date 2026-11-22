@@ -46,7 +46,7 @@ describe('CalendarIcalModal', () => {
     const links = Array.from(container.querySelectorAll('a'))
     const googleLink = links.find((a) => a.textContent?.includes('Google Calendar'))
     expect(googleLink?.getAttribute('href')).toBe(
-      `https://calendar.google.com/calendar/r?cid=${encodeURIComponent('http://localhost:8080/api/calendar.ics?token=abcd1234efgh5678')}`
+      `https://calendar.google.com/calendar/r?cid=${encodeURIComponent('webcal://localhost:8080/api/calendar.ics?token=abcd1234efgh5678')}`
     )
   })
 })

@@ -7,6 +7,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [Unreleased]
 
 ### Corrigé
+- **Lien Google Calendar dans la modale d'abonnement iCal (`CalendarIcalModal.tsx`)** :
+  - Restauration du schéma `webcal://` (`tokenData.webcal_url`) dans le paramètre `cid=` de `https://calendar.google.com/calendar/r?cid=...`, Google Agenda rejetant les URLs `https://` dans `cid=` (*« Impossible d'ajouter l'agenda. Vérifiez l'url »*).
 - **Création manuelle de titres (`POST /api/titles`, `TitleHandler.Create`)** :
   - Déduplication par identifiants externes (`IMDBID`, `TMDBID`, `AniListID`, `TVDBID`) via `FindByExternalID` avant création (renvoie `200 OK` avec le titre existant au lieu de créer un doublon) et normalisation des identifiants vides ou nuls (`0` / `""`) vers `nil`.
 

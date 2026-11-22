@@ -86,8 +86,8 @@ export function CalendarIcalModal({ isOpen, onClose }: Props) {
     }
   }
 
-  const googleCalUrl = tokenData?.http_url
-    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(tokenData.http_url)}`
+  const googleCalUrl = tokenData?.webcal_url
+    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(tokenData.webcal_url)}`
     : '#'
 
   return (
