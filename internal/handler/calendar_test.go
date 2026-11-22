@@ -148,4 +148,34 @@ func TestCalendarHandler_TokenEndpoints(t *testing.T) {
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&regenResp))
 	assert.NotEmpty(t, regenResp.Token)
 	assert.NotEqual(t, tokResp.Token, regenResp.Token)
+
+	// HTTPS detection via proxy / origin / referer headers
+	for _, tc := range []struct {
+		name   string
+		header string
+		value  string
+		want   string
+	}{
+		{name: "default http", want: "http://trackarr.example.com/api/calendar.ics?token="},
+		{name: "X-Forwarded-Proto", header: "X-Forwarded-Proto", value: "https", want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "X-Forwarded-Proto chained", header: "X-Forwarded-Proto", value: "https, http", want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "X-Forwarded-Ssl", header: "X-Forwarded-Ssl", value: "on", want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "Forwarded", header: "Forwarded", value: "for=1.2.3.4;proto=https", want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "Forwarded quoted", header: "Forwarded", value: `for=1.2.3.4;proto="https"`, want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "Origin", header: "Origin", value: "https://trackarr.example.com", want: "https://trackarr.example.com/api/calendar.ics?token="},
+		{name: "Referer", header: "Referer", value: "https://trackarr.example.com/calendar", want: "https://trackarr.example.com/api/calendar.ics?token="},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/calendar/token", nil)
+			req.Host = "trackarr.example.com"
+			if tc.header != "" {
+				req.Header.Set(tc.header, tc.value)
+			}
+			require.NoError(t, h.GetToken(w, req))
+			var resp handler.CalendarTokenResponse
+			require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+			assert.True(t, len(resp.HTTPURL) > len(tc.want) && resp.HTTPURL[:len(tc.want)] == tc.want, "got %s", resp.HTTPURL)
+		})
+	}
 }

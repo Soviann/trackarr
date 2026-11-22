@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
@@ -105,4 +106,36 @@ func TestCalendarService_GenerateICS(t *testing.T) {
 	assert.Contains(t, icsStr, "URL:https://trackarr.example.com/title/")
 	assert.Contains(t, icsStr, "END:VCALENDAR")
 	assert.True(t, strings.HasSuffix(icsStr, "END:VCALENDAR\r\n"))
+}
+
+func TestCalendarService_GenerateICS_UTF8Folding(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	titleRepo := repository.NewTitleRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	calSvc := service.NewCalendarService(db, titleRepo, settingRepo)
+
+	today := time.Now().UTC().Format("2006-01-02")
+	longJapaneseName := "華野超美（ごにんめ）華野超美（ごにんめ）華野超美（ごにんめ）華野超美（ごにんめ）"
+
+	seriesID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 2026, Status: model.TitleStatusPlanToWatch, MatchStatus: model.MatchStatusConfirmed},
+		[]model.TitleName{{Name: "A Certain Dark Item", Language: "en", IsPrimary: true}},
+	)
+	season := testutil.UpsertSeason(t, db, seriesID, 1, 12)
+	testutil.UpsertEpisodesBatch(t, db, season.ID, []repository.EpisodeUpsert{
+		{EpisodeNumber: 3, Name: longJapaneseName, AirDate: today},
+	})
+
+	icsBytes, err := calSvc.GenerateICS(context.Background(), "https://trackarr.example.com")
+	require.NoError(t, err)
+	assert.True(t, utf8.Valid(icsBytes), "ICS output must be valid UTF-8 after line folding")
+	for _, line := range strings.Split(strings.TrimSuffix(string(icsBytes), "\r\n"), "\r\n") {
+		assert.LessOrEqual(t, len(line), 75, "folded line exceeds 75 octets: %q", line)
+	}
+	unfolded := strings.ReplaceAll(string(icsBytes), "\r\n ", "")
+	assert.Contains(t, unfolded, longJapaneseName)
 }

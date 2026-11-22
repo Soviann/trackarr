@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Soviann/trackarr/internal/cache"
@@ -38,11 +39,33 @@ type CalendarTokenResponse struct {
 	WebcalURL string `json:"webcal_url"`
 }
 
-func buildURLs(r *http.Request, token string) CalendarTokenResponse {
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
+// detectScheme determines whether the client reached the server via HTTPS,
+// accounting for reverse proxies that omit X-Forwarded-Proto.
+func detectScheme(r *http.Request) string {
+	if r.TLS != nil {
+		return "https"
 	}
+	if xfp := r.Header.Get("X-Forwarded-Proto"); xfp != "" {
+		first := strings.TrimSpace(strings.Split(xfp, ",")[0])
+		if strings.EqualFold(first, "https") {
+			return "https"
+		}
+	}
+	if strings.EqualFold(r.Header.Get("X-Forwarded-Ssl"), "on") {
+		return "https"
+	}
+	if fwd := strings.ToLower(r.Header.Get("Forwarded")); strings.Contains(fwd, "proto=https") || strings.Contains(fwd, `proto="https"`) {
+		return "https"
+	}
+	if strings.HasPrefix(r.Header.Get("Origin"), "https://") ||
+		strings.HasPrefix(r.Header.Get("Referer"), "https://") {
+		return "https"
+	}
+	return "http"
+}
+
+func buildURLs(r *http.Request, token string) CalendarTokenResponse {
+	scheme := detectScheme(r)
 	host := r.Host
 	feedURL := fmt.Sprintf("/api/calendar.ics?token=%s", token)
 	httpURL := fmt.Sprintf("%s://%s%s", scheme, host, feedURL)
@@ -64,11 +87,7 @@ func (h *CalendarHandler) ServeICS(w http.ResponseWriter, r *http.Request) error
 		return nil
 	}
 
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
+	baseURL := fmt.Sprintf("%s://%s", detectScheme(r), r.Host)
 
 	ics, err := h.calendarSvc.GenerateICS(r.Context(), baseURL)
 	if err != nil {

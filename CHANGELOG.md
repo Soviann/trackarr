@@ -6,6 +6,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.33.1] — 2026-11-22
+
+### Corrigé
+- **Flux iCal (`/api/calendar.ics` & modal d'abonnement)** :
+  - Détection fiable du schéma `https://` derrière un reverse proxy (prise en charge de `X-Forwarded-Ssl`, `Forwarded`, `Origin` et `Referer` en plus de `X-Forwarded-Proto`).
+  - Utilisation de l'URL HTTP/HTTPS directe dans le lien d'abonnement Google Calendar (au lieu de `webcal://` qui force le port 80).
+  - Découpage des lignes RFC 5545 (`writeICSLine`) sur les frontières UTF-8 afin de ne plus tronquer les caractères multi-octets.
+
 ## [v1.33.0] — 2026-11-21
 
 ### Ajouté
@@ -26,7 +34,6 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ### Corrigé
 - **Compagnon de direct et création automatique des titres non répertoriés (`internal/service/jellyfin.go`, `internal/service/plex.go`)** :
   - Création automatique du titre avec le statut `watching` via `CreateFromScrobble` lors d'un événement `PlaybackStart` (Jellyfin) ou `media.play`/`media.resume` (Plex) pour les films et séries non encore présents dans la collection locale, garantissant l'affichage immédiat du bandeau live dès le lancement de la lecture.
-
 
 ## [v1.32.0] — 2026-11-20
 

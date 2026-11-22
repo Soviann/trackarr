@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/repository"
@@ -194,21 +195,36 @@ func escapeICS(s string) string {
 	return s
 }
 
-// writeICSLine writes a folded RFC 5545 line ending in CRLF.
+// writeICSLine writes a folded RFC 5545 line ending in CRLF without splitting UTF-8 runes.
 func writeICSLine(sb *strings.Builder, line string) {
-	const maxLen = 75
-	if len(line) <= maxLen {
+	const maxOctets = 75
+	if len(line) <= maxOctets {
 		sb.WriteString(line)
 		sb.WriteString("\r\n")
 		return
 	}
 
-	// Line folding: limit lines to 75 octets, continuations prefixed with a space
-	for len(line) > maxLen {
-		sb.WriteString(line[:maxLen])
+	// First line allows up to 75 octets; continuation lines start with a single
+	// space (1 octet), leaving 74 octets for content.
+	limit := maxOctets
+	for len(line) > 0 {
+		if len(line) <= limit {
+			sb.WriteString(line)
+			break
+		}
+		cut := limit
+		for cut > 0 && !utf8.RuneStart(line[cut]) {
+			cut--
+		}
+		if cut == 0 {
+			// Single rune larger than limit (impossible for valid UTF-8 <= 4 bytes)
+			_, size := utf8.DecodeRuneInString(line)
+			cut = size
+		}
+		sb.WriteString(line[:cut])
 		sb.WriteString("\r\n ")
-		line = line[maxLen:]
+		line = line[cut:]
+		limit = maxOctets - 1
 	}
-	sb.WriteString(line)
 	sb.WriteString("\r\n")
 }

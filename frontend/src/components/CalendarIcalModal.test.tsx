@@ -42,5 +42,11 @@ describe('CalendarIcalModal', () => {
     const input = container.querySelector('input') as HTMLInputElement
     expect(input).not.toBeNull()
     expect(input.value).toBe('http://localhost:8080/api/calendar.ics?token=abcd1234efgh5678')
+
+    const links = Array.from(container.querySelectorAll('a'))
+    const googleLink = links.find((a) => a.textContent?.includes('Google Calendar'))
+    expect(googleLink?.getAttribute('href')).toBe(
+      `https://calendar.google.com/calendar/r?cid=${encodeURIComponent('http://localhost:8080/api/calendar.ics?token=abcd1234efgh5678')}`
+    )
   })
 })
