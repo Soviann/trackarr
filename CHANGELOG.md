@@ -6,6 +6,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Corrigé
+- **Création manuelle de titres (`POST /api/titles`, `TitleHandler.Create`)** :
+  - Déduplication par identifiants externes (`IMDBID`, `TMDBID`, `AniListID`, `TVDBID`) via `FindByExternalID` avant création (renvoie `200 OK` avec le titre existant au lieu de créer un doublon) et normalisation des identifiants vides ou nuls (`0` / `""`) vers `nil`.
+
 ## [v1.34.0] — 2026-11-22
 
 ### Ajouté

@@ -174,6 +174,82 @@ func TestTitleHandler_Create_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestTitleHandler_Create_DeduplicatesByExternalID(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	tmdbID := int64(171802)
+	existingID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        0,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Blade Runner 2099", Language: "en", IsPrimary: true}})
+
+	// Same TMDB ID + same type + zero AniList ID should return existing title (200 OK), not create a duplicate.
+	body, _ := json.Marshal(map[string]any{
+		"type":         "series",
+		"year":         2026,
+		"status":       "plan_to_watch",
+		"match_status": "confirmed",
+		"names":        []map[string]any{{"name": "Blade Runner 2099", "language": "en", "is_primary": true}},
+		"tmdb_id":      171802,
+		"anilist_id":   0,
+	})
+
+	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Create(rr, req))
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var got model.Title
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&got))
+	assert.Equal(t, existingID, got.ID)
+
+	var count int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM titles`).Scan(&count))
+	assert.Equal(t, 1, count)
+}
+
+func TestTitleHandler_Create_SameTMDBDifferentTypeAllowed(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	tmdbID := int64(171802)
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2026,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "Blade Runner 2099", Language: "en", IsPrimary: true}})
+
+	// Same TMDB ID but different type (movie vs series) should create a new record and normalize zero/empty IDs to nil.
+	body, _ := json.Marshal(map[string]any{
+		"type":         "movie",
+		"year":         2026,
+		"status":       "plan_to_watch",
+		"match_status": "confirmed",
+		"names":        []map[string]any{{"name": "Some Movie", "language": "en", "is_primary": true}},
+		"tmdb_id":      171802,
+		"anilist_id":   0,
+		"imdb_id":      "",
+	})
+
+	req := httptest.NewRequest("POST", "/api/titles", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	require.NoError(t, h.Create(rr, req))
+
+	assert.Equal(t, http.StatusCreated, rr.Code)
+	var got model.Title
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&got))
+	assert.Nil(t, got.AniListID)
+	assert.Nil(t, got.IMDBID)
+
+	var count int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM titles`).Scan(&count))
+	assert.Equal(t, 2, count)
+}
+
 func TestTitleHandler_Update(t *testing.T) {
 	h, db, _ := setupHandler(t)
 
@@ -784,4 +860,3 @@ func TestTitleHandler_BatchCreate(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 	})
 }
-

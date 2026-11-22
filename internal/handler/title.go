@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -308,6 +309,26 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		return httputil.BadRequest("Invalid request")
 	}
 
+	imdbID := normalizeStringPtr(body.IMDBID)
+	anilistID := normalizeInt64Ptr(body.AniListID)
+	tmdbID := normalizeInt64Ptr(body.TMDBID)
+	tvdbID := normalizeInt64Ptr(body.TVDBID)
+
+	if h.titles != nil && (imdbID != nil || tmdbID != nil || anilistID != nil || tvdbID != nil) {
+		var typePtr *model.TitleType
+		if body.Type != "" {
+			typePtr = &body.Type
+		}
+		existing, err := h.titles.FindByExternalID(imdbID, tmdbID, nil, anilistID, tvdbID, typePtr)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return httputil.InternalError("Internal error", err)
+		}
+		if existing != nil {
+			httputil.WriteJSON(w, http.StatusOK, existing)
+			return nil
+		}
+	}
+
 	manualSource := "manual"
 	title := &model.Title{
 		Type:        body.Type,
@@ -317,10 +338,10 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		MatchStatus: body.MatchStatus,
 		MatchSource: &manualSource,
 		CoverURL:    body.CoverURL,
-		IMDBID:      body.IMDBID,
-		AniListID:   body.AniListID,
-		TMDBID:      body.TMDBID,
-		TVDBID:      body.TVDBID,
+		IMDBID:      imdbID,
+		AniListID:   anilistID,
+		TMDBID:      tmdbID,
+		TVDBID:      tvdbID,
 		ArrIgnored:  true,
 	}
 
@@ -333,6 +354,24 @@ func (h *TitleHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	created, _ := h.titles.GetByID(id)
 	httputil.WriteJSON(w, http.StatusCreated, created)
 	return nil
+}
+
+func normalizeStringPtr(p *string) *string {
+	if p == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*p)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func normalizeInt64Ptr(p *int64) *int64 {
+	if p == nil || *p == 0 {
+		return nil
+	}
+	return p
 }
 
 func (h *TitleHandler) BatchCreate(w http.ResponseWriter, r *http.Request) error {
