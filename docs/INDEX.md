@@ -42,7 +42,7 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 - Bare-metal Go/Systemd deployment, environment variables, and reverse proxy setup.
 
 ### 6. [Maintenance & Operations](maintenance.md)
-- 1-Click Web UI Export & Import (JSON, CSV, Trakt.tv sync) with dry-run preview.
+- 1-Click Web UI Export & Import (Full JSON, SQLite snapshot, CSV, Trakt.tv sync) with dry-run preview.
 - Automated dependency management via Dependabot.
 - Automated CI/CD pipelines (unit tests, linting, production Vite compilation, multi-arch GHCR releases, and Dependabot auto-merge).
 - Private daemon routines for weekly documentation/i18n audits and feature proposals.

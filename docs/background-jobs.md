@@ -115,7 +115,11 @@ stateDiagram-v2
 | `radarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a movie to the configured Radarr instance download queue with quality profile and root folder settings. |
 | `sonarr_push` | `ArrPushPayload`<br>(`title_id`) | Pushes a television series to the configured Sonarr instance download queue. |
 | `sonarr_delete` | `SonarrDeletePayload`<br>(`title_id`, `sonarr_id`, `tvdb_id`, `title_name`) | Asynchronously deletes a series from Sonarr (including disk files and adding an import list exclusion) when marked as dropped in EditSheet. |
+| `arr_reconcile` | `ArrReconcilePayload`<br>(`title_id` optional) | Reconciles Radarr/Sonarr library links and episode/movie `downloaded_at` availability on demand (`POST /api/admin/arr/reconcile`). |
+| `jellyfin_rating_push` | `JellyfinRatingPushPayload`<br>(`title_id`, `rating`) | Asynchronously pushes an updated user rating to Jellyfin REST API after `TitleService.Update`. |
 | `generate_wrapped` | `GenerateWrappedPayload`<br>(`year`) | Compiles and persists an annual Wrapped snapshot into `wrapped_snapshots` and triggers a Web Push notification (`notif_wrapped_ready`). Automatically enqueued at date (for the immediately elapsed year `now.Year() - 1` provided watch activity exists, strictly without retroactive backfilling), or manually triggered from Admin / Stats. Years with 0 titles are skipped. |
+
+> **Daily Automated Backups**: During `Scheduler.RunMaintenance` (at 04:30), `WriteAutomatedBackups` also writes compressed `.db.gz` and `.json.gz` snapshots to `<dataDir>/backups/` with a 7-day rolling retention.
 
 ---
 
@@ -126,7 +130,7 @@ To avoid SQLite corruption, `database is locked` panics, and orphaned `running` 
 1. **Signal Interception**: `cmd/serve.go` captures `os.Interrupt` and `syscall.SIGTERM`.
 2. **HTTP Drain**: The HTTP listener stops accepting new connections (`srv.Shutdown` with a 5-second context).
 3. **Goroutine Barrier (`shutdownWG`)**:
-   - `BackgroundService.StartTicker` decrements the wait group when its current loop concludes.
+   - `Scheduler.Start` decrements the wait group when its current loop concludes.
    - `TaskQueueWorker.Start` decrements the wait group when its current polling pass finishes.
    - Async webhook enrichment routines registered on the wait group finish their database transactions.
 4. **Database Close**: `writeDB.Close()` and `readDB.Close()` are called strictly **after** `shutdownWG.Wait()` resolves (or upon a 10-second safety timeout).

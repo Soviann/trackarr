@@ -1,6 +1,17 @@
+import { getLocale, type Locale } from '../i18n'
+
 // Country display helpers. Uses the browser-native Intl.DisplayNames for names
 // (no bundled country table) and regional-indicator code points for flags.
-const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
+const regionNamesCache = new Map<string, Intl.DisplayNames>()
+
+function getRegionNames(locale: Locale): Intl.DisplayNames {
+  let formatter = regionNamesCache.get(locale)
+  if (!formatter) {
+    formatter = new Intl.DisplayNames([locale], { type: 'region' })
+    regionNamesCache.set(locale, formatter)
+  }
+  return formatter
+}
 
 // Currently-assigned ISO 3166-1 alpha-2 codes. A regional-indicator pair only
 // renders as a real flag glyph for these. Historic / exceptional codes that
@@ -31,16 +42,16 @@ export function countryFlag(iso: string): string {
   return String.fromCodePoint(A + (code.charCodeAt(0) - 65), A + (code.charCodeAt(1) - 65))
 }
 
-export function countryName(iso: string): string {
+export function countryName(iso: string, locale: Locale = getLocale()): string {
   const code = iso.trim().toUpperCase()
   try {
-    return regionNames.of(code) ?? code
+    return getRegionNames(locale).of(code) ?? code
   } catch {
     return code
   }
 }
 
-export function countryLabel(iso: string): string {
+export function countryLabel(iso: string, locale: Locale = getLocale()): string {
   const flag = countryFlag(iso)
-  return flag ? `${flag} ${countryName(iso)}` : countryName(iso)
+  return flag ? `${flag} ${countryName(iso, locale)}` : countryName(iso, locale)
 }

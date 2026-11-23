@@ -1,5 +1,6 @@
 import type { TitleStatus, TitleType, SeriesStatus } from '../../types'
 import type { SortField, SortOrder, SortState } from '../../store'
+import type { TranslationKey } from '../../i18n'
 
 export type StatusFilter = TitleStatus | 'up_to_date' | null
 export type TypeFilter = TitleType | null
@@ -81,36 +82,36 @@ export interface FilterDrawerProps {
   onTmdbRatingMinChange?: (v: string) => void
 }
 
-export const statusFilters: { id: StatusFilter; label: string }[] = [
-  { id: null, label: 'All' },
-  { id: 'plan_to_watch', label: 'Plan' },
-  { id: 'watching', label: 'Watching' },
-  { id: 'up_to_date', label: 'Caught up' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'dropped', label: 'Dropped' },
+export const statusFilters: { id: StatusFilter; labelKey: TranslationKey }[] = [
+  { id: null, labelKey: 'status.all' },
+  { id: 'plan_to_watch', labelKey: 'status.planToWatch' },
+  { id: 'watching', labelKey: 'status.watching' },
+  { id: 'up_to_date', labelKey: 'status.caughtUp' },
+  { id: 'completed', labelKey: 'status.completed' },
+  { id: 'dropped', labelKey: 'status.dropped' },
 ]
 
-export const typeFilters: { id: TypeFilter; label: string }[] = [
-  { id: null, label: 'All' },
-  { id: 'movie', label: 'Movie' },
-  { id: 'series', label: 'Series' },
+export const typeFilters: { id: TypeFilter; labelKey: TranslationKey }[] = [
+  { id: null, labelKey: 'status.all' },
+  { id: 'movie', labelKey: 'common.movie' },
+  { id: 'series', labelKey: 'common.series' },
 ]
 
-export const sortOptions: { field: SortField; label: string; defaultOrder: SortOrder }[] = [
-  { field: 'updated_at', label: 'Last updated', defaultOrder: 'desc' },
-  { field: 'original_title', label: 'Title', defaultOrder: 'asc' },
-  { field: 'release_date', label: 'Release date', defaultOrder: 'desc' },
-  { field: 'my_rating', label: 'Rating', defaultOrder: 'desc' },
-  { field: 'created_at', label: 'Date added', defaultOrder: 'desc' },
-  { field: 'last_watched_at', label: 'Last watched', defaultOrder: 'desc' },
+export const sortOptions: { field: SortField; labelKey: TranslationKey; defaultOrder: SortOrder }[] = [
+  { field: 'updated_at', labelKey: 'search.sortUpdatedAt', defaultOrder: 'desc' },
+  { field: 'original_title', labelKey: 'search.sortOriginalTitle', defaultOrder: 'asc' },
+  { field: 'release_date', labelKey: 'search.sortReleaseDate', defaultOrder: 'desc' },
+  { field: 'my_rating', labelKey: 'search.sortMyRating', defaultOrder: 'desc' },
+  { field: 'created_at', labelKey: 'search.sortCreatedAt', defaultOrder: 'desc' },
+  { field: 'last_watched_at', labelKey: 'search.sortLastWatched', defaultOrder: 'desc' },
 ]
 
-export const seriesStatusFilters: { id: SeriesStatusFilter; label: string }[] = [
-  { id: null, label: 'All' },
-  { id: 'returning', label: 'Returning' },
-  { id: 'ended', label: 'Ended' },
-  { id: 'cancelled', label: 'Cancelled' },
-  { id: 'in_production', label: 'Not started' },
+export const seriesStatusFilters: { id: SeriesStatusFilter; labelKey: TranslationKey }[] = [
+  { id: null, labelKey: 'status.all' },
+  { id: 'returning', labelKey: 'search.seriesReturning' },
+  { id: 'ended', labelKey: 'search.seriesEnded' },
+  { id: 'cancelled', labelKey: 'search.seriesCancelled' },
+  { id: 'in_production', labelKey: 'search.seriesNotStarted' },
 ]
 
 export const decadeOptions = [

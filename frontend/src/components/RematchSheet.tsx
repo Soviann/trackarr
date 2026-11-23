@@ -492,19 +492,19 @@ export function RematchSheet({ open, onClose, title, seasonID, onDone }: Rematch
               <div className={s.manualSection}>
                 <label className={s.fieldLabel}>
                   TMDB ID
-                  <input type="text" value={manualTmdb} onInput={(e) => setManualTmdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 550" />
+                  <input type="text" value={manualTmdb} onInput={(e) => setManualTmdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder={t('common.examplePrefix', { example: '550' })} />
                 </label>
                 <label className={s.fieldLabel}>
                   IMDB ID
-                  <input type="text" value={manualImdb} onInput={(e) => setManualImdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. tt0137523" />
+                  <input type="text" value={manualImdb} onInput={(e) => setManualImdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder={t('common.examplePrefix', { example: 'tt0137523' })} />
                 </label>
                 <label className={s.fieldLabel}>
                   {anilistSeason ? t('rematch.anilistIdSeason', { season: anilistSeason.season_number }) : 'AniList ID'}
-                  <input type="text" value={manualAnilist} onInput={(e) => setManualAnilist((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 21" />
+                  <input type="text" value={manualAnilist} onInput={(e) => setManualAnilist((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder={t('common.examplePrefix', { example: '21' })} />
                 </label>
                 <label className={s.fieldLabel}>
                   TVDB ID
-                  <input type="text" value={manualTvdb} onInput={(e) => setManualTvdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder="e.g. 81189" />
+                  <input type="text" value={manualTvdb} onInput={(e) => setManualTvdb((e.target as HTMLInputElement).value)} className={s.fieldInput} placeholder={t('common.examplePrefix', { example: '81189' })} />
                 </label>
                 <label className={s.autoFillRow}>
                   <input type="checkbox" checked={autoFill} onChange={(e) => setAutoFill((e.target as HTMLInputElement).checked)} />

@@ -6,7 +6,7 @@ package model
 // the body valid JSON for any item type (a Movie has no SeasonNumber, etc.),
 // EVERY field in the template is emitted as a quoted string and parsed here —
 // numeric and boolean coercion happens in the service layer, never in the
-// template. The matching template lives in docs/user-guide.md.
+// template. The matching template lives in docs/integrations.md.
 type JellyfinPayload struct {
 	NotificationType   string `json:"notification_type"` // "PlaybackStart" | "PlaybackStop" | "UserDataSaved" | "ItemAdded"
 	ItemType           string `json:"item_type"`         // "Movie" | "Series" | "Episode"

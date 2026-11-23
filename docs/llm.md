@@ -81,7 +81,7 @@
     - `cmd/trackarr-mcp` implements the Model Context Protocol (`mark3labs/mcp-go`) in `stdio` mode with zero Node.js footprint.
     - `log.SetOutput(os.Stderr)` enforced at startup; stdout is reserved strictly for JSON-RPC messages.
     - Errors report `CallToolResult{IsError: true}` inside the protocol payload for LLM self-correction.
-    - 11 tools (`search`, `get_title`, `get_continue_watching`, `resolve_url`, `get_stats`, `add_title`, `batch_add`, `update_title`, `set_episode_watched`, `delete_title`, `push_to_arr`) and 2 resources (`trackarr://library/summary`, `trackarr://continue-watching`).
+    - 13 tools (`search`, `get_title`, `get_continue_watching`, `resolve_url`, `get_stats`, `add_title`, `batch_add`, `update_title`, `set_episode_watched`, `delete_title`, `push_to_arr`, `get_upcoming`, `get_active_playback`) and 2 resources (`trackarr://library/summary`, `trackarr://continue-watching`).
     - Authenticates via scoped API key (`TRACKARR_API_KEY`) and respects granular scopes (`library:read`, `library:write`, `library:delete`, `arr:write`).
 18. **Adaptive Desktop Search & Multi-View Exploration**:
     - Viewports ≥ 1024px anchor `SearchBar` in a sticky top header alongside filter drawer triggers and view switcher (`grid` vs `list`, persisted in `localStorage: trackarr_search_view_mode`), hiding the bottom navbar. Mobile (< 1024px) retains bottom-docked search bar above navbar tabs.
@@ -102,7 +102,7 @@
     - `EpisodeRow` Swipe-to-Complete: mobile horizontal touch swipe with direction locking, haptic feedback (`HAPTIC_SHORT`), and 64px threshold for thumb-friendly episode validation.
 22. **Saga & Franchise Hub & Arr Webhooks (Lot 4)**:
     - `FranchiseRelationsSection`: replaces redirect to `/admin/validate` with 1-tap `+ À voir` button (creates title as `plan_to_watch` with universal `UndoSnackbar` cancellation) and `Arr` push action (opens `ArrPushSheet` directly).
-    - Arr Webhooks (`POST /api/webhook/arr/{secret}`): ingests Radarr & Sonarr `On Download` / `On Upgrade` events, persisting `downloaded_at` timestamp in SQLite on titles and episodes.
+    - Arr Webhooks (`POST /api/webhook/arr/{secret}`): ingests Radarr & Sonarr `On Download` / `On Upgrade` events (persisting `downloaded_at`) and deletion events (`MovieFileDelete`, `MovieDelete`, `EpisodeFileDelete`, `SeriesDelete`, clearing `downloaded_at` and Arr IDs).
     - Media Availability Badges: emerald `Disponible` / `Available` badge displayed on `NextEpisodeHero` and `EpisodeRow` checkmark when `downloaded_at` is set.
     - Configurable Push Notification: optional `notif_media_downloaded` toggle in **Admin ➔ Notifications** dispatches Web Push alerts upon Arr download completion.
 23. **Search Deduplication & Semantic Card Links (Lot 5 / Roadmap Q4 2026)**:
@@ -131,7 +131,8 @@
     - Mobile frontend surfaces a pulsing `LivePlaybackIndicator` above navbar, opening `LivePlaybackDrawer` with quick `+1 Marquer vu` action.
 28. **Jellyfin Rating Ingestion & Outbound Sync**:
     - Jellyfin `UserDataSaved` webhooks deliver rating events (float/int coerced to 1–10 integer score via `math.Round`). Matched against local library by external IDs (TMDB, TVDB, IMDb), persisted via `TitleService.Update` / `TitleWriter.Update`, and asynchronously enqueues AniList rating push for anime.
-    - Outbound CLI tool `sync-jellyfin-ratings` (`make jellyfin-sync-ratings`) pushes existing Trackarr ratings to Jellyfin REST API (`GET /Users/{userId}/Items` and `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}`) with rate throttling and dry-run support.
+    - Automatic outbound push: `TitleService.Update` enqueues `TaskTypeJellyfinRatingPush` when a title's rating changes and Jellyfin API credentials are configured.
+    - Outbound bulk sync: exposed via `/admin/jellyfin` UI controls (*Test Connection*, *Sync All Ratings to Jellyfin*, *Dry-run*) and CLI tool `sync-jellyfin-ratings` (`make jellyfin-sync-ratings`), pushing Trackarr ratings to Jellyfin REST API (`GET /Users/{userId}/Items` and `POST /Users/{userId}/Items/{itemId}/Rating?rating={rating}&likes={likes}`) with rate throttling and dry-run support.
 29. **Radarr Movie Deletion & Re-push Exclusion Cleanup**:
     - `DELETE /api/arr/title/{id}` (`arr:write` scope, movie-only) executes `ArrService.DeleteMovieFromRadarr` synchronously (`DELETE /api/v3/movie/{id}?deleteFiles=...&addImportExclusion=...`, both defaulting to `true` when omitted or empty body).
     - Lookup fallback (`lookupRadarrMovieID` querying `/api/v3/movie?tmdbId=` and `/api/v3/movie/lookup?term=tmdb:`) propagates Radarr/network errors; only confirmed absence (`[]`/`404`) or successful deletion (`200`/`204`/`404`) transactionally clears `radarr_id` (`ClearRadarrID`) and `downloaded_at` (`ClearDownloadedAt`) via `TitleWriter.Update` without altering `status`, `my_rating`, `watch_events`, or `arr_ignored`.
@@ -245,9 +246,9 @@
 - `POST /api/admin/season-audit/dismiss` : Dismiss season proposal.
 - `POST /api/push/subscribe` & `DELETE /api/push/subscribe` : Web Push subscription registration.
 - `POST /api/webhook/jellyfin/{secret}` : Ingest Jellyfin `PlaybackStop` (scrobble), `PlaybackStart` (live companion), `UserDataSaved` (inbound rating ingestion with 1–10 scale coercion and AniList sync trigger), and `ItemAdded` (auto-add missing movies/series as `plan_to_watch`).
-- `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` & `media.play` / `media.resume` / `media.stop`.
+- `POST /api/webhook/plex/{secret}` : Ingest Plex `media.scrobble` (clears active session), `media.rate` (1–10 rating), & `media.play` / `media.resume` / `media.stop`.
 - `GET /api/playback/active` : Active media playback session (204 No Content if idle, 200 OK with session payload).
-- `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade webhooks.
+- `POST /api/webhook/arr/{secret}` : Ingest Radarr & Sonarr download/upgrade/delete webhooks (`MovieFileDelete`, `MovieDelete`, `EpisodeFileDelete`, `SeriesDelete`).
 - `GET /api/arr/{app}/rootfolder` & `GET /api/arr/{app}/qualityprofile` : Proxy Radarr/Sonarr root folders and quality profiles.
 - `GET /api/arr/title/{id}` & `PUT /api/arr/title/{id}` : Check Arr library status and edit quality profile / root folder.
 - `DELETE /api/arr/title/{id}` : Delete movie from Radarr (`delete_files`, `add_import_exclusion`, defaulting to `true`), clearing `radarr_id` and `downloaded_at` while preserving watch status/history (`arr:write` scope).

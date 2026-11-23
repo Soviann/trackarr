@@ -58,6 +58,14 @@ describe('i18n hardcoded text & comments audit', () => {
 })
 
 describe('i18n translation dictionary parity', () => {
+  it('detects invalid double-brace {{param}} interpolation in dictionaries', () => {
+    const issues = checkDictionaryParity(
+      { demo: { msg: 'Count: {{count}}' } },
+      { demo: { msg: 'Compte : {{count}}' } }
+    )
+    expect(issues.some((i) => i.kind === 'param-mismatch' && i.snippet === 'demo.msg')).toBe(true)
+  })
+
   it('has exact key and parameter parity between English and French dictionaries', () => {
     const issues = checkDictionaryParity()
 

@@ -26,19 +26,19 @@ interface TasksResponse {
   total: number
 }
 
-function parseTitleFromPayload(payload: string): string {
-  try {
-    const p = JSON.parse(payload)
-    return p.title_name || `Title #${p.title_id}`
-  } catch {
-    return 'Unknown'
-  }
-}
-
 type FilterType = 'all' | 'pending' | 'errored'
 
 export function AdminTasks({ path }: { path?: string }) {
   const { t } = useTranslation()
+
+  const parseTitleFromPayload = (payload: string): string => {
+    try {
+      const p = JSON.parse(payload)
+      return p.title_name || t('adminTasks.titleIdFallback', { id: p.title_id })
+    } catch {
+      return t('adminTasks.unknownTitle')
+    }
+  }
   const [acting, setActing] = useState<number | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
   const [page, setPage] = useState(1)
@@ -173,6 +173,22 @@ export function AdminTasks({ path }: { path?: string }) {
         return t('adminTasks.typeRefresh')
       case 'cover_fetch':
         return t('adminTasks.typeCover')
+      case 'anilist_push_season':
+        return t('adminTasks.typeAnilistPushSeason')
+      case 'anilist_push_movie':
+        return t('adminTasks.typeAnilistPushMovie')
+      case 'radarr_push':
+        return t('adminTasks.typeRadarrPush')
+      case 'sonarr_push':
+        return t('adminTasks.typeSonarrPush')
+      case 'sonarr_delete':
+        return t('adminTasks.typeSonarrDelete')
+      case 'arr_reconcile':
+        return t('adminTasks.typeArrReconcile')
+      case 'jellyfin_rating_push':
+        return t('adminTasks.typeJellyfinRatingPush')
+      case 'generate_wrapped':
+        return t('adminTasks.typeGenerateWrapped')
       default:
         return type
     }
@@ -263,7 +279,7 @@ export function AdminTasks({ path }: { path?: string }) {
 
                       <div className={s.taskDetails}>
                         <div className={s.taskMeta}>
-                          {task.attempts}/{task.max_attempts} — day {task.day} · {formatRelativeTime(task.run_at)}
+                          {task.attempts}/{task.max_attempts} — {t('adminTasks.dayLabel', { day: task.day })} · {formatRelativeTime(task.run_at)}
                         </div>
                         {task.last_error && (
                           <div className={s.taskError}>{task.last_error}</div>

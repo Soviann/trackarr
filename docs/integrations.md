@@ -37,7 +37,10 @@ Trackarr logs media consumption automatically as you watch. When a movie or epis
        "series_name": "{{{SeriesName}}}",
        "series_id": "{{SeriesId}}",
        "season": "{{SeasonNumber}}",
-       "episode": "{{EpisodeNumber}}"
+       "episode": "{{EpisodeNumber}}",
+       "overview": "{{{Overview}}}",
+       "runtime_ticks": "{{RunTimeTicks}}",
+       "playback_position_ticks": "{{PlaybackPositionTicks}}"
      }
      ```
 
@@ -62,8 +65,11 @@ In addition to webhook ingestion, configuring your Jellyfin API credentials (**J
 - **Automatic Schedule**: Wired onto `Scheduler` (`cmd/serve.go`) to run on startup (after the 30-second initial delay, before metadata refresh) and on every 24-hour scheduled pass. Cleanly no-ops if any Jellyfin API credential is empty, and is suppressed when `DISABLE_BACKGROUND_TASKS=true`.
 - **Manual Trigger (UI & API)**: Click **Sync Unwatched Movies** on **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)** or call `POST /api/admin/jellyfin/sync-movies` (browser JWT cookie session required; accepts optional `{"dry_run": bool}`). Returns a summary payload with `dry_run`, `fetched`, `unwatched`, `created`, `skipped`, and `errors`.
 
-### Outbound Jellyfin Rating Sync (`sync-jellyfin-ratings`):
-To push existing ratings from your Trackarr library back to Jellyfin (useful for initial library setup or catching up), use the CLI tool or Makefile target:
+### Outbound Jellyfin Rating Sync (Auto-Push, UI & CLI):
+Trackarr can push your Trackarr ratings back to Jellyfin both automatically on rating changes and in bulk:
+- **Automatic Outbound Push**: Whenever a title's rating is updated in Trackarr (`TitleService.Update`), Trackarr asynchronously enqueues a `jellyfin_rating_push` background task (`TaskTypeJellyfinRatingPush`) if Jellyfin API credentials are configured.
+- **Web UI Controls (`/admin/jellyfin`)**: Configure your Jellyfin credentials and use **Test Connection**, **Sync All Ratings to Jellyfin**, and the **Dry-run** toggle directly from the dashboard.
+- **CLI Tool (`sync-jellyfin-ratings`)**: For initial setup or scripted runs, use the CLI tool or Makefile target:
 
 ```bash
 # Dry-run mode (preview matched items without making changes)
@@ -98,7 +104,7 @@ The command accepts CLI flags or reads defaults from environment variables:
 ### Plex Webhook Configuration:
 1. In Plex Web, go to **Settings ➔ Webhooks ➔ Add Webhook**.
 2. Set URL to `https://<your-trackarr-url>/api/webhook/plex/<secret>` (where `<secret>` matches `PLEX_WEBHOOK_SECRET` or your configured token, also visible and copyable in **Admin Dashboard ➔ Media Servers (`/admin/jellyfin`)**).
-3. Scrobble events (`media.scrobble`) as well as live companion events (`media.play`, `media.resume`, `media.stop`) will be parsed automatically. Live playback events update in-memory active playback companion state without creating premature watch records.
+3. Scrobble events (`media.scrobble`), rating events (`media.rate`, 1–10 scale for `movie`, `show`, and `episode`), and live companion events (`media.play`, `media.resume`, `media.stop`) will be parsed automatically. Live playback events update in-memory active playback companion state without creating premature watch records, and `media.scrobble` clears the active session upon completion.
 
 ### Automatic Series Disambiguation via Episode Clues:
 When an incoming episode scrobble belongs to a series that does not yet exist in your library, Trackarr extracts episode metadata (`Name`, `SeasonNumber`, `EpisodeNumber`, and IMDb ID). If TMDB search returns multiple candidate series (e.g. multiple adaptations sharing the same name from different decades), Trackarr invokes Gemini AI with these episode clues to select and verify the exact series before adding it to your library.
@@ -129,11 +135,13 @@ Manage your media library and track availability seamlessly:
 - **Cyan Top Border**: Series is managed and monitored in **Sonarr**.
 - **Arr Icon Badges**: 18px indicator pills on search and list cards.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), or directly from unowned cards in the **Saga & Franchise Hub**.
-- **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, and add media directly to Trackarr with 1-click **+ Add**.
+- **Prowlarr Releases**: View indexer releases on `/releases` with multi-indexer filtering, year filtering, library presence filtering, 1-click **+ Add** to Trackarr, and 1-tap **Add & Send to Radarr/Sonarr**.
 
-### Webhook Notifications & Download Availability (`/api/webhook/arr/{secret}`):
-- **Real-Time Availability**: Configure Trackarr's Arr webhook URL in Radarr & Sonarr (**Settings ➔ Connect ➔ Webhook**, trigger on *On Download* and *On Upgrade*).
+### Webhook Notifications, Download Availability & Reconciliation (`/api/webhook/arr/{secret}`):
+- **Real-Time Availability**: Configure Trackarr's Arr webhook URL in Radarr & Sonarr (**Settings ➔ Connect ➔ Webhook**, trigger on *On Download*, *On Upgrade*, *On Movie Delete*, *On Movie File Delete*, *On Series Delete*, and *On Episode File Delete*).
 - **Available Badge**: When a media file finishes downloading/importing, Trackarr updates `downloaded_at` on movies and individual episodes. The **Next Episode Hero** and **Episode Rows** display an emerald **Disponible** / **Available** badge.
+- **Deletion Events**: `MovieFileDelete`, `MovieDelete`, `EpisodeFileDelete`, and `SeriesDelete` webhooks clear `downloaded_at` (and `radarr_id` / `sonarr_id` on full item deletion) to keep availability indicators accurate.
+- **Manual Reconciliation**: Trigger `POST /api/admin/arr/reconcile` (`TaskTypeArrReconcile`) from `/admin/arr` to synchronize Radarr/Sonarr availability state on demand.
 - **Push Alerts**: If enabled in **Admin ➔ Notifications**, a Web Push alert is dispatched immediately when media is ready to watch.
 
 ### Deletion & Import List Exclusions (Dropped Series):

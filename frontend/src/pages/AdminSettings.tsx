@@ -252,7 +252,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                     style={{ background: currentTheme.gradient }}
                   />
                   <span className={s.dropdownSelectedTitle}>{currentTheme.name}</span>
-                  <span className={s.dropdownSelectedSub}>{currentTheme.description}</span>
+                  <span className={s.dropdownSelectedSub}>{t(currentTheme.descriptionKey)}</span>
                 </div>
                 <ChevronIcon isOpen={openDropdown === 'theme'} />
               </button>
@@ -279,7 +279,7 @@ export function AdminSettings({ path }: { path?: string }): JSX.Element {
                           />
                           <div className={s.dropdownItemInfo}>
                             <span className={s.dropdownItemTitle}>{theme.name}</span>
-                            <span className={s.dropdownItemSub}>{theme.description}</span>
+                            <span className={s.dropdownItemSub}>{t(theme.descriptionKey)}</span>
                           </div>
                         </div>
                         {isSelected && <span className={s.checkMark}>✓</span>}

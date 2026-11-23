@@ -1,9 +1,11 @@
+import type { TranslationKey } from '../i18n'
+
 export type ThemeId = 'cyber' | 'sunset' | 'emerald' | 'vault'
 
 export interface ThemeOption {
   id: ThemeId
   name: string
-  description: string
+  descriptionKey: TranslationKey
   color: string
   gradient: string
 }
@@ -12,28 +14,28 @@ export const THEMES: ThemeOption[] = [
   {
     id: 'cyber',
     name: 'Cyber Cyan',
-    description: 'Electric Cyan & Violet',
+    descriptionKey: 'common.themeCyberDesc',
     color: '#06b6d4',
     gradient: 'linear-gradient(135deg, #06b6d4, #8b5cf6)',
   },
   {
     id: 'sunset',
     name: 'Sunset Coral',
-    description: 'Warm Amber, Coral & Violet',
+    descriptionKey: 'common.themeSunsetDesc',
     color: '#f43f5e',
     gradient: 'linear-gradient(135deg, #f59e0b, #f43f5e, #8b5cf6)',
   },
   {
     id: 'emerald',
     name: 'Emerald Teal',
-    description: 'Mint Emerald & Azure',
+    descriptionKey: 'common.themeEmeraldDesc',
     color: '#10b981',
     gradient: 'linear-gradient(135deg, #10b981, #06b6d4, #3b82f6)',
   },
   {
     id: 'vault',
     name: 'Vault Amber',
-    description: 'Heritage Warm Tan & Bronze',
+    descriptionKey: 'common.themeVaultDesc',
     color: '#d4ad7a',
     gradient: 'linear-gradient(135deg, #d4ad7a, #8f6738)',
   },

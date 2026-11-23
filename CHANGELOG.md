@@ -6,6 +6,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.34.2] — 2026-11-23
+
+### Corrigé
+- **Interpolation i18n (`mediaServers.syncSummary` & `checker.ts`)** :
+  - Correction des doubles accolades `{{...}}` sur `mediaServers.syncSummary` dans `en.ts` / `fr.ts` (qui laissaient apparaître `{N}` dans `/admin/jellyfin`), élargissement du titre `mediaServers.jellyfinApiSectionTitle`, et ajout d'une détection des doubles accolades dans `checkDictionaryParity()`.
+- **Internationalisation complète de l'interface** :
+  - Localisation des filtres, tris, puces actives (`FilterBasicsTab`, `FilterDrawer`, `filter/types.ts`) et des noms de pays (`Intl.DisplayNames` selon la locale active dans `lib/country.ts`).
+  - Localisation des helpers d'affichage (`utils.ts` : `getTypeLabel`, `formatMatchSource`, `formatDate`, `formatDateTime`, `formatRelativeTime`, `formatSortCaption`, `formatBingeTime` avec `j`/`d` selon la locale) et de `NextEpisodeHero.tsx`.
+  - Traduction des 8 types de tâches manquants et libellés résiduels dans `AdminTasks.tsx`, des attributs `aria-label` / `placeholder`, des descriptions de thèmes (`theme.ts` / `AdminSettings.tsx`), des erreurs de `store.ts`, et suppression de la clé orpheline `nav.help`.
+- **Configuration & déploiement** :
+  - Correction de `ExecStart=/usr/local/bin/trackarr serve` dans `docs/deployment.md` et de `GEMINI_API_KEYS=` → `GEMINI_API_KEY=` dans `.env.example` (avec ajout de `METADATA_LANGUAGE`, `DISABLE_BACKGROUND_TASKS` et `ARR_WEBHOOK_SECRET`).
+
+### Documentation
+- **Synchronisation des guides (`v1.32.0`–`v1.33.0`)** :
+  - Mise à jour de `docs/dev/mcp-server.md` et `docs/llm.md` (13 outils MCP, paramètres étendus de `trackarr_set_episode_watched`, chemins `trackarr-mcp`).
+  - Mise à jour de `docs/integrations.md`, `docs/dev/arr-integration.md`, `docs/patterns.md`, `docs/user-guide.md`, `docs/background-jobs.md`, `docs/dev/database-model.md`, `docs/maintenance.md`, `docs/INDEX.md` et `docs/overview.md` (template Jellyfin Live Playback, Plex `media.rate`, push auto des notes Jellyfin, webhooks de suppression `*arr` & réconciliation, 1-Tap Arr dans `/releases`, migration 052, export SQLite `VACUUM INTO` et sauvegardes quotidiennes rotatives).
+
 ## [v1.34.1] — 2026-11-22
 
 ### Corrigé

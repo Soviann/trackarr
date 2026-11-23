@@ -166,7 +166,7 @@ export function Calendar(_props: { path?: string }) {
           </button>
         </div>
 
-        <div className={s.typeFilters} role="group" aria-label="Filters">
+        <div className={s.typeFilters} role="group" aria-label={t('search.filters')}>
           <button
             className={`${s.typeChip}${typeFilter === 'all' ? ` ${s.typeChipActive}` : ''}`}
             onClick={() => setTypeFilter('all')}

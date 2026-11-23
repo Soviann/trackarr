@@ -6,6 +6,7 @@
 
 ## Architecture & Source Files
 - Service & Proxy: `internal/service/arr.go` (`ArrService`)
+- Webhook Processor: `internal/service/arr_webhook.go` (`ArrWebhookService`)
 - Background Worker: `internal/service/background_arr.go` (`handleArrPush`, `saveArrID`)
 - HTTP Handler: `internal/handler/arr.go` (`ArrHandler`)
 - Router Endpoints: `internal/router/router.go` (`/api/arr/*`, `/api/admin/arr`)
@@ -90,6 +91,13 @@ When opening `ArrPushSheet`:
    - On success, `ArrPushSheet` calls `onDeleted?.()` (falling back to `onUnlinked?.()`) and closes: `TitleDetail` clears `radarr_id: null` and `downloaded_at: null` and calls `useTitleStore.invalidate()`; `FranchiseRelationsSection` clears `matched_radarr_id: null` on matching relation items and invalidates `useTitleStore`.
 4. **Re-Push Exclusion Cleanup**:
    - When re-pushing a movie to Radarr (`ArrService.PushTitle` via `POST /api/arr/push/{id}` or `/api/arr/queue/{id}/push`), `cleanupImportExclusion` calls `removeRadarrImportExclusion` (`GET /api/v3/exclusions` + `DELETE /api/v3/exclusions/{id}` matching `tmdbId`) as a best-effort cleanup in both the already-exists and post-add branches.
+
+## Arr Webhooks & Manual Reconciliation
+- **Webhook Ingestion (`ArrWebhookService` / `POST /api/webhook/arr/{secret}`)**:
+  - Processes Radarr & Sonarr download/upgrade events (`Download`, `Upgrade`) to set `downloaded_at` and optionally dispatch Web Push alerts.
+  - Processes deletion events (`MovieFileDelete`, `MovieDelete`, `EpisodeFileDelete`, `SeriesDelete`) to clear `downloaded_at` (and `radarr_id` / `sonarr_id` on full item deletion).
+- **Manual Reconciliation (`POST /api/admin/arr/reconcile`)**:
+  - Enqueues `TaskTypeArrReconcile` to reconcile Radarr/Sonarr library links and episode/movie `downloaded_at` availability against live Arr state on demand from `/admin/arr`.
 
 
 

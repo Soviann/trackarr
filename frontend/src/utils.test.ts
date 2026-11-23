@@ -315,9 +315,12 @@ describe('formatBingeTime', () => {
   })
 
   it('formats days and hours', () => {
-    expect(formatBingeTime(1500)).toBe('1j 1h')
-    expect(formatBingeTime(1440)).toBe('1j')
-    expect(formatBingeTime(2880)).toBe('2j')
+    expect(formatBingeTime(1500, 'en')).toBe('1d 1h')
+    expect(formatBingeTime(1440, 'en')).toBe('1d')
+    expect(formatBingeTime(2880, 'en')).toBe('2d')
+    expect(formatBingeTime(1500, 'fr')).toBe('1j 1h')
+    expect(formatBingeTime(1440, 'fr')).toBe('1j')
+    expect(formatBingeTime(2880, 'fr')).toBe('2j')
   })
 })
 

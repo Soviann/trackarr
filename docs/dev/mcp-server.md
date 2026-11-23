@@ -61,7 +61,7 @@ The compiled executable will be placed in `./tmp/trackarr-mcp`.
 ```json
 {
   "name": "trackarr",
-  "command": "/path/to/plextracker/tmp/trackarr-mcp",
+  "command": "/path/to/trackarr/tmp/trackarr-mcp",
   "env": {
     "TRACKARR_URL": "http://127.0.0.1:8080",
     "TRACKARR_API_KEY": "trck_live_YOUR_64_HEX_CHAR_API_KEY"
@@ -74,7 +74,7 @@ The compiled executable will be placed in `./tmp/trackarr-mcp`.
 {
   "mcpServers": {
     "trackarr": {
-      "command": "/path/to/plextracker/tmp/trackarr-mcp",
+      "command": "/path/to/trackarr/tmp/trackarr-mcp",
       "env": {
         "TRACKARR_URL": "http://127.0.0.1:8080",
         "TRACKARR_API_KEY": "trck_live_YOUR_64_HEX_CHAR_API_KEY"
@@ -89,7 +89,7 @@ The compiled executable will be placed in `./tmp/trackarr-mcp`.
 {
   "mcpServers": {
     "trackarr": {
-      "command": "/path/to/plextracker/tmp/trackarr-mcp",
+      "command": "/path/to/trackarr/tmp/trackarr-mcp",
       "args": [
         "-url", "http://127.0.0.1:8080",
         "-api-key", "trck_live_YOUR_64_HEX_CHAR_API_KEY"
@@ -136,6 +136,18 @@ Retrieve library statistics (movie count, series count, total watch minutes, epi
 - **Parameters**: None.
 - **Scope**: `library:read`.
 
+#### `trackarr_get_upcoming`
+Get upcoming episodes and movies from the Trackarr calendar for the next N days.
+- **Parameters**:
+  - `days` (integer, optional, default: 7, max: 90): Number of days ahead to query.
+  - `type` (string, optional, default: `"all"`): Media type filter (`"all"`, `"movie"`, `"series"`, `"anime"`).
+- **Scope**: `library:read`.
+
+#### `trackarr_get_active_playback`
+Get the currently active Plex/Jellyfin playback session, or idle status if nothing is playing.
+- **Parameters**: None.
+- **Scope**: `library:read`.
+
 ---
 
 ### 2. Library Modifications
@@ -173,10 +185,13 @@ Update properties of an existing title (watch status, rating 0–10, notes, anim
 - **Scope**: `library:write`.
 
 #### `trackarr_set_episode_watched`
-Set or toggle the watched state of a TV series episode idempotently.
+Set or toggle the watched state of a TV series episode idempotently. Provide either `episode_id`, `season_number` + `episode_number`, or `next_unwatched=true`.
 - **Parameters**:
   - `title_id` (integer, required): Series ID.
-  - `episode_id` (integer, required): Episode ID.
+  - `episode_id` (integer, optional): Episode ID (optional if `season_number` + `episode_number` or `next_unwatched` is provided).
+  - `season_number` (integer, optional): Season number (used with `episode_number`).
+  - `episode_number` (integer, optional): Episode number within the season (used with `season_number`).
+  - `next_unwatched` (boolean, optional): If `true`, automatically targets the next unwatched episode.
   - `watched` (boolean, required): `true` to mark watched, `false` to mark unwatched.
 - **Scope**: `library:write`.
 

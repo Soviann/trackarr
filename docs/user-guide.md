@@ -244,7 +244,7 @@ Trackarr bridges media tracking with your download managers:
 - **Arr Icon Badges**: 18px indicator pills on search and list cards showing Radarr target or Sonarr waveform.
 - **Direct Arr Push**: Send titles directly to Radarr or Sonarr from the title detail sheet (**Actions ➔ More ➔ Send to Radarr/Sonarr**), with defaults configurable at `/admin/arr`.
 - **Delete Movies from Radarr**: On movies already linked in Radarr (**Manage in Radarr**), tap **Delete from Radarr** to open an inline confirmation prompt warning that disk/NAS files will be permanently deleted. An **import exclusion** checkbox is checked by default to prevent Radarr lists from re-adding the movie automatically, while your Trackarr watch status, rating, and history stay preserved. If you re-push the movie later, Trackarr clears the Radarr exclusion automatically.
-- **Prowlarr Releases**: Access incoming releases on `/releases` with multi-indexer filtering, year filtering, and 1-click **+ Add** to Trackarr.
+- **Prowlarr Releases**: Access incoming releases on `/releases` with multi-indexer filtering, year filtering, library presence filtering, 1-click **+ Add** to Trackarr, and 1-tap **Add & Send to Radarr/Sonarr**.
 
 ---
 

@@ -129,7 +129,7 @@ export function AdminJellyfin({ path }: { path?: string }): JSX.Element {
       )
       setJfTestStatus({
         ok: res.ok,
-        text: res.ok ? res.message || 'OK' : res.error || 'Error',
+        text: res.ok ? res.message || 'OK' : res.error || t('common.error'),
       })
     } catch (err: unknown) {
       setJfTestStatus({ ok: false, text: err instanceof Error ? err.message : String(err) })

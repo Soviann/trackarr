@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { apiFetch } from './api'
 import { Title, PaginatedResponse, StatusCounts, DiscoveryItem } from './types'
+import { getLocale, translate } from './i18n'
 
 const PAGE_SIZE = 48
 
@@ -171,7 +172,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
       })
     } catch (e) {
       if (get()._fetchGen !== gen) return
-      set({ error: e instanceof Error ? e.message : 'Fetch failed', loading: false })
+      set({ error: e instanceof Error ? e.message : translate(getLocale(), 'common.fetchFailed'), loading: false })
     }
   },
 
@@ -202,7 +203,7 @@ export const useTitleStore = create<TitleState>((set, get) => ({
         set({ loadingMore: false })
         return
       }
-      set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
+      set({ error: e instanceof Error ? e.message : translate(getLocale(), 'common.loadMoreFailed'), loadingMore: false })
     }
   },
 
@@ -293,7 +294,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       })
     } catch (e) {
       if (get()._searchGen !== gen) return
-      set({ error: e instanceof Error ? e.message : 'Search failed', loading: false })
+      set({ error: e instanceof Error ? e.message : translate(getLocale(), 'common.searchFailed'), loading: false })
     }
   },
 
@@ -333,7 +334,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         set({ loadingMore: false })
         return
       }
-      set({ error: e instanceof Error ? e.message : 'Load more failed', loadingMore: false })
+      set({ error: e instanceof Error ? e.message : translate(getLocale(), 'common.loadMoreFailed'), loadingMore: false })
     }
   },
 

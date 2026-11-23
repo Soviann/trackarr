@@ -20,7 +20,7 @@
 - **Sagas & Franchise Hub**: Chronological timeline ordering for movie collections, TV universes, and anime side stories with completion gauges, 1-click missing title additions, and Saga Smart Next-Up continuity across Continue Watching and hero cards.
 - **Configurable Streaming Providers**: Availability badges for active streaming subscriptions (Netflix, Prime Video, Disney+, Apple TV+, Max, etc.).
 - **Universal Undo & Haptics**: 5-second perimeter radial timer countdown allowing instant rollback of progress changes and deletions.
-- **1-Click Backup & Restore**: Full JSON, spreadsheet CSV, and Trakt.tv archive exports plus drag-and-drop backup import with dry-run verification.
+- **1-Click Backup & Restore**: Full JSON, SQLite snapshot (`VACUUM INTO`), spreadsheet CSV, and Trakt.tv archive exports plus drag-and-drop backup import with dry-run verification.
 - **Trackarr Wrapped**: Interactive multi-slide annual retrospective with Gemini AI viewing persona, top favorites, release rankings, rewatch champion, and custom fun facts.
 
 ### What Trackarr Intentionally Does NOT Do

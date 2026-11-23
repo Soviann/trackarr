@@ -51,7 +51,7 @@ export function FilterBasicsTab({
             >
               {sortOptions.map((opt) => (
                 <option key={opt.field} value={opt.field}>
-                  {t('search.sortPrefix', { label: opt.label })}
+                  {t('search.sortPrefix', { label: t(opt.labelKey) })}
                 </option>
               ))}
             </select>
@@ -84,7 +84,7 @@ export function FilterBasicsTab({
             .filter((f) => f.id !== null)
             .map((f) => (
               <option key={f.id} value={f.id!}>
-                {t('search.statusPrefix', { label: f.label })}
+                {t('search.statusPrefix', { label: t(f.labelKey) })}
               </option>
             ))}
         </select>
@@ -94,12 +94,12 @@ export function FilterBasicsTab({
           <div className={s.segmentedControl} role="group" aria-label={t('search.filterType')}>
             {typeFilters.map((f) => (
               <button
-                key={f.label}
+                key={f.labelKey}
                 type="button"
                 className={clsx(s.segmentBtn, filter.type === f.id && s.segmentBtnActive)}
                 onClick={() => actions.onTypeChange(f.id)}
               >
-                {f.label}
+                {t(f.labelKey)}
               </button>
             ))}
           </div>
@@ -131,7 +131,7 @@ export function FilterBasicsTab({
               .filter((f) => f.id !== null)
               .map((f) => (
                 <option key={f.id} value={f.id!}>
-                  {t('search.seriesPrefix', { label: f.label })}
+                  {t('search.seriesPrefix', { label: t(f.labelKey) })}
                 </option>
               ))}
           </select>

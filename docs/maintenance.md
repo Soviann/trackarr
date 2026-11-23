@@ -37,11 +37,12 @@ Trackarr uses GitHub Dependabot to keep Go modules, npm packages, Docker bases, 
 ### 1-Click Web UI Export & Import (Recommended):
 From the **Admin Dashboard** (`/admin` → *Backup & Data Management*):
 - **Direct 1-Click Exports**:
-  - `JSON Complet` (`/api/admin/export/json`): Complete library archive with titles, seasons, episodes, ratings, and watch dates.
-  - `CSV Tableur` (`/api/admin/export/csv`): Spreadsheet export compatible with Excel, Google Sheets, and Numbers.
+  - `Full JSON` (`/api/admin/export/json`): Complete library archive with titles, seasons, episodes, ratings, and watch dates.
+  - `SQLite Snapshot` (`/api/admin/export/sqlite`): Compacted point-in-time SQLite database snapshot generated via `VACUUM INTO`.
+  - `Spreadsheet CSV` (`/api/admin/export/csv`): Spreadsheet export compatible with Excel, Google Sheets, and Numbers.
   - `Trakt.tv Sync` (`/api/admin/export/trakt`): Structured JSON sync format compatible with Trakt.tv and Simkl.
 - **Universal Drag & Drop Import**:
-  - Supports `.zip`, `.json`, and `.csv` backup files.
+  - Supports `.zip`, `.gz`, `.json.gz`, `.json`, and `.csv` backup files.
   - Features an instant safe **Dry-Run Preview** before committing writes, detailing total items found, new titles to create, existing items to skip, and errors.
 
 ### Online SQLite WAL Backup (CLI):
@@ -69,6 +70,7 @@ docker compose up -d
 
 ### Automated Background Maintenance & WAL Checkpoint:
 Trackarr runs an automatic daily maintenance cycle at 04:30 (and during scheduled passes):
+- **Automated Daily Backups**: Writes compressed `.db.gz` and `.json.gz` snapshots to `<dataDir>/backups/` (`WriteAutomatedBackups`) with 7-day rolling retention.
 - **Dead Tasks Pruning**: Purges dead tasks from `task_queue` whose `updated_at` is older than 14 days, preventing queue table bloating.
 - **Passive WAL Checkpoint**: Executes `PRAGMA wal_checkpoint(PASSIVE)` to fold committed WAL pages back into the main database file without blocking in-flight reads or transactions.
 

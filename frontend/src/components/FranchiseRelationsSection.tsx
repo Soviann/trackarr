@@ -481,7 +481,7 @@ export function FranchiseRelationsSection({
               {/* Controls: Sort and Filter */}
               <div className={s.controlsArea}>
                 {relations.length > 1 && (
-                  <div className={s.sortToggle} role="group" aria-label="Sort">
+                  <div className={s.sortToggle} role="group" aria-label={t('common.sort')}>
                     <button
                       type="button"
                       className={`${s.sortBtn} ${sortOrder === 'timeline' ? s.sortBtnActive : ''}`}

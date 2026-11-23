@@ -268,20 +268,35 @@ export function scanAllSourceFiles(srcDir: string): I18nIssue[] {
   return allIssues
 }
 
-export function checkDictionaryParity(): I18nIssue[] {
+export function checkDictionaryParity(
+  enDict: Record<string, any> = en,
+  frDict: Record<string, any> = fr
+): I18nIssue[] {
   const issues: I18nIssue[] = []
 
   function extractKeysAndParams(
     obj: Record<string, any>,
+    filePath: string,
     prefix = ''
   ): Map<string, string[]> {
     const result = new Map<string, string[]>()
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const nested = extractKeysAndParams(value, fullKey)
+        const nested = extractKeysAndParams(value, filePath, fullKey)
         nested.forEach((params, k) => result.set(k, params))
       } else if (typeof value === 'string') {
+        const doubleBraces = value.match(/\{\{\w+\}\}/g)
+        if (doubleBraces) {
+          issues.push({
+            filePath,
+            line: 1,
+            col: 1,
+            kind: 'param-mismatch',
+            message: `Invalid double-brace interpolation ${doubleBraces.join(', ')} in key '${fullKey}' (use single braces {param})`,
+            snippet: fullKey,
+          })
+        }
         const params = Array.from(new Set(value.match(/\{(\w+)\}/g) || [])).sort()
         result.set(fullKey, params)
       }
@@ -289,8 +304,8 @@ export function checkDictionaryParity(): I18nIssue[] {
     return result
   }
 
-  const enMap = extractKeysAndParams(en)
-  const frMap = extractKeysAndParams(fr)
+  const enMap = extractKeysAndParams(enDict, 'frontend/src/i18n/locales/en.ts')
+  const frMap = extractKeysAndParams(frDict, 'frontend/src/i18n/locales/fr.ts')
 
   // 1. Missing in French
   for (const [key, enParams] of enMap.entries()) {

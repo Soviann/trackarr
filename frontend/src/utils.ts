@@ -1,5 +1,6 @@
 import { Title, TitleType, TitleStatus } from './types'
 import type { SortField } from './store'
+import { getLocale, translate, type Locale, type TranslationKey } from './i18n'
 
 /** Convert "#RRGGBB" to "rgba(R, G, B, alpha)". Returns empty string for invalid input. */
 export function hexToRgba(hex: string | null | undefined, alpha: number): string {
@@ -32,7 +33,7 @@ export function setPreferredMetadataLanguage(lang: string): void {
 
 /** Returns the best display name for a title according to preferred metadata language. Priority: preferred → en/fr → (x-romaji → ja when anime) → first. */
 export function getName(title: Title, preferredLang?: string): string {
-  if (!title.names || title.names.length === 0) return '(untitled)'
+  if (!title.names || title.names.length === 0) return translate(getLocale(), 'common.untitled')
   const pref = preferredLang || currentMetadataLanguage || 'fr'
   const pick = (lang: string) => title.names.find((n) => n.language === lang)?.name
   
@@ -98,51 +99,52 @@ export function getAlternativeNames(title: Title, preferredLang?: string): { nam
 }
 
 /** Returns the display label for a title type. */
-export function getTypeLabel(type: TitleType): string {
+export function getTypeLabel(type: TitleType, locale: Locale = getLocale()): string {
   switch (type) {
-    case 'movie': return 'Movie'
-    case 'series': return 'Series'
+    case 'movie': return translate(locale, 'common.movie')
+    case 'series': return translate(locale, 'common.series')
     default: return type
   }
 }
 
 /** Returns the display label for a title status. */
-export function getStatusLabel(status: TitleStatus): string {
+export function getStatusLabel(status: TitleStatus, locale: Locale = getLocale()): string {
   switch (status) {
-    case 'watching': return 'Watching'
-    case 'completed': return 'Completed'
-    case 'dropped': return 'Dropped'
-    case 'plan_to_watch': return 'Plan to Watch'
+    case 'watching': return translate(locale, 'status.watching')
+    case 'completed': return translate(locale, 'status.completed')
+    case 'dropped': return translate(locale, 'status.dropped')
+    case 'plan_to_watch': return translate(locale, 'status.planToWatch')
     default: return status
   }
 }
 
 /** Returns a human-friendly display label for a matching source strategy. */
-export function formatMatchSource(source: string | null | undefined): string {
+export function formatMatchSource(source: string | null | undefined, locale: Locale = getLocale()): string {
   if (!source) return ''
-  const map: Record<string, string> = {
-    plex_ids: 'Scrobble metadata',
-    scrobble_ids: 'Scrobble metadata',
-    scrobble: 'Scrobble metadata',
-    crossref: 'Anime Cross-Ref DB',
-    tmdb: 'TMDB Search',
-    tmdb_search: 'TMDB Search',
-    tvdb: 'TVDB Search',
-    tvdb_search: 'TVDB Search',
-    anilist: 'AniList Search',
-    anilist_search: 'AniList Search',
-    gemini_fuzzy: 'Gemini AI Search',
-    manual: 'Manual Match',
+  const map: Record<string, TranslationKey> = {
+    plex_ids: 'common.matchSourceScrobble',
+    scrobble_ids: 'common.matchSourceScrobble',
+    scrobble: 'common.matchSourceScrobble',
+    crossref: 'common.matchSourceCrossref',
+    tmdb: 'common.matchSourceTmdb',
+    tmdb_search: 'common.matchSourceTmdb',
+    tvdb: 'common.matchSourceTvdb',
+    tvdb_search: 'common.matchSourceTvdb',
+    anilist: 'common.matchSourceAnilist',
+    anilist_search: 'common.matchSourceAnilist',
+    gemini_fuzzy: 'common.matchSourceGemini',
+    manual: 'common.matchSourceManual',
   }
-  return map[source] ?? source.replace(/_/g, ' ')
+  const key = map[source]
+  return key ? translate(locale, key) : source.replace(/_/g, ' ')
 }
 
 /** Formats a date string to locale short format. */
-export function formatDate(dateStr: string | null | undefined): string {
+export function formatDate(dateStr: string | null | undefined, locale: Locale = getLocale()): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 /**
@@ -151,30 +153,34 @@ export function formatDate(dateStr: string | null | undefined): string {
  * date is more useful than "32d ago". Callers needing the exact date should
  * pair this with a tooltip via `formatDateTime`.
  */
-export function formatRelativeTime(dateStr: string): string {
+export function formatRelativeTime(dateStr: string, locale: Locale = getLocale()): string {
   const d = new Date(dateStr)
   const now = new Date()
   const diffMs = d.getTime() - now.getTime()
   const absDiffMs = Math.abs(diffMs)
 
-  if (absDiffMs < 60_000) return 'now'
+  if (absDiffMs < 60_000) return translate(locale, 'common.now')
   if (absDiffMs < 3_600_000) {
     const mins = Math.round(absDiffMs / 60_000)
-    return diffMs > 0 ? `in ${mins}m` : `${mins}m ago`
+    return diffMs > 0
+      ? translate(locale, 'common.inMinutes', { n: mins })
+      : translate(locale, 'common.minutesAgo', { n: mins })
   }
   if (absDiffMs < 86_400_000) {
     const hours = Math.round(absDiffMs / 3_600_000)
-    return diffMs > 0 ? `in ${hours}h` : `${hours}h ago`
+    return diffMs > 0
+      ? translate(locale, 'common.inHours', { n: hours })
+      : translate(locale, 'common.hoursAgo', { n: hours })
   }
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' })
 }
 
 /** Full date + time for tooltips. */
-export function formatDateTime(dateStr: string | null | undefined): string {
+export function formatDateTime(dateStr: string | null | undefined, locale: Locale = getLocale()): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 /** Formats a date string to "DD/MM/YYYY, HH:mm" (24h format). */
@@ -191,16 +197,16 @@ export function formatDateTime24h(dateStr: string | null | undefined): string {
  * so the order is self-explanatory at a glance. Returns null when the value
  * is missing or the sort doesn't warrant a caption (e.g. title sort).
  */
-export function formatSortCaption(title: Title, sortField: SortField): string | null {
+export function formatSortCaption(title: Title, sortField: SortField, locale: Locale = getLocale()): string | null {
   switch (sortField) {
     case 'last_watched_at':
-      return title.last_watched_at ? `Watched ${formatDate(title.last_watched_at)}` : null
+      return title.last_watched_at ? translate(locale, 'common.sortWatched', { date: formatDate(title.last_watched_at, locale) }) : null
     case 'updated_at':
-      return title.updated_at ? `Updated ${formatDate(title.updated_at)}` : null
+      return title.updated_at ? translate(locale, 'common.sortUpdated', { date: formatDate(title.updated_at, locale) }) : null
     case 'created_at':
-      return title.created_at ? `Added ${formatDate(title.created_at)}` : null
+      return title.created_at ? translate(locale, 'common.sortAdded', { date: formatDate(title.created_at, locale) }) : null
     case 'release_date':
-      return title.year ? `Released ${title.year}` : null
+      return title.year ? translate(locale, 'common.sortReleased', { year: title.year }) : null
     case 'my_rating':
       return title.my_rating != null ? `★ ${title.my_rating}/10` : null
     case 'original_title':
@@ -272,16 +278,17 @@ export function formatWatchtime(minutes: number | null | undefined): string | nu
   return `${h}h ${m}m`
 }
 
-/** Formats binge estimation duration (e.g. "3h 15m", "45m", "1j 4h", "2j"). */
-export function formatBingeTime(minutes: number | null | undefined): string {
+/** Formats binge estimation duration (e.g. "3h 15m", "45m", "1j 4h" / "1d 4h", "2j" / "2d"). */
+export function formatBingeTime(minutes: number | null | undefined, locale: Locale = getLocale()): string {
   if (!minutes || minutes <= 0) return '0m'
   const days = Math.floor(minutes / (24 * 60))
   const remainingMinsAfterDays = minutes % (24 * 60)
   const hours = Math.floor(remainingMinsAfterDays / 60)
   const mins = remainingMinsAfterDays % 60
+  const dayUnit = locale === 'fr' ? 'j' : 'd'
 
   if (days > 0) {
-    return hours > 0 ? `${days}j ${hours}h` : `${days}j`
+    return hours > 0 ? `${days}${dayUnit} ${hours}h` : `${days}${dayUnit}`
   }
   if (hours > 0) {
     return mins > 0 ? `${hours}h ${mins.toString().padStart(2, '0')}m` : `${hours}h`

@@ -166,7 +166,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
   if (!isSearchActive && activeSort && (sort.field !== 'release_date' || sort.order !== 'desc')) {
     activeChips.push({
       id: 'sort',
-      label: `${activeSort.label} ${sort.order === 'asc' ? '↑' : '↓'}`,
+      label: `${t(activeSort.labelKey)} ${sort.order === 'asc' ? '↑' : '↓'}`,
       onDismiss: () => onSortChange?.({ field: 'release_date', order: 'desc' }),
     })
   }
@@ -174,14 +174,14 @@ export function FilterDrawer(props: FilterDrawerProps) {
   if (filter.status !== null && activeStatus) {
     activeChips.push({
       id: 'status',
-      label: activeStatus.label,
+      label: t(activeStatus.labelKey),
       onDismiss: () => actions.onStatusChange(null),
     })
   }
   if (filter.isAnime) {
     activeChips.push({
       id: 'anime',
-      label: 'Anime',
+      label: t('search.animeChip'),
       onDismiss: () => actions.onIsAnimeChange(false),
     })
   }
@@ -189,7 +189,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
   if (filter.type !== null && activeType) {
     activeChips.push({
       id: 'type',
-      label: activeType.label,
+      label: t(activeType.labelKey),
       onDismiss: () => actions.onTypeChange(null),
     })
   }
@@ -198,7 +198,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
     if (activeSeries) {
       activeChips.push({
         id: 'series-status',
-        label: activeSeries.label,
+        label: t(activeSeries.labelKey),
         onDismiss: () => actions.onSeriesStatusChange(null),
       })
     }
@@ -243,7 +243,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
   if (filter.myRatingMin) {
     activeChips.push({
       id: 'my-rating',
-      label: `My ★≥${filter.myRatingMin}`,
+      label: t('search.myRatingChip', { n: filter.myRatingMin }),
       onDismiss: () => actions.onMyRatingMinChange(''),
     })
   }

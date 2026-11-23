@@ -260,7 +260,7 @@ export function NextEpisodeHero({ title, onEpisodeToggle, onStatusChange }: Next
               )}
               {unwatchedCount > 0 && (
                 <span className={s.bingeEstimate}>
-                  ⏱️ {t('hero.bingeRemaining')}{formatBingeTime(remainingMinutes)} ({unwatchedCount} ep.)
+                  ⏱️ {t('hero.bingeRemaining')}{formatBingeTime(remainingMinutes)} ({t('hero.epShort', { count: unwatchedCount })})
                 </span>
               )}
             </div>

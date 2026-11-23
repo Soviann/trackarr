@@ -95,9 +95,9 @@
 | `PlaybackHubService` | `internal/service/playback_hub.go` | In-memory singleton managing active media playback sessions with thread-safe RWMutex and 4h TTL | `docs/patterns.md` |
 | `JellyfinService` | `internal/service/jellyfin.go` | Jellyfin webhook ingestion (`PlaybackStop` scrobbles, `PlaybackStart` live sessions with auto-create, `UserDataSaved` rating sync & `ItemAdded` movie/series auto-add) | `docs/integrations.md` |
 | `JellyfinSyncService` | `internal/service/jellyfin_sync.go` | Outbound rating synchronization and scheduled/manual inbound unwatched movie synchronization with Jellyfin REST API | `docs/integrations.md` |
-| `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
+| `PlexService` | `internal/service/plex.go` | Plex webhook ingestion (`media.scrobble`, `media.rate`, `media.play`, `media.resume`, `media.stop`) | `docs/integrations.md` |
 | `ArrService` | `internal/service/arr.go` | Radarr/Sonarr proxy, push, Radarr deletion & exclusion cleanup, and Sonarr deletion enqueuing | `docs/dev/arr-integration.md` |
-| `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download/upgrade events, update `downloaded_at`, push alerts | `docs/integrations.md` |
+| `ArrWebhookService` | `internal/service/arr_webhook.go` | Process Radarr/Sonarr download, upgrade, and delete events, update `downloaded_at`, push alerts | `docs/integrations.md` |
 | `AniListPushService` | `internal/service/anilist_push.go` | AniList GraphQL state push (per season part / movie) | `docs/dev/anilist-sync.md` |
 | `BackfillService` | `internal/service/backfill.go` | Episode metadata backfilling (opens isolated writeDB tx) | `docs/dev/database-model.md` |
 | `BackupService` | `internal/service/backup.go` | 1-Click JSON/CSV/Trakt exports and transactional archive import with dry-run | `docs/maintenance.md` |
@@ -130,8 +130,8 @@
 | POST | `/api/admin/api-keys/{id}/revoke` | `adminAPIKeys.Revoke` | Revoke active API key |
 | DELETE | `/api/admin/api-keys/{id}` | `adminAPIKeys.Delete` | Permanently remove API key |
 | POST | `/api/webhook/jellyfin/{secret}` | `handler.HandleJellyfin` | Ingest scrobbles, UserDataSaved ratings, and ItemAdded titles from Jellyfin |
-| POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles from Plex |
-| POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/import events from Radarr & Sonarr, mark media downloaded, and push alerts |
+| POST | `/api/webhook/plex/{secret}` | `handler.HandlePlex` | Ingest scrobbles, `media.rate` ratings, and live playback events from Plex |
+| POST | `/api/webhook/arr/{secret}` | `handler.HandleArr` | Ingest download/upgrade/delete events from Radarr & Sonarr, update `downloaded_at`, and push alerts |
 | GET | `/api/calendar.ics` | `calendarHandler.ServeICS` | Public token-secured RFC 5545 iCalendar subscription feed (`?token=...`, groups same-day series episodes by default) |
 | GET | `/api/calendar/events` | `calendarHandler.GetEvents` | In-app calendar events for interactive multi-view calendar |
 | GET | `/api/calendar/token` | `calendarHandler.GetToken` | Retrieve active iCal subscription token & webcal URLs |
@@ -163,7 +163,7 @@
 | PATCH | `/api/titles/{titleID}/episodes/{episodeID}` | `episodes.ToggleWatched` | Mark episode watched / unwatched |
 | POST | `/api/titles/{titleID}/episodes/batch-watch` | `episodes.BatchMarkWatched` | Bulk mark episodes watched or unwatched (`watched: false`) |
 | POST | `/api/titles/{titleID}/seasons/{seasonID}/anilist` | `seasonExternal.AddAniListID` | Attach AniList part to season (provisions Season 1 on demand if seasonID <= 0) |
-| DELETE\| `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` \| `seasonExternal.RemoveAniListID` \| Detach AniList part |
+| DELETE | `/api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` | `seasonExternal.RemoveAniListID` | Detach AniList part |
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
 | DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |
@@ -311,6 +311,7 @@
 | `SwipeActions`| `components/SwipeActions.tsx` | Swipeable item revealing action buttons with zero-reflow CSS Grid row collapse and GPU slide-out exit animation |
 | `ErrorBanner` | `components/ErrorBanner.tsx` | Dismissible alert banner for API and network errors |
 | `ErrorBoundary` | `components/ErrorBoundary.tsx` | React error boundary with error recovery fallback |
+| `typeIcons` | `components/typeIcons.tsx` | Reusable SVG icon helpers for media types (movie, series, anime) |
 
 ### Design Tokens & Theming (`frontend/src/tokens.css`)
 - **Theme Variables**: 4 distinct themes (`vault`, `cyber`, `sunset`, `emerald`).
