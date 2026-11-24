@@ -6,9 +6,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.35.0] — 2026-11-24
+
 ### Ajouté
 - **Enrichissement des crédits (scénaristes, compositeurs, casting étendu) & affichage progressif (`internal/service/matching/tmdb_details.go`, `TitleDetail.tsx`)** :
-  - Extraction complète des réalisateurs, scénaristes (`Writer`, `Screenplay`, `Story`, `Author` ou département `Writing`), compositeurs (`Original Music Composer`, `Music`, `Composer`) et des acteurs principaux jusqu'à 20 membres depuis les crédits TMDB (avec déduplication stricte par personne et fonction).
+  - Extraction complète des réalisateurs, scénaristes (`Writer`, `Screenplay`, `Story`, `Author` ou département `Writing`), compositeurs (`Original Music Composer`, `Music`, `Composer`, `Original Score`, `Music Score`, `Music Composer`) et des acteurs principaux jusqu'à 20 membres depuis les crédits TMDB (avec déduplication stricte par personne et fonction).
   - Affichage dans la fiche titre (`TitleDetail`) plafonné à 10 entrées par défaut avec un bouton de bascule dynamique « Afficher plus » / « Afficher moins » lorsque la liste dépasse 10 personnes.
   - Mise à jour des requêtes de statistiques et de Wrapped annuel (`internal/repository/stats.go`) pour exclure les scénaristes et compositeurs des classements d'acteurs.
 
