@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+## [v1.35.1] — 2026-11-24
+
+### Modifié
+- **Séparation visuelle Équipe / Acteurs sur la fiche titre (`TitleDetail.tsx`, `TitleDetail.module.css`)** :
+  - Distinction visuelle claire entre l'équipe principale (réalisateurs, scénaristes, compositeurs) affichée en tête de carte et la section « Acteurs » (`details.actors`) introduite par un sous-titre dédié et une ligne de séparation subtile.
+  - Plafonnement des acteurs aux 10 premiers profils par défaut avec bouton interactif « Afficher plus » / « Réduire » lorsque la liste dépasse 10 acteurs.
+
 ## [v1.35.0] — 2026-11-24
 
 ### Ajouté
