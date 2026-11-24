@@ -526,7 +526,7 @@ func (r *StatsRepository) topActorsFiltered(ctx context.Context, limit int, filt
 			  AND t.credits != ''
 			  AND t.credits != '[]'
 			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') != 'Director'
+			  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
 			  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
 			  AND json_extract(je.value, '$.name') IS NOT NULL
 			  AND trim(json_extract(je.value, '$.name')) != ''
@@ -550,7 +550,7 @@ func (r *StatsRepository) topActorsFiltered(ctx context.Context, limit int, filt
 			  AND t.credits != ''
 			  AND t.credits != '[]'
 			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') != 'Director'
+			  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
 			  AND json_extract(je.value, '$.name') IS NOT NULL
 			  AND trim(json_extract(je.value, '$.name')) != ''
 			  AND %s
@@ -1147,7 +1147,7 @@ func (r *StatsRepository) TopActors(ctx context.Context, limit int) ([]model.Per
 		  AND t.credits != ''
 		  AND t.credits != '[]'
 		  AND json_valid(t.credits) = 1
-		  AND json_extract(je.value, '$.role') != 'Director'
+		  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
 		  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
 		  AND json_extract(je.value, '$.name') IS NOT NULL
 		  AND trim(json_extract(je.value, '$.name')) != ''
@@ -1547,7 +1547,7 @@ func (r *StatsRepository) GetWrappedData(ctx context.Context, year int) (*model.
 		WHERE we.created_at >= ? AND we.created_at < ?
 		  AND t.credits IS NOT NULL AND t.credits != '' AND t.credits != '[]'
 		  AND json_valid(t.credits) = 1
-		  AND json_extract(je.value, '$.role') != 'Director'
+		  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
 		  AND json_extract(je.value, '$.name') IS NOT NULL
 		  AND trim(json_extract(je.value, '$.name')) != ''
 		GROUP BY name

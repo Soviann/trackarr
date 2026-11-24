@@ -298,3 +298,50 @@ func TestExtractOriginCountry(t *testing.T) {
 	assert.NotNil(t, got)
 	assert.Equal(t, "JP", *got) // uppercased
 }
+
+func TestMarshalCredits(t *testing.T) {
+	assert.Equal(t, "[]", marshalCredits(nil))
+	assert.Equal(t, "[]", marshalCredits(&TMDBCredits{}))
+
+	credits := &TMDBCredits{
+		Crew: []TMDBCrewMember{
+			{Name: "Christopher Nolan", Job: "Director"},
+			{Name: "Christopher Nolan", Job: "Screenplay", Department: "Writing"},
+			{Name: "Kai Bird", Job: "Author", Department: "Writing"},
+			{Name: "Ludwig Göransson", Job: "Original Music Composer", Department: "Sound"},
+			{Name: "John Williams", Job: "Music Score", Department: "Sound"},
+			{Name: "Random Crew", Job: "Camera Operator", Department: "Camera"},
+		},
+		Cast: []TMDBCastMember{
+			{Name: "Cillian Murphy", Character: "J. Robert Oppenheimer"},
+			{Name: "Emily Blunt", Character: "Kitty Oppenheimer"},
+			{Name: "Matt Damon", Character: ""}, // Empty character -> "Actor"
+		},
+	}
+
+	got := marshalCredits(credits)
+	expected := `[
+		{"name":"Christopher Nolan","role":"Director"},
+		{"name":"Christopher Nolan","role":"Writer"},
+		{"name":"Kai Bird","role":"Writer"},
+		{"name":"Ludwig Göransson","role":"Composer"},
+		{"name":"John Williams","role":"Composer"},
+		{"name":"Cillian Murphy","role":"J. Robert Oppenheimer"},
+		{"name":"Emily Blunt","role":"Kitty Oppenheimer"},
+		{"name":"Matt Damon","role":"Actor"}
+	]`
+	assert.JSONEq(t, expected, got)
+
+	// Test cap at 20 actors
+	manyCast := make([]TMDBCastMember, 25)
+	for i := 0; i < 25; i++ {
+		manyCast[i] = TMDBCastMember{Name: "Actor " + string(rune('A'+i)), Character: "Character"}
+	}
+	capped := marshalCredits(&TMDBCredits{Cast: manyCast})
+	var parsed []map[string]string
+	err := json.Unmarshal([]byte(capped), &parsed)
+	require.NoError(t, err)
+	assert.Len(t, parsed, 20)
+	assert.Equal(t, "Actor A", parsed[0]["name"])
+	assert.Equal(t, "Actor T", parsed[19]["name"])
+}

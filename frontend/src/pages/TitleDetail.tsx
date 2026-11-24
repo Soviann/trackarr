@@ -78,6 +78,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   const [showSonarrReaddConfirm, setShowSonarrReaddConfirm] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
+  const [castExpanded, setCastExpanded] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -1023,7 +1024,7 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
             <div className={s.card}>
               <div className={s.cardLabel}>{t('details.castCrew')}</div>
               <div className={s.castList}>
-                {credits.map((c) => (
+                {(castExpanded ? credits : credits.slice(0, 10)).map((c) => (
                   <div key={`${c.name}-${c.role}`} className={s.castEntry}>
                     <button
                       type="button"
@@ -1036,6 +1037,15 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                   </div>
                 ))}
               </div>
+              {credits.length > 10 && (
+                <button
+                  type="button"
+                  className={s.castToggle}
+                  onClick={() => setCastExpanded(!castExpanded)}
+                >
+                  {castExpanded ? t('details.showLess') : t('details.showMore')}
+                </button>
+              )}
             </div>
           )}
 

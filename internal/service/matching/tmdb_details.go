@@ -266,6 +266,22 @@ func extractGenreNames(genres []TMDBGenre) []string {
 	return names
 }
 
+func isWriterJob(job, dept string) bool {
+	switch strings.ToLower(strings.TrimSpace(job)) {
+	case "writer", "screenplay", "story", "author", "co-writer", "teleplay", "original story", "scenario":
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(dept), "Writing")
+}
+
+func isComposerJob(job string) bool {
+	switch strings.ToLower(strings.TrimSpace(job)) {
+	case "original music composer", "music", "composer", "original score", "music score", "music composer":
+		return true
+	}
+	return false
+}
+
 func marshalCredits(c *TMDBCredits) string {
 	if c == nil {
 		return "[]"
@@ -274,18 +290,57 @@ func marshalCredits(c *TMDBCredits) string {
 		Name string `json:"name"`
 		Role string `json:"role"`
 	}
-	var entries []entry
-	for _, crew := range c.Crew {
-		if crew.Job == "Director" {
-			entries = append(entries, entry{Name: crew.Name, Role: "Director"})
+	entries := make([]entry, 0)
+	seen := make(map[string]bool)
+	addEntry := func(name, role string) {
+		name = strings.TrimSpace(name)
+		role = strings.TrimSpace(role)
+		if name == "" {
+			return
+		}
+		key := name + "|" + role
+		if !seen[key] {
+			seen[key] = true
+			entries = append(entries, entry{Name: name, Role: role})
 		}
 	}
-	limit := 5
+
+	// 1. Directors
+	for _, crew := range c.Crew {
+		if strings.EqualFold(strings.TrimSpace(crew.Job), "Director") {
+			addEntry(crew.Name, "Director")
+		}
+	}
+
+	// 2. Writers
+	for _, crew := range c.Crew {
+		if isWriterJob(crew.Job, crew.Department) {
+			addEntry(crew.Name, "Writer")
+		}
+	}
+
+	// 3. Composers
+	for _, crew := range c.Crew {
+		if isComposerJob(crew.Job) {
+			addEntry(crew.Name, "Composer")
+		}
+	}
+
+	// 4. Main Cast (up to 20)
+	limit := 20
 	if len(c.Cast) < limit {
 		limit = len(c.Cast)
 	}
 	for _, cast := range c.Cast[:limit] {
-		entries = append(entries, entry{Name: cast.Name, Role: cast.Character})
+		role := strings.TrimSpace(cast.Character)
+		if role == "" {
+			role = "Actor"
+		}
+		addEntry(cast.Name, role)
+	}
+
+	if len(entries) == 0 {
+		return "[]"
 	}
 	b, _ := json.Marshal(entries)
 	return string(b)

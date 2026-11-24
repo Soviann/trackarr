@@ -254,14 +254,14 @@ func TestStatsRepo_TopActors_And_Directors(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewStatsRepository(db)
 
-	// Dune: Watched movie, directed by Denis Villeneuve, starring Timothée Chalamet & Zendaya
-	duneCredits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Zendaya","role":"Chani"}]`
+	// Dune: Watched movie, directed by Denis Villeneuve, written by Frank Herbert, music by Hans Zimmer, starring Timothée Chalamet & Zendaya
+	duneCredits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Frank Herbert","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Zendaya","role":"Chani"}]`
 	id1 := createTitle(t, db, "Dune", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(9))
 	_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, duneCredits, id1)
 	require.NoError(t, err)
 
-	// Dune 2: Watched movie, directed by Denis Villeneuve, starring Timothée Chalamet & Florence Pugh
-	dune2Credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Florence Pugh","role":"Princess Irulan"}]`
+	// Dune 2: Watched movie, directed by Denis Villeneuve, music by Hans Zimmer, starring Timothée Chalamet & Florence Pugh
+	dune2Credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Timothée Chalamet","role":"Paul Atreides"},{"name":"Florence Pugh","role":"Princess Irulan"}]`
 	id2 := createTitle(t, db, "Dune Part Two", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(10))
 	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, dune2Credits, id2)
 	require.NoError(t, err)
@@ -297,6 +297,8 @@ func TestStatsRepo_TopActors_And_Directors(t *testing.T) {
 	assert.Equal(t, 1, actorNames["Zendaya"])
 	assert.NotContains(t, actorNames, "Cillian Murphy", "unwatched titles should not be included")
 	assert.NotContains(t, actorNames, "Denis Villeneuve", "directors should not be in top actors")
+	assert.NotContains(t, actorNames, "Frank Herbert", "writers should not be in top actors")
+	assert.NotContains(t, actorNames, "Hans Zimmer", "composers should not be in top actors")
 
 	// Test TopDirectors
 	directors, err := repo.TopDirectors(context.Background(), 10)

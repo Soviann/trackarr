@@ -639,6 +639,41 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(await screen.findByText('Save & rate')).not.toBeNull()
       expect(screen.queryByText('Save rating')).toBeNull()
     })
+
+    it('clamps cast & crew to 10 by default and expands on toggle click', () => {
+      const credits = Array.from({ length: 15 }, (_, i) => ({
+        name: `Person ${i + 1}`,
+        role: i === 0 ? 'Director' : i === 1 ? 'Writer' : 'Actor',
+      }))
+      const movieWithManyCredits: Title = {
+        ...unratedMovie,
+        credits: JSON.stringify(credits),
+      }
+      vi.mocked(useApi).mockReturnValue({
+        data: movieWithManyCredits,
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="88" />)
+
+      expect(screen.getByText('Person 1')).not.toBeNull()
+      expect(screen.getByText('Person 10')).not.toBeNull()
+      expect(screen.queryByText('Person 11')).toBeNull()
+
+      const toggleBtn = screen.getByText('Show more')
+      fireEvent.click(toggleBtn)
+
+      expect(screen.getByText('Person 11')).not.toBeNull()
+      expect(screen.getByText('Person 15')).not.toBeNull()
+      expect(screen.getByText('Show less')).not.toBeNull()
+
+      fireEvent.click(screen.getByText('Show less'))
+      expect(screen.queryByText('Person 11')).toBeNull()
+      expect(screen.getByText('Show more')).not.toBeNull()
+    })
   })
 })
 
