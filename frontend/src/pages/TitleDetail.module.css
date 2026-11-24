@@ -366,6 +366,20 @@
 }
 
 /* Cast list */
+.castSection {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+}
+
+.castSubLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+}
+
 .castList {
   display: flex;
   flex-direction: column;

@@ -243,6 +243,7 @@ export const en = {
   details: {
     overview: 'Overview',
     castCrew: 'Cast & Crew',
+    actors: 'Actors',
     mediaDetails: 'Media Details',
     watchHistory: 'Watch History',
     watchHistorySubtitle: 'View watch logs & rewatches',

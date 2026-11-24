@@ -245,6 +245,7 @@ export const fr: TranslationSchema = {
   details: {
     overview: 'Synopsis',
     castCrew: 'Casting & Équipe',
+    actors: 'Acteurs',
     mediaDetails: 'Détails du média',
     watchHistory: 'Historique de visionnage',
     watchHistorySubtitle: 'Afficher les visionnages et rewatchs',

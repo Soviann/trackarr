@@ -640,7 +640,7 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(screen.queryByText('Save rating')).toBeNull()
     })
 
-    it('clamps cast & crew to 10 by default and expands on toggle click', () => {
+    it('separates crew and actors with Actors header, clamps actors to 10 by default and expands on toggle click', () => {
       const credits = Array.from({ length: 15 }, (_, i) => ({
         name: `Person ${i + 1}`,
         role: i === 0 ? 'Director' : i === 1 ? 'Writer' : 'Actor',
@@ -659,20 +659,73 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
 
       render(<TitleDetail id="88" />)
 
+      // Crew entries and Actors section header are present
       expect(screen.getByText('Person 1')).not.toBeNull()
-      expect(screen.getByText('Person 10')).not.toBeNull()
-      expect(screen.queryByText('Person 11')).toBeNull()
+      expect(screen.getByText('Director')).not.toBeNull()
+      expect(screen.getByText('Person 2')).not.toBeNull()
+      expect(screen.getByText('Writer')).not.toBeNull()
+      expect(screen.getByText('Actors')).not.toBeNull()
+
+      // First 10 actors (Person 3 to Person 12) are rendered
+      expect(screen.getByText('Person 3')).not.toBeNull()
+      expect(screen.getByText('Person 12')).not.toBeNull()
+      // 11th actor (Person 13) is clamped
+      expect(screen.queryByText('Person 13')).toBeNull()
 
       const toggleBtn = screen.getByText('Show more')
       fireEvent.click(toggleBtn)
 
-      expect(screen.getByText('Person 11')).not.toBeNull()
+      expect(screen.getByText('Person 13')).not.toBeNull()
       expect(screen.getByText('Person 15')).not.toBeNull()
       expect(screen.getByText('Show less')).not.toBeNull()
 
       fireEvent.click(screen.getByText('Show less'))
-      expect(screen.queryByText('Person 11')).toBeNull()
+      expect(screen.queryByText('Person 13')).toBeNull()
       expect(screen.getByText('Show more')).not.toBeNull()
+    })
+
+    it('renders only actors directly without redundant Actors header when no crew exists', () => {
+      const credits = [
+        { name: 'Actor One', role: 'Character 1' },
+        { name: 'Actor Two', role: 'Character 2' },
+      ]
+      vi.mocked(useApi).mockReturnValue({
+        data: { ...unratedMovie, credits: JSON.stringify(credits) },
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="89" />)
+
+      expect(screen.getByText('Actor One')).not.toBeNull()
+      expect(screen.getByText('Character 1')).not.toBeNull()
+      expect(screen.getByText('Actor Two')).not.toBeNull()
+      // "Actors" sub-header is not rendered when there is no crew to distinguish from
+      expect(screen.queryByText('Actors')).toBeNull()
+    })
+
+    it('renders only crew without Actors section when no actors exist', () => {
+      const credits = [
+        { name: 'Directing Legend', role: 'Director' },
+        { name: 'Music Maestro', role: 'Composer' },
+      ]
+      vi.mocked(useApi).mockReturnValue({
+        data: { ...unratedMovie, credits: JSON.stringify(credits) },
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="90" />)
+
+      expect(screen.getByText('Directing Legend')).not.toBeNull()
+      expect(screen.getByText('Director')).not.toBeNull()
+      expect(screen.getByText('Music Maestro')).not.toBeNull()
+      expect(screen.getByText('Composer')).not.toBeNull()
+      expect(screen.queryByText('Actors')).toBeNull()
     })
   })
 })
