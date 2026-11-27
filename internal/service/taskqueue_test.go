@@ -104,6 +104,33 @@ func TestBuildEnrichmentUpdate_UnconfirmedMatchPreservesType(t *testing.T) {
 	assert.Nil(t, uEmpty.Type, "empty result title type must not change title type")
 }
 
+func TestBuildEnrichmentUpdate_CreditsRefreshedAt(t *testing.T) {
+	t.Run("stamps credits_refreshed_at when TMDB credits fetched", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{
+			Credits: `[{"name":"Denis Villeneuve","role":"Director"}]`,
+		}, service.EnrichmentPayload{})
+		require.NotNil(t, u.Credits)
+		assert.NotNil(t, u.CreditsRefreshedAt)
+	})
+
+	t.Run("stamps credits_refreshed_at when TMDB returns empty credits array", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{
+			Credits: "[]",
+		}, service.EnrichmentPayload{})
+		require.NotNil(t, u.Credits)
+		assert.Equal(t, "[]", *u.Credits)
+		assert.NotNil(t, u.CreditsRefreshedAt)
+	})
+
+	t.Run("leaves credits_refreshed_at nil when TMDB metadata did not run", func(t *testing.T) {
+		u := service.BuildEnrichmentUpdateForTest(&matching.MatchResult{
+			Credits: "",
+		}, service.EnrichmentPayload{})
+		assert.Nil(t, u.Credits)
+		assert.Nil(t, u.CreditsRefreshedAt)
+	})
+}
+
 // fakeAniListPusher records PushSeasonState/PushMovieState invocations so
 // dispatch tests can assert the worker routes each task kind to the right
 // method with the payload decoded correctly.

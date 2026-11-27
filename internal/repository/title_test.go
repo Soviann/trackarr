@@ -3,6 +3,8 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -2330,5 +2332,499 @@ func TestTitleRepository_ListRatedTitles(t *testing.T) {
 		assert.Equal(t, "Rated Series", titles[1].PrimaryName())
 		assert.Equal(t, &rating4, titles[1].MyRating)
 		assert.Equal(t, ptr(int64(202)), titles[1].TVDBID)
+	})
+}
+
+type creditsTestInvalidator struct {
+	mu   sync.Mutex
+	tags [][]string
+}
+
+func (i *creditsTestInvalidator) Invalidate(tags ...string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.tags = append(i.tags, tags)
+}
+
+func TestTitleRepository_CreditsRefreshedAt(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("migration 053 up and down roundtrip", func(t *testing.T) {
+		db, _, err := database.Open(":memory:")
+		require.NoError(t, err)
+		defer db.Close()
+
+		require.NoError(t, database.Migrate(db))
+		var colName string
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		require.NoError(t, err)
+		assert.Equal(t, "credits_refreshed_at", colName)
+
+		require.NoError(t, database.MigrateTo(db, 52))
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+
+		require.NoError(t, database.Migrate(db))
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		require.NoError(t, err)
+	})
+
+	t.Run("update and clear via TitleWriter.Update read via GetByID and ListAll", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2024,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+		got, err := repo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		ts := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+			CreditsRefreshedAt: &ts,
+		})
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*got.CreditsRefreshedAt))
+
+		all, err := repo.ListAll()
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		require.NotNil(t, all[0].CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*all[0].CreditsRefreshedAt))
+
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+			ClearCreditsRefreshedAt: true,
+		})
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		all, err = repo.ListAll()
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		assert.Nil(t, all[0].CreditsRefreshedAt)
+	})
+
+	t.Run("UpdateCreditsCatchUp and MarkCreditsRefreshed preserve updated_at and invalidate cache", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		inv := &creditsTestInvalidator{}
+		database.SetInvalidator(inv)
+		defer database.SetInvalidator(nil)
+
+		rating := 9
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2021,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			MyRating:    &rating,
+		}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+		// Pin an older updated_at so we can prove catch-up does not bump it.
+		_, err := db.Exec(`UPDATE titles SET updated_at = '2020-01-01 00:00:00' WHERE id = ?`, id)
+		require.NoError(t, err)
+
+		inv.tags = nil
+		ts := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+		credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Jon Spaihts","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"}]`
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).UpdateCreditsCatchUp(ctx, id, credits, ts)
+		}))
+
+		got, err := repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.Credits)
+		assert.Equal(t, credits, *got.Credits)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*got.CreditsRefreshedAt))
+		assert.Equal(t, "2020-01-01 00:00:00", got.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, model.TitleStatusCompleted, got.Status)
+		require.NotNil(t, got.MyRating)
+		assert.Equal(t, 9, *got.MyRating)
+
+		require.Len(t, inv.tags, 1)
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats, database.TagCalendar}, inv.tags[0])
+
+		// MarkCreditsRefreshed updates timestamp only, leaves credits untouched, and invalidates cache.
+		inv.tags = nil
+		ts2 := time.Date(2026, 7, 2, 8, 15, 0, 0, time.UTC)
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).MarkCreditsRefreshed(ctx, id, ts2)
+		}))
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.Credits)
+		assert.Equal(t, credits, *got.Credits)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts2.Equal(*got.CreditsRefreshedAt))
+		assert.Equal(t, "2020-01-01 00:00:00", got.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+		require.Len(t, inv.tags, 1)
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats, database.TagCalendar}, inv.tags[0])
+
+		// Boundary: rollback must NOT invalidate cache.
+		inv.tags = nil
+		err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			if err := repository.NewTitleWriter(tx).MarkCreditsRefreshed(ctx, id, ts); err != nil {
+				return err
+			}
+			return errors.New("force rollback")
+		})
+		require.Error(t, err)
+		assert.Empty(t, inv.tags)
+	})
+}
+
+func TestTitleRepository_List_PersonRoleFilter(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	cBoth := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Denis Villeneuve","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"}]`
+	idBoth := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cBoth,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	cDirector := `[{"name":"Denis Villeneuve","role":"Director"}]`
+	idDirector := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2016,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cDirector,
+	}, []model.TitleName{{Name: "Arrival", Language: "en", IsPrimary: true}})
+
+	// Denis is an Actor while someone else is Writer — tests same-EXISTS correlation
+	cActorAndOtherWriter := `[{"name":"Denis Villeneuve","role":"Cameo"},{"name":"Other Writer","role":"Writer"}]`
+	idActor := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cActorAndOtherWriter,
+	}, []model.TitleName{{Name: "Cameo Film", Language: "en", IsPrimary: true}})
+
+	// Empty role should match role=all but NOT role=actor
+	cEmptyRole := `[{"name":"Denis Villeneuve","role":""}]`
+	idEmptyRole := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2020,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cEmptyRole,
+	}, []model.TitleName{{Name: "Empty Role Film", Language: "en", IsPrimary: true}})
+
+	// Malformed JSON and non-object array entries must not fail the SQLite query
+	cBad := `{malformed`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2019,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cBad,
+	}, []model.TitleName{{Name: "Malformed JSON Film", Language: "en", IsPrimary: true}})
+
+	cNonObj := `["Denis Villeneuve"]`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2018,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cNonObj,
+	}, []model.TitleName{{Name: "Non Object Array Film", Language: "en", IsPrimary: true}})
+
+	idsOf := func(res *repository.PaginatedResult) []int64 {
+		ids := make([]int64, len(res.Titles))
+		for i, tt := range res.Titles {
+			ids[i] = tt.ID
+		}
+		return ids
+	}
+
+	personLower := "denis villeneuve"
+
+	// all / empty -> all matching titles regardless of role
+	for _, role := range []string{"", "all"} {
+		res, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: role})
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []int64{idBoth, idDirector, idActor, idEmptyRole}, idsOf(res), "role=%q", role)
+	}
+
+	// director
+	resDir, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "director"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth, idDirector}, idsOf(resDir))
+
+	// writer (must exclude idActor where Other Writer holds Writer)
+	resWriter, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "writer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resWriter))
+
+	// actor (must exclude empty role and Director/Writer-only titles)
+	resActor, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "actor"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idActor}, idsOf(resActor))
+
+	// composer
+	resComposer, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "composer"})
+	require.NoError(t, err)
+	assert.Empty(t, resComposer.Titles)
+
+	hans := "Hans Zimmer"
+	resHans, err := repo.List(repository.TitleFilter{Person: &hans, PersonRole: "composer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resHans))
+
+	// Boundary: PersonRole without Person does not filter out titles
+	resNoPerson, err := repo.List(repository.TitleFilter{PersonRole: "director"})
+	require.NoError(t, err)
+	assert.Len(t, resNoPerson.Titles, 6)
+
+	// Combined with Search
+	searchDune := "Dune"
+	resSearch, err := repo.List(repository.TitleFilter{Search: &searchDune, Person: &personLower, PersonRole: "writer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resSearch))
+}
+
+func TestTitleRepository_ListTitlesNeedingCreditsCatchUp(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("filters eligibility across statuses, tmdb_id, credits_refreshed_at, and credits shapes", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		// Eligible titles
+		idNull := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2010,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(101)),
+		}, []model.TitleName{{Name: "Null Credits", Language: "en", IsPrimary: true}})
+
+		cDirActor := `[{"name":"Christopher Nolan","role":"Director"},{"name":"Leonardo DiCaprio","role":"Cobb"}]`
+		idDirActor := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2015,
+			Status:      model.TitleStatusDropped,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(102)),
+			Credits:     &cDirActor,
+		}, []model.TitleName{{Name: "Dropped Dir Only", Language: "en", IsPrimary: true}})
+
+		cEmpty := "   "
+		idEmpty := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2011,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(103)),
+			Credits:     &cEmpty,
+		}, []model.TitleName{{Name: "Blank Credits", Language: "en", IsPrimary: true}})
+
+		cEmptyArr := "[]"
+		idEmptyArr := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2012,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(104)),
+			Credits:     &cEmptyArr,
+		}, []model.TitleName{{Name: "Empty Array Credits", Language: "en", IsPrimary: true}})
+
+		cMalformed := "{malformed"
+		idMalformed := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2013,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(105)),
+			Credits:     &cMalformed,
+		}, []model.TitleName{{Name: "Malformed Credits", Language: "en", IsPrimary: true}})
+
+		cNonArray := `{"not":"array"}`
+		idNonArray := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2014,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(106)),
+			Credits:     &cNonArray,
+		}, []model.TitleName{{Name: "Non Array Credits", Language: "en", IsPrimary: true}})
+
+		cStringArray := `["Hans Zimmer"]`
+		idStringArray := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2014,
+			Status:      model.TitleStatusDropped,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(107)),
+			Credits:     &cStringArray,
+		}, []model.TitleName{{Name: "String Array Credits", Language: "en", IsPrimary: true}})
+
+		// Excluded: watching / plan_to_watch
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusWatching,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(201)),
+		}, []model.TitleName{{Name: "Watching Movie", Language: "en", IsPrimary: true}})
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2020,
+			Status:      model.TitleStatusPlanToWatch,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(202)),
+		}, []model.TitleName{{Name: "PTW Series", Language: "en", IsPrimary: true}})
+
+		// Excluded: missing or non-positive tmdb_id
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "No TMDB", Language: "en", IsPrimary: true}})
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(0)),
+		}, []model.TitleName{{Name: "Zero TMDB", Language: "en", IsPrimary: true}})
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(-1)),
+		}, []model.TitleName{{Name: "Negative TMDB", Language: "en", IsPrimary: true}})
+
+		// Excluded: already refreshed credits
+		idAlreadyRefreshed := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(203)),
+			Credits:     &cEmptyArr,
+		}, []model.TitleName{{Name: "Refreshed Empty", Language: "en", IsPrimary: true}})
+		ts := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+		testutil.UpdateTitle(t, db, idAlreadyRefreshed, repository.TitleUpdate{CreditsRefreshedAt: &ts})
+
+		// Excluded: already has Writer or Composer
+		cHasWriter := `[{"name":"Vince Gilligan","role":"Writer"}]`
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Year:        2008,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(204)),
+			Credits:     &cHasWriter,
+		}, []model.TitleName{{Name: "Has Writer", Language: "en", IsPrimary: true}})
+
+		cHasComposer := `[{"name":"Hans Zimmer","role":"Composer"}]`
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2021,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(205)),
+			Credits:     &cHasComposer,
+		}, []model.TitleName{{Name: "Has Composer", Language: "en", IsPrimary: true}})
+
+		got, err := repo.ListTitlesNeedingCreditsCatchUp(ctx, 50)
+		require.NoError(t, err)
+		gotIDs := make([]int64, len(got))
+		for i, item := range got {
+			gotIDs[i] = item.ID
+		}
+		assert.ElementsMatch(t, []int64{
+			idNull, idDirActor, idEmpty, idEmptyArr, idMalformed, idNonArray, idStringArray,
+		}, gotIDs)
+	})
+
+	t.Run("orders by last_refreshed_at ASC NULLS FIRST then id ASC and respects limit", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		mk := func(name string, tmdb int64) int64 {
+			return testutil.CreateTitle(t, db, &model.Title{
+				Type:        model.TitleTypeMovie,
+				Year:        2020,
+				Status:      model.TitleStatusCompleted,
+				MatchStatus: model.MatchStatusConfirmed,
+				TMDBID:      &tmdb,
+			}, []model.TitleName{{Name: name, Language: "en", IsPrimary: true}})
+		}
+
+		idNewer := mk("Newer", 301)
+		idNull1 := mk("Null 1", 302)
+		idOlder := mk("Older", 303)
+		idNull2 := mk("Null 2", 304)
+
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			w := repository.NewTitleWriter(tx)
+			if err := w.MarkRefreshed(ctx, idNewer, time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+				return err
+			}
+			return w.MarkRefreshed(ctx, idOlder, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+		}))
+
+		all, err := repo.ListTitlesNeedingCreditsCatchUp(ctx, 10)
+		require.NoError(t, err)
+		require.Len(t, all, 4)
+		assert.Equal(t, []int64{idNull1, idNull2, idOlder, idNewer}, []int64{all[0].ID, all[1].ID, all[2].ID, all[3].ID})
+
+		capped, err := repo.ListTitlesNeedingCreditsCatchUp(ctx, 2)
+		require.NoError(t, err)
+		require.Len(t, capped, 2)
+		assert.Equal(t, []int64{idNull1, idNull2}, []int64{capped[0].ID, capped[1].ID})
+	})
+
+	t.Run("boundary non-positive limit returns empty slice", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		_ = testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      ptr(int64(401)),
+		}, []model.TitleName{{Name: "Eligible", Language: "en", IsPrimary: true}})
+
+		for _, lim := range []int{0, -1} {
+			got, err := repo.ListTitlesNeedingCreditsCatchUp(ctx, lim)
+			require.NoError(t, err)
+			assert.NotNil(t, got)
+			assert.Empty(t, got)
+		}
+	})
+
+	t.Run("error on cancelled context", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		cancelledCtx, cancel := context.WithCancel(ctx)
+		cancel()
+
+		_, err := repo.ListTitlesNeedingCreditsCatchUp(cancelledCtx, 10)
+		require.Error(t, err)
 	})
 }

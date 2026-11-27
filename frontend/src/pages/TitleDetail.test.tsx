@@ -4,9 +4,19 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/pr
 import { TitleDetail } from './TitleDetail'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
+import { setLocale } from '../i18n'
 import type { Title } from '../types'
 
 const mockInvalidate = vi.fn()
+const mockRoute = vi.fn()
+
+vi.mock('preact-router', async () => {
+  const actual = await vi.importActual<typeof import('preact-router')>('preact-router')
+  return {
+    ...actual,
+    route: (...args: unknown[]) => mockRoute(...args),
+  }
+})
 
 vi.mock('../hooks/useApi', () => ({
   useApi: vi.fn(),
@@ -74,10 +84,12 @@ const mockNormalSeries: Title = {
 
 describe('TitleDetail - Sonarr Re-add Flow', () => {
   beforeEach(() => {
+    setLocale('en')
     vi.resetAllMocks()
   })
 
   afterEach(() => {
+    setLocale('en')
     cleanup()
   })
 
@@ -726,6 +738,50 @@ describe('TitleDetail - Sonarr Re-add Flow', () => {
       expect(screen.getByText('Music Maestro')).not.toBeNull()
       expect(screen.getByText('Composer')).not.toBeNull()
       expect(screen.queryByText('Actors')).toBeNull()
+    })
+
+    it('localizes crew and generic Actor role labels and links each credit with matching ?role= filter', () => {
+      const credits = [
+        { name: 'Denis Villeneuve', role: 'Director' },
+        { name: 'Jon Spaihts', role: 'Writer' },
+        { name: 'Hans Zimmer', role: 'Composer' },
+        { name: 'Timothée Chalamet', role: 'Paul Atreides' }, // i18n-ignore
+        { name: 'Background Extra', role: 'Actor' },
+      ]
+      vi.mocked(useApi).mockReturnValue({
+        data: { ...unratedMovie, credits: JSON.stringify(credits) },
+        loading: false,
+        error: null,
+        mutate: vi.fn(),
+        setData: vi.fn(),
+      })
+
+      render(<TitleDetail id="91" />)
+
+      const directorLink = screen.getByRole('link', { name: 'Denis Villeneuve' })
+      expect(directorLink.getAttribute('href')).toBe('/person/Denis%20Villeneuve?role=director')
+      fireEvent.click(directorLink)
+      expect(mockRoute).toHaveBeenCalledWith('/person/Denis%20Villeneuve?role=director')
+
+      const writerLink = screen.getByRole('link', { name: 'Jon Spaihts' })
+      expect(writerLink.getAttribute('href')).toBe('/person/Jon%20Spaihts?role=writer')
+
+      const composerLink = screen.getByRole('link', { name: 'Hans Zimmer' })
+      expect(composerLink.getAttribute('href')).toBe('/person/Hans%20Zimmer?role=composer')
+
+      const actorLink = screen.getByRole('link', { name: 'Timothée Chalamet' }) // i18n-ignore
+      expect(actorLink.getAttribute('href')).toBe('/person/Timoth%C3%A9e%20Chalamet?role=actor')
+      expect(screen.getByText('Paul Atreides')).not.toBeNull()
+
+      cleanup()
+      setLocale('fr')
+      render(<TitleDetail id="91" />)
+
+      expect(screen.getByText('Réalisateur')).not.toBeNull() // i18n-ignore
+      expect(screen.getByText('Scénariste')).not.toBeNull() // i18n-ignore
+      expect(screen.getByText('Compositeur')).not.toBeNull()
+      expect(screen.getByText('Acteur')).not.toBeNull()
+      expect(screen.getByText('Paul Atreides')).not.toBeNull()
     })
   })
 })

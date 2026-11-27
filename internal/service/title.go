@@ -201,6 +201,11 @@ func (s *TitleService) Rematch(ctx context.Context, db *sql.DB, id int64, imdbID
 	if titleType != nil && *titleType != "" {
 		update.Type = titleType
 	}
+	tmdbChanged := tmdbID != nil && (title.TMDBID == nil || *tmdbID != *title.TMDBID)
+	typeChanged := titleType != nil && *titleType != "" && *titleType != title.Type
+	if tmdbChanged || (typeChanged && (tmdbID != nil || title.TMDBID != nil)) {
+		update.ClearCreditsRefreshedAt = true
+	}
 
 	// Arr synchronization:
 	// If the title was linked to Radarr or Sonarr, a Rematch means its identity changed.
@@ -363,6 +368,9 @@ func (s *TitleService) SetExternalIDs(ctx context.Context, db *sql.DB, id int64,
 		update.ClearSonarrDeletedAt = true
 		falseVal := false
 		update.ArrIgnored = &falseVal
+	}
+	if tmdbChanged {
+		update.ClearCreditsRefreshedAt = true
 	}
 
 	// When both poster sources (TMDB, TVDB) are gone, reset the cover so a later

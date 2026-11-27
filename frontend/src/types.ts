@@ -232,10 +232,19 @@ export interface Episode {
   downloaded_at?: string | null
 }
 
-// Stats
+// Stats & People
+export type PersonRole = 'actor' | 'director' | 'writer' | 'composer'
+export type PersonRoleFilter = 'all' | PersonRole
+
 export interface PersonStat {
   name: string
   count: number
+}
+
+export interface PersonSearchResult {
+  name: string
+  roles: PersonRole[]
+  title_count: number
 }
 
 export interface StatsResponse {
@@ -247,6 +256,8 @@ export interface StatsResponse {
   genres: Array<{ genre: string; count: number }>
   top_actors?: PersonStat[]
   top_directors?: PersonStat[]
+  top_writers?: PersonStat[]
+  top_composers?: PersonStat[]
   streaks: {
     current: number
     best: number

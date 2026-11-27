@@ -30,6 +30,43 @@
   line-height: 1.2;
 }
 
+.rolePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 var(--space-lg) 14px;
+}
+
+.rolePill {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.rolePill:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.rolePillActive {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.rolePillActive:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
 .list {
   display: flex;
   flex-direction: column;

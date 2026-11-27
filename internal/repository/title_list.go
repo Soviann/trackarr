@@ -45,6 +45,7 @@ type TitleFilter struct {
 	Genres           []string // filter by these genres
 	GenreOp          string   // "AND" | "OR", defaults to "OR"
 	Person           *string  // filter by credit name (json_each on credits column)
+	PersonRole       string   // optional role filter ("all", "actor", "director", "writer", "composer")
 	OriginCountries  []string // OR match on origin_country
 	MyRatingMin      *int     // my_rating >= this
 	TMDBRatingMin    *float64 // tmdb_rating >= this
@@ -172,10 +173,7 @@ func (r *TitleRepository) List(filter TitleFilter) (*PaginatedResult, error) {
 		}
 	}
 
-	if filter.Person != nil {
-		conditions = append(conditions, `t.credits IS NOT NULL AND EXISTS (SELECT 1 FROM json_each(t.credits) je WHERE json_extract(je.value, '$.name') = ?)`)
-		args = append(args, *filter.Person)
-	}
+	conditions, args = appendPersonFilterCondition(conditions, args, filter)
 
 	if len(filter.OriginCountries) > 0 {
 		placeholders := make([]string, len(filter.OriginCountries))
@@ -311,4 +309,31 @@ func (r *TitleRepository) GetStatusCounts() (*StatusCounts, error) {
 		return nil, fmt.Errorf("get status counts: %w", err)
 	}
 	return &counts, nil
+}
+
+func appendPersonFilterCondition(conditions []string, args []any, filter TitleFilter) ([]string, []any) {
+	if filter.Person == nil {
+		return conditions, args
+	}
+	person := strings.TrimSpace(*filter.Person)
+	if person == "" {
+		return conditions, args
+	}
+
+	var roleClause string
+	switch strings.ToLower(strings.TrimSpace(filter.PersonRole)) {
+	case "director":
+		roleClause = ` AND json_extract(je.value, '$.role') = 'Director'`
+	case "writer":
+		roleClause = ` AND json_extract(je.value, '$.role') = 'Writer'`
+	case "composer":
+		roleClause = ` AND json_extract(je.value, '$.role') = 'Composer'`
+	case "actor":
+		roleClause = ` AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer') AND json_extract(je.value, '$.role') IS NOT NULL AND trim(json_extract(je.value, '$.role')) != ''`
+	}
+
+	cond := `CASE WHEN t.credits IS NOT NULL AND t.credits != '' AND t.credits != '[]' AND json_valid(t.credits) = 1 AND json_type(t.credits) = 'array' THEN EXISTS (SELECT 1 FROM json_each(t.credits) je WHERE je.type = 'object' AND json_extract(je.value, '$.name') = ? COLLATE NOCASE` + roleClause + `) ELSE 0 END = 1`
+	conditions = append(conditions, cond)
+	args = append(args, person)
+	return conditions, args
 }

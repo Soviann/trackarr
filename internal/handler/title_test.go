@@ -860,3 +860,76 @@ func TestTitleHandler_BatchCreate(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 	})
 }
+
+func TestTitleHandler_List_PersonRole(t *testing.T) {
+	h, db, _ := setupHandler(t)
+
+	cDune := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Denis Villeneuve","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"}]`
+	idDune := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cDune,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	cActor := `[{"name":"Denis Villeneuve","role":"Cameo"}]`
+	idActor := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cActor,
+	}, []model.TitleName{{Name: "Cameo Movie", Language: "en", IsPrimary: true}})
+
+	t.Run("nominal role filters (case-insensitive and trimmed)", func(t *testing.T) {
+		cases := []struct {
+			query       string
+			expectedIDs []int64
+		}{
+			{"person=Denis+Villeneuve", []int64{idDune, idActor}},
+			{"person=Denis+Villeneuve&role=all", []int64{idDune, idActor}},
+			{"person=Denis+Villeneuve&role=DIRECTOR", []int64{idDune}},
+			{"person=Denis+Villeneuve&role=%20Writer%20", []int64{idDune}},
+			{"person=Denis+Villeneuve&role=actor", []int64{idActor}},
+			{"person=Hans+Zimmer&role=composer", []int64{idDune}},
+		}
+		for _, tc := range cases {
+			req := httptest.NewRequest(http.MethodGet, "/api/titles?"+tc.query, nil)
+			rr := httptest.NewRecorder()
+			require.NoError(t, h.List(rr, req))
+			assert.Equal(t, http.StatusOK, rr.Code)
+
+			var res repository.PaginatedResult
+			require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+			gotIDs := make([]int64, len(res.Titles))
+			for i, tt := range res.Titles {
+				gotIDs[i] = tt.ID
+			}
+			assert.ElementsMatch(t, tc.expectedIDs, gotIDs, tc.query)
+		}
+	})
+
+	t.Run("boundary whitespace-only role is ignored", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/titles?person=Denis+Villeneuve&role=%20%20", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.List(rr, req))
+		assert.Equal(t, http.StatusOK, rr.Code)
+	})
+
+	t.Run("error invalid role returns 400 Bad Request", func(t *testing.T) {
+		r := chi.NewRouter()
+		r.Get("/api/titles", httputil.WrapHandler(h.List))
+
+		for _, q := range []string{
+			"/api/titles?person=Denis+Villeneuve&role=producer",
+			"/api/titles?role=unknown",
+		} {
+			req := httptest.NewRequest(http.MethodGet, q, nil)
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+			assert.Equal(t, http.StatusBadRequest, rr.Code, q)
+			assert.Contains(t, rr.Body.String(), "Invalid role")
+		}
+	})
+}

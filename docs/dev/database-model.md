@@ -18,13 +18,14 @@
 
 ## Core Architecture Rule: Reader vs Writer Pattern
 To enforce compile-time write safety:
-1. **Readers** (`internal/repository/*_repository.go`):
-   - Implemented as methods on repository structs accepting `database.DBTX` (`*sql.DB` or `*sql.Tx`).
+1. **Readers** (`internal/repository/*.go`):
+   - Implemented as methods on repository structs accepting `database.DBTX` (`*sql.DB` or `*sql.Tx`), including read-only queries such as `StatsRepository` and `PeopleRepository`.
    - Read methods can query either the `writeDB` pool or a separate read pool (`readDB`).
 2. **Writers** (`internal/repository/*_writer.go`):
    - Implemented on dedicated writer structs (e.g. `TitleWriter`, `SeasonWriter`, `EpisodeWriter`, `WatchEventWriter`, `TaskWriter`, `MatchEventWriter`).
    - **Constructor accepts only `*sql.Tx`**: `NewTitleWriter(tx *sql.Tx)`.
    - The Go compiler strictly rejects executing mutating SQL statements outside an explicit transaction block.
+   - `TitleWriter` also exposes metadata-only catch-up helpers (`UpdateCreditsCatchUp`, `MarkCreditsRefreshed`) that invalidate `TagTitles`, `TagStats`, and `TagCalendar` post-commit without bumping `updated_at` or mutating user watch state.
 
 ## Critical Invariant: Nested Transaction Deadlock
 Because `MaxOpenConns = 1`, acquiring a new write transaction while already holding a transaction will **permanently deadlock the server**:
@@ -32,7 +33,7 @@ Because `MaxOpenConns = 1`, acquiring a new write transaction while already hold
 - **Rule**: Post-commit side effects (e.g. backfilling, push notifications, webhooks, queue dispatching) must be returned to the caller and executed **after** `WithTxContext` finishes and commits.
 
 ## Tables & Primary Schema Entities
-- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at` (migration 048; non-null only when series is purged from Sonarr with `sonarr_id = NULL`), `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`, `downloaded_at` (migration 050).
+- `titles`: Core media table. Columns: `id`, `type` (`movie`/`series`), `is_anime`, `year`, `status` (`watching`/`completed`/`dropped`/`plan_to_watch`), `match_status` (`confirmed`/`pending_review`/`unconfirmed`), `series_status` (`returning`/`ended`/`cancelled`/`in_production`), `tmdb_id`, `imdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `external_source_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at` (migration 048; non-null only when series is purged from Sonarr with `sonarr_id = NULL`), `arr_ignored`, `cover_url`, `overview`, `credits`, `runtime`, `my_rating`, `tmdb_rating`, `tvdb_rating`, `anilist_rating`, `first_watched_at`, `last_watched_at`, `last_refreshed_at`, `credits_refreshed_at` (migration 053; nullable DATETIME stamping last TMDB extended-credits fetch/catch-up, cleared when TMDB ID changes or is removed), `next_air_date`, `next_air_episode`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`, `downloaded_at` (migration 050).
 - `title_names`: Multilingual and alternative aliases. Columns: `id`, `title_id`, `name`, `language`, `is_primary`.
 - `title_names_fts` & `title_names_trigram_fts`: FTS5 virtual tables on `title_names.name` (`unicode61 remove_diacritics 2` for prefix search, and `tokenize='trigram'` for fuzzy typo/substring matching, migration 051).
 - `title_genres`: Associated genres per title. Columns: `title_id`, `genre`.

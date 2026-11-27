@@ -111,9 +111,19 @@ func (r *StatsRepository) GetFiltered(ctx context.Context, filter model.StatsFil
 		return nil, fmt.Errorf("stats top actors: %w", err)
 	}
 
-	topDirectors, err := r.topDirectorsFiltered(ctx, 10, filter)
+	topDirectors, err := r.topCrewRoleFiltered(ctx, "Director", 10, filter)
 	if err != nil {
 		return nil, fmt.Errorf("stats top directors: %w", err)
+	}
+
+	topWriters, err := r.topCrewRoleFiltered(ctx, "Writer", 10, filter)
+	if err != nil {
+		return nil, fmt.Errorf("stats top writers: %w", err)
+	}
+
+	topComposers, err := r.topCrewRoleFiltered(ctx, "Composer", 10, filter)
+	if err != nil {
+		return nil, fmt.Errorf("stats top composers: %w", err)
 	}
 
 	currentStreak, err := r.CurrentStreak(ctx)
@@ -156,6 +166,8 @@ func (r *StatsRepository) GetFiltered(ctx context.Context, filter model.StatsFil
 		Genres:       genres,
 		TopActors:    topActors,
 		TopDirectors: topDirectors,
+		TopWriters:   topWriters,
+		TopComposers: topComposers,
 		Streaks: model.StatsStreaks{
 			Current: currentStreak,
 			Best:    bestStreak,
@@ -510,79 +522,44 @@ func (r *StatsRepository) topGenresFiltered(ctx context.Context, limit int, filt
 }
 
 func (r *StatsRepository) topActorsFiltered(ctx context.Context, limit int, filter model.StatsFilter) ([]model.PersonStat, error) {
-	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
-	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
-
-	var query string
-	var args []any
-
-	if !isTimeFiltered {
-		query = fmt.Sprintf(`
-			SELECT
-				json_extract(je.value, '$.name') AS name,
-				COUNT(DISTINCT t.id) AS count
-			FROM titles t, json_each(t.credits) je
-			WHERE t.credits IS NOT NULL
-			  AND t.credits != ''
-			  AND t.credits != '[]'
-			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
-			  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
-			  AND json_extract(je.value, '$.name') IS NOT NULL
-			  AND trim(json_extract(je.value, '$.name')) != ''
-			  AND %s
-			GROUP BY name
-			ORDER BY count DESC, name ASC
-			LIMIT ?
-		`, typeCond)
-		args = []any{limit}
-	} else {
-		timeCond, timeArgs := timeframeCondition(filter, "we")
-		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
-		query = fmt.Sprintf(`
-			SELECT
-				json_extract(je.value, '$.name') AS name,
-				COUNT(DISTINCT t.id) AS count
-			FROM watch_events we
-			JOIN titles t ON we.title_id = t.id,
-			json_each(t.credits) je
-			WHERE t.credits IS NOT NULL
-			  AND t.credits != ''
-			  AND t.credits != '[]'
-			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
-			  AND json_extract(je.value, '$.name') IS NOT NULL
-			  AND trim(json_extract(je.value, '$.name')) != ''
-			  AND %s
-			GROUP BY name
-			ORDER BY count DESC, name ASC
-			LIMIT ?
-		`, where)
-		args = make([]any, 0, len(timeArgs)+1)
-		args = append(args, timeArgs...)
-		args = append(args, limit)
-	}
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("stats: top actors: %w", err)
-	}
-	defer rows.Close()
-
-	results := []model.PersonStat{}
-	for rows.Next() {
-		var p model.PersonStat
-		if err := rows.Scan(&p.Name, &p.Count); err != nil {
-			return nil, fmt.Errorf("stats: actor scan: %w", err)
-		}
-		results = append(results, p)
-	}
-	return results, rows.Err()
+	return r.topPeopleFiltered(
+		ctx,
+		"json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer') AND json_extract(je.value, '$.role') IS NOT NULL AND trim(json_extract(je.value, '$.role')) != ''",
+		nil,
+		limit,
+		filter,
+		"top actors",
+	)
 }
 
-func (r *StatsRepository) topDirectorsFiltered(ctx context.Context, limit int, filter model.StatsFilter) ([]model.PersonStat, error) {
+func (r *StatsRepository) topCrewRoleFiltered(ctx context.Context, role string, limit int, filter model.StatsFilter) ([]model.PersonStat, error) {
+	role = strings.TrimSpace(role)
+	if role == "" {
+		return []model.PersonStat{}, nil
+	}
+	return r.topPeopleFiltered(
+		ctx,
+		"json_extract(je.value, '$.role') = ?",
+		[]any{role},
+		limit,
+		filter,
+		"top "+strings.ToLower(role)+"s",
+	)
+}
+
+func (r *StatsRepository) topPeopleFiltered(ctx context.Context, roleCond string, roleArgs []any, limit int, filter model.StatsFilter, label string) ([]model.PersonStat, error) {
 	isTimeFiltered := filter.Timeframe == "year" || filter.Timeframe == "30d" || filter.Timeframe == "30days"
 	typeCond, _ := mediaTypeCondition(filter.MediaType, "t")
+
+	const safeCreditsJoin = `json_each(CASE WHEN t.credits IS NOT NULL AND t.credits != '' AND t.credits != '[]' AND json_valid(t.credits) = 1 AND json_type(t.credits) = 'array' THEN t.credits ELSE '[]' END) je`
+	const commonCreditsWhere = `t.credits IS NOT NULL
+			  AND t.credits != ''
+			  AND t.credits != '[]'
+			  AND json_valid(t.credits) = 1
+			  AND json_type(t.credits) = 'array'
+			  AND je.type = 'object'
+			  AND json_extract(je.value, '$.name') IS NOT NULL
+			  AND trim(json_extract(je.value, '$.name')) != ''`
 
 	var query string
 	var args []any
@@ -592,21 +569,18 @@ func (r *StatsRepository) topDirectorsFiltered(ctx context.Context, limit int, f
 			SELECT
 				json_extract(je.value, '$.name') AS name,
 				COUNT(DISTINCT t.id) AS count
-			FROM titles t, json_each(t.credits) je
-			WHERE t.credits IS NOT NULL
-			  AND t.credits != ''
-			  AND t.credits != '[]'
-			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') = 'Director'
+			FROM titles t, %s
+			WHERE %s
+			  AND %s
 			  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
-			  AND json_extract(je.value, '$.name') IS NOT NULL
-			  AND trim(json_extract(je.value, '$.name')) != ''
 			  AND %s
 			GROUP BY name
 			ORDER BY count DESC, name ASC
 			LIMIT ?
-		`, typeCond)
-		args = []any{limit}
+		`, safeCreditsJoin, commonCreditsWhere, roleCond, typeCond)
+		args = make([]any, 0, len(roleArgs)+1)
+		args = append(args, roleArgs...)
+		args = append(args, limit)
 	} else {
 		timeCond, timeArgs := timeframeCondition(filter, "we")
 		where := fmt.Sprintf("%s AND %s", timeCond, typeCond)
@@ -616,27 +590,23 @@ func (r *StatsRepository) topDirectorsFiltered(ctx context.Context, limit int, f
 				COUNT(DISTINCT t.id) AS count
 			FROM watch_events we
 			JOIN titles t ON we.title_id = t.id,
-			json_each(t.credits) je
-			WHERE t.credits IS NOT NULL
-			  AND t.credits != ''
-			  AND t.credits != '[]'
-			  AND json_valid(t.credits) = 1
-			  AND json_extract(je.value, '$.role') = 'Director'
-			  AND json_extract(je.value, '$.name') IS NOT NULL
-			  AND trim(json_extract(je.value, '$.name')) != ''
+			%s
+			WHERE %s
+			  AND %s
 			  AND %s
 			GROUP BY name
 			ORDER BY count DESC, name ASC
 			LIMIT ?
-		`, where)
-		args = make([]any, 0, len(timeArgs)+1)
+		`, safeCreditsJoin, commonCreditsWhere, roleCond, where)
+		args = make([]any, 0, len(roleArgs)+len(timeArgs)+1)
+		args = append(args, roleArgs...)
 		args = append(args, timeArgs...)
 		args = append(args, limit)
 	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("stats: top directors: %w", err)
+		return nil, fmt.Errorf("stats: %s: %w", label, err)
 	}
 	defer rows.Close()
 
@@ -644,7 +614,7 @@ func (r *StatsRepository) topDirectorsFiltered(ctx context.Context, limit int, f
 	for rows.Next() {
 		var p model.PersonStat
 		if err := rows.Scan(&p.Name, &p.Count); err != nil {
-			return nil, fmt.Errorf("stats: director scan: %w", err)
+			return nil, fmt.Errorf("stats: %s scan: %w", label, err)
 		}
 		results = append(results, p)
 	}
@@ -1138,72 +1108,22 @@ func computeBestStreak(days []string) int {
 
 // TopActors returns the top N actors by distinct watched titles count.
 func (r *StatsRepository) TopActors(ctx context.Context, limit int) ([]model.PersonStat, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			json_extract(je.value, '$.name') AS name,
-			COUNT(DISTINCT t.id) AS count
-		FROM titles t, json_each(t.credits) je
-		WHERE t.credits IS NOT NULL
-		  AND t.credits != ''
-		  AND t.credits != '[]'
-		  AND json_valid(t.credits) = 1
-		  AND json_extract(je.value, '$.role') NOT IN ('Director', 'Writer', 'Composer')
-		  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
-		  AND json_extract(je.value, '$.name') IS NOT NULL
-		  AND trim(json_extract(je.value, '$.name')) != ''
-		GROUP BY name
-		ORDER BY count DESC, name ASC
-		LIMIT ?
-	`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("stats: top actors: %w", err)
-	}
-	defer rows.Close()
-
-	results := []model.PersonStat{}
-	for rows.Next() {
-		var p model.PersonStat
-		if err := rows.Scan(&p.Name, &p.Count); err != nil {
-			return nil, fmt.Errorf("stats: actor scan: %w", err)
-		}
-		results = append(results, p)
-	}
-	return results, rows.Err()
+	return r.topActorsFiltered(ctx, limit, model.StatsFilter{Timeframe: "all", MediaType: "all"})
 }
 
 // TopDirectors returns the top N directors by distinct watched titles count.
 func (r *StatsRepository) TopDirectors(ctx context.Context, limit int) ([]model.PersonStat, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			json_extract(je.value, '$.name') AS name,
-			COUNT(DISTINCT t.id) AS count
-		FROM titles t, json_each(t.credits) je
-		WHERE t.credits IS NOT NULL
-		  AND t.credits != ''
-		  AND t.credits != '[]'
-		  AND json_valid(t.credits) = 1
-		  AND json_extract(je.value, '$.role') = 'Director'
-		  AND (t.last_watched_at IS NOT NULL OR t.status IN ('completed', 'watching'))
-		  AND json_extract(je.value, '$.name') IS NOT NULL
-		  AND trim(json_extract(je.value, '$.name')) != ''
-		GROUP BY name
-		ORDER BY count DESC, name ASC
-		LIMIT ?
-	`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("stats: top directors: %w", err)
-	}
-	defer rows.Close()
+	return r.topCrewRoleFiltered(ctx, "Director", limit, model.StatsFilter{Timeframe: "all", MediaType: "all"})
+}
 
-	results := []model.PersonStat{}
-	for rows.Next() {
-		var p model.PersonStat
-		if err := rows.Scan(&p.Name, &p.Count); err != nil {
-			return nil, fmt.Errorf("stats: director scan: %w", err)
-		}
-		results = append(results, p)
-	}
-	return results, rows.Err()
+// TopWriters returns the top N writers by distinct watched titles count.
+func (r *StatsRepository) TopWriters(ctx context.Context, limit int) ([]model.PersonStat, error) {
+	return r.topCrewRoleFiltered(ctx, "Writer", limit, model.StatsFilter{Timeframe: "all", MediaType: "all"})
+}
+
+// TopComposers returns the top N composers by distinct watched titles count.
+func (r *StatsRepository) TopComposers(ctx context.Context, limit int) ([]model.PersonStat, error) {
+	return r.topCrewRoleFiltered(ctx, "Composer", limit, model.StatsFilter{Timeframe: "all", MediaType: "all"})
 }
 
 // AvailableYears returns all calendar years containing watch events, sorted descending.

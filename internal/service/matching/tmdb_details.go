@@ -45,6 +45,10 @@ type TMDBCrewMember struct {
 	Department string `json:"department"`
 }
 
+type TMDBCreator struct {
+	Name string `json:"name"`
+}
+
 type TMDBMovieDetails struct {
 	ID                  int64               `json:"id"`
 	Title               string              `json:"title"`
@@ -76,6 +80,7 @@ type TMDBTVDetails struct {
 	OriginCountry  []string            `json:"origin_country"`
 	EpisodeRunTime []int               `json:"episode_run_time"`
 	VoteAverage    float64             `json:"vote_average"`
+	CreatedBy      []TMDBCreator       `json:"created_by"`
 	Credits        *TMDBCredits        `json:"credits"`
 	WatchProviders *tmdbWatchProviders `json:"watch/providers"`
 	Seasons        []struct {
@@ -214,7 +219,7 @@ func ExtractMovieMetadata(d *TMDBMovieDetails) (genres, credits string, runtime 
 // ExtractTVMetadata builds JSON strings for genres and credits from TMDB TV details.
 func ExtractTVMetadata(d *TMDBTVDetails) (genres, credits string, runtime *int, rating *float64) {
 	genres = marshalGenres(d.Genres)
-	credits = marshalCredits(d.Credits)
+	credits = marshalCreditsWithCreators(d.Credits, d.CreatedBy)
 	if len(d.EpisodeRunTime) > 0 && d.EpisodeRunTime[0] > 0 {
 		runtime = &d.EpisodeRunTime[0]
 	}
@@ -283,7 +288,11 @@ func isComposerJob(job string) bool {
 }
 
 func marshalCredits(c *TMDBCredits) string {
-	if c == nil {
+	return marshalCreditsWithCreators(c, nil)
+}
+
+func marshalCreditsWithCreators(c *TMDBCredits, creators []TMDBCreator) string {
+	if c == nil && len(creators) == 0 {
 		return "[]"
 	}
 	type entry struct {
@@ -306,37 +315,48 @@ func marshalCredits(c *TMDBCredits) string {
 	}
 
 	// 1. Directors
-	for _, crew := range c.Crew {
-		if strings.EqualFold(strings.TrimSpace(crew.Job), "Director") {
-			addEntry(crew.Name, "Director")
+	if c != nil {
+		for _, crew := range c.Crew {
+			if strings.EqualFold(strings.TrimSpace(crew.Job), "Director") {
+				addEntry(crew.Name, "Director")
+			}
 		}
 	}
 
-	// 2. Writers
-	for _, crew := range c.Crew {
-		if isWriterJob(crew.Job, crew.Department) {
-			addEntry(crew.Name, "Writer")
+	// 2. Writers (TV created_by entries + crew writers, deduplicated)
+	for _, creator := range creators {
+		addEntry(creator.Name, "Writer")
+	}
+	if c != nil {
+		for _, crew := range c.Crew {
+			if isWriterJob(crew.Job, crew.Department) {
+				addEntry(crew.Name, "Writer")
+			}
 		}
 	}
 
 	// 3. Composers
-	for _, crew := range c.Crew {
-		if isComposerJob(crew.Job) {
-			addEntry(crew.Name, "Composer")
+	if c != nil {
+		for _, crew := range c.Crew {
+			if isComposerJob(crew.Job) {
+				addEntry(crew.Name, "Composer")
+			}
 		}
 	}
 
 	// 4. Main Cast (up to 20)
-	limit := 20
-	if len(c.Cast) < limit {
-		limit = len(c.Cast)
-	}
-	for _, cast := range c.Cast[:limit] {
-		role := strings.TrimSpace(cast.Character)
-		if role == "" {
-			role = "Actor"
+	if c != nil {
+		limit := 20
+		if len(c.Cast) < limit {
+			limit = len(c.Cast)
 		}
-		addEntry(cast.Name, role)
+		for _, cast := range c.Cast[:limit] {
+			role := strings.TrimSpace(cast.Character)
+			if role == "" {
+				role = "Actor"
+			}
+			addEntry(cast.Name, role)
+		}
 	}
 
 	if len(entries) == 0 {

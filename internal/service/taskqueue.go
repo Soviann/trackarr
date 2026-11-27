@@ -464,6 +464,8 @@ func buildEnrichmentUpdate(result *matching.MatchResult, payload EnrichmentPaylo
 	}
 	if result.Credits != "" {
 		update.Credits = &result.Credits
+		now := time.Now().UTC()
+		update.CreditsRefreshedAt = &now
 	}
 	if result.AniListRating != nil {
 		update.AniListRating = result.AniListRating

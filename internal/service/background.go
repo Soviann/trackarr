@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -554,6 +556,111 @@ func mapTMDBSeriesStatus(details *matching.TMDBTVDetails) *model.SeriesStatus {
 		return nil
 	}
 	return &status
+}
+
+// DefaultCreditsCatchUpBatchSize caps the number of completed/dropped titles
+// backfilled per scheduled pass to avoid saturating TMDB quotas on large libraries.
+const DefaultCreditsCatchUpBatchSize = 25
+
+// CatchUpExtendedCredits incrementally backfills TMDB extended credits
+// (directors, writers, TV creators, composers, and top cast) for a capped
+// batch of completed or dropped titles lacking them. Returns the count of
+// titles updated with fetched credits.
+func (s *BackgroundService) CatchUpExtendedCredits(ctx context.Context) int {
+	return s.catchUpExtendedCreditsBatch(ctx, DefaultCreditsCatchUpBatchSize)
+}
+
+func (s *BackgroundService) catchUpExtendedCreditsBatch(ctx context.Context, batchSize int) int {
+	if s == nil || s.tmdb == nil || s.titles == nil || s.writeDB == nil || batchSize <= 0 {
+		return 0
+	}
+	if ctx.Err() != nil {
+		return 0
+	}
+
+	titles, err := s.titles.ListTitlesNeedingCreditsCatchUp(ctx, batchSize)
+	if err != nil {
+		log.Printf("background: list titles for credits catch-up: %v", err)
+		return 0
+	}
+
+	updated := 0
+	for i := range titles {
+		if ctx.Err() != nil {
+			log.Printf("background: credits catch-up cancelled: %v", ctx.Err())
+			return updated
+		}
+
+		title := &titles[i]
+		if title.TMDBID == nil || *title.TMDBID <= 0 {
+			continue
+		}
+
+		if s.limiter != nil {
+			if err := s.limiter.Wait(ctx); err != nil {
+				return updated
+			}
+		}
+
+		credits, err := s.fetchTMDBCredits(ctx, title.Type, *title.TMDBID)
+		if ctx.Err() != nil {
+			return updated
+		}
+		if err != nil {
+			if matching.IsRateLimitError(err) {
+				log.Printf("background: credits catch-up rate-limited on title %d (%s), stopping batch: %v", title.ID, title.PrimaryName, err)
+				return updated
+			}
+			var apiErr *matching.APIError
+			if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
+				if txErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+					return repository.NewTitleWriter(tx).MarkCreditsRefreshed(ctx, title.ID, time.Now().UTC())
+				}); txErr != nil {
+					log.Printf("background: mark credits refreshed for title %d (%s): %v", title.ID, title.PrimaryName, txErr)
+				}
+				continue
+			}
+			if matching.IsRetryableError(err) {
+				log.Printf("background: credits catch-up retryable error for title %d (%s): %v", title.ID, title.PrimaryName, err)
+				continue
+			}
+			log.Printf("background: credits catch-up error for title %d (%s): %v", title.ID, title.PrimaryName, err)
+			continue
+		}
+
+		if txErr := database.WithTxContext(ctx, s.writeDB, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).UpdateCreditsCatchUp(ctx, title.ID, credits, time.Now().UTC())
+		}); txErr != nil {
+			log.Printf("background: update credits catch-up for title %d (%s): %v", title.ID, title.PrimaryName, txErr)
+			continue
+		}
+		updated++
+	}
+
+	return updated
+}
+
+func (s *BackgroundService) fetchTMDBCredits(ctx context.Context, titleType model.TitleType, tmdbID int64) (string, error) {
+	if titleType == model.TitleTypeMovie {
+		details, err := s.tmdb.GetMovieDetails(ctx, tmdbID)
+		if err != nil {
+			return "", err
+		}
+		if details == nil {
+			return "[]", nil
+		}
+		_, credits, _, _ := matching.ExtractMovieMetadata(details)
+		return credits, nil
+	}
+	details, err := s.tmdb.GetTVDetails(ctx, tmdbID)
+	if err != nil {
+		return "", err
+	}
+	if details == nil {
+		return "[]", nil
+	}
+	_, credits, _, _ := matching.ExtractTVMetadata(details)
+	return credits, nil
 }
 
 // StartTicker launches the background refresh on a daily interval by delegating to Scheduler.

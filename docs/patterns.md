@@ -50,7 +50,7 @@
 
 | Model | File | Description & Key Fields |
 |---|---|---|
-| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `SonarrDeletedAt`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`, `DownloadedAt`. |
+| `Title` | `internal/model/title.go` | `ID`, `Type`, `Status`, `SeriesStatus`, `MatchStatus`, `TMDBID`, `TVDBID`, `AniListID`, `SimklID`, `RadarrID`, `SonarrID`, `SonarrDeletedAt`, `ArrIgnored`, `OriginCountry`, `TotalWatchMinutes`, `AccentHex`, `WatchProviders`, `PersonalNotes`, `DownloadedAt`, `CreditsRefreshedAt`. |
 | `TitleName` | `internal/model/title.go` | Multi-language and alternative alias names (`TitleID`, `Language`, `Name`). |
 | `Season` | `internal/model/season.go` | `ID`, `TitleID`, `SeasonNumber`, `EpisodeCount`, `WatchedCount`, `AirDate`. |
 | `Episode` | `internal/model/episode.go` | `ID`, `SeasonID`, `EpisodeNumber`, `Name`, `Watched`, `LastWatchedAt`, `DownloadedAt`. |
@@ -61,14 +61,14 @@
 | `TitleRelation` | `internal/model/title_relation.go` | Side stories, movies, sagas, and franchise relations (`TitleID`, `SeasonID`, `Provider`, `ExternalID`, `RelationType`, `Format`, `MatchedTitleID`). |
 | `NextEpisode` | `internal/model/title.go` | First unwatched episode projection (`ID`, `SeasonID`, `Episode`, `SeasonNumber`, `Name`, `AirDate`, `IsTBA`). |
 | `ActivePlaybackSession` | `internal/model/playback.go` | In-memory active playback session (`Source`, `Player`, `TitleID`, `TitleName`, `TitleType`, `SeasonNumber`, `EpisodeNumber`, `DurationSec`, `ViewOffsetSec`). |
-| `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, actor/director rankings, and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
+| `WrappedResponse` / `Stats` | `internal/model/stats.go` | Comprehensive statistics, cast/crew rankings (`top_actors`, `top_directors`, `top_writers`, `top_composers`), people search DTO (`PersonSearchResult`), and annual Wrapped payload (`WrappedResponse`, `WrappedAIPersona`, `WrappedArchiveItem`). |
 | `APIKey` | `internal/model/api_key.go` | Machine-to-machine authentication credential (`ID`, `Name`, `KeyHash`, `KeyPrefix`, `Scopes`, `CreatedAt`, `LastUsedAt`, `RevokedAt`). |
 
 ### Repositories (`internal/repository/`)
 
 | Repository | Reader Methods (`DBTX`) | Writer Methods (`*sql.Tx`) |
 |---|---|---|
-| `Title` | `GetByID`, `List`, `ListAll`, `ListRatedTitles`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
+| `Title` | `GetByID`, `List` (supports `Person` & `PersonRole` filtering), `ListAll`, `ListRatedTitles`, `ListTitlesNeedingCreditsCatchUp`, `ListContinueWatching` (with saga smart next-up continuity resolution), `FindByExternalID`, `FindByNameAndType` (exact year, guarded on year=0), `ListOriginCountries`, `HasWatchedEpisodes`, `HasUnwatchedEpisodes`, search in `title_search.go` (SQLite FTS5 trigram fallback `title_names_trigram_fts`) | `Create`, `Update`, `UpdateLastWatchedAt`, `MarkRefreshed`, `UpdateCreditsCatchUp`, `MarkCreditsRefreshed`, `ReplaceNames`, `AddMissingNames`, `Merge`, `Delete`, `BatchDelete`, `BatchStatus` |
 | `APIKey` | `List`, `GetByHash`, `GetByID` | `Create`, `Revoke`, `Delete`, `UpdateLastUsedAt` |
 | `TitleRelation` | `GetByTitleID`, `GetBySeasonID` | `UpsertBatch`, `DeleteForTitle` |
 | `Season` | `GetByID`, `ListByTitleID` | `GetOrCreate`, `UpdateRating`, `UpdateTotalEpisodes`, `Upsert` |
@@ -80,7 +80,8 @@
 | `Setting` | `Get` | `Set`, `Delete` |
 | `MatchEvent` | `ListRecent` (includes cover URL join) | `Create` |
 | `SeasonAudit` | `ListDismissals` | `Dismiss` |
-| `Stats` | `TotalWatchMinutes`, `TopGenres`, `TopActors`, `TopDirectors`, `CurrentStreak`, `BestStreak`, `GetWrappedData` | N/A (read-only) |
+| `Stats` | `TotalWatchMinutes`, `TopGenres`, `TopActors`, `TopDirectors`, `TopWriters`, `TopComposers`, `CurrentStreak`, `BestStreak`, `GetWrappedData` | N/A (read-only) |
+| `People` | `Search` (Unicode NFD accent-tolerant, case-insensitive, partial & multi-token credit search over `titles.credits`) | N/A (read-only) |
 | `Wrapped` | `GetSnapshot`, `HasSnapshot`, `ListArchives` | `SaveSnapshot`, `DeleteSnapshot` |
 | `Activity` | `List` (paginated scrobble events) | N/A (read-only) |
 | `History` | `GetByTitleID` (title watch log) | N/A (read-only) |
@@ -105,8 +106,8 @@
 | `ProwlarrService` | `internal/service/prowlarr.go` | Prowlarr indexer search (releases), memory caching, and poster resolution | `docs/patterns.md` |
 | `APILimiter` | `internal/service/ratelimiter.go` | Global 2 rps token bucket for external APIs | `docs/patterns.md` |
 | `CalendarService` | `internal/service/calendar.go` | RFC 5545 iCalendar generation (with configurable same-day episode grouping via `ical_group_same_day`), token rotation & range queries | `docs/user-guide.md` |
-| `BackgroundService` / `MetadataSyncService` | `internal/service/background.go` | Title metadata enrichment and synchronization (TMDB, AniList, TVDB) | `docs/background-jobs.md` |
-| `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (Jellyfin unwatched movie sync, daily refresh, cover maintenance, automated backups, wrapped checks) | `docs/background-jobs.md` |
+| `BackgroundService` / `MetadataSyncService` | `internal/service/background.go` | Title metadata enrichment, synchronization (TMDB, AniList, TVDB), and incremental extended credits catch-up (`CatchUpExtendedCredits`) | `docs/background-jobs.md` |
+| `Scheduler` | `internal/service/scheduler.go` | Periodic cron orchestrator (Jellyfin unwatched movie sync, daily refresh, extended credits catch-up, cover maintenance, automated backups, wrapped checks) | `docs/background-jobs.md` |
 | `SeasonAuditService` | `internal/service/seasonaudit.go` | Split season detection and suggested merge engine | `docs/dev/anilist-sync.md` |
 | `SimklImporter` | `internal/service/simkl.go` | Simkl backup archive parser and database populator | `docs/deployment.md` |
 | `TaskQueueWorker` | `internal/service/taskqueue.go` | Asynchronous task execution engine with priority ordering (interactive pushes ahead of bulk enrichment) | `docs/background-jobs.md` |
@@ -138,7 +139,7 @@
 | POST | `/api/calendar/token/regenerate` | `calendarHandler.RegenerateToken` | Rotate iCal secret token |
 | GET | `/api/covers/{filename}` | `covers.Serve` | Serve cached cover image |
 | GET | `/covers/{filename}` | `covers.Serve` | Legacy top-level cover route without `/api` prefix |
-| GET | `/api/titles` | `titles.List` | Paginated library list with filters and search |
+| GET | `/api/titles` | `titles.List` | Paginated library list with filters (including `person` and `role`) and search |
 | GET | `/api/playback/active` | `playbackHandler.GetActivePlayback` | Active playback session (204 No Content if idle, 200 OK with session payload) |
 | POST | `/api/titles` | `titles.Create` | Manually create a new title |
 | POST | `/api/titles/batch` | `titles.BatchCreate` | Bulk ingest titles (up to 100) with local regex URL parsing, deduplication, and task prioritization |
@@ -167,13 +168,14 @@
 | PUT | `/api/titles/{titleID}/seasons/{seasonID}/anilist/order` | `seasonExternal.ReorderAniList` | Reorder AniList parts |
 | POST | `/api/push/subscribe` | `push.Subscribe` | Register Web Push subscription |
 | DELETE | `/api/push/subscribe` | `push.Unsubscribe` | Remove Web Push subscription |
-| GET | `/api/stats` | `stats.Get` | Library metrics, genre/people distributions & insight cards with timeframe, year and media type filters |
+| GET | `/api/stats` | `stats.Get` | Library metrics, genre/cast & crew distributions (`top_actors`, `top_directors`, `top_writers`, `top_composers`) & insight cards with timeframe, year and media type filters |
 | GET | `/api/stats/wrapped` | `stats.GetWrapped` | Annual retrospective metrics, top favorites/releases & Gemini AI persona |
 | GET | `/api/stats/wrapped/archives` | `stats.GetWrappedArchives` | List all archived Wrapped snapshots for gallery display |
 | POST | `/api/stats/wrapped/generate` | `stats.RegenerateWrapped` | Force generation & SQLite persistence of Wrapped snapshot |
 | GET | `/api/stats/activity` | `activity.List` | Paginated watch history feed |
 | GET | `/api/match-events` | `matchEvents.List` | Audit trail of auto-matches |
 | GET | `/api/genres` | `genres.List` | List genres with counts |
+| GET | `/api/people` | `people.Search` | Search cast & crew across `titles.credits` with aggregated roles (`director`, `writer`, `composer`, `actor`) and distinct title counts |
 | GET | `/api/countries` | `titles.Countries` | List origin countries with counts |
 | GET | `/api/settings` | `settings.Get` | User and app settings |
 | GET | `/api/anilist/auth` | `anilistAuth.Authorize` | Generate AniList OAuth authorize URL |
@@ -232,6 +234,7 @@
   - `StatsHandler.Get`: key `stats:<timeframe>:<year>:<mediaType>`, tags `TagStats`, `TagTitles`.
   - `CalendarHandler.GetEvents`: key `calendar:events:<start>:<end>:<typeFilter>`, tags `TagCalendar`, `TagTitles`.
   - `GenreHandler.List`: key `genres:list:<rawQuery>`, tag `TagTitles`.
+  - `PeopleHandler.Search`: key `people:search:<rawQuery>`, tag `TagTitles`.
   - `TitleHandler.Countries`: key `countries:list:<rawQuery>`, tag `TagTitles`.
   - `TitleHandler.ReviewCount`: key `titles:review_count`, tag `TagTitles`.
 - **Deterministic Post-Commit Invalidation**: Mutating transactional writers (`TitleWriter`, `EpisodeWriter`, `SeasonWriter`, `WatchEventWriter`, `TitleRelationWriter`, `GenreWriter`, `SettingWriter`, `SeasonExternalIDWriter`) mark active transactions dirty via `database.MarkTxDirty(tx, ...)`. Upon successful commit via `database.WithTxContext` (or `CommitTx`), all cached keys matching the dirty tags are atomically evicted post-commit. Transactions that fail or roll back never invalidate, eliminating cache stampedes and preventing stale reads.
@@ -241,7 +244,7 @@
 ## Frontend (Preact)
 
 ### Routing Conventions (`frontend/src/routes.ts`)
-- **Single Source of Truth**: All route patterns live in `ROUTE_PATHS`, route builders in `routeTo`.
+- **Single Source of Truth**: All route patterns live in `ROUTE_PATHS`, route builders in `routeTo` (including `routeTo.person(name, role?)` with optional `?role=` query parameter).
 - **API URL Rule**: `apiFetch` and `useApi` automatically prepend `/api`. Never write `apiFetch('/api/...')`.
 - **Naming Rule**: SPA routes are singular (`/title/:id`), API routes are plural (`/api/titles/:id`).
 - **Contextual Active Tab Highlighting (`getActiveTab` in `components/navItems.tsx`)**: Bottom navigation bar and lateral sidebar evaluate `getActiveTab(currentPath)` to preserve active tab context across nested workflows: `/admin/validate` and `/add` map to `/search` (`Explore`), `/continue-watching` and `/coming-up` map to `/` (`Collection`), `/releases` maps to `/calendar` (`Calendar`), while `/admin/*` subroutes remain mapped to `/admin`.
@@ -250,7 +253,7 @@
 
 ### State Management (`frontend/src/store.ts`)
 - `useTitleStore`: Zustand store for title listing, pagination, sorting (`localStorage`), and session-persistent filters (`status`, `type`, `is_anime`, `series_status`, `decade`, `release_from`, `release_to`, `genres`, `origin_country`, `my_rating_min`, `tmdb_rating_min`). Filters persist across title details and navigation, resetting only on explicit user action or reload.
-- `useSearchStore`: Search query state, text and filter-only search execution with `hasActiveFilters` helper, debounce, and TMDB toggle. Preserved across title/person detail drill-down navigation and restored on browser back button; automatically reset alongside filter drawer filters when exiting search to main sections, entering fresh search, or exiting merge mode.
+- `useSearchStore`: Search query state, concurrent `/titles` + `/people?search=...` (`peopleResults`, `loadingPeople`, opt-out via `includePeople: false` in merge mode) execution under `_searchGen` race guard, `hasActiveFilters` helper, debounce, and TMDB toggle. Preserved across title/person detail drill-down navigation and restored on browser back button; automatically reset alongside filter drawer filters when exiting search to main sections, entering fresh search, or exiting merge mode.
 
 ### Components Map (`frontend/src/components/`)
 
@@ -297,7 +300,7 @@
 | `CalendarMonthGrid` | `components/CalendarMonthGrid.tsx` | 7-column monthly interactive grid with today indicator & selected day release cards |
 | `CalendarWeekTimeline` | `components/CalendarWeekTimeline.tsx` | 7-day weekly timeline view with rich release cards |
 | `CalendarIcalModal` | `components/CalendarIcalModal.tsx` | iCal subscription modal with 1-click URL copy, Apple/Google links, and token rotation |
-| `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing filmography and library titles for a given actor or director |
+| `PersonFilmographyDrawer` | `components/PersonFilmographyDrawer.tsx` | Slide-up modal sheet listing role-filtered filmography and library titles for a given cast/crew member (`actor`, `director`, `writer`, `composer`) with role icon/label and link to `/person/:name?role=...` |
 | `PrimeBadge` | `components/PrimeBadge.tsx` | Amazon Prime Video source badge |
 | `ConfirmationDrawer` | `components/ConfirmationDrawer.tsx` | Slide-up confirmation modal with affirmative/cancel actions (safeguards mass confirm in MatchReview, season merges in AdminSeasonAudit, disconnect in AdminAniList, re-adding deleted series in TitleDetail) |
 | `ArrUnlinkDrawer` | `components/ArrUnlinkDrawer.tsx` | Slide-up 3-way modal prompting whether to delete from Arr or unlink only upon rematch or external ID modification |
@@ -330,11 +333,11 @@
 | `/continue-watching` | `ContinueWatching` | `pages/ContinueWatching.tsx` | In-progress titles, quick watch buttons, and unwatched episodes tracking |
 | `/calendar` | `Calendar` | `pages/Calendar.tsx` | Multi-view calendar (month, week, list) and iCal feed subscription |
 | `/coming-up` | `ComingUp` | `pages/ComingUp.tsx` | Dedicated upcoming airing page with at-a-glance next air dates and episode tags |
-| `/search` | `Search` | `pages/Search.tsx` | Full-text library search with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, external discovery deduplication (filtering out titles already in library with badge or empty notice), full-card clickability on owned titles, and discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) |
+| `/search` | `Search` | `pages/Search.tsx` | Full-text library search and concurrent People search (`GET /api/people`, hidden in merge mode, suppresses empty-results card on people hits) with mobile docked bar, desktop sticky top header (>= 1024px), adaptive Poster Grid / List view toggle, 150ms local debouncing, external discovery deduplication (filtering out titles already in library with badge or empty notice), full-card clickability on owned titles, and discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`) |
 | `/add` | `Add` | `pages/Add.tsx` | Instant live discovery and addition: debounced search across TMDB & AniList with discrete external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), local library cross-checking (`In Library ↗`), full-card clickable links to owned titles, optional hide-in-library filter toggle, 1-tap tracking status buttons (`+ Plan to Watch`, `+ Watching`) with universal undo, and URL/share-target routing |
-| `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, top actors, directors, and genre charts with responsive desktop Bento grid and accessible ARIA meters |
-| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Bento (`UX-2`), zero-reflow GPU ambient glow mesh (`.ambientMesh` with `--cover-accent-glow`, `--cover-accent-wash` dual radial gradients), full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar & Bento Box on desktop (>=1024px) with synchronized seasons rail, internal episodes scroll (max-height 520px), expandable Cast & Crew section with separated key crew and actors clamped to 10 entries with progressive toggle, and keyboard shortcuts (`W` for next episode, `1..9` for seasons) |
-| `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and directors |
+| `/stats` | `Stats` | `pages/Stats.tsx` | Decomposed watch metrics, unified 4-role Top Cast & Crew selector (*Actors*, *Directors*, *Writers*, *Composers*), and genre charts with responsive desktop Bento grid and accessible ARIA meters |
+| `/title/:id` | `TitleDetail` | `pages/TitleDetail.tsx` | Detailed title page with responsive Studio Bento (`UX-2`), zero-reflow GPU ambient glow mesh (`.ambientMesh` with `--cover-accent-glow`, `--cover-accent-wash` dual radial gradients), full-bleed cover hero on mobile (<640px), centered single-column (<1024px), and 2-column Studio Sidebar & Bento Box on desktop (>=1024px) with synchronized seasons rail, internal episodes scroll (max-height 520px), expandable Cast & Crew section with separated localized key crew (`Director`, `Writer`, `Composer`) and actors clamped to 10 entries with progressive toggle and `/person/:name?role=...` deep links, and keyboard shortcuts (`W` for next episode, `1..9` for seasons) |
+| `/person/:name` | `PersonTitles` | `pages/PersonTitles.tsx` | Interactive filmography list for cast and crew with 5 role filter pills (`All`, `Actor`, `Director`, `Writer`, `Composer`) synced via `?role=` (`history.replaceState`) |
 | `/wrapped`, `/wrapped/:year` | `Wrapped` | `pages/Wrapped.tsx` | Annual retrospective stories player and historical archives gallery |
 | `/login` | `Login` | `pages/Login.tsx` | Local password login and Google OAuth authentication |
 | `/setup` | `Setup` | `pages/Setup.tsx` | Initial administrative setup and emergency recovery key generation |

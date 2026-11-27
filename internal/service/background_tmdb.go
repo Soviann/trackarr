@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
@@ -40,9 +41,11 @@ func (s *BackgroundService) refreshMovieFromTMDB(ctx context.Context, title *rep
 
 	genres, credits, runtime, rating := matching.ExtractMovieMetadata(details)
 	overview := details.Overview
+	creditsRefreshedAt := time.Now().UTC()
 	metaUpdate := repository.TitleUpdate{
-		Overview: &overview,
-		Credits:  &credits,
+		Overview:           &overview,
+		Credits:            &credits,
+		CreditsRefreshedAt: &creditsRefreshedAt,
 	}
 	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
 	metaUpdate.WatchProviders = &watchProviders
@@ -130,9 +133,11 @@ func (s *BackgroundService) refreshSeriesFromTMDB(ctx context.Context, title *re
 
 	genres, credits, runtime, rating := matching.ExtractTVMetadata(details)
 	overview := details.Overview
+	creditsRefreshedAt := time.Now().UTC()
 	metaUpdate := repository.TitleUpdate{
-		Overview: &overview,
-		Credits:  &credits,
+		Overview:           &overview,
+		Credits:            &credits,
+		CreditsRefreshedAt: &creditsRefreshedAt,
 	}
 	watchProviders := matching.ExtractFlatrateProvidersFR(details.WatchProviders)
 	metaUpdate.WatchProviders = &watchProviders

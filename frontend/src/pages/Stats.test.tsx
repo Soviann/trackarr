@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
+import { setLocale } from '../i18n'
 import type { StatsResponse, ActivityEvent } from '../types'
 
 const apiFetchMock = vi.fn()
@@ -28,6 +29,8 @@ const baseStats: StatsResponse = {
   genres: [{ genre: 'Action', count: 5 }],
   top_actors: [{ name: 'Timothée Chalamet', count: 3 }], // i18n-ignore
   top_directors: [{ name: 'Denis Villeneuve', count: 2 }],
+  top_writers: [{ name: 'Jonathan Nolan', count: 4 }],
+  top_composers: [{ name: 'Hans Zimmer', count: 5 }],
   streaks: { current: 0, best: 0 },
   total_watch_minutes: 1703040, // 3 yrs 87 d 16 h (3*525600 + 87*1440 + 16*60)
   available_years: [2026, 2025, 2024],
@@ -38,6 +41,7 @@ const baseStats: StatsResponse = {
 
 describe('Stats', () => {
   beforeEach(() => {
+    setLocale('en')
     localStorage.clear()
     apiFetchMock.mockReset()
     useApiMock.mockReset()
@@ -56,6 +60,7 @@ describe('Stats', () => {
   })
 
   afterEach(() => {
+    setLocale('en')
     cleanup()
   })
 
@@ -102,30 +107,119 @@ describe('Stats', () => {
     })
   })
 
-  it('renders top actors and top directors sections', async () => {
+  it('renders unified Top Cast & Crew section and switches between Actors, Directors, Writers, and Composers', async () => {
     apiFetchMock.mockResolvedValueOnce([])
     const { Stats } = await import('./Stats')
     render(<Stats />)
 
-    expect(screen.getByText('Top Actors')).toBeTruthy()
+    expect(screen.getByText('Top Cast & Crew')).toBeTruthy()
+    expect(screen.queryByText('Top Actors')).toBeNull()
+    expect(screen.queryByText('Top Directors')).toBeNull()
+
+    const actorsBtn = screen.getByRole('button', { name: 'Actors' })
+    const directorsBtn = screen.getByRole('button', { name: 'Directors' })
+    const writersBtn = screen.getByRole('button', { name: 'Writers' })
+    const composersBtn = screen.getByRole('button', { name: 'Composers' })
+
+    expect(actorsBtn.getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('Timothée Chalamet')).toBeTruthy() // i18n-ignore
-    expect(screen.getByText('Top Directors')).toBeTruthy()
+    expect(screen.queryByText('Denis Villeneuve')).toBeNull()
+
+    fireEvent.click(directorsBtn)
+    expect(directorsBtn.getAttribute('aria-pressed')).toBe('true')
+    expect(actorsBtn.getAttribute('aria-pressed')).toBe('false')
     expect(screen.getByText('Denis Villeneuve')).toBeTruthy()
+    expect(screen.getByLabelText('Denis Villeneuve: 2').getAttribute('role')).toBe('meter')
+
+    fireEvent.click(writersBtn)
+    expect(writersBtn.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('Jonathan Nolan')).toBeTruthy()
+    expect(screen.getByLabelText('Jonathan Nolan: 4').getAttribute('role')).toBe('meter')
+
+    fireEvent.click(composersBtn)
+    expect(composersBtn.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('Hans Zimmer')).toBeTruthy()
+    expect(screen.getByLabelText('Hans Zimmer: 5').getAttribute('role')).toBe('meter')
   })
 
-  it('clicking an actor opens the person filmography drawer', async () => {
+  it('displays clean empty message when selected role has no entries under active filters', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    useApiMock.mockImplementation((path: string | null) => {
+      if (path?.startsWith('/stats?')) {
+        return {
+          data: { ...baseStats, top_composers: [] },
+          loading: false,
+          error: null,
+          mutate: vi.fn(),
+          setData: vi.fn(),
+        }
+      }
+      return { data: null, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+    })
+
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Composers' }))
+    expect(screen.getByText('No watched titles for this role under the active filters.')).toBeTruthy()
+  })
+
+  it('updates rankings when timeframe and media_type filters change while preserving selected role', async () => {
+    apiFetchMock.mockResolvedValueOnce([])
+    const filteredStats: StatsResponse = {
+      ...baseStats,
+      top_writers: [{ name: 'Charlie Kaufman', count: 2 }],
+    }
+    useApiMock.mockImplementation((path: string | null) => {
+      if (path?.includes('media_type=movie')) {
+        return { data: filteredStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      if (path?.startsWith('/stats?')) {
+        return { data: baseStats, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+      }
+      return { data: null, loading: false, error: null, mutate: vi.fn(), setData: vi.fn() }
+    })
+
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Writers' }))
+    expect(screen.getByText('Jonathan Nolan')).toBeTruthy()
+
+    fireEvent.click(screen.getByText('🎬 Movies'))
+    await waitFor(() => {
+      expect(screen.getByText('Charlie Kaufman')).toBeTruthy()
+    })
+    expect(screen.getByRole('button', { name: 'Writers' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('clicking a person opens PersonFilmographyDrawer with matching role filter', async () => {
     apiFetchMock.mockResolvedValueOnce([])
     const { Stats } = await import('./Stats')
     render(<Stats />)
 
-    const actorBtn = screen.getByText('Timothée Chalamet') // i18n-ignore
-    fireEvent.click(actorBtn)
+    fireEvent.click(screen.getByRole('button', { name: 'Composers' }))
+    fireEvent.click(screen.getByText('Hans Zimmer'))
 
-    // The drawer should open with the actor name in the header
     await waitFor(() => {
-      const headings = screen.getAllByText('Timothée Chalamet') // i18n-ignore
+      const headings = screen.getAllByText('Hans Zimmer')
       expect(headings.length).toBeGreaterThanOrEqual(2)
+      expect(useApiMock).toHaveBeenCalledWith('/titles?person=Hans%20Zimmer&role=composer&limit=100')
     })
+    expect(screen.getByText('Composer')).toBeTruthy()
+  })
+
+  it('localizes Top Cast & Crew role selector in French', async () => {
+    setLocale('fr')
+    apiFetchMock.mockResolvedValueOnce([])
+    const { Stats } = await import('./Stats')
+    render(<Stats />)
+
+    expect(screen.getByText('Casting & Équipe favoris')).toBeTruthy() // i18n-ignore
+    expect(screen.getByRole('button', { name: 'Acteurs' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Réalisateurs' })).toBeTruthy() // i18n-ignore
+    expect(screen.getByRole('button', { name: 'Scénaristes' })).toBeTruthy() // i18n-ignore
+    expect(screen.getByRole('button', { name: 'Compositeurs' })).toBeTruthy()
   })
 
   it('activity row href uses singular SPA route /title/:id (not plural)', async () => {

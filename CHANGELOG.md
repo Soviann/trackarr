@@ -6,6 +6,27 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 ## [Unreleased]
 
+### Ajouté
+- **Recherche de personnes (cast & crew) (`GET /api/people`, `/search`)** :
+  - Nouvel endpoint `GET /api/people?search=...&limit=...` (`ScopeLibraryRead`, exécuté sur `readDB` et mis en cache sous le tag `titles`) recherchant dans `titles.credits` de façon insensible à la casse et tolérante aux accents (`NFD` via `golang.org/x/text/unicode/norm`), avec prise en charge des requêtes partielles, complètes et multi-mots, classification déterministe des rôles (`director`, `writer`, `composer`, `actor`), comptage des titres distincts, classement par qualité de correspondance et tolérance aux lignes JSON malformées.
+  - Nouvelle section **Personnalités** sur `/search` (`useSearchStore` avec garde anti-race `_searchGen`) affichant les profils correspondants (nom, badges de rôle traduits, nombre de titres) en liens sémantiques vers `/person/:name`, masquée en mode fusion (`mergeSourceId`) et supprimant le panneau « Aucun résultat » lorsqu'au moins une personne correspond ou pendant le chargement.
+- **Classements étendus & sélecteur de rôle (`GET /api/stats`, `/stats`, `PersonFilmographyDrawer`)** :
+  - Extension de `GET /api/stats` avec `top_writers` et `top_composers` (top 10 chacun, tableaux non nuls) filtrés par `timeframe` (`all`, `year`, `30d`), `year` et `media_type` (`all`, `movie`, `series`, `anime`) via un helper SQL paramétré.
+  - Remplacement des blocs empilés Acteurs/Réalisateurs dans `Stats.tsx` par une section unifiée **Casting & Équipe favoris** dotée d'un sélecteur à 4 rôles (*Acteurs*, *Réalisateurs*, *Scénaristes*, *Compositeurs*), de barres accessibles `role="meter"` et d'un état vide contextuel sous filtres actifs.
+  - Extension de `PersonFilmographyDrawer` avec icône et libellé de rôle, requête filtrée par rôle (`/titles?person=...&role=...&limit=100`) et lien vers `/person/:name?role=...`.
+- **Filtrage par rôle des filmographies & libellés de rôles localisés (`/person/:name`, `GET /api/titles`, `TitleDetail.tsx`)** :
+  - Prise en charge du paramètre `?role=` (`all`, `actor`, `director`, `writer`, `composer`, rejet `400 Bad Request` sur valeur invalide) dans `GET /api/titles` (`TitleFilter.PersonRole`, filtrage `json_valid`/`json_type` et correspondance `COLLATE NOCASE` dans la même clause `EXISTS` sur `json_each(t.credits)`).
+  - Ajout de 5 filtres pilules de rôle (*Tous*, *Acteur*, *Réalisateur*, *Scénariste*, *Compositeur*) sur `/person/:name` initialisés depuis `?role=` et synchronisés via `window.history.replaceState` sans polluer l'historique navigateur.
+  - Localisation des rôles canoniques (`Director` ➔ *Réalisateur*, `Writer` ➔ *Scénariste*, `Composer` ➔ *Compositeur*, `Actor` ➔ *Acteur*) dans `TitleDetail.tsx` avec liens vers `/person/:name?role=...`.
+- **Extraction TMDB `created_by` & rattrapage incrémental des crédits (`migration 053`, `BackgroundService`, `Scheduler`)** :
+  - Extraction des créateurs de séries (`TMDBTVDetails.CreatedBy`) sous le rôle canonique `"Writer"` (dédupliqués avec les scénaristes de l'équipe technique) dans `ExtractTVMetadata`.
+  - Migration `053_titles_credits_refreshed_at` ajoutant `titles.credits_refreshed_at` (renseigné lors des rafraîchissements et enrichissements TMDB, effacé lors d'un réappariement ou d'une modification d'ID TMDB).
+  - Rattrapage incrémental `BackgroundService.CatchUpExtendedCredits` (`DefaultCreditsCatchUpBatchSize = 25`, déclenché par `Scheduler` après `RefreshTitles` au démarrage et toutes les 24h) pour les titres `completed`/`dropped` avec `tmdb_id` dépourvus de crédits étendus : appels TMDB limités par `APILimiter` hors transaction SQLite, marquage des 404 TMDB (`MarkCreditsRefreshed`) pour éviter les boucles infinies, conservation des erreurs réessayables, arrêt immédiat sur HTTP 429 et préservation stricte de `status`, `seasons`, `episodes`, `watch_events` et `updated_at`.
+
+### Documentation
+- **Synchronisation des guides techniques et utilisateur** :
+  - Mise à jour de `docs/patterns.md`, `docs/llm.md`, `docs/user-guide.md`, `docs/background-jobs.md`, `docs/dev/database-model.md`, `docs/maintenance.md` et `docs/INDEX.md` pour documenter `GET /api/people`, `?role=`, `top_writers`/`top_composers`, la migration `053`, `CatchUpExtendedCredits` et les vues frontend mises à jour.
+
 ## [v1.35.1] — 2026-11-24
 
 ### Modifié

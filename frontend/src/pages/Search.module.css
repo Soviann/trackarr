@@ -812,3 +812,127 @@
   max-width: 1600px;
   margin: 12px 0;
 }
+
+/* People search results */
+.peopleSection {
+  margin-bottom: var(--space-sm);
+}
+
+.peopleList {
+  padding: 0 var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.personCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-button);
+  padding: 10px var(--space-md);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.personCard:hover {
+  background: var(--bg-elev2);
+  border-color: var(--accent-dim, var(--accent));
+  transform: translateY(-1px);
+}
+
+.personCard:hover .cardChevron {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+.personCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.personAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-wash);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.personBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.personName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.personRoles {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.personRoleBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-wash);
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  line-height: 1.4;
+}
+
+.personTitleCount {
+  font-size: var(--font-size-xs);
+  color: var(--ink-dim);
+}
+
+@media (min-width: 1024px) {
+  .peopleList {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-md);
+    padding: 0 var(--space-xl);
+  }
+
+  .peopleGrid {
+    max-width: 1400px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .peopleGrid {
+    max-width: 1600px;
+  }
+}

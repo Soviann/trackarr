@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Soviann/trackarr/internal/config"
 	"github.com/Soviann/trackarr/internal/database"
@@ -891,5 +892,93 @@ func TestTitleService_BatchCreate_BoundariesAndErrors(t *testing.T) {
 		assert.Contains(t, res.Items[4].Error, "title or valid external identifier")
 
 		assert.Equal(t, "created", res.Items[5].Status)
+	})
+}
+
+func TestTitleService_ClearsCreditsRefreshedAtOnTMDBChange(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	titleRepo := repository.NewTitleRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+	svc := service.NewTitleService(db, titleRepo, taskRepo, nil)
+
+	refreshedAt := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+
+	t.Run("Rematch clears credits_refreshed_at when TMDB ID changes and preserves when unchanged", func(t *testing.T) {
+		oldTMDB := int64(100)
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &oldTMDB,
+		}, []model.TitleName{{Name: "Rematch Movie", Language: "en", IsPrimary: true}})
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{CreditsRefreshedAt: &refreshedAt})
+
+		// Same TMDB ID and same type -> keeps credits_refreshed_at
+		sameTMDB := int64(100)
+		require.NoError(t, svc.Rematch(ctx, db, id, nil, &sameTMDB, nil, nil, nil, false))
+		got, err := titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.NotNil(t, got.CreditsRefreshedAt)
+
+		// Different TMDB ID -> clears credits_refreshed_at
+		newTMDB := int64(200)
+		require.NoError(t, svc.Rematch(ctx, db, id, nil, &newTMDB, nil, nil, nil, false))
+		got, err = titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		// Re-stamp then flip type movie -> series with same TMDB ID -> clears credits_refreshed_at
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{CreditsRefreshedAt: &refreshedAt})
+		seriesType := model.TitleTypeSeries
+		require.NoError(t, svc.Rematch(ctx, db, id, nil, &newTMDB, nil, nil, &seriesType, false))
+		got, err = titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+	})
+
+	t.Run("SetExternalIDs clears credits_refreshed_at when TMDB ID is modified or cleared", func(t *testing.T) {
+		tmdbID := int64(300)
+		tvdbID := int64(400)
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeSeries,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbID,
+			TVDBID:      &tvdbID,
+		}, []model.TitleName{{Name: "SetIDs Series", Language: "en", IsPrimary: true}})
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{CreditsRefreshedAt: &refreshedAt})
+
+		// Unchanged TMDB ID (only TVDB changed) -> keeps credits_refreshed_at
+		newTVDB := int64(401)
+		require.NoError(t, svc.SetExternalIDs(ctx, db, id, service.ExternalIDEdit{
+			TMDBID: &tmdbID,
+			TVDBID: &newTVDB,
+		}))
+		got, err := titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.NotNil(t, got.CreditsRefreshedAt)
+
+		// Modified TMDB ID -> clears credits_refreshed_at
+		newTMDB := int64(301)
+		require.NoError(t, svc.SetExternalIDs(ctx, db, id, service.ExternalIDEdit{
+			TMDBID: &newTMDB,
+			TVDBID: &newTVDB,
+		}))
+		got, err = titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		// Re-stamp then clear TMDB ID (nil) -> clears credits_refreshed_at
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{CreditsRefreshedAt: &refreshedAt})
+		require.NoError(t, svc.SetExternalIDs(ctx, db, id, service.ExternalIDEdit{
+			TMDBID: nil,
+			TVDBID: &newTVDB,
+		}))
+		got, err = titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
 	})
 }

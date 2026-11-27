@@ -362,6 +362,7 @@ func appendFilterConditions(conditions []string, args []any, filter TitleFilter)
 			}
 		}
 	}
+	conditions, args = appendPersonFilterCondition(conditions, args, filter)
 	if len(filter.OriginCountries) > 0 {
 		placeholders := make([]string, len(filter.OriginCountries))
 		for i, c := range filter.OriginCountries {

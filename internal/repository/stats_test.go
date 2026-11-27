@@ -3,6 +3,7 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -530,4 +531,264 @@ func TestStatsRepository_AvailableYears(t *testing.T) {
 	assert.Contains(t, yearsWithWatch, currentYear)
 	assert.Contains(t, yearsWithWatch, 2024)
 	assert.NotContains(t, yearsWithWatch, 1982)
+}
+
+func TestStatsRepo_TopWriters_And_Composers(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	// Movie 1 (completed): Multi-role person (Director + Writer + Cast), plus Writer & Composer
+	c1 := `[{"name":"Quentin Tarantino","role":"Director"},{"name":"Quentin Tarantino","role":"Writer"},{"name":"Quentin Tarantino","role":"Jimmie"},{"name":"Roger Avary","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Uma Thurman","role":"Mia"}]`
+	id1 := createTitle(t, db, "Movie One", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(9))
+	_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, c1, id1)
+	require.NoError(t, err)
+
+	// Series 1 (watching): Duplicate Writer entry on same title should still count once
+	c2 := `[{"name":"Craig Mazin","role":"Writer"},{"name":"Craig Mazin","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Pedro Pascal","role":"Joel"}]`
+	id2 := createTitle(t, db, "Series One", model.TitleTypeSeries, false, model.TitleStatusWatching, ptr(9))
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, c2, id2)
+	require.NoError(t, err)
+
+	// Anime 1 (dropped WITH last_watched_at set): should count because it was watched
+	c3 := `[{"name":"Craig Mazin","role":"Writer"},{"name":"Yoko Kanno","role":"Composer"},{"name":"Spike Actor","role":"Spike"}]`
+	id3 := createTitle(t, db, "Anime Watched Dropped", model.TitleTypeSeries, true, model.TitleStatusDropped, ptr(8))
+	_, err = db.Exec(`UPDATE titles SET credits = ?, last_watched_at = CURRENT_TIMESTAMP WHERE id = ?`, c3, id3)
+	require.NoError(t, err)
+
+	// Unwatched plan_to_watch and unwatched dropped (last_watched_at IS NULL): must NOT count
+	c4 := `[{"name":"Unwatched Writer","role":"Writer"},{"name":"Unwatched Composer","role":"Composer"},{"name":"Unwatched Actor","role":"Lead"}]`
+	id4 := createTitle(t, db, "Plan Movie", model.TitleTypeMovie, false, model.TitleStatusPlanToWatch, nil)
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, c4, id4)
+	require.NoError(t, err)
+
+	id5 := createTitle(t, db, "Never Watched Dropped", model.TitleTypeMovie, false, model.TitleStatusDropped, nil)
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, c4, id5)
+	require.NoError(t, err)
+
+	// Direct repository convenience methods
+	writers, err := repo.TopWriters(context.Background(), 10)
+	require.NoError(t, err)
+	assert.Equal(t, []model.PersonStat{
+		{Name: "Craig Mazin", Count: 2},
+		{Name: "Quentin Tarantino", Count: 1},
+		{Name: "Roger Avary", Count: 1},
+	}, writers)
+
+	composers, err := repo.TopComposers(context.Background(), 10)
+	require.NoError(t, err)
+	assert.Equal(t, []model.PersonStat{
+		{Name: "Hans Zimmer", Count: 2},
+		{Name: "Yoko Kanno", Count: 1},
+	}, composers)
+
+	// GetAll integrates top_writers, top_composers, top_directors, top_actors
+	resp, err := repo.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, writers, resp.TopWriters)
+	assert.Equal(t, composers, resp.TopComposers)
+	assert.Equal(t, []model.PersonStat{{Name: "Quentin Tarantino", Count: 1}}, resp.TopDirectors)
+
+	actorCounts := make(map[string]int)
+	for _, a := range resp.TopActors {
+		actorCounts[a.Name] = a.Count
+	}
+	assert.Equal(t, 1, actorCounts["Uma Thurman"])
+	assert.Equal(t, 1, actorCounts["Pedro Pascal"])
+	assert.Equal(t, 1, actorCounts["Spike Actor"])
+	// Quentin Tarantino has a cast entry ("Jimmie"), so that cast entry counts; pure crew roles must not.
+	assert.Equal(t, 1, actorCounts["Quentin Tarantino"])
+	assert.NotContains(t, actorCounts, "Craig Mazin")
+	assert.NotContains(t, actorCounts, "Roger Avary")
+	assert.NotContains(t, actorCounts, "Hans Zimmer")
+	assert.NotContains(t, actorCounts, "Yoko Kanno")
+	assert.NotContains(t, actorCounts, "Unwatched Actor")
+}
+
+func TestStatsRepo_CrewRankings_Filters(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewStatsRepository(db)
+
+	now := time.Now().UTC()
+	recentTime := now.AddDate(0, 0, -5)
+	pastYearTime := time.Date(2024, 6, 15, 20, 0, 0, 0, time.UTC)
+
+	movieID := createTitle(t, db, "Movie Filter", model.TitleTypeMovie, false, model.TitleStatusCompleted, ptr(9))
+	_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`,
+		`[{"name":"Dir Movie","role":"Director"},{"name":"Writer Movie","role":"Writer"},{"name":"Comp Movie","role":"Composer"},{"name":"Actor Movie","role":"Hero"}]`, movieID)
+	require.NoError(t, err)
+
+	seriesID := createTitle(t, db, "Series Filter", model.TitleTypeSeries, false, model.TitleStatusCompleted, ptr(8))
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`,
+		`[{"name":"Dir Series","role":"Director"},{"name":"Writer Series","role":"Writer"},{"name":"Comp Series","role":"Composer"},{"name":"Actor Series","role":"Detective"}]`, seriesID)
+	require.NoError(t, err)
+
+	animeID := createTitle(t, db, "Anime Filter", model.TitleTypeSeries, true, model.TitleStatusWatching, ptr(10))
+	_, err = db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`,
+		`[{"name":"Dir Anime","role":"Director"},{"name":"Writer Anime","role":"Writer"},{"name":"Comp Anime","role":"Composer"},{"name":"Actor Anime","role":"Protagonist"}]`, animeID)
+	require.NoError(t, err)
+
+	// Multiple watch events in 2024 for movie (must still count distinct title = 1)
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: movieID, Source: model.WatchEventSourcePlex, CreatedAt: pastYearTime})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: movieID, Source: model.WatchEventSourcePlex, CreatedAt: pastYearTime.Add(2 * time.Hour)})
+	// Series watched in 2024
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: seriesID, Source: model.WatchEventSourcePlex, CreatedAt: pastYearTime})
+	// Anime watched in last 30 days
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{TitleID: animeID, Source: model.WatchEventSourcePlex, CreatedAt: recentTime})
+
+	cases := []struct {
+		name          string
+		filter        model.StatsFilter
+		wantActors    []model.PersonStat
+		wantDirectors []model.PersonStat
+		wantWriters   []model.PersonStat
+		wantComposers []model.PersonStat
+	}{
+		{
+			name:          "media_type=movie",
+			filter:        model.StatsFilter{Timeframe: "all", MediaType: "movie"},
+			wantActors:    []model.PersonStat{{Name: "Actor Movie", Count: 1}},
+			wantDirectors: []model.PersonStat{{Name: "Dir Movie", Count: 1}},
+			wantWriters:   []model.PersonStat{{Name: "Writer Movie", Count: 1}},
+			wantComposers: []model.PersonStat{{Name: "Comp Movie", Count: 1}},
+		},
+		{
+			name:          "media_type=series excludes anime",
+			filter:        model.StatsFilter{Timeframe: "all", MediaType: "series"},
+			wantActors:    []model.PersonStat{{Name: "Actor Series", Count: 1}},
+			wantDirectors: []model.PersonStat{{Name: "Dir Series", Count: 1}},
+			wantWriters:   []model.PersonStat{{Name: "Writer Series", Count: 1}},
+			wantComposers: []model.PersonStat{{Name: "Comp Series", Count: 1}},
+		},
+		{
+			name:          "media_type=anime",
+			filter:        model.StatsFilter{Timeframe: "all", MediaType: "anime"},
+			wantActors:    []model.PersonStat{{Name: "Actor Anime", Count: 1}},
+			wantDirectors: []model.PersonStat{{Name: "Dir Anime", Count: 1}},
+			wantWriters:   []model.PersonStat{{Name: "Writer Anime", Count: 1}},
+			wantComposers: []model.PersonStat{{Name: "Comp Anime", Count: 1}},
+		},
+		{
+			name:          "timeframe=year year=2024 distinct title counts",
+			filter:        model.StatsFilter{Timeframe: "year", Year: 2024, MediaType: "all"},
+			wantActors:    []model.PersonStat{{Name: "Actor Movie", Count: 1}, {Name: "Actor Series", Count: 1}},
+			wantDirectors: []model.PersonStat{{Name: "Dir Movie", Count: 1}, {Name: "Dir Series", Count: 1}},
+			wantWriters:   []model.PersonStat{{Name: "Writer Movie", Count: 1}, {Name: "Writer Series", Count: 1}},
+			wantComposers: []model.PersonStat{{Name: "Comp Movie", Count: 1}, {Name: "Comp Series", Count: 1}},
+		},
+		{
+			name:          "timeframe=30d",
+			filter:        model.StatsFilter{Timeframe: "30d", MediaType: "all"},
+			wantActors:    []model.PersonStat{{Name: "Actor Anime", Count: 1}},
+			wantDirectors: []model.PersonStat{{Name: "Dir Anime", Count: 1}},
+			wantWriters:   []model.PersonStat{{Name: "Writer Anime", Count: 1}},
+			wantComposers: []model.PersonStat{{Name: "Comp Anime", Count: 1}},
+		},
+		{
+			name:          "timeframe=year year=2024 and media_type=anime yields non-nil empty",
+			filter:        model.StatsFilter{Timeframe: "year", Year: 2024, MediaType: "anime"},
+			wantActors:    []model.PersonStat{},
+			wantDirectors: []model.PersonStat{},
+			wantWriters:   []model.PersonStat{},
+			wantComposers: []model.PersonStat{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := repo.GetFiltered(context.Background(), tc.filter)
+			require.NoError(t, err)
+			assert.NotNil(t, resp.TopActors)
+			assert.NotNil(t, resp.TopDirectors)
+			assert.NotNil(t, resp.TopWriters)
+			assert.NotNil(t, resp.TopComposers)
+			assert.Equal(t, tc.wantActors, resp.TopActors)
+			assert.Equal(t, tc.wantDirectors, resp.TopDirectors)
+			assert.Equal(t, tc.wantWriters, resp.TopWriters)
+			assert.Equal(t, tc.wantComposers, resp.TopComposers)
+		})
+	}
+}
+
+func TestStatsRepo_CrewRankings_BoundaryAndError(t *testing.T) {
+	t.Run("empty database returns non-nil empty slices", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewStatsRepository(db)
+
+		resp, err := repo.GetFiltered(context.Background(), model.StatsFilter{Timeframe: "all", MediaType: "all"})
+		require.NoError(t, err)
+		assert.NotNil(t, resp.TopActors)
+		assert.NotNil(t, resp.TopDirectors)
+		assert.NotNil(t, resp.TopWriters)
+		assert.NotNil(t, resp.TopComposers)
+		assert.Empty(t, resp.TopActors)
+		assert.Empty(t, resp.TopDirectors)
+		assert.Empty(t, resp.TopWriters)
+		assert.Empty(t, resp.TopComposers)
+	})
+
+	t.Run("top 10 cap and deterministic tie-breaking", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewStatsRepository(db)
+
+		// Create 12 writers & composers: Writer 01 / Composer 01 get 2 titles, 02..12 get 1 title.
+		for i := 1; i <= 12; i++ {
+			wName := fmt.Sprintf("Writer %02d", i)
+			cName := fmt.Sprintf("Composer %02d", i)
+			credits := fmt.Sprintf(`[{"name":%q,"role":"Writer"},{"name":%q,"role":"Composer"}]`, wName, cName)
+			id := createTitle(t, db, fmt.Sprintf("Cap Title %02d", i), model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
+			_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, credits, id)
+			require.NoError(t, err)
+		}
+		// Give Writer 01 and Composer 01 a second title so they sort first with count=2
+		extraID := createTitle(t, db, "Cap Title Extra", model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
+		_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`,
+			`[{"name":"Writer 01","role":"Writer"},{"name":"Composer 01","role":"Composer"}]`, extraID)
+		require.NoError(t, err)
+
+		resp, err := repo.GetAll(context.Background())
+		require.NoError(t, err)
+		require.Len(t, resp.TopWriters, 10)
+		require.Len(t, resp.TopComposers, 10)
+		assert.Equal(t, model.PersonStat{Name: "Writer 01", Count: 2}, resp.TopWriters[0])
+		assert.Equal(t, model.PersonStat{Name: "Writer 10", Count: 1}, resp.TopWriters[9])
+		assert.Equal(t, model.PersonStat{Name: "Composer 01", Count: 2}, resp.TopComposers[0])
+		assert.Equal(t, model.PersonStat{Name: "Composer 10", Count: 1}, resp.TopComposers[9])
+	})
+
+	t.Run("malformed, non-array, and blank credits do not fail queries", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewStatsRepository(db)
+
+		badRows := []string{`{malformed`, `{"name":"ObjectNotArray","role":"Writer"}`, `[123, null, "str"]`, `[{"name":"  ","role":"Writer"},{"name":"BlankRole","role":""}]`}
+		for i, raw := range badRows {
+			id := createTitle(t, db, fmt.Sprintf("Bad Credits %d", i), model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
+			_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, raw, id)
+			require.NoError(t, err)
+		}
+		validID := createTitle(t, db, "Valid Credits", model.TitleTypeMovie, false, model.TitleStatusCompleted, nil)
+		_, err := db.Exec(`UPDATE titles SET credits = ? WHERE id = ?`, `[{"name":"Valid Writer","role":"Writer"}]`, validID)
+		require.NoError(t, err)
+
+		resp, err := repo.GetAll(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, []model.PersonStat{{Name: "Valid Writer", Count: 1}}, resp.TopWriters)
+		assert.Empty(t, resp.TopActors)
+		assert.Empty(t, resp.TopDirectors)
+		assert.Empty(t, resp.TopComposers)
+	})
+
+	t.Run("cancelled context returns error", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewStatsRepository(db)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := repo.GetFiltered(ctx, model.StatsFilter{Timeframe: "all", MediaType: "all"})
+		assert.Error(t, err)
+		_, err = repo.TopWriters(ctx, 10)
+		assert.Error(t, err)
+		_, err = repo.TopComposers(ctx, 10)
+		assert.Error(t, err)
+	})
 }

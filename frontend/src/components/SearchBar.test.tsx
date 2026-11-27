@@ -32,12 +32,12 @@ describe('SearchBar', () => {
 
   it('renders input with translated placeholder', () => {
     const { getByPlaceholderText } = render(<SearchBar />)
-    expect(getByPlaceholderText('Search titles...')).toBeDefined()
+    expect(getByPlaceholderText('Search titles or people...')).toBeDefined()
   })
 
   it('updates store query on user input', () => {
     const { getByPlaceholderText } = render(<SearchBar />)
-    const input = getByPlaceholderText('Search titles...') as HTMLInputElement
+    const input = getByPlaceholderText('Search titles or people...') as HTMLInputElement
     fireEvent.input(input, { target: { value: 'Arcane' } })
     expect(mockState.setQuery).toHaveBeenCalledWith('Arcane')
   })
@@ -95,7 +95,7 @@ describe('SearchBar', () => {
 
   it('redirects to /admin/validate when a supported media URL is entered', () => {
     const { getByPlaceholderText } = render(<SearchBar />)
-    const input = getByPlaceholderText('Search titles...') as HTMLInputElement
+    const input = getByPlaceholderText('Search titles or people...') as HTMLInputElement
     fireEvent.input(input, { target: { value: 'https://www.themoviedb.org/movie/550-fight-club' } })
     expect(route).toHaveBeenCalledWith('/admin/validate?q=https%3A%2F%2Fwww.themoviedb.org%2Fmovie%2F550-fight-club')
     expect(mockState.setQuery).not.toHaveBeenCalled()
@@ -103,7 +103,7 @@ describe('SearchBar', () => {
 
   it('redirects to /admin/validate when an IMDb URL is entered', () => {
     const { getByPlaceholderText } = render(<SearchBar />)
-    const input = getByPlaceholderText('Search titles...') as HTMLInputElement
+    const input = getByPlaceholderText('Search titles or people...') as HTMLInputElement
     fireEvent.input(input, { target: { value: 'https://www.imdb.com/title/tt0137523/' } })
     expect(route).toHaveBeenCalledWith('/admin/validate?q=https%3A%2F%2Fwww.imdb.com%2Ftitle%2Ftt0137523%2F')
     expect(mockState.setQuery).not.toHaveBeenCalled()
