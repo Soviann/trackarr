@@ -1,10 +1,13 @@
 package handler_test
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Soviann/trackarr/internal/cache"
 	"github.com/Soviann/trackarr/internal/database"
@@ -38,8 +41,10 @@ func TestStatsHandler_Get_EmptyDB(t *testing.T) {
 
 	var result map[string]any
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&result))
-	assert.Contains(t, result, "top_actors")
-	assert.Contains(t, result, "top_directors")
+	for _, key := range []string{"top_actors", "top_directors", "top_writers", "top_composers"} {
+		assert.Contains(t, result, key)
+		assert.Equal(t, []any{}, result[key], "%s must serialize as [] rather than null", key)
+	}
 }
 
 func TestStatsHandler_Get_CacheControl(t *testing.T) {
@@ -144,9 +149,10 @@ func TestStatsHandler_Get_CacheAndInvalidation(t *testing.T) {
 	require.NoError(t, h.Get(rr2, req1))
 	assert.Equal(t, http.StatusOK, rr2.Code)
 
-	// 3. Mutate: add a watched title in WithTxContext
-	testutil.CreateTitle(t, db,
-		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed},
+	// 3. Mutate: add a watched title with credits in WithTxContext
+	credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Jon Spaihts","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Timothée Chalamet","role":"Paul"}]`
+	titleID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 2024, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, Credits: &credits},
 		[]model.TitleName{{Name: "Stats Invalidation Movie", Language: "en", IsPrimary: true}},
 	)
 
@@ -154,7 +160,7 @@ func TestStatsHandler_Get_CacheAndInvalidation(t *testing.T) {
 	_, okAfter := c.Get("stats:all:0:all")
 	assert.False(t, okAfter, "cache must be invalidated when titles/stats change")
 
-	// 4. Third request: refreshed from DB, now TotalTitles == 1
+	// 4. Third request: refreshed from DB, now TotalTitles == 1 and crew rankings populated
 	rr3 := httptest.NewRecorder()
 	require.NoError(t, h.Get(rr3, req1))
 	assert.Equal(t, http.StatusOK, rr3.Code)
@@ -162,5 +168,115 @@ func TestStatsHandler_Get_CacheAndInvalidation(t *testing.T) {
 	var res3 model.StatsResponse
 	require.NoError(t, json.NewDecoder(rr3.Body).Decode(&res3))
 	assert.Equal(t, 1, res3.Overview.TotalTitles)
+	assert.Equal(t, []model.PersonStat{{Name: "Jon Spaihts", Count: 1}}, res3.TopWriters)
+	assert.Equal(t, []model.PersonStat{{Name: "Hans Zimmer", Count: 1}}, res3.TopComposers)
+
+	// 5. Mutate via UpdateCreditsCatchUp inside WithTxContext -> cache invalidated again
+	_, cachedBeforeCatchUp := c.Get("stats:all:0:all")
+	assert.True(t, cachedBeforeCatchUp)
+
+	updatedCredits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Eric Roth","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Timothée Chalamet","role":"Paul"}]`
+	require.NoError(t, database.WithTxContext(context.Background(), db, func(tx *sql.Tx) error {
+		return repository.NewTitleWriter(tx).UpdateCreditsCatchUp(context.Background(), titleID, updatedCredits, time.Now().UTC())
+	}))
+
+	_, okAfterCatchUp := c.Get("stats:all:0:all")
+	assert.False(t, okAfterCatchUp, "cache must be invalidated after UpdateCreditsCatchUp commits")
+
+	rr4 := httptest.NewRecorder()
+	require.NoError(t, h.Get(rr4, req1))
+	assert.Equal(t, http.StatusOK, rr4.Code)
+	var res4 model.StatsResponse
+	require.NoError(t, json.NewDecoder(rr4.Body).Decode(&res4))
+	assert.Equal(t, []model.PersonStat{{Name: "Eric Roth", Count: 1}}, res4.TopWriters)
 }
 
+func TestStatsHandler_Get_ExtendedCreditsAndFilters(t *testing.T) {
+	db, _, err := database.Open(":memory:")
+	require.NoError(t, err)
+	require.NoError(t, database.Migrate(db))
+	t.Cleanup(func() { db.Close() })
+
+	statsRepo := repository.NewStatsRepository(db)
+	wrappedRepo := repository.NewWrappedRepository(db)
+	h := handler.NewStatsHandler(db, statsRepo, wrappedRepo, nil)
+
+	movieCredits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Eric Roth","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"},{"name":"Rebecca Ferguson","role":"Lady Jessica"}]`
+	movieID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeMovie, Year: 2021, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, Credits: &movieCredits},
+		[]model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}},
+	)
+	animeCredits := `[{"name":"Shinichiro Watanabe","role":"Director"},{"name":"Keiko Nobumoto","role":"Writer"},{"name":"Yoko Kanno","role":"Composer"},{"name":"Koichi Yamadera","role":"Spike"}]`
+	animeID := testutil.CreateTitle(t, db,
+		&model.Title{Type: model.TitleTypeSeries, IsAnime: true, Year: 1998, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, Credits: &animeCredits},
+		[]model.TitleName{{Name: "Cowboy Bebop", Language: "en", IsPrimary: true}},
+	)
+
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   movieID,
+		Source:    model.WatchEventSourcePlex,
+		CreatedAt: time.Date(2024, 3, 1, 20, 0, 0, 0, time.UTC),
+	})
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   animeID,
+		Source:    model.WatchEventSourcePlex,
+		CreatedAt: time.Now().UTC().AddDate(0, 0, -3),
+	})
+
+	t.Run("all titles", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.Get(rr, req))
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var resp model.StatsResponse
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+		assert.Equal(t, []model.PersonStat{{Name: "Eric Roth", Count: 1}, {Name: "Keiko Nobumoto", Count: 1}}, resp.TopWriters)
+		assert.Equal(t, []model.PersonStat{{Name: "Hans Zimmer", Count: 1}, {Name: "Yoko Kanno", Count: 1}}, resp.TopComposers)
+		assert.Equal(t, []model.PersonStat{{Name: "Koichi Yamadera", Count: 1}, {Name: "Rebecca Ferguson", Count: 1}}, resp.TopActors)
+	})
+
+	t.Run("media_type=movie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/stats?media_type=movie", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.Get(rr, req))
+
+		var resp model.StatsResponse
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+		assert.Equal(t, []model.PersonStat{{Name: "Eric Roth", Count: 1}}, resp.TopWriters)
+		assert.Equal(t, []model.PersonStat{{Name: "Hans Zimmer", Count: 1}}, resp.TopComposers)
+		assert.Equal(t, []model.PersonStat{{Name: "Denis Villeneuve", Count: 1}}, resp.TopDirectors)
+		assert.Equal(t, []model.PersonStat{{Name: "Rebecca Ferguson", Count: 1}}, resp.TopActors)
+	})
+
+	t.Run("timeframe=year and year=2024", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/stats?timeframe=year&year=2024", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.Get(rr, req))
+
+		var resp model.StatsResponse
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+		assert.Equal(t, []model.PersonStat{{Name: "Eric Roth", Count: 1}}, resp.TopWriters)
+		assert.Equal(t, []model.PersonStat{{Name: "Hans Zimmer", Count: 1}}, resp.TopComposers)
+	})
+
+	t.Run("timeframe=30d and media_type=anime", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/stats?timeframe=30d&media_type=anime", nil)
+		rr := httptest.NewRecorder()
+		require.NoError(t, h.Get(rr, req))
+
+		var resp model.StatsResponse
+		require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+		assert.Equal(t, []model.PersonStat{{Name: "Keiko Nobumoto", Count: 1}}, resp.TopWriters)
+		assert.Equal(t, []model.PersonStat{{Name: "Yoko Kanno", Count: 1}}, resp.TopComposers)
+	})
+
+	t.Run("cancelled context returns error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		req := httptest.NewRequest(http.MethodGet, "/api/stats", nil).WithContext(ctx)
+		rr := httptest.NewRecorder()
+		err := h.Get(rr, req)
+		assert.Error(t, err)
+	})
+}
