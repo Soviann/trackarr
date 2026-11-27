@@ -2,8 +2,8 @@ import type { ComponentChildren } from 'preact'
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { route } from 'preact-router'
 import clsx from 'clsx'
-import type { Title, TitleStatus, DiscoveryItem } from '../types'
-import { useTranslation } from '../i18n'
+import type { Title, TitleStatus, DiscoveryItem, PersonRole } from '../types'
+import { useTranslation, type TranslationKey } from '../i18n'
 import { useTitleStore, useSearchStore, hasActiveFilters } from '../store'
 import { getName, getTypeLabel } from '../utils'
 import { apiFetch } from '../api'
@@ -22,6 +22,19 @@ import { PullToRefresh } from '../components/PullToRefresh'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import s from './Search.module.css'
+
+function getPersonRoleLabel(role: PersonRole, t: (key: TranslationKey) => string): string {
+  switch (role) {
+    case 'director':
+      return t('stats.director')
+    case 'writer':
+      return t('stats.writer')
+    case 'composer':
+      return t('stats.composer')
+    case 'actor':
+      return t('stats.actor')
+  }
+}
 
 function getMetadata(t: Title) {
   const parts = [getTypeLabel(t.type), String(t.year)]
@@ -65,6 +78,8 @@ export function Search({
   const filter = useTitleStore(s => s.filter)
   const query = useSearchStore(s => s.query)
   const results = useSearchStore(s => s.results)
+  const peopleResults = useSearchStore(s => s.peopleResults) ?? []
+  const loadingPeople = useSearchStore(s => s.loadingPeople) ?? false
   const total = useSearchStore(s => s.total)
   const hasMore = useSearchStore(s => s.hasMore)
   const loading = useSearchStore(s => s.loading)
@@ -137,17 +152,19 @@ export function Search({
 
   useEffect(() => {
     const trimmed = query.trim()
+    const searchOpts = mergeSourceId ? { includePeople: false } : undefined
     if (!trimmed) {
-      search(filter)
+      search(filter, searchOpts)
       return
     }
     const timer = setTimeout(() => {
-      search(filter)
+      search(filter, searchOpts)
     }, 150)
     return () => clearTimeout(timer)
   }, [
     search,
     query,
+    mergeSourceId,
     filter.status,
     filter.type,
     filter.is_anime,
@@ -316,7 +333,11 @@ export function Search({
     }
   }
 
-  const retry = () => search(filter)
+  const isMergeMode = Boolean(mergeSourceId)
+  const visiblePeople = !isMergeMode && hasQuery ? peopleResults : []
+  const isPeopleInFlight = !isMergeMode && hasQuery && loadingPeople
+
+  const retry = () => search(filter, isMergeMode ? { includePeople: false } : undefined)
 
   const handleMerge = async () => {
     if (!mergeSourceId || !mergeTarget || merging) return
@@ -422,6 +443,56 @@ export function Search({
 
           {isSearching && error && <ErrorBanner message={error} onRetry={retry} />}
 
+          {visiblePeople.length > 0 && (
+            <section className={s.peopleSection} aria-label={t('search.peopleResults')}>
+              <div className={clsx(s.sectionDivider, isDesktop && viewMode === 'grid' && !isMergeMode && s.sectionDividerGrid)}>
+                <span>{t('search.peopleResults')}</span>
+              </div>
+              <div className={clsx(s.peopleList, isDesktop && viewMode === 'grid' && !isMergeMode && s.peopleGrid)}>
+                {visiblePeople.map((person) => (
+                  <a
+                    key={person.name}
+                    href={routeTo.person(person.name)}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                      e.preventDefault()
+                      route(routeTo.person(person.name))
+                    }}
+                    className={s.personCard}
+                  >
+                    <div className={s.personAvatar} aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                    <div className={s.personBody}>
+                      <div className={s.personName}>{person.name}</div>
+                      <div className={s.personMeta}>
+                        <span className={s.personRoles}>
+                          {person.roles.map((role) => (
+                            <span key={role} className={s.personRoleBadge}>
+                              {getPersonRoleLabel(role, t)}
+                            </span>
+                          ))}
+                        </span>
+                        <span className={s.personTitleCount}>
+                          {t('search.personTitleCount', {
+                            count: person.title_count,
+                            plural: person.title_count === 1 ? '' : 's',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" className={s.cardChevron}>
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
           {results.length > 0 && (
             <>
               <div className={s.resultCount}>
@@ -520,7 +591,7 @@ export function Search({
             </>
           )}
 
-          {isSearching && !loading && results.length === 0 && !error && (!searchOnTMDB || (!loadingDiscovery && discoveryItems.length === 0)) && (
+          {isSearching && !loading && !isPeopleInFlight && results.length === 0 && visiblePeople.length === 0 && !error && (!searchOnTMDB || (!loadingDiscovery && discoveryItems.length === 0)) && (
             <div className={s.emptyPromptCard}>
               <p className={s.emptyPromptText}>
                 {hasQuery
@@ -722,7 +793,7 @@ export function Search({
             </>
           )}
 
-          {isSearching && (loading || loadingDiscovery) && (
+          {isSearching && (loading || isPeopleInFlight || loadingDiscovery) && (
             <div className={s.statusMessage}>
               {t('search.searching')}
             </div>

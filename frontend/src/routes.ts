@@ -1,3 +1,5 @@
+import type { PersonRoleFilter } from './types'
+
 /**
  * Single source of truth for SPA routes.
  *
@@ -54,7 +56,13 @@ export const routeTo = {
   setup: () => '/setup',
   matchReview: () => '/match-review',
   title: (id: number | string) => `/title/${id}`,
-  person: (name: string) => `/person/${encodeURIComponent(name)}`,
+  person: (name: string, role?: PersonRoleFilter) => {
+    const base = `/person/${encodeURIComponent(name)}`
+    if (role && role !== 'all') {
+      return `${base}?role=${encodeURIComponent(role)}`
+    }
+    return base
+  },
   admin: () => '/admin',
   adminSettings: () => '/admin/settings',
   adminAuth: () => '/admin/auth',

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSearchStore, hasActiveFilters, type TitleFilter } from './store'
+import { routeTo } from './routes'
 import { apiFetch } from './api'
 
 vi.mock('./api', () => ({
@@ -113,5 +114,143 @@ describe('useSearchStore - filter search without text query', () => {
 
     expect(useSearchStore.getState().results).toHaveLength(2)
     expect(useSearchStore.getState().hasMore).toBe(false)
+  })
+})
+
+describe('routeTo.person', () => {
+  it('builds /person/:name without query when role is omitted or all', () => {
+    expect(routeTo.person('Denis Villeneuve')).toBe('/person/Denis%20Villeneuve')
+    expect(routeTo.person('Denis Villeneuve', 'all')).toBe('/person/Denis%20Villeneuve')
+  })
+
+  it('appends ?role= when a specific role is provided', () => {
+    expect(routeTo.person('Hans Zimmer', 'composer')).toBe('/person/Hans%20Zimmer?role=composer')
+    expect(routeTo.person('Christopher Nolan', 'writer')).toBe('/person/Christopher%20Nolan?role=writer')
+  })
+})
+
+describe('useSearchStore - people search', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useSearchStore.getState().clear()
+  })
+
+  it('fetches /titles and /people concurrently for non-empty query', async () => {
+    const mockPeople = [{ name: 'Hans Zimmer', roles: ['composer'], title_count: 5 }]
+    vi.mocked(apiFetch).mockImplementation((url: string) => {
+      if (url.startsWith('/people?')) {
+        return Promise.resolve(mockPeople)
+      }
+      return Promise.resolve({ titles: [], total: 0, has_more: false })
+    })
+
+    useSearchStore.getState().setQuery('Hans Zimmer')
+    await useSearchStore.getState().search()
+
+    expect(apiFetch).toHaveBeenCalledTimes(2)
+    expect(apiFetch).toHaveBeenCalledWith('/people?search=Hans%20Zimmer')
+    expect(useSearchStore.getState().peopleResults).toEqual(mockPeople)
+    expect(useSearchStore.getState().loadingPeople).toBe(false)
+    expect(useSearchStore.getState().loading).toBe(false)
+  })
+
+  it('clears peopleResults and skips /people when query is blank even with active filters', async () => {
+    useSearchStore.setState({
+      query: '   ',
+      peopleResults: [{ name: 'Stale Person', roles: ['actor'], title_count: 1 }],
+    })
+    vi.mocked(apiFetch).mockResolvedValueOnce({ titles: [], total: 0, has_more: false })
+
+    await useSearchStore.getState().search({ type: 'movie' })
+
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(apiFetch).mock.calls[0][0]).toContain('/titles?')
+    expect(useSearchStore.getState().peopleResults).toEqual([])
+    expect(useSearchStore.getState().loadingPeople).toBe(false)
+  })
+
+  it('suppresses /people fetch and clears peopleResults when includePeople is false', async () => {
+    useSearchStore.setState({
+      query: 'Dune',
+      peopleResults: [{ name: 'Denis Villeneuve', roles: ['director'], title_count: 2 }],
+    })
+    vi.mocked(apiFetch).mockResolvedValueOnce({ titles: [], total: 0, has_more: false })
+
+    await useSearchStore.getState().search({}, { includePeople: false })
+
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(apiFetch).mock.calls[0][0]).toContain('/titles?')
+    expect(useSearchStore.getState().peopleResults).toEqual([])
+    expect(useSearchStore.getState().loadingPeople).toBe(false)
+  })
+
+  it('discards stale /people and /titles responses via _searchGen race guard', async () => {
+    let resolveFirstPeople!: (value: unknown) => void
+    let resolveFirstTitles!: (value: unknown) => void
+    const firstPeople = new Promise((r) => { resolveFirstPeople = r })
+    const firstTitles = new Promise((r) => { resolveFirstTitles = r })
+
+    vi.mocked(apiFetch)
+      .mockImplementationOnce(() => firstTitles)
+      .mockImplementationOnce(() => firstPeople)
+      .mockImplementationOnce(() => Promise.resolve({ titles: [{ id: 2 }], total: 1, has_more: false }))
+      .mockImplementationOnce(() => Promise.resolve([{ name: 'Second Person', roles: ['writer'], title_count: 3 }]))
+
+    useSearchStore.getState().setQuery('First')
+    const p1 = useSearchStore.getState().search()
+
+    useSearchStore.getState().setQuery('Second')
+    const p2 = useSearchStore.getState().search()
+    await p2
+
+    resolveFirstTitles({ titles: [{ id: 1 }], total: 1, has_more: false })
+    resolveFirstPeople([{ name: 'First Person', roles: ['actor'], title_count: 1 }])
+    await p1
+
+    expect(useSearchStore.getState().results).toEqual([{ id: 2 }])
+    expect(useSearchStore.getState().peopleResults).toEqual([
+      { name: 'Second Person', roles: ['writer'], title_count: 3 },
+    ])
+  })
+
+  it('degrades gracefully when /people fails while /titles succeeds', async () => {
+    useSearchStore.setState({
+      query: 'Nolan',
+      peopleResults: [{ name: 'Old Person', roles: ['director'], title_count: 1 }],
+    })
+    vi.mocked(apiFetch).mockImplementation((url: string) => {
+      if (url.startsWith('/people?')) {
+        return Promise.reject(new Error('network down'))
+      }
+      return Promise.resolve({ titles: [{ id: 10 }], total: 1, has_more: false })
+    })
+
+    await useSearchStore.getState().search()
+
+    expect(useSearchStore.getState().results).toEqual([{ id: 10 }])
+    expect(useSearchStore.getState().peopleResults).toEqual([])
+    expect(useSearchStore.getState().loadingPeople).toBe(false)
+    expect(useSearchStore.getState().error).toBeNull()
+  })
+
+  it('clears peopleResults and discards in-flight results on clear()', async () => {
+    let resolvePeople!: (value: unknown) => void
+    const pendingPeople = new Promise((r) => { resolvePeople = r })
+
+    vi.mocked(apiFetch).mockImplementation((url: string) => {
+      if (url.startsWith('/people?')) return pendingPeople
+      return Promise.resolve({ titles: [], total: 0, has_more: false })
+    })
+
+    useSearchStore.getState().setQuery('Hans')
+    const searchPromise = useSearchStore.getState().search()
+    useSearchStore.getState().clear()
+
+    resolvePeople([{ name: 'Hans Zimmer', roles: ['composer'], title_count: 2 }])
+    await searchPromise
+
+    expect(useSearchStore.getState().query).toBe('')
+    expect(useSearchStore.getState().peopleResults).toEqual([])
+    expect(useSearchStore.getState().loadingPeople).toBe(false)
   })
 })

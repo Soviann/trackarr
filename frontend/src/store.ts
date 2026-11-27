@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { apiFetch } from './api'
-import { Title, PaginatedResponse, StatusCounts, DiscoveryItem } from './types'
+import { Title, PaginatedResponse, StatusCounts, DiscoveryItem, PersonSearchResult } from './types'
 import { getLocale, translate } from './i18n'
 
 const PAGE_SIZE = 48
@@ -212,9 +212,15 @@ export const useTitleStore = create<TitleState>((set, get) => ({
   },
 }))
 
+export interface SearchOptions {
+  includePeople?: boolean
+}
+
 export interface SearchState {
   query: string
   results: Title[]
+  peopleResults: PersonSearchResult[]
+  loadingPeople: boolean
   discoveryResults: DiscoveryItem[]
   loadingDiscovery: boolean
   total: number
@@ -228,7 +234,7 @@ export interface SearchState {
   setSearchOnTMDB: (v: boolean) => void
   setDiscoveryResults: (items: DiscoveryItem[] | ((prev: DiscoveryItem[]) => DiscoveryItem[])) => void
   setLoadingDiscovery: (loading: boolean) => void
-  search: (filter?: TitleState['filter']) => Promise<void>
+  search: (filter?: TitleState['filter'], options?: SearchOptions) => Promise<void>
   loadMore: (filter?: TitleState['filter']) => Promise<void>
   clear: () => void
 }
@@ -236,6 +242,8 @@ export interface SearchState {
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
   results: [],
+  peopleResults: [],
+  loadingPeople: false,
   discoveryResults: [],
   loadingDiscovery: false,
   total: 0,
@@ -254,48 +262,85 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     })),
   setLoadingDiscovery: (loadingDiscovery) => set({ loadingDiscovery }),
 
-  search: async (filter = {}) => {
+  search: async (filter = {}, options = {}) => {
     const { query, results } = get()
     const trimmed = query.trim()
     const hasFilters = hasActiveFilters(filter)
+    const shouldFetchPeople = Boolean(trimmed) && options.includePeople !== false
+
     if (!trimmed && !hasFilters) {
-      set({ results: [], total: 0, hasMore: false, error: null, loading: false })
+      const gen = get()._searchGen + 1
+      set({
+        results: [],
+        peopleResults: [],
+        total: 0,
+        hasMore: false,
+        error: null,
+        loading: false,
+        loadingPeople: false,
+        _searchGen: gen,
+      })
       return
     }
 
     const isFirstLoad = results.length === 0
     const gen = get()._searchGen + 1
-    if (isFirstLoad) {
-      set({ loading: true, error: null, _searchGen: gen })
-    } else {
-      set({ error: null, _searchGen: gen })
+    set({
+      ...(isFirstLoad ? { loading: true } : {}),
+      ...(shouldFetchPeople ? { loadingPeople: true } : { peopleResults: [], loadingPeople: false }),
+      error: null,
+      _searchGen: gen,
+    })
+
+    const params = new URLSearchParams()
+    if (trimmed) {
+      params.set('search', trimmed)
     }
+    if (filter.status) params.set('status', filter.status)
+    appendFilterParams(params, filter)
 
-    try {
-      const params = new URLSearchParams()
-      if (trimmed) {
-        params.set('search', trimmed)
-      }
-      if (filter.status) params.set('status', filter.status)
-      appendFilterParams(params, filter)
+    const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
+    params.set('limit', String(limit))
+    params.set('offset', '0')
 
-      const limit = isFirstLoad ? PAGE_SIZE : Math.max(results.length, PAGE_SIZE)
-      params.set('limit', String(limit))
-      params.set('offset', '0')
-
-      const result = await apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
-      // Discard stale response if a newer search was fired while awaiting
-      if (get()._searchGen !== gen) return
-      set({
-        results: result.titles,
-        total: result.total,
-        hasMore: result.has_more,
-        loading: false,
+    const titlesPromise = apiFetch<PaginatedResponse>(`/titles?${params.toString()}`)
+      .then((result) => {
+        // Discard stale response if a newer search was fired while awaiting
+        if (get()._searchGen !== gen) return
+        set({
+          results: result.titles,
+          total: result.total,
+          hasMore: result.has_more,
+          loading: false,
+        })
       })
-    } catch (e) {
-      if (get()._searchGen !== gen) return
-      set({ error: e instanceof Error ? e.message : translate(getLocale(), 'common.searchFailed'), loading: false })
-    }
+      .catch((e) => {
+        if (get()._searchGen !== gen) return
+        set({
+          error: e instanceof Error ? e.message : translate(getLocale(), 'common.searchFailed'),
+          loading: false,
+        })
+      })
+
+    const peoplePromise = shouldFetchPeople
+      ? apiFetch<PersonSearchResult[]>(`/people?search=${encodeURIComponent(trimmed)}`)
+          .then((people) => {
+            if (get()._searchGen !== gen) return
+            set({
+              peopleResults: Array.isArray(people) ? people : [],
+              loadingPeople: false,
+            })
+          })
+          .catch(() => {
+            if (get()._searchGen !== gen) return
+            set({
+              peopleResults: [],
+              loadingPeople: false,
+            })
+          })
+      : Promise.resolve()
+
+    await Promise.all([titlesPromise, peoplePromise])
   },
 
   loadMore: async (filter = {}) => {
@@ -344,15 +389,19 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       titles: [],
       _fetchGen: useTitleStore.getState()._fetchGen + 1,
     })
-    set({
+    set((state) => ({
       query: '',
       results: [],
+      peopleResults: [],
+      loadingPeople: false,
+      loading: false,
       discoveryResults: [],
       loadingDiscovery: false,
       total: 0,
       hasMore: false,
       error: null,
       searchOnTMDB: false,
-    })
+      _searchGen: state._searchGen + 1,
+    }))
   },
 }))

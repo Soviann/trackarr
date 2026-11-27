@@ -1,7 +1,9 @@
 import { render, cleanup, fireEvent, waitFor } from '@testing-library/preact'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { Title } from '../types'
+import { route } from 'preact-router'
+import type { Title, PersonSearchResult } from '../types'
 import { apiFetch } from '../api'
+import { setLocale } from '../i18n'
 import { Search } from './Search'
 
 vi.mock('../api', () => ({
@@ -30,6 +32,8 @@ vi.mock('../context/UndoContext', () => ({
 const mockSearchState = {
   query: '',
   results: [] as Title[],
+  peopleResults: [] as PersonSearchResult[],
+  loadingPeople: false,
   total: 0,
   hasMore: false,
   loading: false,
@@ -78,10 +82,13 @@ vi.mock('../store', async () => {
 describe('Search Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setLocale('en')
     mockSearchState.query = ''
     mockSearchState.searchOnTMDB = false
     mockSearchState.discoveryResults = []
     mockSearchState.results = []
+    mockSearchState.peopleResults = []
+    mockSearchState.loadingPeople = false
     mockSearchState.total = 0
     mockSearchState.hasMore = false
     mockSearchState.loading = false
@@ -442,5 +449,93 @@ describe('Search Page', () => {
 
     // TMDB discover prompt is NOT shown when no query string was typed
     expect(container.querySelector('.discoverPromptBox')).toBeNull()
+  })
+
+  it('renders People results linking to /person/:name and suppresses No results when titles list is empty', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = 'Hans Zimmer'
+    mockSearchState.results = []
+    mockSearchState.peopleResults = [
+      { name: 'Hans Zimmer', roles: ['composer'], title_count: 1 },
+      { name: 'Denis Villeneuve', roles: ['director', 'writer'], title_count: 4 },
+    ]
+
+    const { container, getByText, queryByText } = render(<Search />)
+
+    expect(getByText('People')).toBeDefined()
+    expect(getByText('Hans Zimmer')).toBeDefined()
+    expect(getByText('Composer')).toBeDefined()
+    expect(getByText('1 title')).toBeDefined()
+
+    expect(getByText('Denis Villeneuve')).toBeDefined()
+    expect(getByText('Director')).toBeDefined()
+    expect(getByText('Writer')).toBeDefined()
+    expect(getByText('4 titles')).toBeDefined()
+
+    const zimmerLink = container.querySelector('a.personCard[href="/person/Hans%20Zimmer"]') as HTMLAnchorElement | null
+    expect(zimmerLink).not.toBeNull()
+    fireEvent.click(zimmerLink!)
+    expect(route).toHaveBeenCalledWith('/person/Hans%20Zimmer')
+
+    // Suppresses empty prompt card when people results exist
+    expect(container.querySelector('.emptyPromptCard')).toBeNull()
+    expect(queryByText('No results for "Hans Zimmer"')).toBeNull()
+  })
+
+  it('suppresses No results empty prompt while loadingPeople is in flight', () => {
+    mockIsDesktop.mockReturnValue(false)
+    mockSearchState.query = 'Denis Villeneuve'
+    mockSearchState.results = []
+    mockSearchState.peopleResults = []
+    mockSearchState.loading = false
+    mockSearchState.loadingPeople = true
+
+    const { container, getByText, queryByText } = render(<Search />)
+
+    expect(container.querySelector('.emptyPromptCard')).toBeNull()
+    expect(queryByText('No results for "Denis Villeneuve"')).toBeNull()
+    expect(getByText('Searching...')).toBeDefined()
+  })
+
+  it('hides People results and suppresses people search in merge mode', async () => {
+    vi.useFakeTimers()
+    try {
+      window.history.pushState({}, '', '/search?mergeSourceId=10&mergeSourceName=Dune')
+      mockIsDesktop.mockReturnValue(false)
+      mockSearchState.query = 'Dune'
+      mockSearchState.results = []
+      mockSearchState.peopleResults = [
+        { name: 'Denis Villeneuve', roles: ['director', 'writer'], title_count: 2 },
+      ]
+
+      const { container, queryByText } = render(<Search />)
+      vi.advanceTimersByTime(160)
+
+      expect(container.querySelector('.peopleSection')).toBeNull()
+      expect(queryByText('People')).toBeNull()
+      expect(queryByText('Denis Villeneuve')).toBeNull()
+      expect(container.querySelector('.emptyPromptCard')).not.toBeNull()
+      expect(mockSearchState.search).toHaveBeenCalledWith({}, { includePeople: false })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('localizes People section heading and role badges in French', () => {
+    setLocale('fr')
+    mockIsDesktop.mockReturnValue(true)
+    mockSearchState.query = 'Miyazaki'
+    mockSearchState.peopleResults = [
+      { name: 'Hayao Miyazaki', roles: ['director', 'writer', 'composer', 'actor'], title_count: 3 },
+    ]
+
+    const { getByText } = render(<Search />)
+
+    expect(getByText('Personnalités')).toBeDefined() // i18n-ignore
+    expect(getByText('Réalisateur')).toBeDefined() // i18n-ignore
+    expect(getByText('Scénariste')).toBeDefined() // i18n-ignore
+    expect(getByText('Compositeur')).toBeDefined()
+    expect(getByText('Acteur')).toBeDefined()
+    expect(getByText('3 titres')).toBeDefined()
   })
 })
