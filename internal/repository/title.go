@@ -111,52 +111,54 @@ type TitleUpdate struct {
 	ClearTVDBID    bool
 	// ClearCoverURL resets the cover to NULL — used when the TMDB/TVDB poster
 	// source is removed so a later refresh re-derives it (e.g. from AniList).
-	ClearCoverURL        bool
-	ExternalSourceID     *string
-	MatchSource          *string
-	OriginalTitle        *string
-	Type                 *model.TitleType
-	IsAnime              *bool
-	Overview             *string
-	Runtime              *int
-	TotalWatchMinutes    *int
-	TMDBRating           *float64
-	Credits              *string
-	AniListRating        *int
-	Year                 *int
-	ReleaseDate          *string
-	NextAirDate          *string
-	NextAirEpisode       *string
-	AccentHex            *string
-	SimklID              *int64
-	SimklSlug            *string
-	RadarrID             *int64
-	ClearRadarrID        bool
-	SonarrID             *int64
-	ClearSonarrID        bool
-	ArrIgnored           *bool
-	SonarrDeletedAt      *time.Time
-	ClearSonarrDeletedAt bool
-	SetSonarrDeletedAt   bool
-	DownloadedAt         *time.Time
-	ClearDownloadedAt    bool
-	SetDownloadedAt      bool
-	WatchProviders       *string // JSON array of model.WatchProvider; "[]" clears
-	OriginCountry        *string // ISO-3166-1 alpha-2; sets titles.origin_country
-	PersonalNotes        *string
-	ClearPersonalNotes   bool
+	ClearCoverURL           bool
+	ExternalSourceID        *string
+	MatchSource             *string
+	OriginalTitle           *string
+	Type                    *model.TitleType
+	IsAnime                 *bool
+	Overview                *string
+	Runtime                 *int
+	TotalWatchMinutes       *int
+	TMDBRating              *float64
+	Credits                 *string
+	AniListRating           *int
+	Year                    *int
+	ReleaseDate             *string
+	NextAirDate             *string
+	NextAirEpisode          *string
+	AccentHex               *string
+	SimklID                 *int64
+	SimklSlug               *string
+	RadarrID                *int64
+	ClearRadarrID           bool
+	SonarrID                *int64
+	ClearSonarrID           bool
+	ArrIgnored              *bool
+	SonarrDeletedAt         *time.Time
+	ClearSonarrDeletedAt    bool
+	SetSonarrDeletedAt      bool
+	DownloadedAt            *time.Time
+	ClearDownloadedAt       bool
+	SetDownloadedAt         bool
+	WatchProviders          *string // JSON array of model.WatchProvider; "[]" clears
+	OriginCountry           *string // ISO-3166-1 alpha-2; sets titles.origin_country
+	PersonalNotes           *string
+	ClearPersonalNotes      bool
+	CreditsRefreshedAt      *time.Time
+	ClearCreditsRefreshedAt bool
 }
 
 func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title := &model.Title{}
-	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr *string
+	var firstWatchedAtStr, lastWatchedAtStr, lastRefreshedAtStr, creditsRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr *string
 	var createdAtStr, updatedAtStr string
 	var watchProvidersRaw *string
 	query := `
 		SELECT t.id, t.type, t.is_anime, t.year, t.cover_url, t.imdb_id, t.anilist_id, t.tmdb_id, t.tvdb_id, t.external_source_id,
 		       t.my_rating, t.status, t.series_status, t.match_status, t.original_title, t.match_source, t.overview, t.runtime,
 		       t.total_watch_minutes, t.tmdb_rating, t.credits, t.watch_providers, t.anilist_rating, t.release_date, t.next_air_date,
-		       t.next_air_episode, t.first_watched_at, t.last_watched_at, t.last_refreshed_at, t.accent_hex, t.simkl_id, t.simkl_slug,
+		       t.next_air_episode, t.first_watched_at, t.last_watched_at, t.last_refreshed_at, t.credits_refreshed_at, t.accent_hex, t.simkl_id, t.simkl_slug,
 		       t.radarr_id, t.sonarr_id, t.arr_ignored, t.sonarr_deleted_at, t.downloaded_at, t.personal_notes, t.created_at, t.updated_at,
 		       (CASE WHEN ` + caughtUpCond + ` THEN 1 ELSE 0 END) AS caught_up
 		FROM titles t
@@ -165,7 +167,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 		Scan(&title.ID, &title.Type, &title.IsAnime, &title.Year, &title.CoverURL, &title.IMDBID, &title.AniListID, &title.TMDBID, &title.TVDBID,
 			&title.ExternalSourceID, &title.MyRating, &title.Status, &title.SeriesStatus, &title.MatchStatus, &title.OriginalTitle, &title.MatchSource,
 			&title.Overview, &title.Runtime, &title.TotalWatchMinutes, &title.TMDBRating, &title.Credits, &watchProvidersRaw, &title.AniListRating,
-			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &title.PersonalNotes, &createdAtStr, &updatedAtStr, &title.CaughtUp)
+			&title.ReleaseDate, &title.NextAirDate, &title.NextAirEpisode, &firstWatchedAtStr, &lastWatchedAtStr, &lastRefreshedAtStr, &creditsRefreshedAtStr, &title.AccentHex, &title.SimklID, &title.SimklSlug, &title.RadarrID, &title.SonarrID, &title.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &title.PersonalNotes, &createdAtStr, &updatedAtStr, &title.CaughtUp)
 	if err != nil {
 		return nil, fmt.Errorf("get title: %w", err)
 	}
@@ -174,6 +176,7 @@ func (r *TitleRepository) GetByID(id int64) (*model.Title, error) {
 	title.FirstWatchedAt = parseSQLiteTime(firstWatchedAtStr)
 	title.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 	title.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
+	title.CreditsRefreshedAt = parseSQLiteTime(creditsRefreshedAtStr)
 	title.SonarrDeletedAt = parseSQLiteTime(sonarrDeletedAtStr)
 	title.DownloadedAt = parseSQLiteTime(downloadedAtStr)
 	title.WatchProviders = parseWatchProviders(watchProvidersRaw)
@@ -413,7 +416,7 @@ func (r *TitleRepository) GetLiteByID(ctx context.Context, id int64) (*TitleLite
 
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
-	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, sonarr_deleted_at, downloaded_at, personal_notes, watch_providers, origin_country, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
+	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, credits_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, sonarr_deleted_at, downloaded_at, personal_notes, watch_providers, origin_country, created_at, updated_at FROM titles ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list all titles: %w", err)
 	}
@@ -421,16 +424,17 @@ func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	var titles []model.Title
 	for rows.Next() {
 		var t model.Title
-		var lastWatchedAtStr, lastRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr, watchProvidersRaw *string
+		var lastWatchedAtStr, lastRefreshedAtStr, creditsRefreshedAtStr, sonarrDeletedAtStr, downloadedAtStr, watchProvidersRaw *string
 		if err := rows.Scan(&t.ID, &t.Type, &t.IsAnime, &t.Year, &t.CoverURL, &t.IMDBID, &t.AniListID, &t.TMDBID, &t.TVDBID,
 			&t.ExternalSourceID, &t.MyRating, &t.Status, &t.SeriesStatus, &t.MatchStatus, &t.OriginalTitle, &t.MatchSource,
 			&t.Overview, &t.Runtime, &t.TotalWatchMinutes, &t.TMDBRating, &t.Credits, &t.AniListRating,
-			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &t.PersonalNotes, &watchProvidersRaw, &t.OriginCountry, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.ReleaseDate, &t.NextAirDate, &t.NextAirEpisode, &lastWatchedAtStr, &lastRefreshedAtStr, &creditsRefreshedAtStr, &t.AccentHex, &t.SimklID, &t.SimklSlug, &t.RadarrID, &t.SonarrID, &t.ArrIgnored, &sonarrDeletedAtStr, &downloadedAtStr, &t.PersonalNotes, &watchProvidersRaw, &t.OriginCountry, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan title: %w", err)
 		}
 		t.LastWatchedAt = parseSQLiteTime(lastWatchedAtStr)
 		t.LastRefreshedAt = parseSQLiteTime(lastRefreshedAtStr)
+		t.CreditsRefreshedAt = parseSQLiteTime(creditsRefreshedAtStr)
 		t.SonarrDeletedAt = parseSQLiteTime(sonarrDeletedAtStr)
 		t.DownloadedAt = parseSQLiteTime(downloadedAtStr)
 		t.WatchProviders = parseWatchProviders(watchProvidersRaw)
@@ -662,18 +666,20 @@ func parseWatchProviders(raw *string) []model.WatchProvider {
 // parseSQLiteTimeVal parses a SQLite datetime string into a time.Time.
 // SQLite stores datetimes in UTC without a timezone marker; time.Parse returns
 // UTC when no timezone is embedded, which is the expected behaviour here.
-// Accepted formats: "2006-01-02 15:04:05" (SQLite default) or RFC3339.
+// Accepted formats: "2006-01-02 15:04:05" (SQLite default), RFC3339, or go-sqlite3 timestamp strings.
 // Returns the zero time.Time if no format matches.
 func parseSQLiteTimeVal(s string) time.Time {
-	// Try standard SQLite datetime format
-	t, err := time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		return t
-	}
-	// Try RFC3339 (ISO)
-	t, err = time.Parse(time.RFC3339, s)
-	if err == nil {
-		return t
+	for _, layout := range []string{
+		"2006-01-02 15:04:05",
+		time.RFC3339,
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05Z07:00",
+		"2006-01-02 15:04:05.999999999",
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.UTC()
+		}
 	}
 	return time.Time{}
 }

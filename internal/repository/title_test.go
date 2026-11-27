@@ -3,6 +3,8 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -2330,5 +2332,156 @@ func TestTitleRepository_ListRatedTitles(t *testing.T) {
 		assert.Equal(t, "Rated Series", titles[1].PrimaryName())
 		assert.Equal(t, &rating4, titles[1].MyRating)
 		assert.Equal(t, ptr(int64(202)), titles[1].TVDBID)
+	})
+}
+
+type creditsTestInvalidator struct {
+	mu   sync.Mutex
+	tags [][]string
+}
+
+func (i *creditsTestInvalidator) Invalidate(tags ...string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.tags = append(i.tags, tags)
+}
+
+func TestTitleRepository_CreditsRefreshedAt(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("migration 053 up and down roundtrip", func(t *testing.T) {
+		db, _, err := database.Open(":memory:")
+		require.NoError(t, err)
+		defer db.Close()
+
+		require.NoError(t, database.Migrate(db))
+		var colName string
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		require.NoError(t, err)
+		assert.Equal(t, "credits_refreshed_at", colName)
+
+		require.NoError(t, database.MigrateTo(db, 52))
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+
+		require.NoError(t, database.Migrate(db))
+		err = db.QueryRow(`SELECT name FROM pragma_table_info('titles') WHERE name = 'credits_refreshed_at'`).Scan(&colName)
+		require.NoError(t, err)
+	})
+
+	t.Run("update and clear via TitleWriter.Update read via GetByID and ListAll", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2024,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+		}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+		got, err := repo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		ts := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+			CreditsRefreshedAt: &ts,
+		})
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*got.CreditsRefreshedAt))
+
+		all, err := repo.ListAll()
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		require.NotNil(t, all[0].CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*all[0].CreditsRefreshedAt))
+
+		testutil.UpdateTitle(t, db, id, repository.TitleUpdate{
+			ClearCreditsRefreshedAt: true,
+		})
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+
+		all, err = repo.ListAll()
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		assert.Nil(t, all[0].CreditsRefreshedAt)
+	})
+
+	t.Run("UpdateCreditsCatchUp and MarkCreditsRefreshed preserve updated_at and invalidate cache", func(t *testing.T) {
+		db := setupTestDB(t)
+		repo := repository.NewTitleRepository(db)
+
+		inv := &creditsTestInvalidator{}
+		database.SetInvalidator(inv)
+		defer database.SetInvalidator(nil)
+
+		rating := 9
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2021,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			MyRating:    &rating,
+		}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+		// Pin an older updated_at so we can prove catch-up does not bump it.
+		_, err := db.Exec(`UPDATE titles SET updated_at = '2020-01-01 00:00:00' WHERE id = ?`, id)
+		require.NoError(t, err)
+
+		inv.tags = nil
+		ts := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+		credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Jon Spaihts","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"}]`
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).UpdateCreditsCatchUp(ctx, id, credits, ts)
+		}))
+
+		got, err := repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.Credits)
+		assert.Equal(t, credits, *got.Credits)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts.Equal(*got.CreditsRefreshedAt))
+		assert.Equal(t, "2020-01-01 00:00:00", got.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, model.TitleStatusCompleted, got.Status)
+		require.NotNil(t, got.MyRating)
+		assert.Equal(t, 9, *got.MyRating)
+
+		require.Len(t, inv.tags, 1)
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats, database.TagCalendar}, inv.tags[0])
+
+		// MarkCreditsRefreshed updates timestamp only, leaves credits untouched, and invalidates cache.
+		inv.tags = nil
+		ts2 := time.Date(2026, 7, 2, 8, 15, 0, 0, time.UTC)
+		require.NoError(t, database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			return repository.NewTitleWriter(tx).MarkCreditsRefreshed(ctx, id, ts2)
+		}))
+
+		got, err = repo.GetByID(id)
+		require.NoError(t, err)
+		require.NotNil(t, got.Credits)
+		assert.Equal(t, credits, *got.Credits)
+		require.NotNil(t, got.CreditsRefreshedAt)
+		assert.True(t, ts2.Equal(*got.CreditsRefreshedAt))
+		assert.Equal(t, "2020-01-01 00:00:00", got.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+		require.Len(t, inv.tags, 1)
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats, database.TagCalendar}, inv.tags[0])
+
+		// Boundary: rollback must NOT invalidate cache.
+		inv.tags = nil
+		err = database.WithTxContext(ctx, db, func(tx *sql.Tx) error {
+			if err := repository.NewTitleWriter(tx).MarkCreditsRefreshed(ctx, id, ts); err != nil {
+				return err
+			}
+			return errors.New("force rollback")
+		})
+		require.Error(t, err)
+		assert.Empty(t, inv.tags)
 	})
 }

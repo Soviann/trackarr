@@ -246,6 +246,16 @@ func (w *TitleWriter) Update(ctx context.Context, id int64, update TitleUpdate) 
 		sets = append(sets, `personal_notes = ?`)
 		args = append(args, *update.PersonalNotes)
 	}
+	if update.ClearCreditsRefreshedAt {
+		sets = append(sets, `credits_refreshed_at = NULL`)
+	} else if update.CreditsRefreshedAt != nil {
+		sets = append(sets, `credits_refreshed_at = ?`)
+		at := *update.CreditsRefreshedAt
+		if at.IsZero() {
+			at = time.Now().UTC()
+		}
+		args = append(args, at.UTC().Format("2006-01-02 15:04:05"))
+	}
 
 	if len(sets) == 0 {
 		return nil
@@ -280,6 +290,38 @@ func (w *TitleWriter) MarkRefreshed(ctx context.Context, id int64, at time.Time)
 	_, err := w.tx.ExecContext(ctx, `UPDATE titles SET last_refreshed_at = ? WHERE id = ?`, at, id)
 	if err != nil {
 		return fmt.Errorf("mark refreshed: %w", err)
+	}
+	return nil
+}
+
+// UpdateCreditsCatchUp writes backfilled credits and credits_refreshed_at
+// without bumping updated_at or touching user watch state.
+func (w *TitleWriter) UpdateCreditsCatchUp(ctx context.Context, id int64, credits string, refreshedAt time.Time) error {
+	if refreshedAt.IsZero() {
+		refreshedAt = time.Now().UTC()
+	}
+	_, err := w.tx.ExecContext(ctx,
+		`UPDATE titles SET credits = ?, credits_refreshed_at = ? WHERE id = ?`,
+		credits, refreshedAt.UTC().Format("2006-01-02 15:04:05"), id,
+	)
+	if err != nil {
+		return fmt.Errorf("update credits catch-up: %w", err)
+	}
+	return nil
+}
+
+// MarkCreditsRefreshed stamps credits_refreshed_at without mutating credits or
+// bumping updated_at (used e.g. when TMDB returns 404).
+func (w *TitleWriter) MarkCreditsRefreshed(ctx context.Context, id int64, refreshedAt time.Time) error {
+	if refreshedAt.IsZero() {
+		refreshedAt = time.Now().UTC()
+	}
+	_, err := w.tx.ExecContext(ctx,
+		`UPDATE titles SET credits_refreshed_at = ? WHERE id = ?`,
+		refreshedAt.UTC().Format("2006-01-02 15:04:05"), id,
+	)
+	if err != nil {
+		return fmt.Errorf("mark credits refreshed: %w", err)
 	}
 	return nil
 }

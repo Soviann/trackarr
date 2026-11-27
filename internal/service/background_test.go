@@ -1145,3 +1145,100 @@ func TestBackgroundService_TVDBEmptyEpisodes_FallsBackToTMDB(t *testing.T) {
 	require.NotNil(t, episodes[0].Name)
 	assert.Equal(t, "Episode 1", *episodes[0].Name)
 }
+
+func TestBackgroundService_RefreshStampsCreditsRefreshedAt(t *testing.T) {
+	movieTMDB := int64(438631)
+	seriesTMDB := int64(1396)
+	failTMDB := int64(999999)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/movie/%d", movieTMDB), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":       movieTMDB,
+			"title":    "Dune",
+			"overview": "Desert planet.",
+			"credits": map[string]any{
+				"crew": []map[string]any{
+					{"name": "Denis Villeneuve", "job": "Director", "department": "Directing"},
+					{"name": "Hans Zimmer", "job": "Original Music Composer", "department": "Sound"},
+				},
+				"cast": []map[string]any{
+					{"name": "Timothée Chalamet", "character": "Paul Atreides"},
+				},
+			},
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/tv/%d", seriesTMDB), func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":         seriesTMDB,
+			"name":       "Breaking Bad",
+			"overview":   "Chemistry teacher.",
+			"status":     "Ended",
+			"created_by": []map[string]any{{"name": "Vince Gilligan"}},
+			"credits": map[string]any{
+				"crew": []map[string]any{
+					{"name": "Dave Porter", "job": "Original Music Composer", "department": "Sound"},
+				},
+				"cast": []map[string]any{
+					{"name": "Bryan Cranston", "character": "Walter White"},
+				},
+			},
+		})
+	})
+	mux.HandleFunc(fmt.Sprintf("/movie/%d", failTMDB), func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+
+	movieID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &movieTMDB,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	seriesID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &seriesTMDB,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	failID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2020,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &failTMDB,
+	}, []model.TitleName{{Name: "Failing Movie", Language: "en", IsPrimary: true}})
+
+	require.NoError(t, svc.RefreshByID(context.Background(), movieID))
+	require.NoError(t, svc.RefreshByID(context.Background(), seriesID))
+	require.NoError(t, svc.RefreshByID(context.Background(), failID))
+
+	gotMovie, err := titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	assert.NotNil(t, gotMovie.CreditsRefreshedAt)
+	require.NotNil(t, gotMovie.Credits)
+	assert.Contains(t, *gotMovie.Credits, "Hans Zimmer")
+
+	gotSeries, err := titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	assert.NotNil(t, gotSeries.CreditsRefreshedAt)
+	require.NotNil(t, gotSeries.Credits)
+	assert.Contains(t, *gotSeries.Credits, `"name":"Vince Gilligan","role":"Writer"`)
+
+	gotFail, err := titleRepo.GetByID(failID)
+	require.NoError(t, err)
+	assert.Nil(t, gotFail.CreditsRefreshedAt, "failed TMDB fetch must not stamp credits_refreshed_at")
+}

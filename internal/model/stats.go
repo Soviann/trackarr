@@ -2,10 +2,17 @@ package model
 
 import "time"
 
-// PersonStat holds an actor or director name and their watched titles count.
+// PersonStat holds a cast or crew person name and their watched titles count.
 type PersonStat struct {
 	Name  string `json:"name"`
 	Count int    `json:"count"`
+}
+
+// PersonSearchResult holds a matching cast or crew person across the library.
+type PersonSearchResult struct {
+	Name       string   `json:"name"`
+	Roles      []string `json:"roles"`
+	TitleCount int      `json:"title_count"`
 }
 
 // StatsFilter defines optional filters for stats aggregation.
@@ -25,6 +32,8 @@ type StatsResponse struct {
 	Genres            any            `json:"genres"`
 	TopActors         []PersonStat   `json:"top_actors"`
 	TopDirectors      []PersonStat   `json:"top_directors"`
+	TopWriters        []PersonStat   `json:"top_writers"`
+	TopComposers      []PersonStat   `json:"top_composers"`
 	Streaks           StatsStreaks   `json:"streaks"`
 	TotalWatchMinutes int            `json:"total_watch_minutes"`
 	// Library strip — compact at-a-glance figures.

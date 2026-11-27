@@ -54,6 +54,9 @@ func newTestTMDBServer(t *testing.T) (*httptest.Server, *TMDBClient) {
 			ID:           1399,
 			Name:         "Breaking Bad",
 			FirstAirDate: "2008-01-20",
+			CreatedBy: []TMDBCreator{
+				{Name: "Vince Gilligan"},
+			},
 			Seasons: []struct {
 				SeasonNumber int    `json:"season_number"`
 				EpisodeCount int    `json:"episode_count"`
@@ -193,6 +196,8 @@ func TestTMDBGetTVDetails(t *testing.T) {
 	assert.Equal(t, "tt0903747", details.ExternalIDs.IMDBID)
 	assert.Equal(t, int64(81189), details.ExternalIDs.TVDBID)
 	assert.Len(t, details.Seasons, 2)
+	require.Len(t, details.CreatedBy, 1)
+	assert.Equal(t, "Vince Gilligan", details.CreatedBy[0].Name)
 }
 
 func TestTMDBGetTVSeasonEpisodes(t *testing.T) {
@@ -344,4 +349,59 @@ func TestMarshalCredits(t *testing.T) {
 	assert.Len(t, parsed, 20)
 	assert.Equal(t, "Actor A", parsed[0]["name"])
 	assert.Equal(t, "Actor T", parsed[19]["name"])
+}
+
+func TestExtractTVMetadata_CreatedBy(t *testing.T) {
+	t.Run("nominal combines created_by and crew writers without duplicates", func(t *testing.T) {
+		details := &TMDBTVDetails{
+			ID:        1396,
+			Name:      "Breaking Bad",
+			CreatedBy: []TMDBCreator{{Name: "Vince Gilligan"}, {Name: "  "}},
+			Credits: &TMDBCredits{
+				Crew: []TMDBCrewMember{
+					{Name: "Michelle MacLaren", Job: "Director", Department: "Directing"},
+					{Name: "Vince Gilligan", Job: "Director", Department: "Directing"},
+					{Name: "Vince Gilligan", Job: "Writer", Department: "Writing"},
+					{Name: "Peter Gould", Job: "Screenplay", Department: "Writing"},
+					{Name: "Dave Porter", Job: "Original Music Composer", Department: "Sound"},
+				},
+				Cast: []TMDBCastMember{
+					{Name: "Bryan Cranston", Character: "Walter White"},
+				},
+			},
+		}
+
+		_, credits, _, _ := ExtractTVMetadata(details)
+		expected := `[
+			{"name":"Michelle MacLaren","role":"Director"},
+			{"name":"Vince Gilligan","role":"Director"},
+			{"name":"Vince Gilligan","role":"Writer"},
+			{"name":"Peter Gould","role":"Writer"},
+			{"name":"Dave Porter","role":"Composer"},
+			{"name":"Bryan Cranston","role":"Walter White"}
+		]`
+		assert.JSONEq(t, expected, credits)
+	})
+
+	t.Run("boundary extracts created_by even when credits block is nil", func(t *testing.T) {
+		details := &TMDBTVDetails{
+			ID:        100,
+			Name:      "Creator Only Show",
+			CreatedBy: []TMDBCreator{{Name: "Craig Mazin"}},
+			Credits:   nil,
+		}
+		_, credits, _, _ := ExtractTVMetadata(details)
+		assert.JSONEq(t, `[{"name":"Craig Mazin","role":"Writer"}]`, credits)
+	})
+
+	t.Run("boundary blank creator names with nil credits yields empty array", func(t *testing.T) {
+		details := &TMDBTVDetails{
+			ID:        101,
+			Name:      "Empty Creators",
+			CreatedBy: []TMDBCreator{{Name: "   "}},
+			Credits:   nil,
+		}
+		_, credits, _, _ := ExtractTVMetadata(details)
+		assert.Equal(t, "[]", credits)
+	})
 }
