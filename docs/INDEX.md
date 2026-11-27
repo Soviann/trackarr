@@ -15,10 +15,10 @@ Welcome to the official **Trackarr** documentation suite. Explore the dedicated 
 ### 2. [User Guide & Troubleshooting](user-guide.md)
 - Complete UI walkthrough: Library statuses (*Watching*, *Caught up*, *Completed*, *Plan*, *Dropped*), responsive fluid grid, and collapsible desktop sidebar.
 - Dedicated Upcoming Airing Page with at-a-glance next air dates and episode tags (`/coming-up`), and Multi-View Calendar (Month, Week, List) with RFC 5545 iCal subscription feed (`/calendar`).
-- Filterable Stats insights, decomposed watch time, Year/Media filters, Top Cast & interactive filmography drawer (`/stats`).
+- Filterable Stats insights, decomposed watch time, Year/Media filters, 4-role Top Cast & Crew selector (*Actors*, *Directors*, *Writers*, *Composers*), role-filtered filmography drawer & `/person/:name` view (`/stats`).
 - Trackarr Wrapped annual retrospective story player and immutable archives gallery (`/wrapped`).
 - Unified Franchise & History Hub Bar with slide-up bottom sheets, Next Episode Hero, and Binge Estimator.
-- Search deduplication, full-card navigation, external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), and desktop sticky top header.
+- Unified People & Title search (`/search`), search deduplication, full-card navigation, external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`), and desktop sticky top header.
 - Single-line closed filter handle, scrolling dismissible chips, and compact filter drawer with selects.
 - Gestures & shortcuts: Power user shortcuts (`Cmd+K`, `/`, `W`, `1..9`, `Escape`, `Shift+Click`), Universal Undo snackbar, circular `+1` quick mark, multi-select mode, mobile swipe actions, pull-to-refresh.
 - Match Review, Rematching, and Season Audit.
@@ -68,5 +68,5 @@ For developers and contributors looking into the internals:
 - [**Matching Pipeline & AI Verification**](dev/matching-pipeline.md) — 5-step resolution engine and Gemini AI verification.
 - [**AniList Sync & Multi-Parts**](dev/anilist-sync.md) — Prequel trees, season mapping, and GraphQL push protocol.
 - [**Arr Stack Integration**](dev/arr-integration.md) — Radarr/Sonarr proxy architecture, queue management, quality profiles, and deletion workflows.
-- [**Background Jobs & Task Queue**](background-jobs.md) — 24h metadata refresh ticker, asynchronous SQLite task queue, retry policies, and graceful shutdown.
+- [**Background Jobs & Task Queue**](background-jobs.md) — 24h metadata refresh ticker, incremental extended credits catch-up, asynchronous SQLite task queue, retry policies, and graceful shutdown.
 - [**Native Go MCP Server (stdio)**](dev/mcp-server.md) — Model Context Protocol (MCP) server for Claude Desktop, Cursor, and Antigravity.

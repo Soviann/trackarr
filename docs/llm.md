@@ -111,7 +111,7 @@
     - State stability: titles added during active search session (`+ Plan to Watch`, `+ Watching`) remain visible to preserve access to `UndoSnackbar` cancellation.
     - Semantic clickable cards: owned discovery and library cards render as full `<a>` links to `/title/:id` (pointer cursor, elevation, new tab shortcuts) while isolating click propagation on action buttons and external inspection links (`TMDB ↗`, `AniList ↗`, `IMDb ↗`).
 24. **Tag-Based In-Memory Read Cache & Deterministic Post-Commit Invalidation (Lot 6)**:
-    - Thread-safe `internal/cache/cache.go` (`sync.RWMutex`) caches high-frequency read endpoints: `/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/countries`, `/api/titles/review-count`.
+    - Thread-safe `internal/cache/cache.go` (`sync.RWMutex`) caches high-frequency read endpoints: `/api/titles/continue-watching`, `/api/titles/upcoming`, `/api/stats`, `/api/calendar/events`, `/api/genres`, `/api/people`, `/api/countries`, `/api/titles/review-count`.
     - Domain tags (`TagTitles = "titles"`, `TagStats = "stats"`, `TagCalendar = "calendar"`) mapped to cache keys for $O(1)$ group invalidation.
     - Transactional write isolation: writers (`TitleWriter`, `EpisodeWriter`, `SeasonWriter`, `WatchEventWriter`, `TitleRelationWriter`, `GenreWriter`, `SettingWriter`, `SeasonExternalIDWriter`) mark transactions dirty with `database.MarkTxDirty(tx, ...)`. Cache keys are evicted strictly **post-commit** via `database.WithTxContext` / `CommitTx`. Failed or rolled-back transactions never evict cache keys, preventing stale reads and dropping passive read disk I/O to near zero.
 25. **Saga Smart Next-Up & Chronological Continuity (Lot 7)**:
@@ -147,11 +147,19 @@
     - Admin preference `ical_group_same_day` (`SettingKeyICalGroupSameDay` in `settings` table) defaults to **enabled (`true`)** whenever absent, `sql.ErrNoRows`, nil `settingRepo`, or `!= "false"` (trimmed, case-insensitive). Exposed in `GET`/`PUT /api/admin/system-settings` (`ICalGroupSameDay`) and toggled in `AdminSettings.tsx` (`data-testid="ical-group-same-day-toggle"`); intentionally excluded from `/api/config`, `/api/settings`, and `/api/calendar/events`.
     - When enabled, `GenerateICS` groups episode events (`Type != "movie"`, `SeasonNumber != nil && EpisodeNumber != nil`, valid `"2006-01-02"` `AirDate`) sharing composite key `(TitleID, AirDate)` while preserving order of first appearance from `ListCalendarEvents` and sorting members by `SeasonNumber ASC, EpisodeNumber ASC, ID ASC`.
     - Groups of `>= 2` episodes emit a single RFC 5545 `VEVENT` with deterministic `UID:trackarr-group-<TitleID>-<YYYYMMDD>@trackarr`, concise `SUMMARY` (`Title - SxxEyy-Ezz` when strictly consecutive within one season, else comma-joined `SxxEyy` tags capped at 3 with ` (+remaining)`), `DESCRIPTION` enumerating `Episodes (N):` (`- SxxEyy` or `- SxxEyy (EpisodeName)`), streaming providers, overview, and Trackarr URL, escaped via `escapeICS` and folded at ≤ 75 octets on UTF-8 rune boundaries (`writeICSLine`). Single episodes (`trackarr-<event.ID>@trackarr`), movies, `next_air_date` fallback items, and ungrouped mode (`"false"`) emit one `VEVENT` per item.
+32. **Extended Credits Extraction, People Search, Role Filtering & Incremental Catch-Up**:
+    - **TMDB Extraction (`internal/service/matching/tmdb_details.go`)**: `ExtractMovieMetadata` and `ExtractTVMetadata` extract canonical `"Director"`, `"Writer"` (crew writing jobs + `TMDBTVDetails.CreatedBy` deduplicated), `"Composer"`, and top-20 cast (character fallback `"Actor"`), deduplicated on `(name, role)`. `StatsRepository` actor rankings (`TopActors`, `topActorsFiltered`, `GetWrappedData`) exclude `'Director'`, `'Writer'`, and `'Composer'`.
+    - **People Search (`PeopleRepository.Search` & `GET /api/people`)**: `ScopeLibraryRead`, `readDB`-backed, cached under `people:search:<rawQuery>` (`cache.TagTitles`). Normalizes queries and `titles.credits` names in Go using `golang.org/x/text/unicode/norm` (NFD decomposition, stripping `unicode.Mn` combining marks, lowercasing, whitespace collapse). Supports partial, full-name, and multi-token queries across all watch statuses; skips malformed JSON rows; classifies roles deterministically (`["director", "writer", "composer", "actor"]`); ranks exact -> prefix -> word prefix -> substring -> multi-token, then `title_count DESC`, `name ASC`; clamps `limit` (default `20`, max `50`); returns initialized `[]` when blank or unmatched.
+    - **Role Filtering & Extended Stats**:
+      - `GET /api/titles?person=<name>&role=<role>` accepts `all`, `actor`, `director`, `writer`, `composer` (trimmed case-insensitive; invalid non-empty values return `400 Bad Request`). `TitleRepository.List` / `searchTitlesPaginated` guard `t.credits` with `json_valid(t.credits) = 1 AND json_type(t.credits) = 'array'` and apply `COLLATE NOCASE` name match + role condition inside the same `EXISTS (SELECT 1 FROM json_each(t.credits) je ...)` subquery.
+      - `StatsRepository.GetFiltered` populates `TopActors`, `TopDirectors`, `TopWriters`, and `TopComposers` (top 10 each, non-nil empty slices) via shared parameterized `topCrewRoleFiltered` / `topPeopleFiltered` filtered by `timeframe` (`all`, `year`, `30d`), `year`, and `media_type` (`all`, `movie`, `series`, `anime`).
+      - Frontend: `useSearchStore` fetches `/people?search=...` concurrently with `/titles` under `_searchGen` (disabled via `includePeople: false` in merge mode); `Stats.tsx` presents a unified 4-role `TopCastCrewSection` launching `PersonFilmographyDrawer` with `role`; `PersonTitles.tsx` initializes from `?role=`, renders 5 role filter pills, and updates URL via `window.history.replaceState`; `TitleDetail.tsx` localizes `Director`/`Writer`/`Composer`/`Actor` labels and links to `routeTo.person(c.name, role)` with `e.stopPropagation()`.
+    - **Incremental Catch-Up (`BackgroundService.CatchUpExtendedCredits`)**: Migration `053` adds `titles.credits_refreshed_at` (stamped by `refreshMovieFromTMDB`, `refreshSeriesFromTMDB`, `buildEnrichmentUpdate`, `UpdateCreditsCatchUp`, and `MarkCreditsRefreshed`; cleared by `TitleService.Rematch` and `SetExternalIDs` when TMDB ID changes or clears). `ListTitlesNeedingCreditsCatchUp(ctx, 25)` selects `completed`/`dropped` titles with `tmdb_id > 0`, `credits_refreshed_at IS NULL`, and missing/malformed/`Writer`/`Composer`-absent credits ordered by `last_refreshed_at ASC NULLS FIRST, id ASC`. `Scheduler` invokes `catchUpExtendedCredits` (`ExtendedCreditsCatchUpper`) after `RefreshTitles` in `runInitialPass` and `runScheduledPass` without breaking `MetadataSyncer` or `RefreshTitles` skip semantics. TMDB HTTP calls run via `APILimiter` strictly outside SQLite write transactions; `UpdateCreditsCatchUp` / `MarkCreditsRefreshed` (used on TMDB 404) mark `TagTitles`/`TagStats`/`TagCalendar` dirty without bumping `updated_at`, `status`, `seasons`, `episodes`, or `watch_events`. Retryable errors stay unstamped; HTTP 429 rate limits stop the batch immediately.
 
 ---
 
 ## 3. Database Schema Overview
-- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`, `downloaded_at`).
+- `titles`: Core media table (`id`, `type: 'movie'|'series'`, `is_anime`, `status: 'watching'|'plan_to_watch'|'completed'|'dropped'`, `series_status: 'returning'|'ended'|'cancelled'|'in_production'`, `match_status: 'confirmed'|'pending_review'|'unconfirmed'`, `year`, `cover_url`, `imdb_id`, `tmdb_id`, `tvdb_id`, `anilist_id`, `simkl_id`, `radarr_id`, `sonarr_id`, `sonarr_deleted_at`, `arr_ignored`, `origin_country`, `total_watch_minutes`, `accent_hex`, `watch_providers`, `personal_notes`, `downloaded_at`, `credits_refreshed_at` [migration 053]).
 - `title_names`: Multilingual title aliases (`title_id`, `name`, `language`, `is_primary`).
 - `title_genres`: Associated genres per title (`title_id`, `genre`).
 - `seasons`: Season entries (`title_id`, `season_number`, `total_episodes`).
@@ -184,7 +192,7 @@
 - `POST /api/admin/api-keys/{id}/revoke` : Revoke active API key.
 - `DELETE /api/admin/api-keys/{id}` : Permanently delete API key.
 - `GET /api/covers/{filename}` : Cached cover image loader (also `/covers/{filename}`).
-- `GET /api/titles` : List titles with status/type/genre/person/country filtering, sorting, pagination.
+- `GET /api/titles` : List titles with status/type/genre/person/role (`all|actor|director|writer|composer`, `400` on invalid `role`)/country filtering, sorting, pagination.
 - `GET /api/titles/{id}` : Full title entity with names, seasons, episodes, cast, external IDs.
 - `POST /api/titles` : Create title (supports manual input or direct URL matching).
 - `POST /api/titles/batch` : High-throughput bulk title ingestion (up to 100 items, 2MB cap, local regex URL parsing, deduplication, 201 Created vs 200 OK partial success).
@@ -213,6 +221,7 @@
 - `DELETE /api/titles/{titleID}/seasons/{seasonID}/anilist/{externalID}` : Remove AniList ID mapping.
 - `PUT /api/titles/{titleID}/seasons/{seasonID}/anilist/order` : Reorder multi-part AniList season mappings.
 - `GET /api/genres` : List genres with counts.
+- `GET /api/people` : Search cast & crew across `titles.credits` (`?search=...&limit=...`, `ScopeLibraryRead`, accent-tolerant NFD matching, cached under tag `titles`).
 - `GET /api/countries` : List origin countries with counts.
 - `GET /api/settings` : User and app settings (including `saga_chronological_next_up`, `auto_open_imdb_on_rate`, `enabled_watch_providers`, AniList and push status).
 - `GET /api/anilist/auth` : Generate AniList OAuth authorize URL.
@@ -256,7 +265,7 @@
 - `POST /api/arr/queue/{id}/push` : Push title from queue directly to Radarr / Sonarr.
 - `GET /api/releases` & `POST /api/releases/add` : Browse Prowlarr releases feed and 1-click import.
 - `POST /api/client-errors` : Client-side error reporting.
-- `GET /api/stats` : Return library metrics, genre distribution, top actors & top directors, streaks, and fun stats with filters (`timeframe=all|year|30d`, `year=YYYY`, `media_type=all|movie|series|anime`).
+- `GET /api/stats` : Return library metrics, genre distribution, top actors, directors, writers & composers (top 10 each), streaks, and fun stats with filters (`timeframe=all|year|30d`, `year=YYYY`, `media_type=all|movie|series|anime`).
 - `GET /api/stats/wrapped` : Annual retrospective stats (overview, category tops, release tops, rewatch champion, top cast/genres, and Gemini AI persona).
 - `GET /api/stats/wrapped/archives` : List all archived Wrapped snapshots.
 - `POST /api/stats/wrapped/generate` : Force generation and persistence of Wrapped snapshot for a given year.
