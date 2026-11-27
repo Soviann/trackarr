@@ -456,6 +456,7 @@ export function Search({
                     onClick={(e) => {
                       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
                       e.preventDefault()
+                      e.stopPropagation()
                       route(routeTo.person(person.name))
                     }}
                     className={s.personCard}

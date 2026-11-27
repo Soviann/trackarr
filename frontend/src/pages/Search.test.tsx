@@ -474,8 +474,22 @@ describe('Search Page', () => {
 
     const zimmerLink = container.querySelector('a.personCard[href="/person/Hans%20Zimmer"]') as HTMLAnchorElement | null
     expect(zimmerLink).not.toBeNull()
-    fireEvent.click(zimmerLink!)
-    expect(route).toHaveBeenCalledWith('/person/Hans%20Zimmer')
+
+    const windowClickSpy = vi.fn()
+    window.addEventListener('click', windowClickSpy)
+    try {
+      const clicked = fireEvent.click(zimmerLink!)
+      expect(clicked).toBe(false)
+      expect(windowClickSpy).not.toHaveBeenCalled()
+      expect(route).toHaveBeenCalledTimes(1)
+      expect(route).toHaveBeenCalledWith('/person/Hans%20Zimmer')
+
+      vi.mocked(route).mockClear()
+      fireEvent.click(zimmerLink!, { ctrlKey: true })
+      expect(route).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('click', windowClickSpy)
+    }
 
     // Suppresses empty prompt card when people results exist
     expect(container.querySelector('.emptyPromptCard')).toBeNull()
