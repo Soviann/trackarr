@@ -20,6 +20,12 @@ type MetadataSyncer interface {
 	RefreshTitles(ctx context.Context) []RefreshResult
 }
 
+// ExtendedCreditsCatchUpper defines incremental extended credits backfill
+// invoked by the Scheduler for completed and dropped titles.
+type ExtendedCreditsCatchUpper interface {
+	CatchUpExtendedCredits(ctx context.Context) int
+}
+
 // CoverSyncer defines the cover maintenance methods invoked by the Scheduler.
 type CoverSyncer interface {
 	FetchMissingCovers(ctx context.Context) int
@@ -34,15 +40,16 @@ type JellyfinMovieSyncer interface {
 // Scheduler orchestrates periodic background jobs (daily metadata refresh,
 // periodic missing cover fetch, weekly unused cover cleanup, and annual wrapped checks).
 type Scheduler struct {
-	writeDB        *sql.DB
-	syncSvc        MetadataSyncer
-	covers         CoverSyncer
-	statsRepo      *repository.StatsRepository
-	wrappedRepo    *repository.WrappedRepository
-	backupSvc      *BackupService
-	jellyfinSyncer JellyfinMovieSyncer
-	dataDir        string
-	shutdownWG     *sync.WaitGroup
+	writeDB           *sql.DB
+	syncSvc           MetadataSyncer
+	creditsCatchUpper ExtendedCreditsCatchUpper
+	covers            CoverSyncer
+	statsRepo         *repository.StatsRepository
+	wrappedRepo       *repository.WrappedRepository
+	backupSvc         *BackupService
+	jellyfinSyncer    JellyfinMovieSyncer
+	dataDir           string
+	shutdownWG        *sync.WaitGroup
 }
 
 // SetBackupService configures automated daily SQLite + JSON backups in <dataDir>/backups.
@@ -62,6 +69,14 @@ func (s *Scheduler) SetJellyfinMovieSyncer(syncer JellyfinMovieSyncer) {
 	s.jellyfinSyncer = syncer
 }
 
+// SetExtendedCreditsCatchUpper configures incremental extended credits backfill.
+func (s *Scheduler) SetExtendedCreditsCatchUpper(catchUpper ExtendedCreditsCatchUpper) {
+	if s == nil {
+		return
+	}
+	s.creditsCatchUpper = catchUpper
+}
+
 // NewScheduler creates a new background job scheduler.
 func NewScheduler(
 	writeDB *sql.DB,
@@ -76,12 +91,17 @@ func NewScheduler(
 	if wrappedRepo == nil && writeDB != nil {
 		wrappedRepo = repository.NewWrappedRepository(writeDB)
 	}
+	var creditsCatchUpper ExtendedCreditsCatchUpper
+	if cu, ok := syncSvc.(ExtendedCreditsCatchUpper); ok {
+		creditsCatchUpper = cu
+	}
 	return &Scheduler{
-		writeDB:     writeDB,
-		syncSvc:     syncSvc,
-		covers:      covers,
-		statsRepo:   statsRepo,
-		wrappedRepo: wrappedRepo,
+		writeDB:           writeDB,
+		syncSvc:           syncSvc,
+		creditsCatchUpper: creditsCatchUpper,
+		covers:            covers,
+		statsRepo:         statsRepo,
+		wrappedRepo:       wrappedRepo,
 	}
 }
 
@@ -225,6 +245,7 @@ func (s *Scheduler) runInitialPass(ctx context.Context) {
 		log.Println("scheduler: starting initial title refresh")
 		s.syncSvc.RefreshTitles(ctx)
 	}
+	s.catchUpExtendedCredits(ctx)
 	s.CheckAnnualWrapped(ctx)
 }
 
@@ -234,6 +255,7 @@ func (s *Scheduler) runScheduledPass(ctx context.Context) {
 		log.Println("scheduler: starting scheduled title refresh")
 		s.syncSvc.RefreshTitles(ctx)
 	}
+	s.catchUpExtendedCredits(ctx)
 	s.CheckAnnualWrapped(ctx)
 
 	if s.covers != nil {
@@ -243,6 +265,15 @@ func (s *Scheduler) runScheduledPass(ctx context.Context) {
 	}
 
 	s.RunMaintenance(ctx)
+}
+
+func (s *Scheduler) catchUpExtendedCredits(ctx context.Context) {
+	if s == nil || s.creditsCatchUpper == nil || ctx.Err() != nil {
+		return
+	}
+	if n := s.creditsCatchUpper.CatchUpExtendedCredits(ctx); n > 0 {
+		log.Printf("scheduler: caught up extended credits for %d titles", n)
+	}
 }
 
 func (s *Scheduler) syncJellyfinMovies(ctx context.Context) {

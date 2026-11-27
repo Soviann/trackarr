@@ -414,6 +414,55 @@ func (r *TitleRepository) GetLiteByID(ctx context.Context, id int64) (*TitleLite
 	return &t, nil
 }
 
+// ListTitlesNeedingCreditsCatchUp returns up to limit completed or dropped
+// titles with a TMDB ID whose extended credits have never been refreshed and
+// whose stored credits are missing, invalid JSON, or lack any Writer/Composer
+// entry, ordered oldest-refreshed first (never refreshed first).
+func (r *TitleRepository) ListTitlesNeedingCreditsCatchUp(ctx context.Context, limit int) ([]TitleLite, error) {
+	if limit <= 0 {
+		return []TitleLite{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT `+titleLiteCols+`
+		FROM titles t
+		WHERE t.status IN ('completed', 'dropped')
+		  AND t.tmdb_id IS NOT NULL AND t.tmdb_id > 0
+		  AND t.credits_refreshed_at IS NULL
+		  AND (
+		    CASE
+		      WHEN t.credits IS NULL OR TRIM(t.credits) = '' OR t.credits = '[]' OR json_valid(t.credits) = 0 OR json_type(t.credits) != 'array'
+		        THEN 1
+		      WHEN EXISTS (
+		        SELECT 1 FROM json_each(t.credits) je
+		        WHERE je.type = 'object'
+		          AND json_extract(je.value, '$.role') IN ('Writer', 'Composer')
+		      )
+		        THEN 0
+		      ELSE 1
+		    END
+		  ) = 1
+		ORDER BY t.last_refreshed_at ASC NULLS FIRST, t.id ASC
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list titles needing credits catch-up: %w", err)
+	}
+	defer rows.Close()
+
+	titles := make([]TitleLite, 0)
+	for rows.Next() {
+		var t TitleLite
+		if err := scanTitleLite(rows, &t); err != nil {
+			return nil, fmt.Errorf("scan credits catch-up title: %w", err)
+		}
+		titles = append(titles, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate credits catch-up titles: %w", err)
+	}
+	return titles, nil
+}
+
 // ListAll returns all titles with full relations (names, seasons, episodes). Used by background jobs.
 func (r *TitleRepository) ListAll() ([]model.Title, error) {
 	rows, err := r.db.Query(`SELECT id, type, is_anime, year, cover_url, imdb_id, anilist_id, tmdb_id, tvdb_id, external_source_id, my_rating, status, series_status, match_status, original_title, match_source, overview, runtime, total_watch_minutes, tmdb_rating, credits, anilist_rating, release_date, next_air_date, next_air_episode, last_watched_at, last_refreshed_at, credits_refreshed_at, accent_hex, simkl_id, simkl_slug, radarr_id, sonarr_id, arr_ignored, sonarr_deleted_at, downloaded_at, personal_notes, watch_providers, origin_country, created_at, updated_at FROM titles ORDER BY updated_at DESC`)

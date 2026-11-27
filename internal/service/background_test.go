@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -361,6 +363,7 @@ func TestBackgroundService_NilSafe(t *testing.T) {
 	var svc *service.BackgroundService
 	results := svc.RefreshTitles(context.Background())
 	assert.Nil(t, results)
+	assert.Equal(t, 0, svc.CatchUpExtendedCredits(context.Background()))
 }
 
 func TestBackgroundService_RefreshCancelledContextStopsLoop(t *testing.T) {
@@ -1241,4 +1244,569 @@ func TestBackgroundService_RefreshStampsCreditsRefreshedAt(t *testing.T) {
 	gotFail, err := titleRepo.GetByID(failID)
 	require.NoError(t, err)
 	assert.Nil(t, gotFail.CreditsRefreshedAt, "failed TMDB fetch must not stamp credits_refreshed_at")
+}
+
+type bgCreditsInvalidator struct {
+	mu   sync.Mutex
+	tags [][]string
+}
+
+func (i *bgCreditsInvalidator) Invalidate(tags ...string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.tags = append(i.tags, tags)
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_NilTMDBNoOp(t *testing.T) {
+	svc, db, titleRepo, _, _ := setupBackgroundService(t)
+	tmdbID := int64(5001)
+	id := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &tmdbID,
+	}, []model.TitleName{{Name: "No TMDB Client", Language: "en", IsPrimary: true}})
+
+	assert.Equal(t, 0, svc.CatchUpExtendedCredits(context.Background()))
+	got, err := titleRepo.GetByID(id)
+	require.NoError(t, err)
+	assert.Nil(t, got.CreditsRefreshedAt)
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_UpdatesCompletedAndDroppedAndPreservesState(t *testing.T) {
+	ctx := context.Background()
+	movieTMDB := int64(438631)
+	seriesTMDB := int64(1396)
+
+	var dbRef *sql.DB
+	var mu sync.Mutex
+	var requestedPaths []string
+	var txCheckErr error
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requestedPaths = append(requestedPaths, r.URL.Path)
+		mu.Unlock()
+
+		// Prove TMDB HTTP I/O executes strictly outside any active SQLite write tx (MaxOpenConns=1).
+		if dbRef != nil {
+			txCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			tx, err := dbRef.BeginTx(txCtx, nil)
+			cancel()
+			if err != nil {
+				mu.Lock()
+				txCheckErr = err
+				mu.Unlock()
+			} else {
+				_ = tx.Rollback()
+			}
+		}
+
+		switch r.URL.Path {
+		case fmt.Sprintf("/movie/%d", movieTMDB):
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    movieTMDB,
+				"title": "Dune",
+				"credits": map[string]any{
+					"crew": []map[string]any{
+						{"name": "Denis Villeneuve", "job": "Director", "department": "Directing"},
+						{"name": "Jon Spaihts", "job": "Screenplay", "department": "Writing"},
+						{"name": "Hans Zimmer", "job": "Original Music Composer", "department": "Sound"},
+					},
+					"cast": []map[string]any{
+						{"name": "Timothée Chalamet", "character": "Paul Atreides"},
+					},
+				},
+			})
+		case fmt.Sprintf("/tv/%d", seriesTMDB):
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":         seriesTMDB,
+				"name":       "Breaking Bad",
+				"status":     "Ended",
+				"created_by": []map[string]any{{"name": "Vince Gilligan"}},
+				"credits": map[string]any{
+					"crew": []map[string]any{
+						{"name": "Vince Gilligan", "job": "Writer", "department": "Writing"},
+						{"name": "Peter Gould", "job": "Writer", "department": "Writing"},
+						{"name": "Dave Porter", "job": "Original Music Composer", "department": "Sound"},
+					},
+					"cast": []map[string]any{
+						{"name": "Bryan Cranston", "character": "Walter White"},
+					},
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+	episodeRepo := repository.NewEpisodeRepository(db)
+	svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+	dbRef = db
+
+	inv := &bgCreditsInvalidator{}
+	database.SetInvalidator(inv)
+	defer database.SetInvalidator(nil)
+
+	rating := 9
+	oldCredits := `[{"name":"Denis Villeneuve","role":"Director"}]`
+	movieID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &movieTMDB,
+		MyRating:    &rating,
+		Credits:     &oldCredits,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	seriesID := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeSeries,
+		Year:        2008,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &seriesTMDB,
+	}, []model.TitleName{{Name: "Breaking Bad", Language: "en", IsPrimary: true}})
+
+	s1 := testutil.GetOrCreateSeason(t, db, seriesID, 1)
+	testutil.UpdateSeasonTotalEpisodes(t, db, s1.ID, 2)
+	ep1 := testutil.SeedEpisode(t, db, s1.ID, 1, "2008-01-20", true)
+	_ = testutil.SeedEpisode(t, db, s1.ID, 2, "2008-01-27", false)
+	testutil.CreateWatchEvent(t, db, &model.WatchEvent{
+		TitleID:   seriesID,
+		EpisodeID: &ep1.ID,
+		Source:    model.WatchEventSourceManual,
+	})
+
+	// Pin older timestamps to assert CatchUpExtendedCredits does not bump updated_at or last_refreshed_at.
+	_, err := db.Exec(`UPDATE titles SET updated_at = '2021-01-01 00:00:00', last_refreshed_at = '2022-01-01 00:00:00' WHERE id IN (?, ?)`, movieID, seriesID)
+	require.NoError(t, err)
+
+	inv.mu.Lock()
+	inv.tags = nil
+	inv.mu.Unlock()
+
+	updated := svc.CatchUpExtendedCredits(ctx)
+	assert.Equal(t, 2, updated)
+	require.NoError(t, txCheckErr, "TMDB HTTP call must not run inside an open SQLite write transaction")
+	assert.ElementsMatch(t, []string{
+		fmt.Sprintf("/movie/%d", movieTMDB),
+		fmt.Sprintf("/tv/%d", seriesTMDB),
+	}, requestedPaths)
+
+	gotMovie, err := titleRepo.GetByID(movieID)
+	require.NoError(t, err)
+	require.NotNil(t, gotMovie.Credits)
+	assert.Contains(t, *gotMovie.Credits, `"name":"Jon Spaihts","role":"Writer"`)
+	assert.Contains(t, *gotMovie.Credits, `"name":"Hans Zimmer","role":"Composer"`)
+	assert.NotNil(t, gotMovie.CreditsRefreshedAt)
+	assert.Equal(t, model.TitleStatusCompleted, gotMovie.Status)
+	require.NotNil(t, gotMovie.MyRating)
+	assert.Equal(t, 9, *gotMovie.MyRating)
+	assert.Equal(t, "2021-01-01 00:00:00", gotMovie.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+	require.NotNil(t, gotMovie.LastRefreshedAt)
+	assert.Equal(t, "2022-01-01 00:00:00", gotMovie.LastRefreshedAt.UTC().Format("2006-01-02 15:04:05"))
+
+	gotSeries, err := titleRepo.GetByID(seriesID)
+	require.NoError(t, err)
+	require.NotNil(t, gotSeries.Credits)
+	assert.Contains(t, *gotSeries.Credits, `"name":"Vince Gilligan","role":"Writer"`)
+	assert.Contains(t, *gotSeries.Credits, `"name":"Peter Gould","role":"Writer"`)
+	assert.Contains(t, *gotSeries.Credits, `"name":"Dave Porter","role":"Composer"`)
+	assert.Contains(t, *gotSeries.Credits, `"name":"Bryan Cranston","role":"Walter White"`)
+	assert.NotNil(t, gotSeries.CreditsRefreshedAt)
+	assert.Equal(t, model.TitleStatusDropped, gotSeries.Status)
+	assert.Equal(t, "2021-01-01 00:00:00", gotSeries.UpdatedAt.UTC().Format("2006-01-02 15:04:05"))
+
+	eps, err := episodeRepo.GetBySeasonID(s1.ID)
+	require.NoError(t, err)
+	require.Len(t, eps, 2)
+	assert.True(t, eps[0].Watched)
+	assert.False(t, eps[1].Watched)
+
+	var watchEvents int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM watch_events WHERE title_id = ?`, seriesID).Scan(&watchEvents))
+	assert.Equal(t, 1, watchEvents)
+
+	inv.mu.Lock()
+	require.Len(t, inv.tags, 2)
+	for _, tags := range inv.tags {
+		assert.ElementsMatch(t, []string{database.TagTitles, database.TagStats, database.TagCalendar}, tags)
+	}
+	inv.mu.Unlock()
+
+	// Second pass must be a complete no-op with zero TMDB requests.
+	mu.Lock()
+	requestedPaths = nil
+	mu.Unlock()
+	assert.Equal(t, 0, svc.CatchUpExtendedCredits(ctx))
+	mu.Lock()
+	assert.Empty(t, requestedPaths)
+	mu.Unlock()
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_IdempotentOnEmptyCrewAnd404(t *testing.T) {
+	ctx := context.Background()
+	emptyCrewTMDB := int64(3001)
+	notFoundTMDB := int64(3002)
+	alreadyHasWriterTMDB := int64(3003)
+	alreadyRefreshedTMDB := int64(3004)
+
+	var mu sync.Mutex
+	var requested []string
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+
+		switch r.URL.Path {
+		case fmt.Sprintf("/movie/%d", emptyCrewTMDB):
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    emptyCrewTMDB,
+				"title": "Silent Film",
+				"credits": map[string]any{
+					"crew": []map[string]any{
+						{"name": "Silent Director", "job": "Director", "department": "Directing"},
+					},
+					"cast": []map[string]any{
+						{"name": "Silent Actor", "character": "Hero"},
+					},
+				},
+			})
+		case fmt.Sprintf("/movie/%d", notFoundTMDB):
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"status_message":"Not Found"}`))
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	})
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+	svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+
+	idEmptyCrew := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        1927,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &emptyCrewTMDB,
+	}, []model.TitleName{{Name: "Silent Film", Language: "en", IsPrimary: true}})
+
+	oldDirCredits := `[{"name":"Old Director","role":"Director"}]`
+	idNotFound := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2000,
+		Status:      model.TitleStatusDropped,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &notFoundTMDB,
+		Credits:     &oldDirCredits,
+	}, []model.TitleName{{Name: "Deleted TMDB", Language: "en", IsPrimary: true}})
+
+	writerCredits := `[{"name":"Existing Writer","role":"Writer"}]`
+	_ = testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2022,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &alreadyHasWriterTMDB,
+		Credits:     &writerCredits,
+	}, []model.TitleName{{Name: "Has Writer", Language: "en", IsPrimary: true}})
+
+	idAlreadyRefreshed := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2022,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		TMDBID:      &alreadyRefreshedTMDB,
+	}, []model.TitleName{{Name: "Already Refreshed", Language: "en", IsPrimary: true}})
+	ts := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	testutil.UpdateTitle(t, db, idAlreadyRefreshed, repository.TitleUpdate{CreditsRefreshedAt: &ts})
+
+	updated := svc.CatchUpExtendedCredits(ctx)
+	assert.Equal(t, 1, updated)
+	assert.ElementsMatch(t, []string{
+		fmt.Sprintf("/movie/%d", emptyCrewTMDB),
+		fmt.Sprintf("/movie/%d", notFoundTMDB),
+	}, requested)
+
+	gotEmpty, err := titleRepo.GetByID(idEmptyCrew)
+	require.NoError(t, err)
+	assert.NotNil(t, gotEmpty.CreditsRefreshedAt)
+	require.NotNil(t, gotEmpty.Credits)
+	assert.Contains(t, *gotEmpty.Credits, "Silent Director")
+
+	got404, err := titleRepo.GetByID(idNotFound)
+	require.NoError(t, err)
+	assert.NotNil(t, got404.CreditsRefreshedAt)
+	require.NotNil(t, got404.Credits)
+	assert.Equal(t, oldDirCredits, *got404.Credits, "404 must preserve existing credits while stamping credits_refreshed_at")
+
+	// Second pass must skip both empty-crew and 404 titles without making any TMDB calls.
+	mu.Lock()
+	requested = nil
+	mu.Unlock()
+	assert.Equal(t, 0, svc.CatchUpExtendedCredits(ctx))
+	mu.Lock()
+	assert.Empty(t, requested)
+	mu.Unlock()
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_BatchCap(t *testing.T) {
+	ctx := context.Background()
+	var reqCount atomic.Int32
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		reqCount.Add(1)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":    1,
+			"title": "Movie",
+			"credits": map[string]any{
+				"crew": []map[string]any{
+					{"name": "Writer Name", "job": "Writer", "department": "Writing"},
+				},
+			},
+		})
+	})
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	svc, db, _, _ := newBackgroundServiceWithTMDB(t, client)
+	svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+
+	const total = 30
+	for i := 1; i <= total; i++ {
+		tmdbID := int64(4000 + i)
+		testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbID,
+		}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+	}
+
+	pass1 := svc.CatchUpExtendedCredits(ctx)
+	assert.Equal(t, service.DefaultCreditsCatchUpBatchSize, pass1)
+	assert.Equal(t, int32(service.DefaultCreditsCatchUpBatchSize), reqCount.Load())
+
+	pass2 := svc.CatchUpExtendedCredits(ctx)
+	assert.Equal(t, total-service.DefaultCreditsCatchUpBatchSize, pass2)
+	assert.Equal(t, int32(total), reqCount.Load())
+
+	pass3 := svc.CatchUpExtendedCredits(ctx)
+	assert.Equal(t, 0, pass3)
+	assert.Equal(t, int32(total), reqCount.Load())
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_ErrorHandling(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("retryable 500 leaves credits_refreshed_at nil and retries next pass", func(t *testing.T) {
+		tmdbFailThenOK := int64(6001)
+		tmdbOK := int64(6002)
+		var firstTitleCalls atomic.Int32
+
+		mux := http.NewServeMux()
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdbFailThenOK), func(w http.ResponseWriter, _ *http.Request) {
+			if firstTitleCalls.Add(1) == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": tmdbFailThenOK,
+				"credits": map[string]any{
+					"crew": []map[string]any{{"name": "Recovered Writer", "job": "Writer", "department": "Writing"}},
+				},
+			})
+		})
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdbOK), func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": tmdbOK,
+				"credits": map[string]any{
+					"crew": []map[string]any{{"name": "Healthy Composer", "job": "Composer", "department": "Sound"}},
+				},
+			})
+		})
+		server := httptest.NewServer(mux)
+		t.Cleanup(server.Close)
+
+		client := matching.NewTMDBClient("test-key")
+		client.SetBaseURL(server.URL)
+
+		svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+		svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+
+		idFail := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbFailThenOK,
+		}, []model.TitleName{{Name: "Fail Once", Language: "en", IsPrimary: true}})
+		idOK := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbOK,
+		}, []model.TitleName{{Name: "Healthy", Language: "en", IsPrimary: true}})
+
+		assert.Equal(t, 1, svc.CatchUpExtendedCredits(ctx))
+
+		gotFail, err := titleRepo.GetByID(idFail)
+		require.NoError(t, err)
+		assert.Nil(t, gotFail.CreditsRefreshedAt, "500 error must leave credits_refreshed_at untouched")
+
+		gotOK, err := titleRepo.GetByID(idOK)
+		require.NoError(t, err)
+		assert.NotNil(t, gotOK.CreditsRefreshedAt)
+
+		// Second pass retries only idFail and succeeds.
+		assert.Equal(t, 1, svc.CatchUpExtendedCredits(ctx))
+		gotFail2, err := titleRepo.GetByID(idFail)
+		require.NoError(t, err)
+		assert.NotNil(t, gotFail2.CreditsRefreshedAt)
+		require.NotNil(t, gotFail2.Credits)
+		assert.Contains(t, *gotFail2.Credits, "Recovered Writer")
+	})
+
+	t.Run("rate limit 429 stops batch immediately without stamping remaining", func(t *testing.T) {
+		tmdb1 := int64(7001)
+		tmdb2 := int64(7002)
+		tmdb3 := int64(7003)
+
+		var thirdCalled atomic.Bool
+		mux := http.NewServeMux()
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdb1), func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": tmdb1,
+				"credits": map[string]any{
+					"crew": []map[string]any{{"name": "Writer 1", "job": "Writer", "department": "Writing"}},
+				},
+			})
+		})
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdb2), func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Retry-After", "60")
+			w.WriteHeader(http.StatusTooManyRequests)
+		})
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdb3), func(w http.ResponseWriter, _ *http.Request) {
+			thirdCalled.Store(true)
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": tmdb3})
+		})
+		server := httptest.NewServer(mux)
+		t.Cleanup(server.Close)
+
+		client := matching.NewTMDBClient("test-key")
+		client.SetBaseURL(server.URL)
+
+		svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+		svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+
+		id1 := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb1}, []model.TitleName{{Name: "T1", Language: "en", IsPrimary: true}})
+		id2 := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb2}, []model.TitleName{{Name: "T2", Language: "en", IsPrimary: true}})
+		id3 := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdb3}, []model.TitleName{{Name: "T3", Language: "en", IsPrimary: true}})
+
+		updated := svc.CatchUpExtendedCredits(ctx)
+		assert.Equal(t, 1, updated)
+		assert.False(t, thirdCalled.Load(), "429 must halt the batch before requesting title 3")
+
+		got1, _ := titleRepo.GetByID(id1)
+		got2, _ := titleRepo.GetByID(id2)
+		got3, _ := titleRepo.GetByID(id3)
+		assert.NotNil(t, got1.CreditsRefreshedAt)
+		assert.Nil(t, got2.CreditsRefreshedAt)
+		assert.Nil(t, got3.CreditsRefreshedAt)
+	})
+
+	t.Run("non-404 auth error 401 leaves credits_refreshed_at nil", func(t *testing.T) {
+		tmdbAuthErr := int64(8001)
+		mux := http.NewServeMux()
+		mux.HandleFunc(fmt.Sprintf("/movie/%d", tmdbAuthErr), func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		})
+		server := httptest.NewServer(mux)
+		t.Cleanup(server.Close)
+
+		client := matching.NewTMDBClient("bad-key")
+		client.SetBaseURL(server.URL)
+
+		svc, db, titleRepo, _ := newBackgroundServiceWithTMDB(t, client)
+		svc.SetAPILimiter(service.NewAPILimiter(1000, 100))
+
+		id := testutil.CreateTitle(t, db, &model.Title{Type: model.TitleTypeMovie, Year: 2020, Status: model.TitleStatusCompleted, MatchStatus: model.MatchStatusConfirmed, TMDBID: &tmdbAuthErr}, []model.TitleName{{Name: "Unauthorized", Language: "en", IsPrimary: true}})
+
+		assert.Equal(t, 0, svc.CatchUpExtendedCredits(ctx))
+		got, err := titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.Nil(t, got.CreditsRefreshedAt)
+	})
+}
+
+func TestBackgroundService_CatchUpExtendedCredits_ContextCancellationAndRateLimit(t *testing.T) {
+	var calls atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id": 1,
+			"credits": map[string]any{
+				"crew": []map[string]any{{"name": "Writer", "job": "Writer", "department": "Writing"}},
+			},
+		})
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := matching.NewTMDBClient("test-key")
+	client.SetBaseURL(server.URL)
+
+	// Keep default 2 rps / burst 1 limiter to exercise rate limiting & cancellation wait.
+	svc, db, _, _ := newBackgroundServiceWithTMDB(t, client)
+
+	for i := 1; i <= 10; i++ {
+		tmdbID := int64(9000 + i)
+		testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2020,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbID,
+		}, []model.TitleName{{Name: fmt.Sprintf("Movie %d", i), Language: "en", IsPrimary: true}})
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	updated := svc.CatchUpExtendedCredits(ctx)
+	elapsed := time.Since(start)
+
+	assert.Less(t, elapsed, time.Second, "catch-up must stop promptly on context cancellation")
+	assert.Less(t, updated, 10)
+	assert.Less(t, int(calls.Load()), 10)
 }

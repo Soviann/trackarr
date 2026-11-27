@@ -15,6 +15,7 @@ import (
 	"github.com/Soviann/trackarr/internal/database"
 	"github.com/Soviann/trackarr/internal/model"
 	"github.com/Soviann/trackarr/internal/repository"
+	"github.com/Soviann/trackarr/internal/service/matching"
 	"github.com/Soviann/trackarr/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,8 +76,10 @@ func TestScheduler_NilSafe(t *testing.T) {
 	var s *Scheduler
 	s.SetShutdownWG(&sync.WaitGroup{})
 	s.SetJellyfinMovieSyncer(nil)
+	s.SetExtendedCreditsCatchUpper(nil)
 	s.Start(context.Background(), time.Second)
 	s.syncJellyfinMovies(context.Background())
+	s.catchUpExtendedCredits(context.Background())
 	s.CheckAnnualWrapped(context.Background())
 	s.RunMaintenance(context.Background())
 }
@@ -304,5 +307,144 @@ func TestScheduler_JellyfinMovieSync(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, model.TitleStatusPlanToWatch, title.Status)
 		assert.NotNil(t, title.DownloadedAt)
+	})
+}
+
+type fakeSyncAndCatchUp struct {
+	refreshCalls atomic.Int32
+	catchUpCalls atomic.Int32
+	onRefresh    func()
+	onCatchUp    func()
+}
+
+func (f *fakeSyncAndCatchUp) RefreshTitles(_ context.Context) []RefreshResult {
+	f.refreshCalls.Add(1)
+	if f.onRefresh != nil {
+		f.onRefresh()
+	}
+	return nil
+}
+
+func (f *fakeSyncAndCatchUp) CatchUpExtendedCredits(_ context.Context) int {
+	f.catchUpCalls.Add(1)
+	if f.onCatchUp != nil {
+		f.onCatchUp()
+	}
+	return 1
+}
+
+type fakeCreditsCatchUpper struct {
+	calls     atomic.Int32
+	onCatchUp func()
+}
+
+func (f *fakeCreditsCatchUpper) CatchUpExtendedCredits(_ context.Context) int {
+	f.calls.Add(1)
+	if f.onCatchUp != nil {
+		f.onCatchUp()
+	}
+	return 2
+}
+
+func TestScheduler_ExtendedCreditsCatchUp(t *testing.T) {
+	t.Run("auto-wired syncSvc runs catch-up after RefreshTitles on initial and scheduled passes", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		var order []string
+		syncer := &fakeSyncAndCatchUp{
+			onRefresh: func() { order = append(order, "refresh") },
+			onCatchUp: func() { order = append(order, "catchup") },
+		}
+
+		sched := NewScheduler(db, syncer, nil, nil, nil)
+
+		sched.runInitialPass(context.Background())
+		assert.Equal(t, []string{"refresh", "catchup"}, order)
+		assert.Equal(t, int32(1), syncer.refreshCalls.Load())
+		assert.Equal(t, int32(1), syncer.catchUpCalls.Load())
+
+		order = nil
+		sched.runScheduledPass(context.Background())
+		assert.Equal(t, []string{"refresh", "catchup"}, order)
+		assert.Equal(t, int32(2), syncer.refreshCalls.Load())
+		assert.Equal(t, int32(2), syncer.catchUpCalls.Load())
+	})
+
+	t.Run("SetExtendedCreditsCatchUpper runs after fakeMetadataSyncer without breaking MetadataSyncer", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		var order []string
+		syncer := &fakeMetadataSyncer{
+			onRefresh: func() { order = append(order, "refresh") },
+		}
+		catchUpper := &fakeCreditsCatchUpper{
+			onCatchUp: func() { order = append(order, "catchup") },
+		}
+
+		sched := NewScheduler(db, syncer, nil, nil, nil)
+		sched.SetExtendedCreditsCatchUpper(catchUpper)
+
+		sched.runInitialPass(context.Background())
+		assert.Equal(t, []string{"refresh", "catchup"}, order)
+		assert.Equal(t, int32(1), catchUpper.calls.Load())
+	})
+
+	t.Run("cancelled context skips catch-up", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		catchUpper := &fakeCreditsCatchUpper{}
+		sched := NewScheduler(db, nil, nil, nil, nil)
+		sched.SetExtendedCreditsCatchUpper(catchUpper)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		sched.catchUpExtendedCredits(ctx)
+		assert.Equal(t, int32(0), catchUpper.calls.Load())
+	})
+
+	t.Run("runs real BackgroundService catch-up during runInitialPass", func(t *testing.T) {
+		db := setupSchedulerTestDB(t)
+		tmdbID := int64(438631)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == fmt.Sprintf("/movie/%d", tmdbID) {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": tmdbID,
+					"credits": map[string]any{
+						"crew": []map[string]any{
+							{"name": "Denis Villeneuve", "job": "Director", "department": "Directing"},
+							{"name": "Jon Spaihts", "job": "Screenplay", "department": "Writing"},
+							{"name": "Hans Zimmer", "job": "Original Music Composer", "department": "Sound"},
+						},
+					},
+				})
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		tmdbClient := matching.NewTMDBClient("test-key")
+		tmdbClient.SetBaseURL(server.URL)
+
+		titleRepo := repository.NewTitleRepository(db)
+		settingRepo := repository.NewSettingRepository(db)
+		bgSvc := NewBackgroundService(db, titleRepo, settingRepo, tmdbClient, nil, NewNoopNotifier())
+		bgSvc.SetAPILimiter(NewAPILimiter(1000, 100))
+
+		id := testutil.CreateTitle(t, db, &model.Title{
+			Type:        model.TitleTypeMovie,
+			Year:        2021,
+			Status:      model.TitleStatusCompleted,
+			MatchStatus: model.MatchStatusConfirmed,
+			TMDBID:      &tmdbID,
+		}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+		sched := NewScheduler(db, bgSvc, nil, nil, nil)
+		sched.runInitialPass(context.Background())
+
+		got, err := titleRepo.GetByID(id)
+		require.NoError(t, err)
+		assert.NotNil(t, got.CreditsRefreshedAt)
+		require.NotNil(t, got.Credits)
+		assert.Contains(t, *got.Credits, "Jon Spaihts")
+		assert.Contains(t, *got.Credits, "Hans Zimmer")
 	})
 }
