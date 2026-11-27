@@ -243,3 +243,93 @@ func TestAdminJellyfinSyncMoviesRoute_AuthAndBehavior(t *testing.T) {
 		assert.NotContains(t, body, jfServer.URL)
 	})
 }
+
+func TestPeopleAndPersonRoleRoutes_AuthAndBehavior(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	t.Cleanup(func() { database.SetInvalidator(nil) })
+
+	credits := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Hans Zimmer","role":"Composer"}]`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &credits,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	cfg := &config.Config{JWTSecret: testRouterJWTSecret}
+	mux := router.New(ctx, cfg, db, db, embed.FS{}, nil, nil, nil)
+
+	apiKeySvc := service.NewAPIKeyService(db, repository.NewAPIKeyRepository(db))
+	_, readToken, err := apiKeySvc.CreateKey(ctx, "Library Read Key", []string{model.ScopeLibraryRead})
+	require.NoError(t, err)
+	_, arrOnlyToken, err := apiKeySvc.CreateKey(ctx, "Arr Only Key", []string{model.ScopeArrRead})
+	require.NoError(t, err)
+
+	// Unauthenticated -> 401
+	reqUnauth := httptest.NewRequest(http.MethodGet, "/api/people?search=Zimmer", nil)
+	rrUnauth := httptest.NewRecorder()
+	mux.ServeHTTP(rrUnauth, reqUnauth)
+	assert.Equal(t, http.StatusUnauthorized, rrUnauth.Code)
+
+	// Wrong scope -> 403
+	reqForbidden := httptest.NewRequest(http.MethodGet, "/api/people?search=Zimmer", nil)
+	reqForbidden.Header.Set("Authorization", "Bearer "+arrOnlyToken)
+	rrForbidden := httptest.NewRecorder()
+	mux.ServeHTTP(rrForbidden, reqForbidden)
+	assert.Equal(t, http.StatusForbidden, rrForbidden.Code)
+
+	// Authorized via ScopeLibraryRead -> 200
+	reqOK := httptest.NewRequest(http.MethodGet, "/api/people?search=Zimmer", nil)
+	reqOK.Header.Set("Authorization", "Bearer "+readToken)
+	rrOK := httptest.NewRecorder()
+	mux.ServeHTTP(rrOK, reqOK)
+	require.Equal(t, http.StatusOK, rrOK.Code)
+	var people []model.PersonSearchResult
+	require.NoError(t, json.NewDecoder(rrOK.Body).Decode(&people))
+	require.Len(t, people, 1)
+	assert.Equal(t, "Hans Zimmer", people[0].Name)
+	assert.Equal(t, []string{"composer"}, people[0].Roles)
+	assert.Equal(t, 1, people[0].TitleCount)
+
+	// Cache invalidation through router after TitleWriter commit
+	c2 := `[{"name":"Hans Zimmer","role":"Composer"}]`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2010,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &c2,
+	}, []model.TitleName{{Name: "Inception", Language: "en", IsPrimary: true}})
+
+	reqAfter := httptest.NewRequest(http.MethodGet, "/api/people?search=Zimmer", nil)
+	reqAfter.Header.Set("Authorization", "Bearer "+readToken)
+	rrAfter := httptest.NewRecorder()
+	mux.ServeHTTP(rrAfter, reqAfter)
+	require.Equal(t, http.StatusOK, rrAfter.Code)
+	var peopleAfter []model.PersonSearchResult
+	require.NoError(t, json.NewDecoder(rrAfter.Body).Decode(&peopleAfter))
+	require.Len(t, peopleAfter, 1)
+	assert.Equal(t, 2, peopleAfter[0].TitleCount)
+
+	// GET /api/titles?person=...&role=... valid and invalid
+	jwtCookie := &http.Cookie{Name: "token", Value: signRouterTestJWT(t, testRouterJWTSecret, time.Now().Add(time.Hour))}
+	reqTitles := httptest.NewRequest(http.MethodGet, "/api/titles?person=Denis+Villeneuve&role=director", nil)
+	reqTitles.AddCookie(jwtCookie)
+	rrTitles := httptest.NewRecorder()
+	mux.ServeHTTP(rrTitles, reqTitles)
+	require.Equal(t, http.StatusOK, rrTitles.Code)
+	var titlesRes repository.PaginatedResult
+	require.NoError(t, json.NewDecoder(rrTitles.Body).Decode(&titlesRes))
+	require.Len(t, titlesRes.Titles, 1)
+	assert.Equal(t, "Dune", titlesRes.Titles[0].PrimaryName())
+
+	reqBadRole := httptest.NewRequest(http.MethodGet, "/api/titles?person=Denis+Villeneuve&role=invalid", nil)
+	reqBadRole.AddCookie(jwtCookie)
+	rrBadRole := httptest.NewRecorder()
+	mux.ServeHTTP(rrBadRole, reqBadRole)
+	assert.Equal(t, http.StatusBadRequest, rrBadRole.Code)
+}

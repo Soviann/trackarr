@@ -213,8 +213,16 @@ func (h *TitleHandler) List(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	if p := r.URL.Query().Get("person"); p != "" {
+	if p := strings.TrimSpace(r.URL.Query().Get("person")); p != "" {
 		filter.Person = &p
+	}
+	if role := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("role"))); role != "" {
+		switch role {
+		case "all", "actor", "director", "writer", "composer":
+			filter.PersonRole = role
+		default:
+			return httputil.BadRequest("Invalid role")
+		}
 	}
 
 	if raw := r.URL.Query()["origin_country"]; len(raw) > 0 {

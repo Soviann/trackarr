@@ -75,8 +75,9 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	historyRepo := repository.NewHistoryRepository(readDB)
 	matchEventRepo := repository.NewMatchEventRepository(readDB)
 
-	// Genre repository (read-only)
+	// Genre & People repositories (read-only)
 	genreReadRepo := repository.NewGenreRepository(readDB)
+	peopleReadRepo := repository.NewPeopleRepository(readDB)
 
 	// Handlers
 	titles := handler.NewTitleHandler(ctx, writeDB, titleRepo, titleReadRepo, seasonRepo, episodeRepo, eventRepo, taskRepo, pipeline, titleSvc, bgSvc)
@@ -114,6 +115,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	wrappedRepo := repository.NewWrappedRepository(writeDB)
 	stats := handler.NewStatsHandler(writeDB, statsRepo, wrappedRepo, pipeline)
 	genres := handler.NewGenreHandler(genreReadRepo)
+	people := handler.NewPeopleHandler(peopleReadRepo)
 	activity := handler.NewActivityHandler(activityRepo)
 	history := handler.NewHistoryHandler(historyRepo)
 	matchEvents := handler.NewMatchEventHandler(matchEventRepo)
@@ -132,6 +134,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 	stats.SetCache(readCache)
 	calendarHandler.SetCache(readCache)
 	genres.SetCache(readCache)
+	people.SetCache(readCache)
 
 	reloader := service.NewDynamicConfigReloader(
 		cfg, writeDB, settingRepo, pipeline, bgSvc, nil, nil, realPushSvc,
@@ -266,6 +269,7 @@ func New(ctx context.Context, cfg *config.Config, writeDB, readDB *sql.DB, distF
 				r.Get("/stats/activity", httputil.WrapHandler(activity.List))
 				r.Get("/match-events", httputil.WrapHandler(matchEvents.List))
 				r.Get("/genres", httputil.WrapHandler(genres.List))
+				r.Get("/people", httputil.WrapHandler(people.Search))
 				r.Get("/countries", httputil.WrapHandler(titles.Countries))
 				r.Get("/settings", httputil.WrapHandler(settings.Get))
 			})

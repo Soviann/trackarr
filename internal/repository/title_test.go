@@ -2485,3 +2485,118 @@ func TestTitleRepository_CreditsRefreshedAt(t *testing.T) {
 		assert.Empty(t, inv.tags)
 	})
 }
+
+func TestTitleRepository_List_PersonRoleFilter(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTitleRepository(db)
+
+	cBoth := `[{"name":"Denis Villeneuve","role":"Director"},{"name":"Denis Villeneuve","role":"Writer"},{"name":"Hans Zimmer","role":"Composer"}]`
+	idBoth := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2021,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cBoth,
+	}, []model.TitleName{{Name: "Dune", Language: "en", IsPrimary: true}})
+
+	cDirector := `[{"name":"Denis Villeneuve","role":"Director"}]`
+	idDirector := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2016,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cDirector,
+	}, []model.TitleName{{Name: "Arrival", Language: "en", IsPrimary: true}})
+
+	// Denis is an Actor while someone else is Writer — tests same-EXISTS correlation
+	cActorAndOtherWriter := `[{"name":"Denis Villeneuve","role":"Cameo"},{"name":"Other Writer","role":"Writer"}]`
+	idActor := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2024,
+		Status:      model.TitleStatusWatching,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cActorAndOtherWriter,
+	}, []model.TitleName{{Name: "Cameo Film", Language: "en", IsPrimary: true}})
+
+	// Empty role should match role=all but NOT role=actor
+	cEmptyRole := `[{"name":"Denis Villeneuve","role":""}]`
+	idEmptyRole := testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2020,
+		Status:      model.TitleStatusPlanToWatch,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cEmptyRole,
+	}, []model.TitleName{{Name: "Empty Role Film", Language: "en", IsPrimary: true}})
+
+	// Malformed JSON and non-object array entries must not fail the SQLite query
+	cBad := `{malformed`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2019,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cBad,
+	}, []model.TitleName{{Name: "Malformed JSON Film", Language: "en", IsPrimary: true}})
+
+	cNonObj := `["Denis Villeneuve"]`
+	testutil.CreateTitle(t, db, &model.Title{
+		Type:        model.TitleTypeMovie,
+		Year:        2018,
+		Status:      model.TitleStatusCompleted,
+		MatchStatus: model.MatchStatusConfirmed,
+		Credits:     &cNonObj,
+	}, []model.TitleName{{Name: "Non Object Array Film", Language: "en", IsPrimary: true}})
+
+	idsOf := func(res *repository.PaginatedResult) []int64 {
+		ids := make([]int64, len(res.Titles))
+		for i, tt := range res.Titles {
+			ids[i] = tt.ID
+		}
+		return ids
+	}
+
+	personLower := "denis villeneuve"
+
+	// all / empty -> all matching titles regardless of role
+	for _, role := range []string{"", "all"} {
+		res, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: role})
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []int64{idBoth, idDirector, idActor, idEmptyRole}, idsOf(res), "role=%q", role)
+	}
+
+	// director
+	resDir, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "director"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth, idDirector}, idsOf(resDir))
+
+	// writer (must exclude idActor where Other Writer holds Writer)
+	resWriter, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "writer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resWriter))
+
+	// actor (must exclude empty role and Director/Writer-only titles)
+	resActor, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "actor"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idActor}, idsOf(resActor))
+
+	// composer
+	resComposer, err := repo.List(repository.TitleFilter{Person: &personLower, PersonRole: "composer"})
+	require.NoError(t, err)
+	assert.Empty(t, resComposer.Titles)
+
+	hans := "Hans Zimmer"
+	resHans, err := repo.List(repository.TitleFilter{Person: &hans, PersonRole: "composer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resHans))
+
+	// Boundary: PersonRole without Person does not filter out titles
+	resNoPerson, err := repo.List(repository.TitleFilter{PersonRole: "director"})
+	require.NoError(t, err)
+	assert.Len(t, resNoPerson.Titles, 6)
+
+	// Combined with Search
+	searchDune := "Dune"
+	resSearch, err := repo.List(repository.TitleFilter{Search: &searchDune, Person: &personLower, PersonRole: "writer"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []int64{idBoth}, idsOf(resSearch))
+}
