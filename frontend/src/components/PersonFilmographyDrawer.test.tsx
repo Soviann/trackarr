@@ -1,9 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/preact'
+import { route } from 'preact-router'
 import { PersonFilmographyDrawer } from './PersonFilmographyDrawer'
-import type { PaginatedResponse, Title } from '../types'
+import { setLocale } from '../i18n'
+import type { PaginatedResponse, PersonRole, Title } from '../types'
 
 const useApiMock = vi.fn()
+
+vi.mock('preact-router', async () => {
+  const actual = await vi.importActual<typeof import('preact-router')>('preact-router')
+  return {
+    ...actual,
+    route: vi.fn(),
+  }
+})
 
 vi.mock('../hooks/useApi', () => ({
   useApi: (path: string | null) => useApiMock(path),
@@ -49,10 +59,13 @@ const sampleTitle: Title = {
 
 describe('PersonFilmographyDrawer', () => {
   beforeEach(() => {
+    setLocale('en')
     useApiMock.mockReset()
+    vi.mocked(route).mockReset()
   })
 
   afterEach(() => {
+    setLocale('en')
     cleanup()
   })
 
@@ -126,7 +139,7 @@ describe('PersonFilmographyDrawer', () => {
     expect(screen.getByText('No titles found in library')).toBeTruthy()
   })
 
-  it('calls onClose when clicking "View full filmography"', () => {
+  it('calls onClose and routes to /person/:name?role=... when clicking "View full filmography"', () => {
     const mockData: PaginatedResponse = {
       titles: [sampleTitle],
       total: 1,
@@ -135,7 +148,7 @@ describe('PersonFilmographyDrawer', () => {
     useApiMock.mockReturnValue({ data: mockData, loading: false, error: null, mutate: vi.fn() })
     const onClose = vi.fn()
 
-    render(
+    const { container } = render(
       <PersonFilmographyDrawer
         open={true}
         personName="Denis Villeneuve"
@@ -144,8 +157,92 @@ describe('PersonFilmographyDrawer', () => {
       />
     )
 
-    const viewAllBtn = screen.getAllByText('View full filmography')[0]
-    fireEvent.click(viewAllBtn)
+    expect(useApiMock).toHaveBeenCalledWith('/titles?person=Denis%20Villeneuve&role=director&limit=100')
+    const viewAllLink = container.querySelector('a.viewAllBtn') as HTMLAnchorElement | null
+    expect(viewAllLink?.getAttribute('href')).toBe('/person/Denis%20Villeneuve?role=director')
+    fireEvent.click(viewAllLink!)
     expect(onClose).toHaveBeenCalled()
+    expect(route).toHaveBeenCalledWith('/person/Denis%20Villeneuve?role=director')
+  })
+
+  it.each<{ role: PersonRole; icon: string; label: string; frLabel: string }>([
+    { role: 'actor', icon: '🎬', label: 'Actor', frLabel: 'Acteur' },
+    { role: 'director', icon: '🎥', label: 'Director', frLabel: 'Réalisateur' }, // i18n-ignore
+    { role: 'writer', icon: '✍️', label: 'Writer', frLabel: 'Scénariste' }, // i18n-ignore
+    { role: 'composer', icon: '🎵', label: 'Composer', frLabel: 'Compositeur' },
+  ])('displays role icon, localized label, role-filtered API request, and person route for $role', ({ role, icon, label, frLabel }) => {
+    const mockData: PaginatedResponse = {
+      titles: [sampleTitle],
+      total: 1,
+      has_more: false,
+    }
+    useApiMock.mockReturnValue({ data: mockData, loading: false, error: null, mutate: vi.fn() })
+
+    const { container } = render(
+      <PersonFilmographyDrawer
+        open={true}
+        personName="Hans Zimmer"
+        role={role}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(useApiMock).toHaveBeenCalledWith(`/titles?person=Hans%20Zimmer&role=${role}&limit=100`)
+    expect(screen.getByText(icon)).toBeTruthy()
+    expect(screen.getByText(new RegExp(`${label} · 1 title in library`))).toBeTruthy()
+    const viewAllLink = container.querySelector('a.viewAllBtn') as HTMLAnchorElement | null
+    expect(viewAllLink?.getAttribute('href')).toBe(`/person/Hans%20Zimmer?role=${role}`)
+
+    cleanup()
+    setLocale('fr')
+    render(
+      <PersonFilmographyDrawer
+        open={true}
+        personName="Hans Zimmer"
+        role={role}
+        onClose={vi.fn()}
+      />
+    )
+    expect(screen.getByText(new RegExp(frLabel))).toBeTruthy()
+  })
+
+  it('omits role query parameter when role prop is not provided', () => {
+    useApiMock.mockReturnValue({
+      data: { titles: [], total: 0, has_more: false },
+      loading: false,
+      error: null,
+      mutate: vi.fn(),
+    })
+
+    const { container } = render(
+      <PersonFilmographyDrawer
+        open={true}
+        personName="Hans Zimmer"
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(useApiMock).toHaveBeenCalledWith('/titles?person=Hans%20Zimmer&limit=100')
+    expect(screen.getByText('Filmography')).toBeTruthy()
+    const viewAllLink = container.querySelector('a.viewAllBtn') as HTMLAnchorElement | null
+    expect(viewAllLink?.getAttribute('href')).toBe('/person/Hans%20Zimmer')
+  })
+
+  it('renders ErrorBanner and allows retry on API error', () => {
+    const mutate = vi.fn()
+    useApiMock.mockReturnValue({ data: null, loading: false, error: 'Server unavailable', mutate })
+
+    render(
+      <PersonFilmographyDrawer
+        open={true}
+        personName="Hans Zimmer"
+        role="composer"
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('alert').textContent).toContain('Server unavailable')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(mutate).toHaveBeenCalledTimes(1)
   })
 })

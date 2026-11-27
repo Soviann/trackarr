@@ -4,33 +4,57 @@ import { TitleCard } from './TitleCard'
 import { ErrorBanner } from './ErrorBanner'
 import { useApi } from '../hooks/useApi'
 import { routeTo } from '../routes'
-import { useTranslation } from '../i18n'
-import type { PaginatedResponse } from '../types'
+import { useTranslation, type TranslationKey } from '../i18n'
+import type { PaginatedResponse, PersonRole } from '../types'
 import s from './PersonFilmographyDrawer.module.css'
 
-interface Props {
+export interface PersonFilmographyDrawerProps {
   open: boolean
   personName: string | null
-  role?: 'actor' | 'director'
+  role?: PersonRole
   onClose: () => void
 }
 
-export function PersonFilmographyDrawer({ open, personName, role, onClose }: Props) {
+const ROLE_META: Record<PersonRole, { icon: string; labelKey: TranslationKey }> = {
+  actor: { icon: '🎬', labelKey: 'stats.actor' },
+  director: { icon: '🎥', labelKey: 'stats.director' },
+  writer: { icon: '✍️', labelKey: 'stats.writer' },
+  composer: { icon: '🎵', labelKey: 'stats.composer' },
+}
+
+export function PersonFilmographyDrawer({ open, personName, role, onClose }: PersonFilmographyDrawerProps) {
   const { t } = useTranslation()
-  const { data, error, loading, mutate } = useApi<PaginatedResponse>(
-    open && personName ? `/titles?person=${encodeURIComponent(personName)}&limit=100` : null
-  )
+  const requestPath = open && personName
+    ? `/titles?person=${encodeURIComponent(personName)}${role ? `&role=${encodeURIComponent(role)}` : ''}&limit=100`
+    : null
+  const { data, error, loading, mutate } = useApi<PaginatedResponse>(requestPath)
 
   const titles = data?.titles ?? []
-  const roleIcon = role === 'director' ? '🎥' : '🎬'
+  const roleMeta = role ? ROLE_META[role] : undefined
+  const roleIcon = roleMeta?.icon ?? '🎬'
+  const roleLabel = roleMeta ? t(roleMeta.labelKey) : ''
+  const personUrl = personName ? routeTo.person(personName, role) : undefined
 
   const handleViewAll = (e: MouseEvent) => {
-    e.preventDefault()
-    if (personName) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) {
       onClose()
-      route(routeTo.person(personName))
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    if (personUrl) {
+      onClose()
+      route(personUrl)
     }
   }
+
+  const countText = t('stats.filmographyCount', {
+    count: titles.length,
+    plural: titles.length === 1 ? '' : 's',
+  })
+  const subtitle = titles.length > 0
+    ? (roleLabel ? `${roleLabel} · ${countText}` : countText)
+    : (roleLabel || t('stats.filmography'))
 
   return (
     <BottomSheet open={open} onClose={onClose} ariaLabel={personName ?? t('stats.filmography')}>
@@ -42,21 +66,12 @@ export function PersonFilmographyDrawer({ open, personName, role, onClose }: Pro
               <span className={s.roleIcon} aria-hidden="true">{roleIcon}</span>
               <span className={s.name}>{personName}</span>
             </div>
-            <div className={s.subtitle}>
-              {titles.length > 0
-                ? t('stats.filmographyCount', {
-                    count: titles.length,
-                    plural: titles.length === 1 ? '' : 's',
-                  })
-                : role === 'director'
-                  ? t('stats.director')
-                  : t('stats.actor')}
-            </div>
+            <div className={s.subtitle}>{subtitle}</div>
           </div>
 
-          {personName && (
+          {personUrl && (
             <a
-              href={routeTo.person(personName)}
+              href={personUrl}
               onClick={handleViewAll}
               className={s.viewAllBtn}
             >

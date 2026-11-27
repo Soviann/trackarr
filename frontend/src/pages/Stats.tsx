@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'preact/hooks'
 import { route } from 'preact-router'
+import clsx from 'clsx'
 import { useApi } from '../hooks/useApi'
 import { apiFetch } from '../api'
 import { formatHumanWatchtime, formatWatchtime, getCoverUrl } from '../utils'
 import { groupIntoRanges, formatRangeLabel } from '../utils/episodeRanges'
-import type { StatsResponse, FunStat, ActivityEvent, PersonStat, WrappedArchiveItem } from '../types'
+import type { StatsResponse, FunStat, ActivityEvent, PersonRole, PersonStat, WrappedArchiveItem } from '../types'
 import { routeTo } from '../routes'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { PersonFilmographyDrawer } from '../components/PersonFilmographyDrawer'
@@ -43,7 +44,8 @@ export function Stats({ path: _path }: { path?: string }) {
 
   const { data, loading } = useApi<StatsResponse>(statsUrl)
   const { data: archives } = useApi<WrappedArchiveItem[]>('/stats/wrapped/archives')
-  const [selectedPerson, setSelectedPerson] = useState<{ name: string; role: 'actor' | 'director' } | null>(null)
+  const [personRole, setPersonRole] = useState<PersonRole>('actor')
+  const [selectedPerson, setSelectedPerson] = useState<{ name: string; role: PersonRole } | null>(null)
 
   if (loading || !data) {
     return (
@@ -210,14 +212,14 @@ export function Stats({ path: _path }: { path?: string }) {
           <StreakSection streaks={data.streaks ?? { current: 0, best: 0 }} t={t} />
         </div>
         <div className={s.bentoCol}>
-          <TopActorsSection
+          <TopCastCrewSection
             actors={data.top_actors ?? []}
-            onSelectPerson={(name) => setSelectedPerson({ name, role: 'actor' })}
-            t={t}
-          />
-          <TopDirectorsSection
             directors={data.top_directors ?? []}
-            onSelectPerson={(name) => setSelectedPerson({ name, role: 'director' })}
+            writers={data.top_writers ?? []}
+            composers={data.top_composers ?? []}
+            selectedRole={personRole}
+            onSelectRole={setPersonRole}
+            onSelectPerson={(name, role) => setSelectedPerson({ name, role })}
             t={t}
           />
           <YearSection year={data.year_summary} t={t} />
@@ -387,90 +389,95 @@ function GenreSection({
   )
 }
 
-function TopActorsSection({
+const STATS_ROLE_CONFIG: ReadonlyArray<{
+  role: PersonRole
+  labelKey: TranslationKey
+  countKey: TranslationKey
+}> = [
+  { role: 'actor', labelKey: 'stats.actors', countKey: 'stats.actorCount' },
+  { role: 'director', labelKey: 'stats.directors', countKey: 'stats.directorCount' },
+  { role: 'writer', labelKey: 'stats.writers', countKey: 'stats.writerCount' },
+  { role: 'composer', labelKey: 'stats.composers', countKey: 'stats.composerCount' },
+]
+
+function TopCastCrewSection({
   actors,
+  directors,
+  writers,
+  composers,
+  selectedRole,
+  onSelectRole,
   onSelectPerson,
   t,
 }: {
   actors: PersonStat[]
-  onSelectPerson: (name: string) => void
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string
-}) {
-  if (actors.length === 0) return null
-  const max = Math.max(...actors.map((a) => a.count), 1)
-  return (
-    <section className={s.section}>
-      <SectionLabel>{t('stats.topActors')}</SectionLabel>
-      {actors.map((a) => (
-        <button
-          key={a.name}
-          type="button"
-          className={s.personRow}
-          onClick={() => onSelectPerson(a.name)}
-          title={t('stats.actorCount', { count: a.count, plural: a.count === 1 ? '' : 's' })}
-        >
-          <span className={s.personLabel}>{a.name}</span>
-          <div
-            className={s.barTrack}
-            role="meter"
-            aria-label={`${a.name}: ${a.count}`}
-            aria-valuenow={a.count}
-            aria-valuemin={0}
-            aria-valuemax={max}
-          >
-            <div
-              className={s.barFill}
-              style={{ width: `${(a.count / max) * 100}%` }}
-            />
-          </div>
-          <span className={s.barValue}>{a.count}</span>
-          <span className={s.personAffordance} aria-hidden="true">→</span>
-        </button>
-      ))}
-    </section>
-  )
-}
-
-function TopDirectorsSection({
-  directors,
-  onSelectPerson,
-  t,
-}: {
   directors: PersonStat[]
-  onSelectPerson: (name: string) => void
+  writers: PersonStat[]
+  composers: PersonStat[]
+  selectedRole: PersonRole
+  onSelectRole: (role: PersonRole) => void
+  onSelectPerson: (name: string, role: PersonRole) => void
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }) {
-  if (directors.length === 0) return null
-  const max = Math.max(...directors.map((d) => d.count), 1)
+  const byRole: Record<PersonRole, PersonStat[]> = {
+    actor: actors,
+    director: directors,
+    writer: writers,
+    composer: composers,
+  }
+  const activeConfig = STATS_ROLE_CONFIG.find((c) => c.role === selectedRole) ?? STATS_ROLE_CONFIG[0]
+  const entries = (byRole[selectedRole] ?? []).slice(0, 10)
+  const max = Math.max(...entries.map((p) => p.count), 1)
+
   return (
     <section className={s.section}>
-      <SectionLabel>{t('stats.topDirectors')}</SectionLabel>
-      {directors.map((d) => (
-        <button
-          key={d.name}
-          type="button"
-          className={s.personRow}
-          onClick={() => onSelectPerson(d.name)}
-          title={t('stats.directorCount', { count: d.count, plural: d.count === 1 ? '' : 's' })}
-        >
-          <span className={s.personLabel}>{d.name}</span>
-          <div
-            className={s.barTrack}
-            role="meter"
-            aria-label={`${d.name}: ${d.count}`}
-            aria-valuenow={d.count}
-            aria-valuemin={0}
-            aria-valuemax={max}
+      <SectionLabel>{t('stats.topCastCrew')}</SectionLabel>
+      <div className={s.roleSelectorRow} role="group" aria-label={t('stats.roleFilterAria')}>
+        {STATS_ROLE_CONFIG.map(({ role, labelKey }) => {
+          const active = selectedRole === role
+          return (
+            <button
+              key={role}
+              type="button"
+              className={clsx(s.pillOpt, active && s.pillOptSelected)}
+              aria-pressed={active}
+              onClick={() => onSelectRole(role)}
+            >
+              {t(labelKey)}
+            </button>
+          )
+        })}
+      </div>
+      {entries.length === 0 ? (
+        <div className={s.emptyRoleMsg}>{t('stats.noRoleEntries')}</div>
+      ) : (
+        entries.map((p) => (
+          <button
+            key={p.name}
+            type="button"
+            className={s.personRow}
+            onClick={() => onSelectPerson(p.name, selectedRole)}
+            title={t(activeConfig.countKey, { count: p.count, plural: p.count === 1 ? '' : 's' })}
           >
+            <span className={s.personLabel}>{p.name}</span>
             <div
-              className={s.barFill}
-              style={{ width: `${(d.count / max) * 100}%` }}
-            />
-          </div>
-          <span className={s.barValue}>{d.count}</span>
-          <span className={s.personAffordance} aria-hidden="true">→</span>
-        </button>
-      ))}
+              className={s.barTrack}
+              role="meter"
+              aria-label={`${p.name}: ${p.count}`}
+              aria-valuenow={p.count}
+              aria-valuemin={0}
+              aria-valuemax={max}
+            >
+              <div
+                className={s.barFill}
+                style={{ width: `${(p.count / max) * 100}%` }}
+              />
+            </div>
+            <span className={s.barValue}>{p.count}</span>
+            <span className={s.personAffordance} aria-hidden="true">→</span>
+          </button>
+        ))
+      )}
     </section>
   )
 }

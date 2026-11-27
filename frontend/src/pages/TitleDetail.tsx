@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { CSSProperties } from 'preact'
 import clsx from 'clsx'
 import { route } from 'preact-router'
-import type { Settings, Title, TitleRelation } from '../types'
+import type { PersonRole, Settings, Title, TitleRelation } from '../types'
 import { useApi } from '../hooks/useApi'
 import { computeAniListUrl, getName, getAlternativeNames, languageLabel, getTypeLabel, getStatusLabel, formatMatchSource, formatDate, formatDateTime, formatRelativeTime, formatWatchtime, hexToRgba, isUnairedOrTBA } from '../utils'
 import { apiFetch } from '../api'
@@ -32,7 +32,7 @@ import { PersonalNotesCard } from '../components/PersonalNotesCard'
 import { routeTo } from '../routes'
 import { useTitleStore } from '../store'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
-import { useTranslation } from '../i18n'
+import { useTranslation, type TranslationKey } from '../i18n'
 import { useUndo } from '../context/UndoContext'
 import s from './TitleDetail.module.css'
 
@@ -64,7 +64,15 @@ function parseJSON<T>(json: string | null): T | null {
   try { return JSON.parse(json) } catch { return null }
 }
 
-const CREW_ROLES = new Set(['Director', 'Writer', 'Composer'])
+const CREW_ROLE_MAP: Record<string, { filter: PersonRole; labelKey: TranslationKey }> = {
+  Director: { filter: 'director', labelKey: 'stats.director' },
+  Writer: { filter: 'writer', labelKey: 'stats.writer' },
+  Composer: { filter: 'composer', labelKey: 'stats.composer' },
+}
+
+function getCrewRoleMeta(role: string): { filter: PersonRole; labelKey: TranslationKey } | undefined {
+  return Object.prototype.hasOwnProperty.call(CREW_ROLE_MAP, role) ? CREW_ROLE_MAP[role] : undefined
+}
 
 export function TitleDetail({ id }: { id?: string; path?: string }) {
   const { data: title, loading, error, mutate, setData } = useApi<Title>(id ? `/titles/${id}` : null)
@@ -124,9 +132,12 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
   }, [current?.id, current?.season_number, title.relations])
 
   const genres = title.genres
-  const credits = parseJSON<{ name: string; role: string }[]>(title.credits)
-  const crew = useMemo(() => credits?.filter((c) => CREW_ROLES.has(c.role)) ?? [], [credits])
-  const actors = useMemo(() => credits?.filter((c) => !CREW_ROLES.has(c.role)) ?? [], [credits])
+  const credits = useMemo(() => {
+    const raw = parseJSON<{ name: string; role: string }[]>(title.credits)
+    return Array.isArray(raw) ? raw : null
+  }, [title.credits])
+  const crew = useMemo(() => credits?.filter((c) => getCrewRoleMeta(c.role) !== undefined) ?? [], [credits])
+  const actors = useMemo(() => credits?.filter((c) => getCrewRoleMeta(c.role) === undefined) ?? [], [credits])
 
   const isAllSeasonWatched = useMemo(() => {
     if (!current || !current.episodes || current.episodes.length === 0) return false
@@ -1031,18 +1042,27 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
               {/* Crew (Director, Writer, Composer) */}
               {crew.length > 0 && (
                 <div className={s.castList}>
-                  {crew.map((c) => (
-                    <div key={`crew-${c.name}-${c.role}`} className={s.castEntry}>
-                      <button
-                        type="button"
-                        className={s.castPerson}
-                        onClick={() => route(routeTo.person(c.name))}
-                      >
-                        {c.name}
-                      </button>
-                      <span className={s.castRole}>{c.role}</span>
-                    </div>
-                  ))}
+                  {crew.map((c) => {
+                    const roleMeta = getCrewRoleMeta(c.role)!
+                    const href = routeTo.person(c.name, roleMeta.filter)
+                    return (
+                      <div key={`crew-${c.name}-${c.role}`} className={s.castEntry}>
+                        <a
+                          href={href}
+                          className={s.castPerson}
+                          onClick={(e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            route(href)
+                          }}
+                        >
+                          {c.name}
+                        </a>
+                        <span className={s.castRole}>{t(roleMeta.labelKey)}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
@@ -1051,18 +1071,27 @@ export function TitleDetail({ id }: { id?: string; path?: string }) {
                 <div className={crew.length > 0 ? s.castSection : undefined}>
                   {crew.length > 0 && <div className={s.castSubLabel}>{t('details.actors')}</div>}
                   <div className={s.castList}>
-                    {(castExpanded ? actors : actors.slice(0, 10)).map((c) => (
-                      <div key={`actor-${c.name}-${c.role}`} className={s.castEntry}>
-                        <button
-                          type="button"
-                          className={s.castPerson}
-                          onClick={() => route(routeTo.person(c.name))}
-                        >
-                          {c.name}
-                        </button>
-                        <span className={s.castRole}>{c.role}</span>
-                      </div>
-                    ))}
+                    {(castExpanded ? actors : actors.slice(0, 10)).map((c) => {
+                      const href = routeTo.person(c.name, 'actor')
+                      const roleLabel = !c.role || c.role === 'Actor' ? t('stats.actor') : c.role
+                      return (
+                        <div key={`actor-${c.name}-${c.role}`} className={s.castEntry}>
+                          <a
+                            href={href}
+                            className={s.castPerson}
+                            onClick={(e) => {
+                              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return
+                              e.preventDefault()
+                              e.stopPropagation()
+                              route(href)
+                            }}
+                          >
+                            {c.name}
+                          </a>
+                          <span className={s.castRole}>{roleLabel}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                   {actors.length > 10 && (
                     <button

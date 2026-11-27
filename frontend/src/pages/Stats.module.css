@@ -378,7 +378,20 @@
   text-align: right;
 }
 
-/* Interactive Person Bar Rows (Actors & Directors) */
+/* Interactive Person Bar Rows (Cast & Crew) */
+.roleSelectorRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-md);
+}
+
+.emptyRoleMsg {
+  font-size: var(--font-size-sm);
+  color: var(--ink-dim);
+  padding: var(--space-sm) 0;
+}
+
 .personRow {
   display: flex;
   align-items: center;
